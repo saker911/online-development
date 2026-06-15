@@ -5,7 +5,7 @@ namespace PermitBehaviorChecks;
 public sealed class SaudiPhoneNumberValidatorTests
 {
     [Theory]
-    [InlineData("1024722918")]
+    [InlineData("1023456789")]
     [InlineData("2023132222")]
     public void IdentityAcceptsNationalIdAndIqamaPrefixes(string identityNumber)
     {
@@ -17,7 +17,7 @@ public sealed class SaudiPhoneNumberValidatorTests
     [InlineData("0024722918")]
     [InlineData("12345")]
     [InlineData("102472291A")]
-    [InlineData("10247229180")]
+    [InlineData("10234567890")]
     public void IdentityRejectsInvalidLengthPrefixOrCharacters(string identityNumber)
     {
         Assert.False(SaudiNationalIdOrIqamaValidator.IsValid(identityNumber));

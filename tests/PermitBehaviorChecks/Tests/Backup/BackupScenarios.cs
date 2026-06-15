@@ -294,7 +294,7 @@ internal static partial class ScenarioCatalog
                         Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                         Username TEXT NOT NULL
                     );
-                    INSERT INTO UserAccounts (Username) VALUES ('1024722918');
+                    INSERT INTO UserAccounts (Username) VALUES ('1023456789');
                     CREATE TABLE AdministrationSettings (
                         Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                         OrganizationName TEXT NOT NULL DEFAULT ''
@@ -421,7 +421,7 @@ internal static partial class ScenarioCatalog
                         Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                         Username TEXT NOT NULL
                     );
-                    INSERT INTO UserAccounts (Username) VALUES ('1024722918');
+                    INSERT INTO UserAccounts (Username) VALUES ('1023456789');
                     CREATE TABLE AdministrationSettings (
                         Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                         OrganizationName TEXT NOT NULL DEFAULT ''

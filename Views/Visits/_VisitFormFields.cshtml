@@ -22,7 +22,7 @@
     <div class="col-md-4">
         <label asp-for="NationalId" class="form-label">رقم هوية الزائر الرئيسي</label>
         <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
-             pattern="[12][0-9]{9}" placeholder="1024722918" required />
+             pattern="[12][0-9]{9}" placeholder="1023456789" required />
          <div class="form-text text-muted-ar">رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.</div>
         <span asp-validation-for="NationalId" class="field-validation-error small"></span>
     </div>
@@ -108,7 +108,7 @@
                                     <div class="col-md-3">
                                         <label class="form-label">رقم الهوية</label>
                                         <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
-                                                 pattern="[12][0-9]{9}" placeholder="1024722918" value="@companions[i].NationalId" data-companion-field="NationalId" />
+                                                 pattern="[12][0-9]{9}" placeholder="1023456789" value="@companions[i].NationalId" data-companion-field="NationalId" />
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">رقم الجوال</label>
@@ -145,7 +145,7 @@
                                 <div class="col-md-3">
                                     <label class="form-label">رقم الهوية</label>
                                     <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
-                                         pattern="[12][0-9]{9}" placeholder="1024722918" data-companion-field="NationalId" />
+                                         pattern="[12][0-9]{9}" placeholder="1023456789" data-companion-field="NationalId" />
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">رقم الجوال</label>
