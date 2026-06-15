@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-06-16
+- Added an isolated PostgreSQL provider path for the online edition while keeping SQLite as the local development default.
+- Added the initial PostgreSQL EF Core migration, automatic migration bootstrap, environment-based connection guidance, and an Arabic execution schedule for the online product.
+- Upgraded EF Core and the Npgsql provider to `8.0.11`, verified that the dependency graph contains no known vulnerable packages, and retained transitional local-time compatibility until the planned UTC normalization phase.
+- Removed personal-looking credentials and names from automated test fixtures used by the online-development repository.
+
 ## 2026-04-23
 - Reserved `1.0.7` as the next local test version by updating the application assembly/package version in `VehiclePermitSystemWeb.csproj` and moving the Windows packaging entrypoints (`package-release.ps1`, `package-all.ps1`, `build-setup.ps1`, `package-update-test.ps1`) to `1.0.7` by default.
 - Updated the Windows packaging operator guide so the published command examples now target `1.0.7` consistently for local release, installer, full deliverables, and update-test package generation.

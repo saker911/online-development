@@ -1678,7 +1678,7 @@ internal static partial class ScenarioCatalog
         };
         AppPermissions.ApplyRoleDefaults(activeUser);
         Require(
-            userAdminService.CreateUser(activeUser, "Aa14011401!"),
+            userAdminService.CreateUser(activeUser, "OnlineTest2026!"),
             "wizard lookup scenario should create the active user"
         );
 
@@ -1695,7 +1695,7 @@ internal static partial class ScenarioCatalog
         };
         AppPermissions.ApplyRoleDefaults(inactiveUser);
         Require(
-            userAdminService.CreateUser(inactiveUser, "Aa14011401!"),
+            userAdminService.CreateUser(inactiveUser, "OnlineTest2026!"),
             "wizard lookup scenario should create the inactive user"
         );
         Require(
@@ -1827,7 +1827,7 @@ internal static partial class ScenarioCatalog
     )
     {
         const string actorUsername = "tester";
-        const string replacementPassword = "Aa14011401!";
+        const string replacementPassword = "OnlineTest2026!";
         var departmentName = $"قسم تحرير يدوي {Guid.NewGuid():N}";
         var targetUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
 
@@ -1972,7 +1972,7 @@ internal static partial class ScenarioCatalog
             };
             AppPermissions.ApplyRoleDefaults(seededUser);
 
-            var created = userAdminService.CreateUser(seededUser, "Aa14011401!");
+            var created = userAdminService.CreateUser(seededUser, "OnlineTest2026!");
             Require(created, $"{role} persistence scenario should create the seed user");
 
             var applyDefaultsController = CreateUsersController(userAdminService, actorPrincipal);
@@ -2367,7 +2367,7 @@ internal static partial class ScenarioCatalog
         AppPermissions.ApplyRoleDefaults(editableUser);
 
         Require(
-            userAdminService.CreateUser(editableUser, "Aa14011401!"),
+            userAdminService.CreateUser(editableUser, "OnlineTest2026!"),
             "privilege-escalation scenario should create the editable seed user"
         );
 

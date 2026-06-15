@@ -2,7 +2,7 @@ const { expect, test } = require("@playwright/test");
 
 const owner = {
   username: "1234567890",
-  password: "Aa14011401!",
+  password: "OnlineTest2026!",
 };
 let permitSequence = 0;
 

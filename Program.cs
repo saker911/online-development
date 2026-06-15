@@ -158,6 +158,26 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     {
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
     }
+    else if (
+        string.Equals(dataProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(dataProvider, "Postgres", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(dataProvider, "Npgsql", StringComparison.OrdinalIgnoreCase)
+    )
+    {
+        // Preserve the current local-time workflow until persisted timestamps are normalized.
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+        var postgreSqlConnectionString = builder.Configuration.GetConnectionString(
+            "PostgreSqlConnection"
+        );
+        if (string.IsNullOrWhiteSpace(postgreSqlConnectionString))
+        {
+            throw new InvalidOperationException(
+                "PostgreSQL is selected, but ConnectionStrings:PostgreSqlConnection is empty."
+            );
+        }
+
+        options.UseNpgsql(postgreSqlConnectionString);
+    }
     else if (string.Equals(dataProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
     {
         var sqliteConnectionString =

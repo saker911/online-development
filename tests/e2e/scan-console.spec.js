@@ -280,7 +280,7 @@ test("display gate keeps latest result and recent operations inside fixed panels
     message: "رسالة عملية طويلة لاختبار عدم تمدد القائمة الجانبية عند تكرار التصريح نفسه.",
     occurredAtText: `2026/05/03 11:48:${String(index).padStart(2, "0")} ص`,
     source: "شاشة البوابة",
-    operatorDisplay: "عادل يوسف العنزي",
+    operatorDisplay: "مشغل البوابة التجريبي",
     statusText: index % 2 ? "خروج مسموح" : "تم السماح بالدخول",
     theme: index % 2 ? "success" : "warning",
   }));
@@ -331,7 +331,7 @@ test("display gate keeps latest result and recent operations inside fixed panels
     setText("#permitReason", "تمت عودة وليد يوسف. ".repeat(8));
     setText("#permitNationalId", "1044563325");
     setText("#permitPhone", "0236666666");
-    setText("#permitScanSource", "بواسطة: عادل يوسف العنزي");
+    setText("#permitScanSource", "بواسطة: مشغل البوابة التجريبي");
 
     const list = document.querySelector("#recentActivityList");
     if (list) {
@@ -343,7 +343,7 @@ test("display gate keeps latest result and recent operations inside fixed panels
           </div>
           <div class="gate-activity-title">${permitData.driverName}</div>
           <div class="gate-activity-meta">رسالة عملية طويلة لاختبار عدم تمدد القائمة الجانبية عند تكرار التصريح نفسه.</div>
-          <div class="gate-activity-meta">بواسطة: عادل يوسف العنزي</div>
+          <div class="gate-activity-meta">بواسطة: مشغل البوابة التجريبي</div>
         </article>
       `).join("");
     }

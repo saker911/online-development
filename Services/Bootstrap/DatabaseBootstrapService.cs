@@ -56,7 +56,20 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
 
         private void InitializeDatabase(ApplicationDbContext db)
         {
-            db.Database.EnsureCreated();
+            if (
+                db.Database.ProviderName?.Contains(
+                    "Npgsql",
+                    StringComparison.OrdinalIgnoreCase
+                ) == true
+            )
+            {
+                db.Database.Migrate();
+            }
+            else
+            {
+                db.Database.EnsureCreated();
+            }
+
             EnsureSqliteSchemaUpgrades(db);
 
             var existingUsers = db.UserAccounts.ToList();
