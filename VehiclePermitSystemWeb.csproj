@@ -8,6 +8,7 @@
     <FileVersion>1.0.15.0</FileVersion>
     <InformationalVersion>$(Version)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <UserSecretsId>f5852623-3eab-4700-8985-48a267fe8a7e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
