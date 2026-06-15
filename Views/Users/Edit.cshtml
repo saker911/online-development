@@ -1,0 +1,47 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Users.UserEditViewModel
+
+@{
+    var isCreateRoute = Context.Request.Path.Value?.EndsWith("/Create", StringComparison.OrdinalIgnoreCase) == true;
+    var editedUsername = string.IsNullOrWhiteSpace(Model.OriginalUsername)
+        ? Model.Username
+        : Model.OriginalUsername;
+    var isSelfEdit = !string.IsNullOrWhiteSpace(editedUsername)
+        && string.Equals(editedUsername, User.Identity?.Name, StringComparison.OrdinalIgnoreCase);
+    var pageTitle = isSelfEdit ? "تحديث بيانات الحساب" : "تعديل المستخدم";
+    var pageDescription = isSelfEdit
+        ? "راجع بيانات الحساب، عدّل المعلومات المتاحة لك، ثم انتقل بين الخطوات حتى حفظ التحديثات النهائية."
+        : "حدّث بيانات المستخدم، عدّل الربط الإداري والصلاحيات، ثم راجع التغييرات قبل حفظها من نفس الصفحة.";
+
+    ViewData["Title"] = isCreateRoute ? "إضافة مستخدم" : pageTitle;
+}
+
+<div class="users-registration-shell">
+    <section class="users-registration-card">
+        <header class="users-registration-head">
+            <h1>@pageTitle</h1>
+            <p>@pageDescription</p>
+        </header>
+
+        @if (!isCreateRoute && !string.IsNullOrWhiteSpace(editedUsername))
+        {
+            <div class="users-edit-national-id-banner">
+                <span>رقم الهوية للمستخدم</span>
+                <strong class="national-id-field">@editedUsername</strong>
+            </div>
+        }
+
+        <form method="post" asp-action="Edit" class="users-editor-form users-editor-form-create users-editor-form-edit users-registration-form needs-validation" novalidate data-form-persist="false" data-form-persist-id="users-wizard-edit" data-user-edit-authoritative="true" autocomplete="off">
+            @await Html.PartialAsync("_CredentialNotice")
+            @await Html.PartialAsync("_UserEditor", Model)
+
+            <div class="users-registration-footnote">
+                <span class="users-registration-footnote-icon">ⓘ</span>
+                <span>يتم عرض البيانات المحفوظة فعليًا لهذا المستخدم بدون استرجاع مسودة مؤقتة</span>
+            </div>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/users-edit-authoritative-fields.js" asp-append-version="true"></script>
+}

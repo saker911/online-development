@@ -1,0 +1,274 @@
+@using System.Globalization
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@{
+    ViewData["Title"] = "لوحة التحكم";
+    ViewData["BodyClass"] = "dashboard-page-body";
+
+    var pendingPermits = ViewBag.PendingPermits as List<Permit> ?? new List<Permit>();
+    var pendingPermitCount = ViewBag.PendingPermitCount as int? ?? 0;
+    var currentUserName = User.Identity?.Name ?? "المستخدم";
+    var hijriCulture = new CultureInfo("ar-SA");
+    var workflowPendingCount = ViewBag.WorkflowPendingCount as int? ?? 0;
+    var workflowUnderReviewCount = ViewBag.WorkflowUnderReviewCount as int? ?? 0;
+    var workflowStoppedCount = ViewBag.WorkflowStoppedCount as int? ?? 0;
+    var workflowClosedCount = ViewBag.WorkflowClosedCount as int? ?? 0;
+    var canViewPermits = User.HasPermission(AppPermissions.ViewPermits);
+    var canCreatePermits = User.HasPermission(AppPermissions.CreatePermit);
+    var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+    var canCreateVisits = User.HasPermission(AppPermissions.CreateVisit);
+    var canViewDisplays = User.HasPermission(AppPermissions.ViewDisplays);
+}
+
+<section class="dashboard-hero">
+    <div class="dashboard-hero-copy">
+        <span class="dashboard-kicker">بوابة المتابعة</span>
+        <h1>مرحبًا، @currentUserName</h1>
+        <p>تابع حالة التصاريح والزيارات والمخالفات اليومية، وانتقل مباشرة إلى الإجراءات الأكثر استخدامًا.</p>
+        <div class="dashboard-hero-actions">
+            @if (canCreatePermits)
+            {
+                <a asp-controller="Permits" asp-action="Create" class="btn btn-primary">طلب تصريح جديد</a>
+            }
+            @if (canViewPermits)
+            {
+                <a asp-controller="Permits" asp-action="Index" class="btn btn-outline-primary">عرض التصاريح</a>
+            }
+            @if (canCreateVisits)
+            {
+                <a asp-controller="Visits" asp-action="Create" class="btn btn-outline-success">تسجيل زيارة</a>
+            }
+            @if (canViewDisplays)
+            {
+                <a asp-controller="Display" asp-action="Access" class="btn btn-outline-dark">صفحة العرض</a>
+            }
+        </div>
+    </div>
+
+    <div class="dashboard-hero-card">
+        <div class="dashboard-hero-avatar">
+            <img src="~/icons/account.svg" alt="" />
+        </div>
+        <div class="dashboard-hero-meta">
+            <strong>ملخص اليوم</strong>
+            <span>@AppClock.LocalNow.ToString("dddd، dd MMMM yyyy", hijriCulture)</span>
+        </div>
+        <div class="dashboard-mini-grid">
+            <div class="dashboard-mini-stat dashboard-mini-stat-blue">
+                <span>إجمالي التصاريح</span>
+                <strong>@ViewBag.TotalPermits</strong>
+            </div>
+            <div class="dashboard-mini-stat dashboard-mini-stat-green">
+                <span>التصاريح الفعالة</span>
+                <strong>@ViewBag.ActivePermits</strong>
+            </div>
+            <div class="dashboard-mini-stat dashboard-mini-stat-cyan">
+                <span>إجمالي الزيارات</span>
+                <strong>@ViewBag.TotalVisits</strong>
+            </div>
+            <div class="dashboard-mini-stat dashboard-mini-stat-amber">
+                <span>الزيارات الموقوفة</span>
+                <strong>@ViewBag.SuspendedVisits</strong>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-panel mt-4">
+    <div class="dashboard-panel-head">
+        <div>
+            <h2>لوحة المخاطر اليوم</h2>
+            <p>ملخص سريع للمخالفات والعودة المتأخرة والحالات الموقوفة، مع أهم التحسينات المفعلة الآن.</p>
+        </div>
+    </div>
+
+    <div class="dashboard-mini-grid">
+        <div class="dashboard-mini-stat dashboard-mini-stat-amber">
+            <span>عدد المخالفات اليوم</span>
+            <strong>@ViewBag.TodayViolations</strong>
+        </div>
+        <div class="dashboard-mini-stat dashboard-mini-stat-cyan">
+            <span>المتأخرين</span>
+            <strong>@ViewBag.TodayLateReturns</strong>
+        </div>
+        <div class="dashboard-mini-stat dashboard-mini-stat-blue">
+            <span>الموقوفين</span>
+            <strong>@ViewBag.StoppedPermits</strong>
+        </div>
+    </div>
+
+    <div class="report-strip mt-3">
+        <div class="metric-card">
+            <span>التحقق من الدوام</span>
+            <strong>@ViewBag.WorkDayStatus</strong>
+            <small>@ViewBag.WorkDayStatusHint</small>
+        </div>
+        <div class="metric-card">
+            <span>مهلة السماح</span>
+            <strong>@ViewBag.LateReturnGraceLabel</strong>
+            <small>ساعات الدوام الحالية: @ViewBag.WorkHoursLabel</small>
+        </div>
+        <div class="metric-card">
+            <span>أيام الدوام</span>
+            <strong>@ViewBag.OfficialWorkDaysLabel</strong>
+            <small>تنعكس هذه الأيام مباشرة على المنع، الجدولة، وإغلاق نهاية الدوام.</small>
+        </div>
+    </div>
+</section>
+
+@if (User.HasPermission(AppPermissions.ViewPermits))
+{
+    <section class="dashboard-panel mt-4">
+        <div class="dashboard-panel-head">
+            <div>
+                <h2>مراحل مخالفات الخروج</h2>
+                <p>بطاقات سريعة تعرض مرحلة معالجة مخالفات الخروج وتفتح الفلتر المناسب مباشرة.</p>
+            </div>
+            <div class="dashboard-panel-actions">
+                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" class="btn btn-outline-dark">فتح
+                    اللوحة</a>
+                </div>
+            </div>
+
+            <div class="dashboard-shortcuts-grid">
+                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="Pending"
+                       class="dashboard-shortcut-card dashboard-shortcut-amber">
+                    <span class="dashboard-shortcut-label">معلقة</span>
+                    <strong>@workflowPendingCount</strong>
+                    <small>الحالات التي ما زالت بانتظار أول حسم.</small>
+                </a>
+                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="UnderReview"
+                       class="dashboard-shortcut-card dashboard-shortcut-cyan">
+                    <span class="dashboard-shortcut-label">مراجعة</span>
+                    <strong>@workflowUnderReviewCount</strong>
+                    <small>حالات تتطلب قرارًا إداريًا الآن.</small>
+                </a>
+                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="Stopped"
+                       class="dashboard-shortcut-card dashboard-shortcut-dark">
+                    <span class="dashboard-shortcut-label">موقوفة</span>
+                    <strong>@workflowStoppedCount</strong>
+                    <small>تصاريح تحولت إلى إيقاف بعد التصعيد.</small>
+                </a>
+                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="Closed"
+                       class="dashboard-shortcut-card dashboard-shortcut-green">
+                    <span class="dashboard-shortcut-label">مغلقة</span>
+                    <strong>@workflowClosedCount</strong>
+                    <small>حالات أغلقت إداريًا أو دون مخالفة نهائية.</small>
+                </a>
+            </div>
+        </section>
+    }
+
+    <section class="dashboard-panel dashboard-permits-panel">
+        <div class="dashboard-panel-head">
+            <div>
+                <h2>الطلبات المؤهلة للتسجيل</h2>
+                <p>بطاقات مختصرة تعرض الطلبات التي تنتظر الاعتماد، مع وصول سريع إلى الإضافة أو العرض الكامل.</p>
+            </div>
+            @if (canCreatePermits)
+            {
+                <div class="dashboard-panel-actions">
+                    <a asp-controller="Permits" asp-action="Create" class="btn btn-primary">إضافة طلب</a>
+                </div>
+            }
+        </div>
+
+        @if (pendingPermitCount > 0)
+        {
+            <div class="dashboard-permits-list">
+                @foreach (var permit in pendingPermits)
+                {
+                    <article class="dashboard-permit-item">
+                        <div class="dashboard-permit-icon">
+                            <img src="~/icons/permit.svg" alt="" />
+                        </div>
+                        <div class="dashboard-permit-content">
+                            <strong>@permit.DriverName</strong>
+                            <span>@permit.PermitNumber - @permit.PermitTypeDisplay</span>
+                        </div>
+                        <div class="dashboard-permit-meta">
+                            <span>ينتهي: @(permit.ExpiresAt.HasValue? permit.ExpiresAt.Value.ToString("dd/MM/yyyy") : "-")</span>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="dashboard-empty-state">
+                <div class="dashboard-empty-illustration">
+                    <img src="~/icons/account.svg" alt="" />
+                </div>
+                <h3>لا توجد طلبات بانتظار التسجيل</h3>
+                <p>يمكنك البدء بإضافة طلب جديد أو الانتقال إلى التصاريح لعرض الحالة الكاملة.</p>
+                @if (canCreatePermits)
+                {
+                    <a asp-controller="Permits" asp-action="Create" class="btn btn-primary">إضافة طلب</a>
+                }
+                else if (canViewPermits)
+                {
+                    <a asp-controller="Permits" asp-action="Index" class="btn btn-outline-primary">عرض التصاريح</a>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="dashboard-shortcuts-title">الخدمات المميزة</section>
+    <div class="dashboard-shortcuts-grid">
+        @if (canViewPermits)
+        {
+            <a asp-controller="Permits" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-blue">
+                <span class="dashboard-shortcut-icon"><img src="~/icons/permit.svg" alt="" /></span>
+                <span class="dashboard-shortcut-label">التصاريح</span>
+                <strong>@ViewBag.TotalPermits</strong>
+                <small>إجمالي التصاريح المسجلة</small>
+            </a>
+        }
+        @if (canViewVisits)
+        {
+            <a asp-controller="Visits" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-green">
+                <span class="dashboard-shortcut-icon"><img src="~/icons/visit.svg" alt="" /></span>
+                <span class="dashboard-shortcut-label">الزيارات</span>
+                <strong>@ViewBag.TotalVisits</strong>
+                <small>الزيارات المسجلة حاليًا</small>
+            </a>
+        }
+        @if (User.HasPermission(AppPermissions.ViewPermits) || User.HasPermission(AppPermissions.ViewVisits))
+        {
+            <a asp-controller="Reports" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-dark">
+                <span class="dashboard-shortcut-icon"><img src="~/icons/reports.svg" alt="" /></span>
+                <span class="dashboard-shortcut-label">التقارير</span>
+                <strong>@(ViewBag.ActivePermits + ViewBag.SuspendedVisits)</strong>
+                <small>مؤشرات النشاط الحالية</small>
+            </a>
+        }
+        @if (User.HasPermission(AppPermissions.ViewDisplays))
+        {
+            <a asp-controller="Display" asp-action="Access" class="dashboard-shortcut-card dashboard-shortcut-cyan">
+                <span class="dashboard-shortcut-icon"><img src="~/icons/display.svg" alt="" /></span>
+                <span class="dashboard-shortcut-label">شاشات العرض</span>
+                <strong>مباشر</strong>
+                <small>واجهة العرض المباشرة</small>
+            </a>
+        }
+        @if (User.HasPermission(AppPermissions.ScanOperations))
+        {
+            <a asp-controller="ScanConsole" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-dark">
+                <span class="dashboard-shortcut-icon"><img src="~/icons/permit.svg" alt="" /></span>
+                <span class="dashboard-shortcut-label">مسح باركود</span>
+                <strong>فحص</strong>
+                <small>واجهة تجربة القراءة المباشرة</small>
+            </a>
+        }
+    </div>

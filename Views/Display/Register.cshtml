@@ -1,0 +1,83 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Display.DisplayDeviceRegistrationViewModel
+@using VehiclePermitSystemWeb.Services.Administration
+@inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
+
+@{
+    ViewData["Title"] = "تسجيل شاشة عرض";
+    var administrationSettings = UserAdminService.GetAdministrationSettings();
+    var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
+    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
+}
+
+<div class="login-page-shell display-register-shell">
+    <div class="login-page-overlay"></div>
+
+    <section class="login-page-card login-card-wide display-register-card">
+        <div class="login-page-brand-row">
+            <img src="~/@organizationLogoPath" alt="شعار @organizationName" class="login-page-logo" />
+            <div>
+                <div class="login-page-kicker">شاشات العرض</div>
+                <div class="login-page-brand-name">@organizationName</div>
+            </div>
+        </div>
+        <h1 class="login-page-title">تسجيل شاشة عرض</h1>
+        <p class="login-page-subtitle">أدخل بيانات الجهاز ومفتاح الإعداد لإرسال طلب الاعتماد إلى مسؤول النظام.</p>
+        @if (Model.Submitted)
+        {
+            <div class="app-inline-note app-inline-note-success">@Model.Message</div>
+            <script nonce="@(Context.Items["CspScriptNonce"])">
+                const pollDisplayApproval = function () {
+                    fetch('@Url.Action("ActivationStatus", "Display")', { method: 'POST', credentials: 'same-origin' })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data && data.approved) {
+                                window.location.href = '@Url.Action("Gate", "Display")';
+                            }
+                        });
+                };
+                pollDisplayApproval();
+                setInterval(pollDisplayApproval, 5000);
+            </script>
+        }
+        else
+        {
+            <form asp-action="Register" method="post" class="row g-3 login-form-grid">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="col-md-6 login-field">
+                    <label asp-for="ScreenName" class="form-label">اسم الشاشة</label>
+                    <input asp-for="ScreenName" class="form-control" placeholder="شاشة البوابة" />
+                    <span asp-validation-for="ScreenName" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 login-field">
+                    <label asp-for="ScreenLocation" class="form-label">موقع الشاشة</label>
+                    <input asp-for="ScreenLocation" class="form-control" placeholder="البوابة الرئيسية" />
+                    <span asp-validation-for="ScreenLocation" class="text-danger"></span>
+                </div>
+                <div class="col-12 login-field">
+                    <label asp-for="Description" class="form-label">وصف اختياري</label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="col-12 login-field">
+                    <label asp-for="SetupKey" class="form-label">مفتاح إعداد شاشة العرض</label>
+                    <input asp-for="SetupKey" class="form-control ltr-field" autocomplete="off" />
+                    <span asp-validation-for="SetupKey" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary login-submit-button w-100">إرسال طلب اعتماد</button>
+                </div>
+            </form>
+            <script nonce="@(Context.Items["CspScriptNonce"])">
+                (function () {
+                    const params = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+                    const setupKey = params.get('setupKey');
+                    const setupKeyInput = document.getElementById('SetupKey');
+                    if (setupKey && setupKeyInput && !setupKeyInput.value) {
+                        setupKeyInput.value = setupKey;
+                        history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                    }
+                })();
+            </script>
+        }
+    </section>
+</div>

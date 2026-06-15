@@ -1,0 +1,12 @@
+@{
+    ViewData["Title"] = "رفض الوصول";
+}
+
+<div class="card-permit text-center">
+    <h1 class="mb-3">ليس لديك صلاحية للوصول</h1>
+    <p class="text-muted-ar">حسابك مسجل بنجاح، لكن هذه الصفحة متاحة لدور آخر فقط.</p>
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">العودة إلى اللوحة الرئيسية</a>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-outline-secondary">تبديل الحساب</a>
+    </div>
+</div>

@@ -1,0 +1,106 @@
+@model VehiclePermitSystemWeb.Models.Entities.UserAccount
+
+@{
+    Layout = null;
+    ViewData["Title"] = "طباعة بطاقة مشغل البوابة";
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="@Url.Content("~/css/print-badges.css")" />
+    <style nonce="@(Context.Items["CspStyleNonce"])">
+            body {
+                margin: 0;
+                font-family: "Segoe UI", Tahoma, sans-serif;
+                background: #f3f6fb;
+                color: #0f172a;
+                display: grid;
+                place-items: center;
+                min-height: 100vh;
+            }
+
+            .badge-sheet {
+                width: 420px;
+                background: #ffffff;
+                border: 1px solid #d7dfec;
+                border-radius: 18px;
+                padding: 24px;
+                box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+                text-align: center;
+            }
+
+            .badge-sheet h1 {
+                margin: 0 0 8px;
+                font-size: 1.4rem;
+            }
+
+            .badge-meta {
+                color: #475569;
+                margin-bottom: 18px;
+            }
+
+            .badge-code {
+                margin-top: 12px;
+                font-weight: 700;
+                direction: ltr;
+                letter-spacing: 0.08em;
+            }
+
+            .badge-hint {
+                margin-top: 18px;
+                padding: 12px 14px;
+                border-radius: 12px;
+                background: #eef6ff;
+                color: #1d4ed8;
+                font-size: 0.92rem;
+            }
+
+            @@page {
+                size: A4 portrait;
+                margin: 0;
+            }
+
+            @@media print {
+                html,
+                body {
+                    background: #fff;
+                    min-height: auto;
+                    width: 100%;
+                }
+
+                body {
+                    padding: 10mm;
+                    place-items: start center;
+                }
+
+                .badge-sheet {
+                    box-shadow: none;
+                    border-color: #cbd5e1;
+                    break-inside: avoid;
+                    page-break-inside: avoid;
+                }
+            }
+    </style>
+</head>
+
+<body>
+    <section class="badge-sheet">
+        <h1>بطاقة مشغل البوابة</h1>
+        <div class="badge-meta">@Model.DisplayName</div>
+        <div class="badge-meta">رقم الهوية: <span class="national-id-field">@Model.Username</span></div>
+           <img src="@Url.Action("OperatorBadge", "Users", new { id = Model.Username })" alt="باركود المشغل"
+               class="badge-barcode-image" />
+        <div class="badge-code">@Model.OperatorBadgeCode</div>
+        <div class="badge-hint">يُسلم الرمز السري المؤقت بشكل منفصل ولا يطبع على البطاقة.</div>
+    </section>
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        window.print();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,54 @@
+# Build
+bin/
+obj/
+publish/
+artifacts/
+
+# IDE
+.vs/
+.vscode/
+
+# Tools / generated
+.tools/
+.config/
+.localdata/
+.online-storage/
+
+# Runtime files
+*.exe
+*.dll
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+*.cache
+*.lscache
+*.tmp
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+*.bak
+*.sqlite*
+*.localdata
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# User files
+*.user
+*.suo
+
+# Uploads
+wwwroot/uploads/
+
+# Env
+.env
+.venv/
+test-results/
+playwright-report/
+security-audit/zap-report-*.html
+security-audit/zap-report-*.md

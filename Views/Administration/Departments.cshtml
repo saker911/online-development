@@ -1,0 +1,1319 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Departments.DepartmentManagementViewModel
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+
+@{
+    ViewData["Title"] = "مركز التعيين والنقل القيادي";
+    var isEditing = Model.Department?.Id > 0;
+    var isSuperAdmin = User.IsSuperAdmin();
+    var openCreatePanel = (ViewData["OpenCreatePanel"] as bool?) == true;
+    var openTransferPanel = (ViewData["OpenTransferPanel"] as bool?) == true;
+    var openManagerHandoverModal = (ViewData["OpenManagerHandoverModal"] as bool?) == true;
+    var transferSourceDepartment = Model.Departments.FirstOrDefault(x => x.Id == Model.TransferSourceDepartmentId);
+    var transferSourceManagerUsername = transferSourceDepartment?.ManagerUsername ?? string.Empty;
+    var transferSourceManagerName = string.IsNullOrWhiteSpace(transferSourceDepartment?.ManagerDisplayName)
+        ? transferSourceManagerUsername
+        : transferSourceDepartment!.ManagerDisplayName;
+    var selectedTransferReplacementManagerUsername = Model.TransferReplacementManagerUsername ?? string.Empty;
+    var regularDepartments = Model.Departments.ToList();
+    var selectedHandoverDepartment = regularDepartments.FirstOrDefault(x => x.Id == Model.Handover.DepartmentId);
+    var selectedHandoverManagerUsername = selectedHandoverDepartment?.ManagerUsername ?? string.Empty;
+    var selectedHandoverManagerName = string.IsNullOrWhiteSpace(selectedHandoverDepartment?.ManagerDisplayName)
+        ? selectedHandoverManagerUsername
+        : selectedHandoverDepartment!.ManagerDisplayName;
+    var selectedHandoverWizardStep = Model.Handover.WizardStep < 1 ? 1 : Model.Handover.WizardStep > 3 ? 3 :
+Model.Handover.WizardStep;
+    var assignmentTypeOptions = new[]
+    {
+        new { Value = DepartmentManagerTransitionTypes.Permanent, Label = "مدير أساسي" },
+        new { Value = DepartmentManagerTransitionTypes.Acting, Label = "مدير مكلّف مؤقتًا" },
+    };
+    var exitActionOptions = new[]
+    {
+        new { Value = DepartmentManagerExitActions.Retirement, Label = "تقاعد" },
+        new { Value = DepartmentManagerExitActions.Resignation, Label = "استقالة" },
+        new { Value = DepartmentManagerExitActions.EndAssignment, Label = "إنهاء تكليف" },
+        new { Value = DepartmentManagerExitActions.ExternalTransfer, Label = "نقل خارجي" },
+        new { Value = DepartmentManagerExitActions.InternalTransfer, Label = "نقل داخلي" },
+    };
+    var selectedHandoverAssignmentTypeLabel = assignmentTypeOptions
+        .FirstOrDefault(item => string.Equals(item.Value, Model.Handover.AssignmentType,
+StringComparison.OrdinalIgnoreCase))?.Label ?? "تثبيت";
+    var selectedHandoverExitActionLabel = exitActionOptions
+        .FirstOrDefault(item => string.Equals(item.Value, Model.Handover.ExitAction, StringComparison.OrdinalIgnoreCase))?.Label
+?? "إنهاء تكليف";
+    var selectedExistingReplacementManager = Model.HandoverManagerOptions.FirstOrDefault(user =>
+        string.Equals(user.Username, Model.Handover.ExistingManagerUsername, StringComparison.OrdinalIgnoreCase)
+    );
+    var selectedHandoverReplacementLabel = Model.Handover.CreateNewManager
+        ? string.IsNullOrWhiteSpace(Model.Handover.NewManagerFullName)
+            ? (string.IsNullOrWhiteSpace(Model.Handover.NewManagerUsername) ? "لم يحدد بعد" : Model.Handover.NewManagerUsername)
+            : $"{Model.Handover.NewManagerFullName} ({Model.Handover.NewManagerUsername})"
+        : selectedExistingReplacementManager == null
+            ? "لم يحدد بعد"
+            : $"{selectedExistingReplacementManager.DisplayName} ({selectedExistingReplacementManager.Username})";
+    var selectedHandoverTargetDepartmentName = regularDepartments.FirstOrDefault(department => department.Id ==
+Model.Handover.PreviousManagerTargetDepartmentId)?.Name
+        ?? "غير مطلوب";
+    var activeDepartmentCount = regularDepartments.Count(department => department.IsActive);
+    var assignedManagerCount = regularDepartments.Count(department =>
+        !string.IsNullOrWhiteSpace(department.ManagerUsername)
+    );
+    var vacantManagerCount = regularDepartments.Count - assignedManagerCount;
+    var departmentEmployeeCount = Model.DepartmentUsersByDepartmentId.Values.Sum(users => users.Count);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/leadership.css" asp-append-version="true" />
+}
+
+<style nonce="@(Context.Items["CspStyleNonce"])">
+    .manager-handover-modal .modal-content {
+        background: var(--t-modal-bg, var(--bs-body-bg, #fff));
+        color: var(--t-text, var(--bs-body-color, #212529));
+        border: 1px solid var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        box-shadow: var(--t-modal-shadow, var(--bs-box-shadow-lg, 0 1rem 3rem rgba(0, 0, 0, 0.175)));
+    }
+
+    .manager-handover-modal .modal-header,
+    .manager-handover-modal .modal-footer {
+        border-color: var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        background: color-mix(in srgb, var(--t-surface, var(--bs-body-bg, #fff)) 88%, transparent);
+    }
+
+    .manager-handover-stepper {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .manager-handover-step {
+        border: 1px solid var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        border-radius: 1rem;
+        background: var(--t-surface-alt, var(--bs-body-bg, #fff));
+        padding: 0.9rem 1rem;
+        text-align: right;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        color: var(--t-text, var(--bs-body-color, #212529));
+        cursor: pointer;
+    }
+
+    .manager-handover-step.is-active {
+        border-color: var(--t-green, var(--bs-success, #198754));
+        box-shadow: 0 0 0 0.15rem color-mix(in srgb, var(--t-green, #198754) 20%, transparent);
+        background: color-mix(in srgb, var(--t-green-soft, rgba(25, 135, 84, 0.08)) 70%, var(--t-surface, var(--bs-body-bg, #fff)));
+    }
+
+    .manager-handover-step.is-complete {
+        border-color: color-mix(in srgb, var(--t-green, #198754) 45%, var(--t-border, #d0d7de));
+    }
+
+    .manager-handover-step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 999px;
+        border: 1px solid var(--t-border, var(--bs-border-color, #d0d7de));
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .manager-handover-step.is-active .manager-handover-step-number,
+    .manager-handover-step.is-complete .manager-handover-step-number {
+        background: var(--t-green, var(--bs-success, #198754));
+        border-color: var(--t-green, var(--bs-success, #198754));
+        color: var(--t-text-inverse, #fff);
+    }
+
+    .manager-handover-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .manager-handover-choice {
+        width: 100%;
+        border: 1px solid var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        border-radius: 1rem;
+        background: var(--t-surface, var(--bs-body-bg, #fff));
+        padding: 1rem;
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        color: var(--t-text, var(--bs-body-color, #212529));
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .manager-handover-choice.is-active {
+        border-color: var(--t-green, var(--bs-success, #198754));
+        box-shadow: 0 0 0 0.15rem color-mix(in srgb, var(--t-green, #198754) 20%, transparent);
+        background: color-mix(in srgb, var(--t-green-soft, rgba(25, 135, 84, 0.08)) 70%, var(--t-surface, var(--bs-body-bg, #fff)));
+    }
+
+    .manager-handover-choice small {
+        color: var(--t-text-muted, var(--bs-secondary-color, #6c757d));
+    }
+
+    .manager-handover-panel-shell {
+        border: 1px solid var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        border-radius: 1rem;
+        padding: 1rem;
+        background: var(--t-surface, var(--bs-body-bg, #fff));
+    }
+
+    .manager-handover-panel-shell.is-muted {
+        background: var(--t-surface-soft, var(--bs-secondary-bg, #f8f9fa));
+    }
+
+    .manager-handover-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
+    }
+
+    .manager-handover-summary-item {
+        border: 1px solid var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        border-radius: 0.9rem;
+        background: var(--t-surface-alt, rgba(33, 37, 41, 0.03));
+        padding: 0.85rem 1rem;
+    }
+
+    .manager-handover-summary-item span {
+        display: block;
+        color: var(--t-text-muted, var(--bs-secondary-color, #6c757d));
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .manager-handover-summary-item strong {
+        display: block;
+        word-break: break-word;
+    }
+</style>
+
+<div class="card-permit leadership-shell">
+    <div class="leadership-hero">
+        <div class="leadership-hero-copy">
+            <span class="leadership-kicker">الحوكمة التنظيمية</span>
+            <div class="leadership-title-row">
+                <span class="leadership-title-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3v5M5 21v-4a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v4M7.5 7.5a4.5 4.5 0 1 0 9 0 4.5 4.5 0 0 0-9 0z" />
+                    </svg>
+                </span>
+                <div>
+                    <h1>مركز التعيين والنقل القيادي</h1>
+                    <p>مسار موحد لتعيين المدير العام، إسناد مدراء الأقسام، ومعالجة النقل والتقاعد دون فصل الحسابات عن هيكلها التنظيمي.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="leadership-actions">
+            <a asp-action="Edit" class="btn btn-outline-secondary">العودة إلى بيانات الإدارة</a>
+            @if (isSuperAdmin)
+            {
+                <button type="button" class="btn btn-primary" id="openGeneralManagerWizardButton"
+                        data-has-current-general-manager="@(!string.IsNullOrWhiteSpace(Model.CurrentGeneralManagerUsername)).ToString().ToLowerInvariant()"
+                        data-current-general-manager-name="@Model.CurrentGeneralManagerName">
+                    إدارة المدير العام
+                </button>
+            }
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse"
+                    data-bs-target="#createDepartmentPanel" aria-expanded="@(openCreatePanel ? "true" : "false")"
+                    aria-controls="createDepartmentPanel">
+                تهيئة قسم
+            </button>
+            @if (Model.TransferSourceDepartmentId > 0)
+            {
+                <button type="button" class="btn btn-warning" data-bs-toggle="collapse"
+                        data-bs-target="#transferDepartmentPanel" aria-expanded="@(openTransferPanel ? "true" : "false")"
+                        aria-controls="transferDepartmentPanel">
+                    نقل الموظفين
+                </button>
+                <a asp-action="Leadership" class="btn btn-outline-warning">إلغاء النقل</a>
+            }
+        </div>
+    </div>
+
+    <div class="leadership-metrics">
+        <div class="leadership-metric leadership-metric-primary">
+            <span>الأقسام النشطة</span>
+            <strong>@activeDepartmentCount</strong>
+            <small>من أصل @regularDepartments.Count أقسام</small>
+        </div>
+        <div class="leadership-metric leadership-metric-success">
+            <span>المديرون المعينون</span>
+            <strong>@assignedManagerCount</strong>
+            <small>ارتباطات قيادية فعالة</small>
+        </div>
+        <div class="leadership-metric leadership-metric-warning">
+            <span>أقسام دون مدير</span>
+            <strong>@vacantManagerCount</strong>
+            <small>تحتاج إسنادًا قياديًا</small>
+        </div>
+        <div class="leadership-metric leadership-metric-info">
+            <span>الموظفون المرتبطون</span>
+            <strong>@departmentEmployeeCount</strong>
+            <small>ضمن الهيكل التنظيمي</small>
+        </div>
+    </div>
+
+    <div class="app-inline-note app-inline-note-info leadership-guidance">
+        <strong>كيف تستخدم المركز؟</strong>
+        <span>أنشئ الحسابات من شاشة المستخدمين، ثم استخدم هذه الصفحة لإسناد القيادة أو نقل المدير أو تقاعده مع سحب الصلاحيات السابقة تلقائيًا.</span>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+    @if (Model.AdministrationDepartment != null)
+    {
+        <div class="leadership-administration-card">
+            <div>
+                <span class="leadership-card-label">الإدارة الرئيسية</span>
+                <h2>@Model.AdministrationDepartment.Name</h2>
+                <p>يمثل هذا السجل الإدارة العامة ويعرض منفصلًا عن أقسام التشغيل.</p>
+            </div>
+            <div class="leadership-administration-manager">
+                <span>المدير العام الحالي</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.AdministrationDepartment.ManagerDisplayName)
+                                                                                                    ? Model.AdministrationDepartment.ManagerUsername
+                                                                                                    : Model.AdministrationDepartment.ManagerDisplayName)</strong>
+                <small class="@(Model.AdministrationDepartment.IsActive ? "is-active" : "is-inactive")">@(Model.AdministrationDepartment.IsActive ? "إدارة نشطة" : "إدارة موقوفة")</small>
+            </div>
+        </div>
+    }
+
+                <div id="createDepartmentPanel" class="collapse @(openCreatePanel ? "show" : string.Empty)">
+                    <div class="card card-body mb-4 shadow-sm border-0">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                            <div>
+                                <h5 class="mb-1">@(isEditing ? "تحديث بيانات القسم" : "تهيئة قسم جديد")</h5>
+                                <div class="text-muted small">@(isEditing ? "حدّث الاسم أو الحالة للحفاظ على الهيكل التنظيمي المعتمد." : "هذه المنطقة مخصصة لتهيئة الهيكل التنظيمي قبل إسناد المديرين ونقلهم.")</div>
+                            </div>
+                            @if (isEditing)
+                            {
+                                <a asp-action="Leadership" class="btn btn-sm btn-outline-secondary">إلغاء التعديل</a>
+                            }
+                        </div>
+
+                        <form asp-action="Departments" method="post" id="departmentForm">
+                            @Html.AntiForgeryToken()
+                            <input asp-for="Department.Id" type="hidden" />
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-8">
+                                    <label asp-for="Department.Name" class="form-label">اسم القسم</label>
+                                    <input asp-for="Department.Name" class="form-control" placeholder="مثال: شؤون الموظفين" />
+                                    <span asp-validation-for="Department.Name" class="field-validation-error small"></span>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check mt-4 pt-2">
+                                        <input asp-for="Department.IsActive" class="form-check-input" />
+                                        <label asp-for="Department.IsActive" class="form-check-label">نشط</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">@(isEditing ? "حفظ التعديلات" : "حفظ التهيئة")</button>
+                                <a asp-action="Leadership" class="btn btn-outline-secondary">تفريغ</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                @if (isSuperAdmin)
+                {
+                    @await Html.PartialAsync("_GeneralManagerWizard", Model)
+                }
+
+                <div id="transferDepartmentPanel" class="collapse @(openTransferPanel ? "show" : string.Empty)">
+                    <div class="card card-body mb-4 shadow-sm border-0">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                            <div>
+                                <h5 class="mb-1">نقل موظفين قبل الحذف</h5>
+                                <div class="text-muted small">اختر قسمًا هدفًا وانقل الجميع أو اختر موظفين محددين فقط.</div>
+                            </div>
+                        </div>
+
+                        <form asp-action="TransferDepartmentUsers" method="post">
+                            @Html.AntiForgeryToken()
+                            <input asp-for="TransferSourceDepartmentId" type="hidden" />
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-4">
+                                    <input class="form-control" value="@(transferSourceDepartment?.Name ?? "-- اختر القسم --")"
+                                           disabled />
+                                </div>
+                                <div class="col-md-4">
+                                    <label asp-for="TransferTargetDepartmentId" class="form-label">القسم الهدف</label>
+                                    <select asp-for="TransferTargetDepartmentId" class="form-select" data-smart-select="true"
+                                            data-smart-select-placeholder="ابحث عن القسم الهدف أو اختره">
+                                        <option value="0">-- اختر القسم الهدف --</option>
+                                        @foreach (var department in regularDepartments)
+                                        {
+                                            if (department.Id != Model.TransferSourceDepartmentId)
+                                            {
+                                                <option value="@department.Id">@department.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check mt-4 pt-2">
+                                        <input asp-for="TransferAllUsers" class="form-check-input" />
+                                        <label asp-for="TransferAllUsers" class="form-check-label">نقل الجميع</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="text-muted small mb-2">الموظفون الموجودون حاليًا في هذا القسم:</div>
+                                <div class="mb-2">
+                                    <input type="text" class="form-control form-control-sm" id="transfer-users-search"
+                                           placeholder="ابحث عن موظف بالنص أو رقم المستخدم" autocomplete="off" />
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (Model.TransferSourceUsers.Count == 0)
+                                    {
+                                        <span class="text-muted">لا يوجد موظفون في هذا القسم.</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small w-100" id="transfer-users-search-empty" hidden>لا
+                                            توجد نتائج مطابقة.</span>
+                                            @foreach (var user in Model.TransferSourceUsers)
+                                            {
+                                                var isSelectedTransferUser = Model.SelectedTransferUsernames.Any(selected =>
+                                                    string.Equals(selected, user.Username, StringComparison.OrdinalIgnoreCase)
+                                                );
+                                                <label class="badge text-bg-light border" data-transfer-user-item="true"
+                                                       data-transfer-user-name="@($"{user.DisplayName} {user.Username}".ToLowerInvariant())">
+                                                    <input type="checkbox" name="SelectedTransferUsernames" value="@user.Username"
+                                                           class="form-check-input me-1" @(isSelectedTransferUser ? "checked" : null) />
+                                                    <span>@user.DisplayName (@user.Username)</span>
+                                                </label>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrWhiteSpace(transferSourceManagerUsername))
+                                {
+                                    <div class="mt-3 row g-3 align-items-end">
+                                        <div class="col-md-6">
+                                            <div class="app-inline-note app-inline-note-warning py-2 mb-0">
+                                                إذا شمل النقل المدير الحالي للقسم (@transferSourceManagerName)، فيجب اختيار مدير بديل قبل
+                                                تنفيذ العملية.
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label asp-for="TransferReplacementManagerUsername" class="form-label">بديل مدير القسم</label>
+                                            <select asp-for="TransferReplacementManagerUsername" class="form-select"
+                                                    data-smart-select="true" data-smart-select-placeholder="ابحث عن المدير البديل أو اختره">
+                                                <option value="">-- اختر البديل عند نقل المدير الحالي --</option>
+                                                @foreach (var manager in Model.TransferReplacementOptions)
+                                                {
+                                                    var managerDepartmentLabel = string.IsNullOrWhiteSpace(manager.Department) ? "بدون قسم" :
+                                            manager.Department;
+                                                    <option value="@manager.Username"
+                                                            selected="@(string.Equals(selectedTransferReplacementManagerUsername, manager.Username, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                                        @manager.DisplayName (@manager.Username) - @managerDepartmentLabel
+                                                    </option>
+                                                }
+                                            </select>
+                                            @if (Model.TransferReplacementOptions.Count == 0)
+                                            {
+                                                <div class="form-text text-danger">لا يوجد مدير مؤهل غير مرتبط بقسم حاليًا. حرر مديرًا أو أنشئ
+                                                    مدير قسم جديدًا أولًا.</div>
+                                                }
+                            else
+                                                {
+                                                    <div class="form-text">يظهر هنا فقط المديرون النشطون غير المرتبطين حاليًا بقسم آخر حتى لا يُسحب
+                                                        مدير من قسم مختلف بالخطأ.</div>
+                                                    }
+                                                    <span asp-validation-for="TransferReplacementManagerUsername"
+                                                          class="field-validation-error small"></span>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                                            <button type="submit" class="btn btn-warning">تنفيذ النقل</button>
+                                            <a asp-action="Leadership" class="btn btn-outline-secondary">إلغاء</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            @if (isSuperAdmin)
+                            {
+                                <div class="leadership-section-heading">
+                                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                                        <div>
+                                            <h5 class="mb-1">نقل المدير الحالي</h5>
+                                            <div class="text-muted small">من كل صف قسم يمكنك فتح نموذج خطوات واضح: تحديد نوع الإسناد، اختيار المدير
+                                                الجديد، ثم اعتماد وضع المدير السابق قبل التنفيذ.</div>
+                                            </div>
+                                            <div class="text-muted small">متاح فقط لمالك النظام</div>
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="table-responsive leadership-table-wrap">
+                                    <table class="table table-striped align-middle permit-list-table app-data-table department-management-table">
+                                        <thead>
+                                            <tr>
+                                                <th>القسم</th>
+                                                <th>المدير</th>
+                                                <th>الموظفون</th>
+                                                <th>الحالة</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var department in regularDepartments)
+                                            {
+                                                var currentManagerDepartment = Model.UserDepartmentsByUsername.TryGetValue(
+                                                    department.ManagerUsername ?? string.Empty,
+                                                    out var resolvedManagerDepartment
+                                                )
+                                                    ? resolvedManagerDepartment
+                                                    : string.Empty;
+                                                var currentManagerUsername = (department.ManagerUsername ?? string.Empty).Trim();
+                                                <tr>
+                                                    <td>@department.Name</td>
+                                                    <td>
+                                                        @if (!string.IsNullOrWhiteSpace(department.ManagerDisplayName))
+                                                        {
+                                                            <span>@department.ManagerDisplayName</span>
+                                                            <span class="text-muted small">(@(string.IsNullOrWhiteSpace(currentManagerDepartment) ? "بدون قسم" : currentManagerDepartment))</span>
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(department.ManagerUsername))
+                                                        {
+                                                            <span>@department.ManagerUsername</span>
+                                                            <span class="text-muted small">(@(string.IsNullOrWhiteSpace(currentManagerDepartment) ? "بدون قسم" : currentManagerDepartment))</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">بدون تعيين</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (Model.DepartmentUsersByDepartmentId.TryGetValue(department.Id, out var departmentUsers) &&
+                                                                                                                                                                                departmentUsers.Count > 0)
+                                                        {
+                                                            var visibleDepartmentUsers = departmentUsers
+                                                                .Where(user => !string.Equals(user.Username, currentManagerUsername,
+                                                    StringComparison.OrdinalIgnoreCase))
+                                                                .ToList();
+                                                            if (visibleDepartmentUsers.Count > 0)
+                                                            {
+                                                                var remainingUserCount = visibleDepartmentUsers.Count - 2;
+                                                                var visibleUserNames = string.Join("، ", visibleDepartmentUsers.Select(user =>
+                                                    user.DisplayName));
+                                                                <div class="d-flex flex-column gap-1">
+                                                                    <span class="text-muted small">@($"{visibleDepartmentUsers.Count} موظف")</span>
+                                                                    <div class="d-flex flex-wrap gap-1" title="@visibleUserNames">
+                                                                        @foreach (var user in visibleDepartmentUsers.Take(2))
+                                                                        {
+                                                                            <span class="badge text-bg-light border">@user.DisplayName</span>
+                                                                        }
+                                                                        @if (remainingUserCount > 0)
+                                                                        {
+                                                                            <span class="badge text-bg-secondary">@($"+{remainingUserCount}")</span>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted">لا يوجد موظفون إضافيون غير المدير الحالي</span>
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">لا يوجد موظفون</span>
+                                                        }
+                                                    </td>
+                                                    <td>@(department.IsActive ? "نشط" : "موقوف")</td>
+                                                    <td>
+                                                        <div class="record-row-actions department-row-actions">
+                                                                                <a asp-action="Leadership" asp-route-id="@department.Id"
+                                                               class="record-icon-action record-icon-action-warning"
+                                                               data-bs-toggle="tooltip" data-bs-title="تعديل" title="تعديل"
+                                                               aria-label="تعديل القسم @department.Name">
+                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <path d="M4 20h4l10.3-10.3a1.4 1.4 0 0 0 0-2L16.3 5.7a1.4 1.4 0 0 0-2 0L4 16v4zM13.5 6.5l4 4"
+                                                                          fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                                </svg>
+                                                            </a>
+                                                                                <a asp-action="Leadership" asp-route-transferFromId="@department.Id"
+                                                               class="record-icon-action record-icon-action-primary"
+                                                               data-bs-toggle="tooltip" data-bs-title="نقل موظفين" title="نقل موظفين"
+                                                               aria-label="نقل موظفي القسم @department.Name">
+                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <path d="M7 7h10M17 7l-3-3M17 7l-3 3M17 17H7M7 17l3-3M7 17l3 3"
+                                                                          fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                                </svg>
+                                                            </a>
+                                                            @if (!string.IsNullOrWhiteSpace(currentManagerUsername))
+                                                            {
+                                                                                     <a asp-action="Leadership" asp-route-handoverDepartmentId="@department.Id"
+                                                                   class="record-icon-action"
+                                                                   data-bs-toggle="tooltip" data-bs-title="نقل المدير الحالي"
+                                                                   title="نقل المدير الحالي"
+                                                                   aria-label="نقل المدير الحالي للقسم @department.Name">
+                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                        <path d="M16 11a4 4 0 1 0-8 0M5 21a7 7 0 0 1 14 0M17 4h4m0 0v4m0-4-5 5"
+                                                                              fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                              stroke-linecap="round" stroke-linejoin="round" />
+                                                                    </svg>
+                                                                </a>
+                                                            }
+                                                            else
+                                                            {
+                                                                <a asp-controller="Users" asp-action="Create"
+                                                                   asp-route-presetRole="@AppRoles.DepartmentManager"
+                                                                   asp-route-creationFlow="department-manager"
+                                                                   asp-route-department="@department.Name"
+                                                                   class="record-icon-action record-icon-action-success"
+                                                                   data-bs-toggle="tooltip" data-bs-title="تعيين مدير"
+                                                                   title="تعيين مدير"
+                                                                   aria-label="تعيين مدير للقسم @department.Name">
+                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                        <path d="M12 5v14M5 12h14" fill="none"
+                                                                              stroke="currentColor" stroke-width="1.9"
+                                                                              stroke-linecap="round" />
+                                                                    </svg>
+                                                                </a>
+                                                            }
+                                                            <form asp-action="DeleteDepartment" method="post" class="record-icon-form"
+                                                                  onsubmit="return confirm('هل تريد حذف القسم @department.Name؟');">
+                                                                @Html.AntiForgeryToken()
+                                                                <input type="hidden" name="id" value="@department.Id" />
+                                                                <button type="submit" class="record-icon-action record-icon-action-danger"
+                                                                        data-bs-toggle="tooltip" data-bs-title="حذف" title="حذف"
+                                                                        aria-label="حذف القسم @department.Name">
+                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7l1-3h4l1 3"
+                                                                              fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                              stroke-linecap="round" stroke-linejoin="round" />
+                                                                    </svg>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            @if (isSuperAdmin)
+                            {
+                                <div class="modal fade manager-handover-modal" id="managerHandoverModal" tabindex="-1"
+                                     aria-labelledby="managerHandoverModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <form asp-action="HandoverDepartmentManager" method="post" id="managerHandoverForm" novalidate>
+                                                @Html.AntiForgeryToken()
+                                                <input asp-for="Handover.DepartmentId" type="hidden" />
+                                                <input asp-for="Handover.WizardStep" type="hidden" />
+                                                <div class="modal-header">
+                                                    <div>
+                                                        <h5 class="modal-title" id="managerHandoverModalLabel">نقل المدير الحالي</h5>
+                                                        <div class="text-muted small mt-1">
+                                                            @(selectedHandoverDepartment == null
+                                                                ? "اختر القسم من زر الصف لفتح تفاصيل التسليم."
+                                                                : $"القسم: {selectedHandoverDepartment.Name} | المدير الحالي:                            {selectedHandoverManagerName}")
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"
+                                                            aria-label="إغلاق"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+                                                    <div class="manager-handover-stepper" id="managerHandoverStepper">
+                                                        <div class="manager-handover-step" data-handover-step-indicator="1">
+                                                            <span class="manager-handover-step-number">1</span>
+                                                            <div class="fw-semibold">طريقة اختيار البديل</div>
+                                                            <div class="text-muted small">اختر حسابًا موجودًا أو أنشئ حسابًا جديدًا.</div>
+                                                        </div>
+                                                        <div class="manager-handover-step" data-handover-step-indicator="2">
+                                                            <span class="manager-handover-step-number">2</span>
+                                                            <div class="fw-semibold">بيانات المدير الجديد</div>
+                                                            <div class="text-muted small">حدد المدير وصفة إدارته للقسم.</div>
+                                                        </div>
+                                                        <div class="manager-handover-step" data-handover-step-indicator="3">
+                                                            <span class="manager-handover-step-number">3</span>
+                                                            <div class="fw-semibold">وضع المدير الحالي</div>
+                                                            <div class="text-muted small">اختر الإجراء ثم راجع أثر النقل قبل التنفيذ.</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="manager-handover-step-panel" data-handover-step-panel="1">
+                                                            <div class="manager-handover-panel-shell">
+                                                                <div class="fw-semibold mb-2">كيف تريد تحديد المدير الجديد؟</div>
+                                                                <div class="text-muted small mb-3">هذا الاختيار لا ينفذ النقل؛ ستراجع جميع التفاصيل في الخطوة الأخيرة.</div>
+                                                                <div class="manager-handover-choice-grid">
+                                                                    <button type="button"
+                                                                            class="manager-handover-choice @(!Model.Handover.CreateNewManager ? "is-active" : string.Empty)"
+                                                                            data-manager-source="existing">
+                                                                        <strong>اختيار حساب موجود</strong>
+                                                                        <small>استخدم حسابًا نشطًا موجودًا في النظام ليصبح مدير القسم مباشرة.</small>
+                                                                    </button>
+                                                                    <button type="button"
+                                                                            class="manager-handover-choice @(Model.Handover.CreateNewManager ? "is-active" : string.Empty)"
+                                                                            data-manager-source="new">
+                                                                        <strong>إنشاء مدير جديد</strong>
+                                                                        <small>يمكن استكمال بيانات المدير الجديد هنا عند الحاجة، مع بقاء شاشة
+                                                                            المستخدمين هي المسار الأساسي لإنشاء الحسابات.</small>
+                                                                        </button>
+                                                                    </div>
+                                                                    <input asp-for="Handover.CreateNewManager" class="d-none" id="handoverCreateNewManager" />
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="manager-handover-step-panel" data-handover-step-panel="2" hidden>
+                                                                <div class="manager-handover-panel-shell">
+                                                                    <div class="fw-semibold mb-2">المدير الجديد</div>
+                                                                    <div class="text-muted small mb-3">@(Model.Handover.CreateNewManager ? "أدخل بيانات المدير الجديد كاملة ليُنشأ الحساب ويُربط بالقسم مباشرة." : "اختر من القائمة حسابًا صالحًا غير مرتبط حاليًا بإدارة أخرى.")</div>
+
+                                                                    <div id="handoverExistingManagerFields" class="row g-3">
+                                                                        <div class="col-12">
+                                                                            <label asp-for="Handover.ExistingManagerUsername" class="form-label">اختر مديرًا
+                                                                                موجودًا</label>
+                                                                                <select asp-for="Handover.ExistingManagerUsername" class="form-select">
+                                                                                    <option value="">-- اختر المدير الجديد --</option>
+                                                                                    @foreach (var user in Model.HandoverManagerOptions)
+                                                                                    {
+                                                                                        var userDepartment = string.IsNullOrWhiteSpace(user.Department) ? "بدون قسم" :
+                                                                                user.Department;
+                                                                                        <option value="@user.Username">@user.DisplayName (@user.Username) -
+                                                                                            @userDepartment</option>
+                                                                                        }
+                                                                                    </select>
+                                                                                    <span asp-validation-for="Handover.ExistingManagerUsername"
+                                                                                          class="field-validation-error small"></span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div id="handoverNewManagerFields" class="row g-3">
+                                                                                <div class="col-md-4">
+                                                                                    <label asp-for="Handover.NewManagerUsername" class="form-label">رقم الهوية</label>
+                                                                                    <input asp-for="Handover.NewManagerUsername" class="form-control ltr-field"
+                                                                                        inputmode="numeric" maxlength="10" pattern="[12][0-9]{9}"
+                                                                                        placeholder="1024722918" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" />
+                                                                                    <span asp-validation-for="Handover.NewManagerUsername"
+                                                                                          class="field-validation-error small"></span>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <label asp-for="Handover.NewManagerFullName" class="form-label">الاسم الكامل</label>
+                                                                                    <input asp-for="Handover.NewManagerFullName" class="form-control" />
+                                                                                    <span asp-validation-for="Handover.NewManagerFullName"
+                                                                                          class="field-validation-error small"></span>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <label asp-for="Handover.NewManagerPhoneNumber" class="form-label">الجوال</label>
+                                                                                    <input asp-for="Handover.NewManagerPhoneNumber" class="form-control ltr-field"
+                                                                                        inputmode="numeric" maxlength="10" pattern="05[0-9]{8}"
+                                                                                        placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" />
+                                                                                    <span asp-validation-for="Handover.NewManagerPhoneNumber"
+                                                                                          class="field-validation-error small"></span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="manager-handover-panel-shell is-muted mt-3">
+                                                                            <div class="fw-semibold mb-2">صفة إدارة القسم</div>
+                                                                            <div class="text-muted small mb-3">هل يصبح المدير مسؤولًا أساسيًا أم يتولى الإدارة مؤقتًا؟</div>
+                                                                            <div class="manager-handover-choice-grid mb-3">
+                                                                                @foreach (var item in assignmentTypeOptions)
+                                                                                {
+                                                                                    <button type="button"
+                                                                                            class="manager-handover-choice @(string.Equals(Model.Handover.AssignmentType, item.Value, StringComparison.OrdinalIgnoreCase) ? "is-active" : string.Empty)"
+                                                                                            data-assignment-choice="@item.Value">
+                                                                                        <strong>@item.Label</strong>
+                                                                                        <small>@(string.Equals(item.Value, DepartmentManagerTransitionTypes.Permanent,
+                                                                                                StringComparison.OrdinalIgnoreCase)
+                                                                                                    ? "يتولى إدارة القسم دون مدة تكليف مؤقتة."
+                                                                                                    : "يتولى إدارة القسم بصفة مؤقتة ويمكن تغييرها لاحقًا.")</small>
+                                                                                    </button>
+                                                                                }
+                                                                            </div>
+                                                                            <select asp-for="Handover.AssignmentType" class="form-select d-none"
+                                                                                    id="Handover_AssignmentType">
+                                                                                @foreach (var item in assignmentTypeOptions)
+                                                                                {
+                                                                                    <option value="@item.Value">@item.Label</option>
+                                                                                }
+                                                                            </select>
+                                                                            <span asp-validation-for="Handover.AssignmentType"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="manager-handover-step-panel" data-handover-step-panel="3" hidden>
+                                                                        <div class="manager-handover-panel-shell is-muted mb-3">
+                                                                            <div class="fw-semibold mb-3">ملخص النقل</div>
+                                                                            <div class="manager-handover-summary-grid">
+                                                                                <div class="manager-handover-summary-item">
+                                                                                    <span>القسم</span>
+                                                                                    <strong>@(selectedHandoverDepartment?.Name ?? "غير محدد")</strong>
+                                                                                </div>
+                                                                                <div class="manager-handover-summary-item">
+                                                                                    <span>المدير الحالي</span>
+                                                                                    <strong>@(string.IsNullOrWhiteSpace(selectedHandoverManagerName) ? "غير محدد" :
+                                                                                                                                                                                                                                                                                                selectedHandoverManagerName)</strong>
+                                                                                    </div>
+                                                                                    <div class="manager-handover-summary-item">
+                                                                                        <span>الإسناد الجديد</span>
+                                                                                        <strong
+                                                                                        data-handover-summary="assignmentType">@selectedHandoverAssignmentTypeLabel</strong>
+                                                                                    </div>
+                                                                                    <div class="manager-handover-summary-item">
+                                                                                        <span>المدير الجديد</span>
+                                                                                        <strong
+                                                                                        data-handover-summary="replacementManager">@selectedHandoverReplacementLabel</strong>
+                                                                                    </div>
+                                                                                    <div class="manager-handover-summary-item">
+                                                                                        <span>وضع المدير السابق</span>
+                                                                                        <strong data-handover-summary="exitAction">@selectedHandoverExitActionLabel</strong>
+                                                                                    </div>
+                                                                                    <div class="manager-handover-summary-item">
+                                                                                        <span>القسم الهدف للنقل الداخلي</span>
+                                                                                        <strong
+                                                                                        data-handover-summary="targetDepartment">@selectedHandoverTargetDepartmentName</strong>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div class="manager-handover-panel-shell">
+                                                                                <div class="fw-semibold mb-2">ماذا يحدث للمدير الحالي؟</div>
+                                                                                <div class="text-muted small mb-3">اختر حالته بعد تسليم القسم للمدير الجديد.</div>
+                                                                                <div class="row g-3">
+                                                                                    <div class="col-md-6">
+                                                                                        <label for="handoverExitActionSelect" class="form-label">الإجراء على المدير
+                                                                                            السابق</label>
+                                                                                            <select asp-for="Handover.ExitAction" class="form-select"
+                                                                                                    id="handoverExitActionSelect">
+                                                                                                @foreach (var item in exitActionOptions)
+                                                                                                {
+                                                                                                    <option value="@item.Value">@item.Label</option>
+                                                                                                }
+                                                                                            </select>
+                                                                                            <span asp-validation-for="Handover.ExitAction"
+                                                                                                  class="field-validation-error small"></span>
+                                                                                        </div>
+                                                                                        <div class="col-md-6" id="handoverPreviousRoleFields">
+                                                                                            <label asp-for="Handover.PreviousManagerNewRole" class="form-label">الدور الجديد
+                                                                                                للمدير السابق</label>
+                                                                                                <select asp-for="Handover.PreviousManagerNewRole" class="form-select">
+                                                                                                    @foreach (var role in Model.PreviousManagerRoleOptions)
+                                                                                                    {
+                                                                                                        <option value="@role">@AppRoles.GetDisplayName(role)</option>
+                                                                                                    }
+                                                                                                </select>
+                                                                                                <span asp-validation-for="Handover.PreviousManagerNewRole"
+                                                                                                      class="field-validation-error small"></span>
+                                                                                            </div>
+                                                                                            <div class="col-12" id="handoverInternalTransferFields">
+                                                                                                <label asp-for="Handover.PreviousManagerTargetDepartmentId" class="form-label">القسم
+                                                                                                    الهدف للمدير السابق</label>
+                                                                                                    <select asp-for="Handover.PreviousManagerTargetDepartmentId" class="form-select">
+                                                                                                        <option value="0">-- اختر القسم الهدف --</option>
+                                                                                                        @foreach (var department in regularDepartments)
+                                                                                                        {
+                                                                                                            if (department.Id != Model.Handover.DepartmentId)
+                                                                                                            {
+                                                                                                                <option value="@department.Id">@department.Name</option>
+                                                                                                            }
+                                                                                                        }
+                                                                                                    </select>
+                                                                                                    <span asp-validation-for="Handover.PreviousManagerTargetDepartmentId"
+                                                                                                          class="field-validation-error small"></span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="handover-automation-note mt-3" aria-live="polite">
+                                                                                            <strong>ما الذي سينفذه النظام تلقائيًا؟</strong>
+                                                                                            <p id="handoverAutomationExplanation"></p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="modal-footer justify-content-between">
+                                                                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                                                    <div class="d-flex gap-2">
+                                                                                        <button type="button" class="btn btn-outline-secondary"
+                                                                                                id="handoverPreviousStepButton">السابق</button>
+                                                                                        <button type="button" class="btn btn-dark" id="handoverNextStepButton">التالي</button>
+                                                                                        <button type="submit" class="btn btn-dark" id="handoverSubmitButton" hidden>تنفيذ
+                                                                                            نقل المدير</button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </form>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+
+                                                                @section Scripts {
+                                                                    <script nonce="@(Context.Items["CspScriptNonce"])">
+                                                                        document.addEventListener("DOMContentLoaded", function () {
+                                                                            const createDepartmentPanel = document.getElementById("createDepartmentPanel");
+                                                                            if (createDepartmentPanel && @openCreatePanel.ToString().ToLowerInvariant()) {
+                                                                                if (window.bootstrap && bootstrap.Collapse) {
+                                                                                    bootstrap.Collapse.getOrCreateInstance(createDepartmentPanel, { toggle: false }).show();
+                                                                                }
+                                                                            }
+
+                                                                            const transferDepartmentPanel = document.getElementById("transferDepartmentPanel");
+                                                                            if (transferDepartmentPanel && @openTransferPanel.ToString().ToLowerInvariant()) {
+                                                                                if (window.bootstrap && bootstrap.Collapse) {
+                                                                                    bootstrap.Collapse.getOrCreateInstance(transferDepartmentPanel, { toggle: false }).show();
+                                                                                }
+                                                                            }
+
+                                                                            const transferUsersSearch = document.getElementById("transfer-users-search");
+                                                                            const transferUserItems = Array.from(document.querySelectorAll('[data-transfer-user-item="true"]'));
+                                                                            const transferUsersSearchEmpty = document.getElementById("transfer-users-search-empty");
+
+                                                                            if (transferUsersSearch && transferUserItems.length > 0) {
+                                                                                transferUsersSearch.addEventListener("input", function () {
+                                                                                    const query = (transferUsersSearch.value || "").trim().toLowerCase();
+                                                                                    let visibleCount = 0;
+
+                                                                                    transferUserItems.forEach(function (item) {
+                                                                                        const searchText = item.getAttribute("data-transfer-user-name") || "";
+                                                                                        const isVisible = !query || searchText.includes(query);
+                                                                                        item.hidden = !isVisible;
+                                                                                        if (isVisible) {
+                                                                                            visibleCount += 1;
+                                                                                        }
+                                                                                    });
+
+                                                                                    if (transferUsersSearchEmpty) {
+                                                                                        transferUsersSearchEmpty.hidden = visibleCount !== 0;
+                                                                                    }
+                                                                                });
+                                                                            }
+
+                                                                            const handoverModal = document.getElementById("managerHandoverModal");
+                                                                            const handoverForm = document.getElementById("managerHandoverForm");
+                                                                            const createNewManagerToggle = document.getElementById("handoverCreateNewManager");
+                                                                            const existingManagerFields = document.getElementById("handoverExistingManagerFields");
+                                                                            const newManagerFields = document.getElementById("handoverNewManagerFields");
+                                                                            const exitActionSelect = document.getElementById("handoverExitActionSelect");
+                                                                            const previousRoleFields = document.getElementById("handoverPreviousRoleFields");
+                                                                            const internalTransferFields = document.getElementById("handoverInternalTransferFields");
+                                                                            const assignmentTypeSelect = document.getElementById("Handover_AssignmentType");
+                                                                            const handoverWizardStepInput = document.getElementById("Handover_WizardStep");
+                                                                            const handoverStepPanels = Array.from(document.querySelectorAll("[data-handover-step-panel]"));
+                                                                            const handoverStepIndicators = Array.from(document.querySelectorAll("[data-handover-step-indicator]"));
+                                                                            const assignmentChoiceButtons = Array.from(document.querySelectorAll("[data-assignment-choice]"));
+                                                                            const managerSourceButtons = Array.from(document.querySelectorAll("[data-manager-source]"));
+                                                                            const previousStepButton = document.getElementById("handoverPreviousStepButton");
+                                                                            const nextStepButton = document.getElementById("handoverNextStepButton");
+                                                                            const submitStepButton = document.getElementById("handoverSubmitButton");
+                                                                            const existingManagerSelect = document.getElementById("Handover_ExistingManagerUsername");
+                                                                            const newManagerUsernameInput = document.getElementById("Handover_NewManagerUsername");
+                                                                            const newManagerFullNameInput = document.getElementById("Handover_NewManagerFullName");
+                                                                            const newManagerPhoneInput = document.getElementById("Handover_NewManagerPhoneNumber");
+                                                                            const previousRoleSelect = document.getElementById("Handover_PreviousManagerNewRole");
+                                                                            const previousManagerTargetDepartmentSelect = document.getElementById("Handover_PreviousManagerTargetDepartmentId");
+                                                                            const summaryAssignmentType = document.querySelector('[data-handover-summary="assignmentType"]');
+                                                                            const summaryReplacementManager = document.querySelector('[data-handover-summary="replacementManager"]');
+                                                                            const summaryExitAction = document.querySelector('[data-handover-summary="exitAction"]');
+                                                                            const summaryTargetDepartment = document.querySelector('[data-handover-summary="targetDepartment"]');
+                                                                            const automationExplanation = document.getElementById("handoverAutomationExplanation");
+                                                                            let handoverCurrentStep = @selectedHandoverWizardStep;
+
+                                                                            if (handoverModal && handoverModal.parentElement !== document.body) {
+                                                                                document.body.appendChild(handoverModal);
+                                                                            }
+
+                                                                            function getVisibleValidationField(field) {
+                                                                                if (!field) {
+                                                                                    return null;
+                                                                                }
+
+                                                                                if (field.matches && field.matches("select[data-smart-select]")) {
+                                                                                    const wrapper = field.closest("[data-smart-select-wrapper='true']");
+                                                                                    return wrapper ? wrapper.querySelector(".smart-select-input") : field;
+                                                                                }
+
+                                                                                return field;
+                                                                            }
+
+                                                                            function getFieldMessageHost(field) {
+                                                                                if (!field || !field.parentElement) {
+                                                                                    return null;
+                                                                                }
+
+                                                                                return field.parentElement.querySelector(".field-validation-error, .field-validation-valid");
+                                                                            }
+
+                                                                            function clearValidationState(field) {
+                                                                                const target = getVisibleValidationField(field);
+                                                                                const messageHost = getFieldMessageHost(field);
+                                                                                if (!target) {
+                                                                                    return;
+                                                                                }
+
+                                                                                if (typeof target.setCustomValidity === "function") {
+                                                                                    target.setCustomValidity("");
+                                                                                }
+
+                                                                                target.classList.remove("is-invalid");
+                                                                                target.removeAttribute("aria-invalid");
+
+                                                                                if (messageHost) {
+                                                                                    messageHost.textContent = "";
+                                                                                }
+                                                                            }
+
+                                                                            function showValidationState(field, message) {
+                                                                                const target = getVisibleValidationField(field);
+                                                                                const messageHost = getFieldMessageHost(field);
+                                                                                if (!target) {
+                                                                                    return false;
+                                                                                }
+
+                                                                                if (typeof target.setCustomValidity === "function") {
+                                                                                    target.setCustomValidity(message);
+                                                                                }
+
+                                                                                target.classList.add("is-invalid");
+                                                                                target.setAttribute("aria-invalid", "true");
+
+                                                                                if (messageHost) {
+                                                                                    messageHost.textContent = message;
+                                                                                }
+
+                                                                                if (target === field && typeof target.reportValidity === "function") {
+                                                                                    target.reportValidity();
+                                                                                }
+
+                                                                                if (typeof target.focus === "function") {
+                                                                                    target.focus();
+                                                                                }
+
+                                                                                return false;
+                                                                            }
+
+                                                                            function toggleVisibility(element, isVisible) {
+                                                                                if (!element) {
+                                                                                    return;
+                                                                                }
+
+                                                                                element.hidden = !isVisible;
+                                                                            }
+
+                                                                            function syncHandoverFormState() {
+                                                                                const createNewManager = createNewManagerToggle && createNewManagerToggle.checked;
+                                                                                const exitAction = exitActionSelect ? exitActionSelect.value : "";
+                                                                                const isInternalTransfer = exitAction === "@DepartmentManagerExitActions.InternalTransfer";
+                                                                                const isEndAssignment = exitAction === "@DepartmentManagerExitActions.EndAssignment";
+
+                                                                                toggleVisibility(existingManagerFields, !createNewManager);
+                                                                                toggleVisibility(newManagerFields, createNewManager);
+                                                                                toggleVisibility(internalTransferFields, isInternalTransfer);
+                                                                                toggleVisibility(previousRoleFields, isInternalTransfer || isEndAssignment);
+
+                                                                                if (createNewManager) {
+                                                                                    clearValidationState(existingManagerSelect);
+                                                                                } else {
+                                                                                    clearValidationState(newManagerUsernameInput);
+                                                                                    clearValidationState(newManagerFullNameInput);
+                                                                                    clearValidationState(newManagerPhoneInput);
+                                                                                }
+
+                                                                                if (!isInternalTransfer) {
+                                                                                    clearValidationState(previousManagerTargetDepartmentSelect);
+                                                                                }
+
+                                                                                if (existingManagerSelect) {
+                                                                                    existingManagerSelect.required = !createNewManager;
+                                                                                }
+
+                                                                                if (newManagerUsernameInput) {
+                                                                                    newManagerUsernameInput.required = createNewManager;
+                                                                                }
+
+                                                                                if (newManagerFullNameInput) {
+                                                                                    newManagerFullNameInput.required = createNewManager;
+                                                                                }
+
+                                                                                if (newManagerPhoneInput) {
+                                                                                    newManagerPhoneInput.required = createNewManager;
+                                                                                }
+
+                                                                                if (previousManagerTargetDepartmentSelect) {
+                                                                                    previousManagerTargetDepartmentSelect.required = isInternalTransfer;
+                                                                                }
+
+                                                                                assignmentChoiceButtons.forEach(function (button) {
+                                                                                    const isActive = assignmentTypeSelect && button.dataset.assignmentChoice === assignmentTypeSelect.value;
+                                                                                    button.classList.toggle("is-active", isActive);
+                                                                                });
+
+                                                                                managerSourceButtons.forEach(function (button) {
+                                                                                    const source = button.dataset.managerSource;
+                                                                                    button.classList.toggle("is-active", createNewManager ? source === "new" : source === "existing");
+                                                                                });
+
+                                                                                syncAutomationExplanation(exitAction);
+                                                                                syncHandoverSummary();
+                                                                            }
+
+                                                                            function syncAutomationExplanation(exitAction) {
+                                                                                if (!automationExplanation) {
+                                                                                    return;
+                                                                                }
+
+                                                                                const messages = {
+                                                                                    "@DepartmentManagerExitActions.Retirement": "يُسند القسم للمدير الجديد، وتُسحب صلاحيات الإدارة من المدير الحالي، ثم يُعطّل حسابه ويُحفظ في السجل بصفته متقاعدًا.",
+                                                                                    "@DepartmentManagerExitActions.Resignation": "يُسند القسم للمدير الجديد، وتُسحب صلاحيات الإدارة من المدير الحالي، ثم يُعطّل حسابه ويُحفظ في السجل بصفته مستقيلًا.",
+                                                                                    "@DepartmentManagerExitActions.ExternalTransfer": "يُسند القسم للمدير الجديد، وتُسحب صلاحيات الإدارة من المدير الحالي، ثم يُعطّل حسابه ويُحفظ كمنقول خارج الجهة.",
+                                                                                    "@DepartmentManagerExitActions.InternalTransfer": "يُسند القسم للمدير الجديد، وتُسحب صلاحيات القسم الحالي من المدير السابق، ثم يُنقل إلى القسم والدور اللذين ستحددهما أدناه.",
+                                                                                    "@DepartmentManagerExitActions.EndAssignment": "يُسند القسم للمدير الجديد، وتُسحب صلاحيات إدارة القسم من المدير السابق، ويبقى حسابه نشطًا داخل القسم بالدور الذي ستحدده."
+                                                                                };
+
+                                                                                automationExplanation.textContent = messages[exitAction]
+                                                                                    || "لن ينفذ النظام أي تغيير قبل الضغط على زر تنفيذ نقل المدير في الخطوة الأخيرة.";
+                                                                            }
+
+                                                                            function syncHandoverSummary() {
+                                                                                if (summaryAssignmentType && assignmentTypeSelect) {
+                                                                                    summaryAssignmentType.textContent = assignmentTypeSelect.options[assignmentTypeSelect.selectedIndex]?.text || "لم يحدد بعد";
+                                                                                }
+
+                                                                                if (summaryReplacementManager) {
+                                                                                    if (createNewManagerToggle && createNewManagerToggle.checked) {
+                                                                                        const fullName = newManagerFullNameInput ? newManagerFullNameInput.value.trim() : "";
+                                                                                        const username = newManagerUsernameInput ? newManagerUsernameInput.value.trim() : "";
+                                                                                        summaryReplacementManager.textContent = fullName
+                                                                                            ? (username ? `${fullName} (${username})` : fullName)
+                                                                                            : (username || "لم يحدد بعد");
+                                                                                    } else if (existingManagerSelect && existingManagerSelect.value) {
+                                                                                        summaryReplacementManager.textContent = existingManagerSelect.options[existingManagerSelect.selectedIndex]?.text || "لم يحدد بعد";
+                                                                                    } else {
+                                                                                        summaryReplacementManager.textContent = "لم يحدد بعد";
+                                                                                    }
+                                                                                }
+
+                                                                                if (summaryExitAction && exitActionSelect) {
+                                                                                    summaryExitAction.textContent = exitActionSelect.options[exitActionSelect.selectedIndex]?.text || "لم يحدد بعد";
+                                                                                }
+
+                                                                                if (summaryTargetDepartment) {
+                                                                                    if (
+                                                                                        previousManagerTargetDepartmentSelect
+                                                                                        && previousManagerTargetDepartmentSelect.value
+                                                                                        && previousManagerTargetDepartmentSelect.value !== "0"
+                                                                                    ) {
+                                                                                        summaryTargetDepartment.textContent = previousManagerTargetDepartmentSelect.options[previousManagerTargetDepartmentSelect.selectedIndex]?.text || "غير مطلوب";
+                                                                                    } else {
+                                                                                        summaryTargetDepartment.textContent = "غير مطلوب";
+                                                                                    }
+                                                                                }
+                                                                            }
+
+                                                                            function setHandoverStep(step) {
+                                                                                handoverCurrentStep = Math.min(3, Math.max(1, step));
+
+                                                                                handoverStepPanels.forEach(function (panel) {
+                                                                                    const panelStep = Number(panel.dataset.handoverStepPanel || "1");
+                                                                                    panel.hidden = panelStep !== handoverCurrentStep;
+                                                                                });
+
+                                                                                handoverStepIndicators.forEach(function (indicator) {
+                                                                                    const indicatorStep = Number(indicator.dataset.handoverStepIndicator || "1");
+                                                                                    indicator.classList.toggle("is-active", indicatorStep === handoverCurrentStep);
+                                                                                    indicator.classList.toggle("is-complete", indicatorStep < handoverCurrentStep);
+                                                                                });
+
+                                                                                if (handoverWizardStepInput) {
+                                                                                    handoverWizardStepInput.value = String(handoverCurrentStep);
+                                                                                }
+
+                                                                                if (previousStepButton) {
+                                                                                    previousStepButton.hidden = handoverCurrentStep === 1;
+                                                                                }
+
+                                                                                if (nextStepButton) {
+                                                                                    nextStepButton.hidden = handoverCurrentStep >= 3;
+                                                                                }
+
+                                                                                if (submitStepButton) {
+                                                                                    submitStepButton.hidden = handoverCurrentStep !== 3;
+                                                                                }
+
+                                                                                syncHandoverSummary();
+                                                                            }
+
+                                                                            function validateHandoverStep(step) {
+                                                                                if (step === 1) {
+                                                                                    return true;
+                                                                                }
+
+                                                                                if (step === 2) {
+                                                                                    if (createNewManagerToggle && createNewManagerToggle.checked) {
+                                                                                        if (newManagerUsernameInput && !newManagerUsernameInput.value.trim()) {
+                                                                                            newManagerUsernameInput.reportValidity();
+                                                                                            newManagerUsernameInput.focus();
+                                                                                            return false;
+                                                                                        }
+
+                                                                                        if (newManagerFullNameInput && !newManagerFullNameInput.value.trim()) {
+                                                                                            newManagerFullNameInput.reportValidity();
+                                                                                            newManagerFullNameInput.focus();
+                                                                                            return false;
+                                                                                        }
+
+                                                                                        if (newManagerPhoneInput && !newManagerPhoneInput.value.trim()) {
+                                                                                            newManagerPhoneInput.reportValidity();
+                                                                                            newManagerPhoneInput.focus();
+                                                                                            return false;
+                                                                                        }
+
+                                                                                        return true;
+                                                                                    }
+
+                                                                                    if (existingManagerSelect && !existingManagerSelect.value.trim()) {
+                                                                                        return showValidationState(existingManagerSelect, "اختر المدير الجديد من القائمة.");
+                                                                                    }
+
+                                                                                    return true;
+                                                                                }
+
+                                                                                if (
+                                                                                    step === 3
+                                                                                    && exitActionSelect
+                                                                                    && exitActionSelect.value === "@DepartmentManagerExitActions.InternalTransfer"
+                                                                                    && previousManagerTargetDepartmentSelect
+                                                                                    && previousManagerTargetDepartmentSelect.value === "0"
+                                                                                ) {
+                                                                                    return showValidationState(previousManagerTargetDepartmentSelect, "اختر القسم الهدف للنقل الداخلي.");
+                                                                                }
+
+                                                                                return true;
+                                                                            }
+
+                                                                            if (createNewManagerToggle) {
+                                                                                createNewManagerToggle.addEventListener("change", syncHandoverFormState);
+                                                                            }
+
+                                                                            if (exitActionSelect) {
+                                                                                exitActionSelect.addEventListener("change", syncHandoverFormState);
+                                                                            }
+
+                                                                            if (assignmentTypeSelect) {
+                                                                                assignmentTypeSelect.addEventListener("change", syncHandoverFormState);
+                                                                            }
+
+                                                                            assignmentChoiceButtons.forEach(function (button) {
+                                                                                button.addEventListener("click", function () {
+                                                                                    if (!assignmentTypeSelect) {
+                                                                                        return;
+                                                                                    }
+
+                                                                                    assignmentTypeSelect.value = button.dataset.assignmentChoice || assignmentTypeSelect.value;
+                                                                                    assignmentTypeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                                                                                });
+                                                                            });
+
+                                                                            managerSourceButtons.forEach(function (button) {
+                                                                                button.addEventListener("click", function () {
+                                                                                    if (!createNewManagerToggle) {
+                                                                                        return;
+                                                                                    }
+
+                                                                                    createNewManagerToggle.checked = button.dataset.managerSource === "new";
+                                                                                    createNewManagerToggle.dispatchEvent(new Event("change", { bubbles: true }));
+                                                                                });
+                                                                            });
+
+                                                                            [existingManagerSelect, newManagerUsernameInput, newManagerFullNameInput, newManagerPhoneInput, previousRoleSelect, previousManagerTargetDepartmentSelect].forEach(function (field) {
+                                                                                if (!field) {
+                                                                                    return;
+                                                                                }
+
+                                                                                field.addEventListener("change", function () {
+                                                                                    clearValidationState(field);
+                                                                                });
+                                                                                field.addEventListener("input", function () {
+                                                                                    clearValidationState(field);
+                                                                                });
+                                                                                field.addEventListener("change", syncHandoverSummary);
+                                                                                field.addEventListener("input", syncHandoverSummary);
+                                                                            });
+
+                                                                            handoverStepIndicators.forEach(function (indicator) {
+                                                                                indicator.addEventListener("click", function () {
+                                                                                    const nextStep = Number(indicator.dataset.handoverStepIndicator || handoverCurrentStep);
+                                                                                    if (nextStep <= handoverCurrentStep || validateHandoverStep(handoverCurrentStep)) {
+                                                                                        setHandoverStep(nextStep);
+                                                                                    }
+                                                                                });
+                                                                            });
+
+                                                                            if (previousStepButton) {
+                                                                                previousStepButton.addEventListener("click", function () {
+                                                                                    setHandoverStep(handoverCurrentStep - 1);
+                                                                                });
+                                                                            }
+
+                                                                            if (nextStepButton) {
+                                                                                nextStepButton.addEventListener("click", function () {
+                                                                                    if (validateHandoverStep(handoverCurrentStep)) {
+                                                                                        setHandoverStep(handoverCurrentStep + 1);
+                                                                                    }
+                                                                                });
+                                                                            }
+
+                                                                            if (handoverForm) {
+                                                                                handoverForm.addEventListener("submit", function (event) {
+                                                                                    syncHandoverFormState();
+
+                                                                                    if (!validateHandoverStep(2)) {
+                                                                                        event.preventDefault();
+                                                                                        setHandoverStep(2);
+                                                                                        return;
+                                                                                    }
+
+                                                                                    if (!validateHandoverStep(3)) {
+                                                                                        event.preventDefault();
+                                                                                        setHandoverStep(3);
+                                                                                    }
+                                                                                });
+                                                                            }
+
+                                                                            syncHandoverFormState();
+                                                                            setHandoverStep(@selectedHandoverWizardStep);
+
+                                                                            if (handoverModal && @openManagerHandoverModal.ToString().ToLowerInvariant()) {
+                                                                                if (window.bootstrap && bootstrap.Modal) {
+                                                                                    bootstrap.Modal.getOrCreateInstance(handoverModal).show();
+                                                                                }
+                                                                            }
+                                                                        });
+                                                                    </script>
+                                                                }

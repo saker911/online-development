@@ -1,0 +1,1741 @@
+.permit-action-hub {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.record-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.record-icon-action {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 9px;
+    border: 1px solid #dbe7f5;
+    background: #ffffff;
+    color: #5e728a;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.record-icon-action svg {
+    width: 16px;
+    height: 16px;
+}
+
+.record-icon-action:hover,
+.record-icon-action:focus {
+    background: #f5f9fd;
+    border-color: #c8d9ea;
+    color: #2f4962;
+}
+
+.record-icon-action-primary {
+    background: #eef6ff;
+    border-color: #cfe0ff;
+    color: #1d4ed8;
+}
+
+.record-icon-action-warning {
+    background: #fff9ea;
+    border-color: #f6dda4;
+    color: #92400e;
+}
+
+.record-icon-action-success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.record-icon-action-danger {
+    background: #fff5f5;
+    border-color: #fecdd3;
+    color: #b42318;
+}
+
+.record-icon-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.delegation-cancel-form {
+    align-items: center;
+    gap: 6px;
+}
+
+.delegation-cancel-form .form-control {
+    width: min(190px, 38vw);
+    min-height: 34px;
+    border-radius: var(--t-input-radius, 16px);
+}
+
+.record-row-actions .permit-action-hub {
+    width: auto;
+}
+
+.record-row-actions .permit-action-trigger {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 9px;
+}
+
+.record-row-actions .permit-action-trigger span,
+.record-row-actions .permit-action-trigger::after {
+    display: none;
+}
+
+.permit-action-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    min-width: 84px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: #f8fbff;
+    border: 1px solid #dbe7f5;
+    color: #213247;
+    font-size: 0.69rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.permit-action-trigger:hover {
+    background: #eef4ff;
+    border-color: #c5d9f0;
+}
+
+.permit-action-trigger::after {
+    content: "";
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid currentColor;
+    margin-inline-start: 2px;
+    transition: transform 0.2s;
+}
+
+.permit-action-hub.is-open .permit-action-trigger {
+    background: #eef4ff;
+    border-color: #a8c8f0;
+    box-shadow: none;
+}
+
+.permit-action-hub.is-open .permit-action-trigger::after {
+    transform: rotate(180deg);
+}
+
+.permit-action-popover {
+    position: fixed;
+    z-index: 9999;
+    min-width: 176px;
+    max-width: 220px;
+    padding: 8px;
+    border: 1px solid #dbe7f5;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.16);
+    animation: permitPopoverIn 0.15s ease-out;
+}
+
+.permit-action-popover[hidden] {
+    display: none;
+}
+
+.permit-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.permit-action-grid-single {
+    grid-template-columns: 1fr;
+}
+
+.permit-action-icon-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+.permit-action-icon-row .permit-action-form {
+    display: inline-flex;
+}
+
+.permit-action-section {
+    display: grid;
+    gap: 6px;
+}
+
+.permit-action-section-spaced {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e3ebf4;
+}
+
+.permit-action-section-title {
+    color: #73859c;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-align: center;
+}
+
+.permit-action-form {
+    margin: 0;
+}
+
+.permit-action-tile {
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 1px solid #dbe7f5;
+    background: #f8fbff;
+    color: #0f172a;
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.permit-action-tile:hover,
+.permit-action-tile:focus {
+    color: #0f172a;
+    background: #eef7ff;
+    border-color: #cfe0f0;
+}
+
+.permit-action-tile-secondary {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
+}
+
+.permit-action-tile-primary {
+    background: #edf4ff;
+    border-color: #cfe0ff;
+    color: #1e40af;
+}
+
+.permit-action-tile-warning {
+    background: #fff9ea;
+    border-color: #f6dda4;
+    color: #92400e;
+}
+
+.permit-action-tile-danger,
+.permit-action-tile-outline-danger {
+    background: #fff5f5;
+    border-color: #fecdd3;
+    color: #b42318;
+}
+
+.permit-action-tile-success,
+.permit-action-tile-outline-success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.permit-action-tile-outline-danger,
+.permit-action-tile-outline-success {
+    background: transparent;
+}
+
+.action-icon-btn {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    gap: 0;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    line-height: 1;
+}
+
+.action-icon-btn svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+
+.action-icon-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.app-table-shell .table-responsive,
+.permit-table-shell .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.compact-form-shell .table-responsive,
+.app-main-surface .table-responsive {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+}
+
+.compact-form-shell .table-responsive>.table,
+.app-main-surface .table-responsive>.table {
+    min-width: 640px;
+}
+
+.app-data-table thead th,
+.app-data-table tbody td,
+.permit-list-table thead th,
+.permit-list-table tbody td {
+    vertical-align: middle;
+}
+
+.app-data-table thead th,
+.permit-list-table thead th {
+    background: var(--t-table-head-bg, #f8fafc);
+    color: var(--t-table-head-text, #0f172a);
+    font-weight: 500;
+    font-size: 0.72rem;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--t-table-border, #dbe3ef);
+    white-space: nowrap;
+}
+
+.app-data-table tbody td,
+.permit-list-table tbody td {
+    font-size: 0.74rem;
+    font-weight: 400;
+    padding: 10px 8px;
+    border-color: var(--t-table-border, #e7edf5);
+    white-space: normal;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.app-data-table tbody tr:hover,
+.permit-list-table tbody tr:hover {
+    background: var(--t-table-row-hover, #f8fbff);
+}
+
+.permit-conflict-table {
+    min-width: 960px;
+    table-layout: fixed;
+}
+
+.permit-conflict-table th,
+.permit-conflict-table td {
+    padding: 10px 9px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.permit-conflict-table th {
+    white-space: nowrap;
+}
+
+.permit-conflict-table td:nth-child(2),
+.permit-conflict-table td:nth-child(5),
+.permit-conflict-table td:nth-child(6) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.permit-conflict-table td .btn {
+    white-space: nowrap;
+}
+
+.permit-management-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #ffffff;
+}
+
+.permit-management-table thead th,
+.permit-management-table tbody td {
+    padding: 16px 10px;
+}
+
+.permit-management-table thead th {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #6f829b;
+    background: #f7faff;
+    border: 0;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+    text-align: center;
+    border-bottom: 1px solid #dbe5f1;
+}
+
+.permit-management-table tbody td {
+    font-size: 0.68rem;
+    font-weight: 400;
+    background: #ffffff;
+    border-top: 1px solid #e8eef5;
+    border-bottom: 0;
+    text-align: center;
+}
+
+.permit-management-table thead th:nth-child(1),
+.permit-management-table tbody td:nth-child(1) {
+    width: 14%;
+    text-align: center;
+}
+
+.permit-management-table thead th:nth-child(2),
+.permit-management-table tbody td:nth-child(2) {
+    width: 26%;
+}
+
+.permit-management-table thead th:nth-child(3),
+.permit-management-table tbody td:nth-child(3) {
+    width: 16%;
+}
+
+.permit-management-table thead th:nth-child(4),
+.permit-management-table tbody td:nth-child(4) {
+    width: 19%;
+}
+
+.permit-management-table thead th:nth-child(5),
+.permit-management-table tbody td:nth-child(5) {
+    width: 12%;
+    text-align: center;
+}
+
+.permit-management-table thead th:nth-child(6),
+.permit-management-table tbody td:nth-child(6) {
+    width: 13%;
+    text-align: center;
+}
+
+.permit-management-table thead th:first-child,
+.permit-management-table tbody td:first-child {
+    border-inline-start: 0;
+    border-radius: 0;
+}
+
+.permit-management-table thead th:last-child,
+.permit-management-table tbody td:last-child {
+    border-inline-end: 0;
+    border-radius: 0;
+}
+
+.permit-management-table tbody tr:hover td {
+    background: #f8fbff;
+    border-top-color: #d8e3f0;
+}
+
+.permit-management-table .permit-primary-text,
+.permit-management-table .permit-secondary-text,
+.permit-management-table .permit-state-note {
+    display: block;
+    max-width: 100%;
+}
+
+.permit-management-table .permit-primary-text {
+    font-size: 0.71rem;
+    font-weight: 600;
+    color: #132033;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.permit-management-table .permit-secondary-text {
+    margin-top: 3px;
+    color: #6d7f95;
+    font-size: 0.61rem;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.permit-management-table .permit-secondary-text.ltr-field {
+    direction: ltr;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.permit-management-table .permit-id-accent,
+.permit-management-table .permit-number-pill.permit-id-accent {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 0;
+    background: transparent;
+    color: #2563eb;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.permit-management-table .permit-holder-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.permit-management-table .permit-holder-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 30px;
+    color: #7f92ab;
+    background: #f4f7fb;
+    border: 1px solid #dde5ef;
+    line-height: 1;
+}
+
+.permit-management-table .permit-holder-avatar-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.permit-management-table .permit-holder-copy,
+.permit-management-table .permit-vehicle-stack,
+.permit-management-table .permit-location-stack,
+.permit-management-table .permit-movement-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    justify-items: center;
+}
+
+.permit-management-table .permit-holder-copy {
+    justify-items: start;
+    text-align: start;
+}
+
+.permit-management-table .permit-holder-copy .permit-primary-text,
+.permit-management-table .permit-holder-copy .permit-secondary-text {
+    text-align: start;
+}
+
+.permit-management-table .permit-holder-copy .national-id-field {
+    justify-self: start;
+}
+
+.permit-management-table .permit-plate-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    min-height: 28px;
+    padding: 0 9px;
+    border-radius: 10px;
+    background: #f6f8fb;
+    border: 1px solid #e0e7ef;
+    color: #1d2b3d;
+    white-space: nowrap;
+    font-size: 0.67rem;
+    font-weight: 600;
+}
+
+.permit-management-table .permit-status-stack {
+    display: grid;
+    justify-items: center;
+    gap: 0;
+}
+
+.permit-state-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    border: 1px solid #dde5ee;
+}
+
+.permit-state-badge.is-approved {
+    background: #eef9f2;
+    color: #1f8a52;
+}
+
+.permit-state-badge.is-pending {
+    background: #fff6e8;
+    color: #a56a21;
+}
+
+.permit-state-badge.is-neutral {
+    background: #f1f5f9;
+    color: #54657a;
+}
+
+.permit-state-badge.is-info {
+    background: #eef5ff;
+    color: #3b6fb6;
+}
+
+.permit-state-badge.is-warning {
+    background: #fff6e8;
+    color: #a56a21;
+}
+
+.permit-state-badge.is-danger {
+    background: #fff1f4;
+    color: #b84b67;
+}
+
+[data-theme="dark"] .permit-action-trigger {
+    background: rgba(32, 46, 70, 0.96);
+    border-color: rgba(155, 173, 196, 0.16);
+    color: #dbe5ef;
+}
+
+[data-theme="dark"] .permit-action-trigger:hover {
+    background: rgba(36, 52, 80, 0.98);
+    border-color: rgba(155, 173, 196, 0.3);
+}
+
+[data-theme="dark"] .record-icon-action {
+    background: rgba(30, 41, 59, 0.88);
+    border-color: rgba(71, 85, 105, 0.45);
+    color: #a9bdd4;
+}
+
+[data-theme="dark"] .record-icon-action:hover,
+[data-theme="dark"] .record-icon-action:focus {
+    background: rgba(51, 65, 85, 0.92);
+    border-color: rgba(96, 165, 250, 0.28);
+    color: #dbeafe;
+}
+
+[data-theme="dark"] .record-icon-action-primary {
+    background: rgba(37, 99, 235, 0.18);
+    border-color: rgba(96, 165, 250, 0.28);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .record-icon-action-warning {
+    background: rgba(146, 64, 14, 0.2);
+    border-color: rgba(251, 191, 36, 0.28);
+    color: #fde68a;
+}
+
+[data-theme="dark"] .record-icon-action-success {
+    background: rgba(22, 101, 52, 0.22);
+    border-color: rgba(74, 222, 128, 0.24);
+    color: #86efac;
+}
+
+[data-theme="dark"] .record-icon-action-danger {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(248, 113, 113, 0.26);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .permit-action-hub.is-open .permit-action-trigger {
+    background: rgba(38, 54, 82, 0.98);
+    border-color: rgba(155, 173, 196, 0.34);
+}
+
+[data-theme="dark"] .permit-action-popover {
+    border-color: rgba(161, 176, 197, 0.18);
+    background: #121d2e;
+    box-shadow: 0 18px 40px rgba(5, 12, 24, 0.36);
+}
+
+[data-theme="dark"] .permit-action-tile {
+    border-color: rgba(161, 176, 197, 0.16);
+    background: #172437;
+    color: #dfe7f0;
+}
+
+[data-theme="dark"] .permit-action-tile:hover,
+[data-theme="dark"] .permit-action-tile:focus {
+    color: #f3f7fb;
+    background: #1b2a3f;
+    border-color: rgba(161, 176, 197, 0.26);
+}
+
+[data-theme="dark"] .permit-action-tile-secondary {
+    background: #172437;
+    border-color: rgba(161, 176, 197, 0.16);
+}
+
+[data-theme="dark"] .permit-action-tile-primary {
+    background: #1b2f4c;
+    border-color: rgba(96, 142, 214, 0.28);
+    color: #bcd0ef;
+}
+
+[data-theme="dark"] .permit-action-tile-warning {
+    background: #2b251b;
+    border-color: rgba(172, 142, 94, 0.28);
+    color: #e1c28f;
+}
+
+[data-theme="dark"] .permit-action-tile-danger,
+[data-theme="dark"] .permit-action-tile-outline-danger {
+    background: #2a1d24;
+    border-color: rgba(190, 123, 141, 0.26);
+    color: #e0bcc7;
+}
+
+[data-theme="dark"] .permit-action-tile-success,
+[data-theme="dark"] .permit-action-tile-outline-success {
+    background: #1d2923;
+    border-color: rgba(110, 157, 125, 0.26);
+    color: #bdd6c3;
+}
+
+[data-theme="dark"] .permit-management-table {
+    background: #101a29;
+}
+
+[data-theme="dark"] .permit-management-table thead th {
+    color: #8fa2bb;
+    background: #141f31;
+    border-bottom-color: rgba(155, 173, 196, 0.12);
+}
+
+[data-theme="dark"] .permit-management-table tbody td {
+    background: #101a29;
+    border-top-color: rgba(155, 173, 196, 0.08);
+}
+
+[data-theme="dark"] .permit-management-table tbody tr:hover td {
+    background: #122033;
+    border-top-color: rgba(155, 173, 196, 0.14);
+}
+
+[data-theme="dark"] .permit-management-table .permit-primary-text {
+    color: #eef4fb;
+}
+
+[data-theme="dark"] .permit-management-table .permit-secondary-text {
+    color: #8b9db6;
+}
+
+[data-theme="dark"] .permit-management-table .permit-id-accent,
+[data-theme="dark"] .permit-management-table .permit-number-pill.permit-id-accent {
+    color: #4d9bff;
+}
+
+[data-theme="dark"] .permit-management-table .permit-holder-avatar {
+    color: #9fb0c3;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .permit-management-table .permit-plate-chip {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(155, 173, 196, 0.12);
+    color: #d7e0ea;
+}
+
+[data-theme="dark"] .permit-state-badge {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .permit-state-badge.is-approved {
+    background: rgba(34, 105, 71, 0.18);
+    color: #56d28e;
+}
+
+[data-theme="dark"] .permit-state-badge.is-pending {
+    background: rgba(162, 114, 42, 0.18);
+    color: #f1bc5f;
+}
+
+[data-theme="dark"] .permit-state-badge.is-neutral {
+    background: rgba(106, 124, 150, 0.18);
+    color: #c8d3df;
+}
+
+[data-theme="dark"] .permit-state-badge.is-info {
+    background: rgba(56, 109, 161, 0.18);
+    color: #8ebdf5;
+}
+
+[data-theme="dark"] .permit-state-badge.is-warning {
+    background: rgba(162, 114, 42, 0.18);
+    color: #f1bc5f;
+}
+
+[data-theme="dark"] .permit-state-badge.is-danger {
+    background: rgba(132, 54, 72, 0.18);
+    color: #ef9faf;
+}
+
+.permit-management-table .permit-state-note {
+    display: none;
+}
+
+.permit-management-table .permit-symbols-cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.permit-management-table .permit-code-stack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.permit-management-table .permit-qr-frame {
+    width: 50px;
+    height: 50px;
+    padding: 6px;
+    border-radius: 12px;
+    background: #f6f8fb;
+    border: 1px solid #e1e8f0;
+    flex: 0 0 auto;
+}
+
+.permit-management-table .permit-qr-thumb {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background: #ffffff;
+    object-fit: contain;
+}
+
+.permit-management-table .permit-code-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+}
+
+.permit-management-table .permit-code-empty {
+    display: flex;
+    justify-content: center;
+}
+
+.permit-management-table .permit-code-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.61rem;
+    font-weight: 600;
+    border: 1px solid #e0e7ef;
+    white-space: nowrap;
+}
+
+.permit-management-table .permit-code-badge-id {
+    background: #f5f8fb;
+    color: #4f6479;
+}
+
+.permit-management-table .permit-code-badge-warning {
+    background: #faf5f1;
+    color: #835f47;
+}
+
+.permit-management-table .permit-code-badge-info {
+    background: #f3f7f9;
+    color: #456476;
+}
+
+.permit-management-table .permit-code-badge-muted {
+    background: #f6f8fa;
+    color: #6f7d8c;
+}
+
+.report-pagination {
+    display: flex;
+    justify-content: center;
+}
+
+.report-pagination .pagination {
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.report-pagination .page-item {
+    margin: 0;
+}
+
+.report-pagination .btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: none;
+}
+
+.report-pagination .pagination-nav {
+    min-width: 4.8rem;
+    font-size: 0.76rem;
+}
+
+.report-pagination .pagination-ellipsis {
+    pointer-events: none;
+    border-color: transparent;
+    background: transparent;
+    color: #94a3b8;
+    min-width: 2.2rem;
+}
+
+.visit-management-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #ffffff;
+}
+
+.visit-management-table thead th,
+.visit-management-table tbody td {
+    padding: 16px 10px;
+}
+
+.visit-management-table thead th {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #6f829b;
+    background: #f7faff;
+    border: 0;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+    text-align: center;
+    border-bottom: 1px solid #dbe5f1;
+}
+
+.visit-management-table tbody td {
+    font-size: 0.68rem;
+    font-weight: 400;
+    background: #ffffff;
+    border-top: 1px solid #e8eef5;
+    border-bottom: 0;
+    box-shadow: none;
+    text-align: center;
+}
+
+.visit-management-table thead th:nth-child(1),
+.visit-management-table tbody td:nth-child(1) {
+    width: 14%;
+    text-align: center;
+}
+
+.visit-management-table thead th:nth-child(2),
+.visit-management-table tbody td:nth-child(2) {
+    width: 26%;
+}
+
+.visit-management-table thead th:nth-child(3),
+.visit-management-table tbody td:nth-child(3) {
+    width: 16%;
+}
+
+.visit-management-table thead th:nth-child(4),
+.visit-management-table tbody td:nth-child(4) {
+    width: 19%;
+}
+
+.visit-management-table thead th:nth-child(5),
+.visit-management-table tbody td:nth-child(5) {
+    width: 12%;
+    text-align: center;
+}
+
+.visit-management-table thead th:nth-child(6),
+.visit-management-table tbody td:nth-child(6) {
+    width: 13%;
+    text-align: center;
+}
+
+.visit-management-table thead th:first-child,
+.visit-management-table tbody td:first-child {
+    border-inline-start: 0;
+    border-radius: 0;
+}
+
+.visit-management-table thead th:last-child,
+.visit-management-table tbody td:last-child {
+    border-inline-end: 0;
+    border-radius: 0;
+}
+
+.visit-management-table tbody tr:hover td {
+    background: #f8fbff;
+    border-top-color: #d8e3f0;
+}
+
+.visit-management-table .permit-primary-text,
+.visit-management-table .permit-secondary-text,
+.visit-management-table .visit-purpose-text {
+    display: block;
+    max-width: 100%;
+}
+
+.visit-management-table .permit-primary-text {
+    font-size: 0.71rem;
+    font-weight: 600;
+    color: #132033;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.visit-management-table .permit-secondary-text {
+    margin-top: 3px;
+    color: #6d7f95;
+    font-size: 0.61rem;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.visit-management-table .visit-time-stack,
+.visit-management-table .permit-movement-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    justify-items: center;
+}
+
+.visit-management-table .visit-date-line {
+    font-size: 0.61rem;
+    color: #6d7f95;
+    font-weight: 600;
+}
+
+.visit-management-table .visit-time-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.visit-management-table .visit-time-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    white-space: nowrap;
+    border: 1px solid #dde5ee;
+}
+
+.visit-management-table .visit-time-badge-entry {
+    background: #eef5ff;
+    border-color: #d7e5fb;
+    color: #386ab0;
+}
+
+.visit-management-table .visit-time-badge-exit {
+    background: #edf8fb;
+    border-color: #d4e9ef;
+    color: #21778a;
+}
+
+.visit-management-table .visit-purpose-text {
+    color: #132033;
+    line-height: 1.35;
+}
+
+.visit-state-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.58rem;
+    font-weight: 700;
+    border: 1px solid #dde5ee;
+}
+
+.visit-state-badge.is-approved {
+    background: #eef9f2;
+    border-color: #d7ebde;
+    color: #1f8a52;
+}
+
+.visit-state-badge.is-pending {
+    background: #eef5ff;
+    border-color: #d7e5fb;
+    color: #3b6fb6;
+}
+
+.visit-state-badge.is-completed,
+.visit-state-badge.is-neutral {
+    background: #f1f5f9;
+    border-color: #dfe6ee;
+    color: #54657a;
+}
+
+.visit-state-badge.is-danger {
+    background: #fff1f4;
+    border-color: #f5d5dd;
+    color: #b84b67;
+}
+
+.visit-management-table .visit-state-note {
+    color: #6d7f95;
+    font-size: 0.64rem;
+    line-height: 1.35;
+}
+
+.visit-management-table .visit-companion-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #f6f8fb;
+    border: 1px solid #e0e7ef;
+    color: #54657a;
+    font-size: 0.61rem;
+    font-weight: 600;
+}
+
+.visit-management-table .visit-companion-icon {
+    width: 16px;
+    height: 16px;
+    color: #8fa1b7;
+}
+
+.visit-management-table .permit-action-popover {
+    min-width: 124px;
+    max-width: 148px;
+    padding: 6px;
+}
+
+.visit-management-table .permit-action-grid {
+    grid-template-columns: 1fr;
+}
+
+@media (max-width: 1199.98px) {
+    .visit-management-table {
+        min-width: 0;
+    }
+
+    .visit-management-table thead th,
+    .visit-management-table tbody td {
+        padding: 10px 8px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .permit-table-shell {
+        background: transparent;
+        box-shadow: none;
+        border: 0;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .permit-table-shell .table-responsive {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    .permit-list-table,
+    .app-data-table {
+        display: table;
+        width: 100%;
+        min-width: 720px;
+    }
+
+    .permit-list-table thead,
+    .app-data-table thead {
+        display: table-header-group;
+    }
+
+    .permit-list-table tbody,
+    .app-data-table tbody {
+        display: table-row-group;
+        padding: 0;
+    }
+
+    .permit-list-table tbody tr,
+    .app-data-table tbody tr {
+        display: table-row;
+        width: auto;
+        padding: 0;
+        border-radius: 0;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .permit-list-table tbody td,
+    .app-data-table tbody td {
+        display: table-cell;
+        padding: 10px 8px;
+        min-width: 0;
+        border-top: 1px solid var(--t-table-border, #e7edf5);
+    }
+
+    .permit-list-table tbody td::before,
+    .app-data-table tbody td::before {
+        content: none;
+        display: none;
+    }
+
+    .visit-management-table {
+        min-width: 0;
+        border-spacing: 0;
+    }
+
+    .permit-management-table {
+        min-width: 0;
+        border-spacing: 0;
+        background: transparent;
+    }
+
+    .permit-management-table tbody tr {
+        display: table-row;
+        padding: 0;
+        border-radius: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    .permit-management-table tbody td {
+        padding: 10px 8px;
+        border-top: 1px solid #e8eef5;
+    }
+
+    .permit-management-table tbody td[data-label="الإجراءات"],
+    .permit-management-table tbody td[data-label="حامل التصريح"],
+    .permit-management-table tbody td[data-label="الغرض من الحركة"],
+    .permit-management-table tbody td[data-label="الحالة"] {
+        grid-column: auto;
+    }
+
+    .permit-management-table .permit-status-stack {
+        justify-items: center;
+    }
+
+    .visit-management-table tbody td[data-label="الإجراءات"],
+    .visit-management-table tbody td[data-label="الزائر"],
+    .visit-management-table tbody td[data-label="توقيت الزيارة"],
+    .visit-management-table tbody td[data-label="الغرض من الزيارة"],
+    .visit-management-table tbody td[data-label="الحالة"] {
+        grid-column: auto;
+    }
+
+    .visit-management-table .permit-status-stack {
+        justify-items: center;
+    }
+
+    .permit-management-table thead th:nth-child(1),
+    .permit-management-table tbody td:nth-child(1),
+    .visit-management-table thead th:nth-child(1),
+    .visit-management-table tbody td:nth-child(1) {
+        width: 12%;
+    }
+
+    .permit-management-table thead th:nth-child(2),
+    .permit-management-table tbody td:nth-child(2),
+    .visit-management-table thead th:nth-child(2),
+    .visit-management-table tbody td:nth-child(2) {
+        width: 21%;
+    }
+
+    .permit-management-table thead th:nth-child(3),
+    .permit-management-table tbody td:nth-child(3),
+    .visit-management-table thead th:nth-child(3),
+    .visit-management-table tbody td:nth-child(3) {
+        width: 14%;
+    }
+
+    .permit-management-table thead th:nth-child(4),
+    .permit-management-table tbody td:nth-child(4),
+    .visit-management-table thead th:nth-child(4),
+    .visit-management-table tbody td:nth-child(4) {
+        width: 17%;
+    }
+
+    .permit-management-table thead th:nth-child(5),
+    .permit-management-table tbody td:nth-child(5),
+    .visit-management-table thead th:nth-child(5),
+    .visit-management-table tbody td:nth-child(5) {
+        width: 11%;
+    }
+
+    .permit-management-table thead th:nth-child(6),
+    .permit-management-table tbody td:nth-child(6),
+    .visit-management-table thead th:nth-child(6),
+    .visit-management-table tbody td:nth-child(6) {
+        width: 25%;
+    }
+
+    .permit-management-table .record-row-actions,
+    .visit-management-table .record-row-actions {
+        flex-wrap: nowrap;
+        gap: 3px;
+        justify-content: center;
+    }
+
+    .permit-management-table .record-icon-action,
+    .permit-management-table .record-row-actions .permit-action-trigger,
+    .visit-management-table .record-icon-action,
+    .visit-management-table .record-row-actions .permit-action-trigger {
+        width: 26px;
+        min-width: 26px;
+        height: 26px;
+        min-height: 26px;
+        border-radius: 8px;
+    }
+
+    .permit-management-table .record-icon-action svg,
+    .visit-management-table .record-icon-action svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+@media (max-width: 767.98px) {
+
+    .permit-management-table tbody tr {
+        padding: 14px;
+    }
+
+    .permit-management-table tbody td[data-label="الإجراءات"],
+    .permit-management-table tbody td[data-label="حامل التصريح"],
+    .permit-management-table tbody td[data-label="الغرض من الحركة"],
+    .permit-management-table tbody td[data-label="الحالة"] {
+        grid-column: auto;
+    }
+
+    .permit-management-table .permit-action-hub,
+    .permit-management-table .permit-action-trigger {
+        width: auto;
+    }
+
+    .permit-management-table .record-row-actions,
+    .visit-management-table .record-row-actions {
+        justify-content: flex-start;
+    }
+
+    .permit-management-table .record-row-actions .permit-action-hub,
+    .permit-management-table .record-row-actions .permit-action-trigger,
+    .visit-management-table .record-row-actions .permit-action-hub,
+    .visit-management-table .record-row-actions .permit-action-trigger {
+        width: auto;
+    }
+
+    .permit-management-table .permit-action-trigger {
+        justify-content: space-between;
+    }
+
+    .permit-management-table .permit-holder-cell {
+        align-items: center;
+    }
+
+    .visit-management-table .permit-action-hub,
+    .visit-management-table .permit-action-trigger {
+        width: auto;
+    }
+
+    .visit-management-table .permit-action-trigger {
+        justify-content: space-between;
+    }
+
+    .permit-management-table .record-row-actions .permit-action-trigger,
+    .visit-management-table .record-row-actions .permit-action-trigger {
+        justify-content: center;
+        width: 34px;
+    }
+
+    .permit-action-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 991.98px) {
+
+    .permit-management-table,
+    .visit-management-table {
+        min-width: 760px;
+        table-layout: fixed;
+    }
+
+    .app-data-table:not(.permit-management-table):not(.visit-management-table),
+    .permit-list-table:not(.permit-management-table):not(.visit-management-table) {
+        min-width: 680px;
+    }
+
+    .users-index-table {
+        display: table;
+        min-width: 760px;
+    }
+
+    .users-index-table thead {
+        display: table-header-group;
+    }
+
+    .users-index-table tbody {
+        display: table-row-group;
+    }
+
+    .users-index-table tr {
+        display: table-row;
+    }
+
+    .users-index-table td,
+    .users-index-table th {
+        display: table-cell;
+        width: auto;
+    }
+
+    .users-index-table td::before {
+        content: none;
+        display: none;
+    }
+
+    .record-row-actions,
+    .users-table-actions,
+    .users-actions-inline,
+    .report-inline-controls {
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .record-row-actions {
+        justify-content: flex-start;
+    }
+
+    .record-row-actions .record-icon-action,
+    .record-row-actions .permit-action-trigger {
+        flex: 0 0 auto;
+    }
+}
+
+[data-theme="dark"] .table {
+    color: var(--t-text);
+    --bs-table-bg: var(--t-table-row-bg);
+    --bs-table-border-color: var(--t-table-border);
+    --bs-table-hover-bg: var(--t-table-row-hover);
+    --bs-table-striped-bg: var(--t-surface-soft);
+}
+
+[data-theme="dark"] .table thead th {
+    background: var(--t-table-head-bg);
+    color: var(--t-table-head-text);
+    border-color: var(--t-table-border);
+}
+
+[data-theme="dark"] .table tbody tr:nth-child(even) {
+    background: var(--t-table-row-alt);
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+    background: var(--t-table-row-hover);
+}
+
+[data-theme="dark"] .table td,
+[data-theme="dark"] .table th {
+    border-color: var(--t-table-border);
+}
+
+[data-theme="dark"] .permit-list-table tbody tr,
+[data-theme="dark"] .app-data-table tbody tr,
+[data-theme="dark"] .user-management-table tbody tr {
+    border-color: var(--t-border);
+}
+
+@media (max-width: 991.98px) {
+
+    [data-theme="dark"] .permit-list-table tbody tr,
+    [data-theme="dark"] .app-data-table tbody tr {
+        background: var(--t-surface);
+        border-color: var(--t-border);
+    }
+}
+
+@media (max-width: 767.98px) {
+    [data-theme="dark"] .user-management-table tbody tr {
+        background: var(--t-surface);
+        border-color: var(--t-border);
+    }
+
+    [data-theme="dark"] .user-management-table tbody td::before,
+    [data-theme="dark"] .permit-list-table tbody td::before,
+    [data-theme="dark"] .app-data-table tbody td::before {
+        color: var(--t-text-muted);
+    }
+}
+
+[data-theme="dark"] .permit-management-table thead th {
+    color: #8ea0b8;
+    background: transparent;
+    border-color: transparent;
+}
+
+[data-theme="dark"] .permit-management-table tbody td {
+    background: #101a29;
+    border-top-color: rgba(155, 173, 196, 0.08);
+    border-bottom-color: transparent;
+}
+
+[data-theme="dark"] .permit-management-table tbody td:first-child {
+    border-inline-start-color: transparent;
+}
+
+[data-theme="dark"] .permit-management-table tbody td:last-child {
+    border-inline-end-color: transparent;
+}
+
+[data-theme="dark"] .permit-management-table tbody tr:hover td {
+    background: #132033;
+}
+
+[data-theme="dark"] .permit-management-table .permit-primary-text {
+    color: #edf3fb;
+}
+
+[data-theme="dark"] .permit-management-table .permit-secondary-text,
+[data-theme="dark"] .permit-management-table .permit-state-note {
+    color: #90a0b5;
+}
+
+[data-theme="dark"] .permit-management-table .permit-id-accent {
+    background: transparent;
+    border-color: transparent;
+    color: #4d9bff;
+}
+
+[data-theme="dark"] .permit-management-table .permit-holder-avatar {
+    background: #162132;
+    border-color: rgba(82, 97, 122, 0.58);
+    color: #9fb0c3;
+}
+
+[data-theme="dark"] .permit-management-table .permit-plate-chip {
+    background: #152131;
+    border-color: rgba(82, 97, 122, 0.56);
+    color: #d7e0eb;
+}
+
+[data-theme="dark"] .permit-action-trigger:hover,
+[data-theme="dark"] .permit-action-hub.is-open .permit-action-trigger {
+    background: rgba(36, 52, 80, 0.98);
+    border-color: rgba(155, 173, 196, 0.3);
+}
+
+[data-theme="dark"] .visit-management-table thead th {
+    color: #9fb2cb;
+    background: transparent;
+    border-color: transparent;
+}
+
+[data-theme="dark"] .visit-management-table tbody td {
+    background: #0f1c33;
+    border-top-color: rgba(61, 86, 124, 0.62);
+    border-bottom-color: rgba(61, 86, 124, 0.62);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .visit-management-table tbody td:first-child {
+    border-inline-start-color: rgba(61, 86, 124, 0.62);
+}
+
+[data-theme="dark"] .visit-management-table tbody td:last-child {
+    border-inline-end-color: rgba(61, 86, 124, 0.62);
+}
+
+[data-theme="dark"] .visit-management-table tbody tr:hover td {
+    background: #142542;
+}
+
+[data-theme="dark"] .visit-management-table .permit-primary-text,
+[data-theme="dark"] .visit-management-table .visit-purpose-text,
+[data-theme="dark"] .visit-management-table .visit-date-line {
+    color: #eef6ff;
+}
+
+[data-theme="dark"] .visit-management-table .permit-secondary-text,
+[data-theme="dark"] .visit-management-table .visit-state-note {
+    color: #8ea5c4;
+}
+
+[data-theme="dark"] .visit-management-table .visit-id-accent {
+    background: linear-gradient(180deg, rgba(23, 74, 115, 0.85) 0%, rgba(13, 57, 91, 0.96) 100%);
+    border-color: rgba(71, 177, 212, 0.45);
+    color: #67d4e6;
+}
+
+[data-theme="dark"] .visit-management-table .visit-visitor-avatar {
+    background: linear-gradient(180deg, rgba(31, 50, 82, 0.98) 0%, rgba(22, 37, 65, 0.98) 100%);
+    border-color: rgba(78, 103, 144, 0.5);
+    color: #9eb6d8;
+}
+
+[data-theme="dark"] .visit-management-table .visit-time-badge-entry {
+    background: rgba(22, 80, 145, 0.34);
+    border-color: rgba(73, 146, 245, 0.34);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .visit-management-table .visit-time-badge-exit {
+    background: rgba(9, 107, 119, 0.30);
+    border-color: rgba(45, 212, 191, 0.28);
+    color: #67e8f9;
+}
+
+[data-theme="dark"] .visit-state-badge.is-approved {
+    background: rgba(22, 101, 52, 0.34);
+    border-color: rgba(74, 222, 128, 0.32);
+    color: #86efac;
+}
+
+[data-theme="dark"] .visit-state-badge.is-pending {
+    background: rgba(29, 78, 216, 0.28);
+    border-color: rgba(96, 165, 250, 0.34);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .visit-state-badge.is-completed,
+[data-theme="dark"] .visit-state-badge.is-neutral {
+    background: rgba(71, 85, 105, 0.3);
+    border-color: rgba(148, 163, 184, 0.25);
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .visit-state-badge.is-danger {
+    background: rgba(159, 18, 57, 0.24);
+    border-color: rgba(251, 113, 133, 0.3);
+    color: #fda4af;
+}
+
+[data-theme="dark"] .visit-management-table .visit-companion-chip,
+[data-theme="dark"] .visit-management-table .visit-action-trigger,
+[data-theme="dark"] .permit-action-trigger {
+    background: rgba(19, 32, 57, 0.96);
+    border-color: rgba(73, 95, 132, 0.52);
+    color: #d7e7fb;
+}
+
+[data-theme="dark"] .visit-management-table .visit-companion-icon {
+    color: #8ea5c4;
+}
+
+[data-theme="dark"] .visit-management-table .visit-action-trigger:hover,
+[data-theme="dark"] .permit-action-hub.is-open .visit-action-trigger,
+[data-theme="dark"] .permit-action-trigger:hover {
+    background: rgba(24, 42, 75, 0.98);
+    border-color: rgba(106, 168, 255, 0.38);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+}
+
+[data-theme="dark"] .permit-action-popover {
+    background: var(--t-dropdown-bg);
+    border-color: var(--t-border);
+    box-shadow: var(--t-dropdown-shadow);
+}
+
+[data-theme="dark"] .permit-action-section-spaced {
+    border-top-color: rgba(155, 173, 196, 0.14);
+}
+
+[data-theme="dark"] .permit-action-section-title {
+    color: #8fa1b8;
+}
+
+[data-theme="dark"] .permit-action-tile {
+    background: var(--t-surface-soft);
+    border-color: var(--t-border);
+    color: var(--t-text);
+}
+
+[data-theme="dark"] .permit-action-tile:hover {
+    background: var(--t-surface-hover);
+    color: var(--t-text);
+}
+
+[data-theme="dark"] .report-pagination .btn {
+    color: var(--t-text);
+}
+
+[data-theme="dark"] .report-pagination .pagination-ellipsis {
+    color: var(--t-text-muted);
+}
+
+.report-pagination .btn,
+.report-pagination .pagination-ellipsis {
+    border-radius: var(--t-input-radius, 8px);
+}
+
+.app-data-table.permit-conflict-table {
+    width: 100%;
+    min-width: 960px;
+    table-layout: fixed;
+}
+
+@media (max-width: 991.98px) {
+    .app-data-table.permit-conflict-table {
+        display: table;
+        width: 960px;
+        min-width: 960px;
+    }
+}

@@ -1,0 +1,203 @@
+@using System.Text.Json
+@model VehiclePermitSystemWeb.Models.ViewModels.Scan.ScanTestViewModel
+
+@{
+    ViewData["Title"] = "مسح باركود";
+    var permitNotFoundMessage = Model.ScannedPermit != null
+        ? "هذا التصريح موجود لكنه غير نشط حاليًا أو منتهي."
+        : "رقم التصريح غير موجود.";
+    var initialPermitJson = Model.ScannedPermit == null
+        ? "null"
+        : JsonSerializer.Serialize(
+            new
+            {
+                Model.ScannedPermit.PermitNumber,
+                Model.ScannedPermit.PublicPermitCode,
+                Model.ScannedPermit.DriverName,
+                Model.ScannedPermit.ApprovalStatusDisplay,
+                Model.ScannedPermit.PermitTypeDisplay,
+                Model.ScannedPermit.DepartmentName,
+                Model.ScannedPermit.LocationDisplay,
+                Model.ScannedPermit.NationalId,
+                Model.ScannedPermit.PlateNumberDisplay,
+                Model.ScannedPermit.VehicleType,
+                Model.ScannedPermit.EmployeePhone,
+                Model.ScannedPermit.Subject,
+            },
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        );
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/scan-console.css" asp-append-version="true" />
+}
+
+<div class="card-permit scan-console-shell mx-auto">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h1 class="mb-1">مسح باركود</h1>
+            <div class="text-muted-ar">هذه الشاشة مخصصة لتجربة أجهزة الباركود الداخلية التي تقرأ رقم التصريح أو رقم
+                الزيارة وتضغط إدخال تلقائيًا.</div>
+        </div>
+        <span class="badge bg-light text-dark border">المستخدم: @Model.ScannerUserName</span>
+    </div>
+
+    <div class="d-flex justify-content-end mb-3">
+        <span class="badge bg-info-subtle text-info-emphasis border">اكتشاف النوع تلقائيًا من القيمة المقروءة</span>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNumber))
+    {
+        <div class="card-permit mb-4 border-primary-subtle">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-1">@(Model.IsSpecificPermitBarcode ? "باركود التصريح المعتمد" : "رمز تجريبي")</h2>
+                    <div class="text-muted-ar">
+                        @(Model.IsSpecificPermitBarcode
+                            ? "هذا الرمز خاص بنفس التصريح المطلوب ويمثل قيمة البوابة فقط."
+                            : "هذا رمز تجريبي من تصريح معتمد لاختبار الجهاز والصوت والرد الفوري، ولا يمثل تصريحًا محددًا من صفحة أخرى.")
+                    </div>
+                </div>
+                <span class="badge bg-primary-subtle text-primary-emphasis">@Model.SamplePermitPublicCode</span>
+            </div>
+
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4 text-center">
+                    <img src="@Url.Action("Barcode", "Permits", new { id = Model.SamplePermitNumber })" alt="رمز الاستجابة السريعة التجريبي"
+                         class="img-fluid barcode-preview-img barcode-preview-img-large" />
+                </div>
+                <div class="col-md-8">
+                    <div class="fw-semibold mb-1">@Model.SamplePermitDisplayName</div>
+                    <div class="text-muted-ar mb-2">امسح هذا الـ QR من الجهاز الحقيقي، وسيظهر اسم صاحب التصريح مع الصوت.
+                    </div>
+                    <div class="small text-muted">رمز التصريح: <span class="ltr-field">@Model.SamplePermitPublicCode</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNotice))
+    {
+        <div class="app-inline-note app-inline-note-warning mb-4">@Model.SamplePermitNotice</div>
+    }
+
+    <div id="scannedPermitCard" class="card-permit mb-4 @(Model.ScannedPermit == null ? "d-none" : string.Empty)">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+                <h2 class="h5 mb-1">بيانات التصريح المقروء</h2>
+                <div class="text-muted-ar">تظهر هذه البيانات تلقائيًا بعد قراءة الباركود أو إدخال الرقم.</div>
+            </div>
+            <span class="badge bg-primary-subtle text-primary-emphasis" id="scannedPermitPublicCode">
+                @(Model.ScannedPermit?.PublicPermitCode ?? string.Empty)
+            </span>
+        </div>
+
+        <div class="row g-3 @(Model.ScannedPermit == null ? "d-none" : string.Empty)" id="scannedPermitDetails">
+            @if (Model.ScannedPermit != null)
+            {
+                <div class="col-md-6">
+                    <strong>رقم التصريح</strong>
+                    <div class="ltr-field">@Model.ScannedPermit.PermitNumber</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>اسم المصرح له</strong>
+                    <div>@Model.ScannedPermit.DriverName</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>الحالة الحالية</strong>
+                    <div>@Model.ScannedPermit.ApprovalStatusDisplay</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>نوع التصريح</strong>
+                    <div>@Model.ScannedPermit.PermitTypeDisplay</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>القسم</strong>
+                    <div>@Model.ScannedPermit.DepartmentName</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>موقع العمل / الزيارة</strong>
+                    <div>@Model.ScannedPermit.LocationDisplay</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>رقم الهوية</strong>
+                    <div class="national-id-field">@Model.ScannedPermit.NationalId</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>رقم اللوحة</strong>
+                    <div class="ltr-field">@Model.ScannedPermit.PlateNumberDisplay</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>نوع المركبة</strong>
+                    <div>@Model.ScannedPermit.VehicleType</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>رقم الجوال</strong>
+                    <div class="ltr-field">@Model.ScannedPermit.EmployeePhone</div>
+                </div>
+                <div class="col-12">
+                    <strong>نص التصريح</strong>
+                    <div>@Model.ScannedPermit.Subject</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <form method="post" class="needs-validation" novalidate id="scanConsoleForm"
+          data-scan-endpoint="@Url.Content("~/api/scan/auto")"
+          data-scanner-user="@Model.ScannerUserName"
+          data-permit-not-found-message="@permitNotFoundMessage">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+        <div class="row g-3 align-items-end">
+            <div class="col-12">
+                <label asp-for="Identifier" class="form-label">القيمة المقروءة</label>
+                <input asp-for="Identifier" class="form-control ltr-field scan-input" autocomplete="off" autofocus
+                       required />
+                <div class="form-text text-muted-ar">امسح الآن بالماسح. إذا كان الجهاز يرسل Enter تلقائيًا فسيتم إرسال
+                    النموذج مباشرة.</div>
+                <div class="small text-muted mt-1" id="detectedScanModeText">سيتم اكتشاف هل القيمة تصريح أو زيارة
+                    تلقائيًا.</div>
+                <span asp-validation-for="Identifier" class="field-validation-error small"></span>
+            </div>
+            <div class="col-12">
+                <div class="small text-muted-ar">لا توجد أزرار تشغيل يدوية هنا. يكفي تمرير الباركود أو الزيارة وسيتم
+                    المعالجة تلقائيًا مع حماية الطلب برمز الصفحة.</div>
+            </div>
+        </div>
+    </form>
+
+    <hr class="my-4" />
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="scan-console-info-panel rounded p-3 h-100">
+                <h2 class="h5 mb-2">طريقة عمل أجهزة الباركود</h2>
+                <div class="text-muted-ar">أغلب أجهزة الباركود السلكية واللاسلكية تعمل كلوحة مفاتيح. عند المسح تكتب
+                    القيمة في الحقل الحالي مثل <span class="ltr-field">P3</span> ثم تضغط Enter.</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="scan-console-info-panel rounded p-3 h-100">
+                <h2 class="h5 mb-2">ماذا تختبر هذه الشاشة؟</h2>
+                <div class="text-muted-ar">تتحقق من أن الجهاز يرسل القيمة بشكل صحيح، وأن النظام يبدل حالة التصريح أو
+                    الزيارة مباشرة عبر نفس منطق المسح الداخلي.</div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="scan-console-info-panel rounded p-3">
+                <h2 class="h5 mb-2">كيف تختبر الصوت؟</h2>
+                <div class="text-muted-ar">اضغط أولًا على زر <strong>تجربة صوت النجاح</strong> أو <strong>تجربة صوت
+                    الخطأ</strong>. إذا سمعت النغمة فهذا يعني أن المتصفح والجهاز جاهزان، وبعدها يمكنك تجربة قارئ
+                    الباركود الحقيقي. بعض المتصفحات لا تسمح بتشغيل الصوت إلا بعد أول نقرة من المستخدم.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="scanConsoleInitialPermit" nonce="@(Context.Items["CspScriptNonce"])">@Html.Raw(initialPermitJson)</script>
+
+@section Scripts {
+    <script src="~/js/scan-console.js" asp-append-version="true"></script>
+}

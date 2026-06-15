@@ -1,0 +1,118 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Delegations.DelegatedActionReportViewModel
+
+@{
+    ViewData["Title"] = "تقرير الاعتمادات بالتفويض";
+
+    string FormatAuditDateTime(DateTime value) =>
+        VehiclePermitSystemWeb.Utilities.Dates.DateHelper.ToGregorianDateTime12(value);
+}
+
+<div class="users-index-shell users-index-shell-compact delegations-page-shell">
+    <div class="users-index-hero app-card-surface">
+        <div class="users-index-hero-copy">
+            <span class="users-section-kicker">Delegated Actions</span>
+            <h1>تقرير الاعتمادات والعمليات بالتفويض</h1>
+            <p>يعرض الفاعل الفعلي، وصاحب الصلاحية الأصلي، ونوع العملية، والوقت، والكيان المتأثر.</p>
+        </div>
+        <div class="users-index-hero-stats">
+            <div class="users-index-stat"><span>العمليات</span><strong>@Model.Entries.Count</strong></div>
+            <div class="users-index-stat"><span>المنفذون</span><strong>@Model.Entries.Select(x =>
+                                                                    x.ActualActorUsername).Where(x =>
+                                                                    !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count()</strong></div>
+                <div class="users-index-stat"><span>المفوِّضون</span><strong>@Model.Entries.Select(x =>
+                                                                                x.DelegatedFromUsername).Where(x =>
+                                                                                !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Count()</strong></div>
+                </div>
+            </div>
+
+            <div class="app-card-surface p-4">
+                <form method="get" id="delegations-audit-filter-form" class="row g-3 mb-4"
+                      data-preserve-scroll-on-submit="true">
+                    <div class="col-md-3">
+                        <label class="form-label">المنفذ الفعلي</label>
+                        <select name="actualActorUsername" class="form-select" data-smart-select="true"
+                                data-smart-select-placeholder="ابحث عن المنفذ الفعلي أو اختره">
+                            <option value="">الكل</option>
+                            @foreach (var user in Model.AvailableUsers)
+                            {
+                                <option value="@user.Username" selected="@(Model.ActualActorUsername == user.Username)">
+                                    @Model.UserDisplayNames.GetValueOrDefault(user.Username)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">صاحب الصلاحية الأصلي</label>
+                            <select name="delegatedFromUsername" class="form-select" data-smart-select="true"
+                                    data-smart-select-placeholder="ابحث عن صاحب الصلاحية أو اختره">
+                                <option value="">الكل</option>
+                                @foreach (var user in Model.AvailableUsers)
+                                {
+                                    <option value="@user.Username" selected="@(Model.DelegatedFromUsername == user.Username)">
+                                        @Model.UserDisplayNames.GetValueOrDefault(user.Username)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">من تاريخ</label>
+                                <input type="date" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))"
+                                       class="form-control" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">إلى تاريخ</label>
+                                <input type="date" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                            </div>
+                            <div class="col-12 d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">تطبيق</button>
+                                <a asp-action="Audit" class="btn btn-outline-secondary btn-sm">إعادة تعيين</a>
+                            </div>
+                        </form>
+
+                        @if (Model.Entries.Count == 0)
+                        {
+                            <div class="users-empty-state">
+                                <h3>لا توجد عمليات مسجلة بالتفويض</h3>
+                                <p>ستظهر هنا الاعتمادات أو العمليات المنفذة عند استخدام تفويض نشط.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table align-middle app-data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>العملية</th>
+                                            <th>الكيان</th>
+                                            <th>المنفذ الفعلي</th>
+                                            <th>بتفويض من</th>
+                                            <th>رقم التفويض</th>
+                                            <th>التفاصيل</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var entry in Model.Entries)
+                                        {
+                                            <tr>
+                                                <td class="ltr-field">@FormatAuditDateTime(entry.OccurredAt)</td>
+                                                <td>
+                                                    <strong>@entry.ActionLabel</strong>
+                                                    <div class="small text-muted">@entry.ActionType</div>
+                                                </td>
+                                                <td>
+                                                    <div>@entry.EntityType</div>
+                                                    <div class="small text-muted">@entry.EntityId</div>
+                                                </td>
+                                                <td>@Model.UserDisplayNames.GetValueOrDefault(entry.ActualActorUsername,
+                                                                                                                                                                                        entry.ActualActorUsername)</td>
+                                                    <td>@Model.UserDisplayNames.GetValueOrDefault(entry.DelegatedFromUsername,
+                                                                                                                                                                                                    entry.DelegatedFromUsername)</td>
+                                                        <td>@(entry.DelegationId?.ToString() ?? "-")</td>
+                                                        <td>@entry.Message</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>

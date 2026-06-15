@@ -1,0 +1,62 @@
+.barcode-preview-img {
+    display: block;
+    margin-inline: auto;
+    background: #fff;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: pixelated;
+}
+
+.barcode-preview-img-large {
+    width: 260px;
+    height: 260px;
+}
+
+.scan-console-shell {
+    max-width: 860px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.scan-console-shell,
+.scan-console-shell * {
+    overflow-wrap: anywhere;
+}
+
+.scan-console-info-panel {
+    border: 1px solid #dbe5f1;
+    background: #f8fbff;
+}
+
+#scannedPermitCard {
+    min-height: 0;
+    max-height: min(340px, 34vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+}
+
+#scannedPermitDetails {
+    min-height: 0;
+}
+
+[data-theme="dark"] .scan-console-info-panel {
+    background: rgba(18, 29, 46, 0.78);
+    border-color: rgba(155, 173, 196, 0.16);
+}
+
+@media (min-width: 992px) {
+    .scan-console-shell {
+        max-height: calc(100dvh - 118px);
+        display: grid;
+        align-content: start;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 991.98px) {
+    #scannedPermitCard {
+        max-height: none;
+        overflow: visible;
+    }
+}

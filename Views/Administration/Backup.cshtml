@@ -1,0 +1,140 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Backup.BackupDashboardViewModel
+
+@{
+    ViewData["Title"] = "النسخ الاحتياطي";
+
+    string FormatBackupDateTime(DateTime value) =>
+        VehiclePermitSystemWeb.Utilities.Dates.DateHelper.ToGregorianDateTime12(value);
+}
+
+<div class="card-permit backup-page-shell">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center bg-light border backup-page-icon backup-page-icon-shell">
+                <img src="~/icons/backup.svg" alt="" class="backup-page-icon-image" />
+            </div>
+            <div>
+                <h1 class="mb-1">النسخ الاحتياطي</h1>
+                <div class="text-muted-ar">تنزيل نسخة احتياطية من قاعدة البيانات أو استعادة ملف ZIP محفوظ، مع نسخ يومي
+                    تلقائي للحفاظ على البيانات.</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-action="Edit" class="btn btn-outline-secondary">بيانات الإدارة</a>
+                <a asp-action="DisplaySettings" class="btn btn-outline-primary">إعدادات الشبكة</a>
+            </div>
+        </div>
+
+        <div asp-validation-summary="ModelOnly" class="app-inline-note app-inline-note-warning mb-4"></div>
+
+        @if (!Model.BackupSupported)
+        {
+            <div class="app-inline-note app-inline-note-warning mb-4">
+                النسخ الاحتياطي التلقائي واليدوي متاحان فقط عند استخدام قاعدة بيانات SQLite.
+            </div>
+        }
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100 backup-stat-card">
+                    <div class="text-muted-ar small">الحالة</div>
+                    <div class="fw-bold fs-5">@(Model.BackupEnabled ? "مفعّل" : "متوقف")</div>
+                    <div class="small text-muted">النسخ التلقائي اليومي</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100 backup-stat-card">
+                    <div class="text-muted-ar small">الاحتفاظ</div>
+                    <div class="fw-bold fs-5">@Model.RetentionDays يوم</div>
+                    <div class="small text-muted">يتم حذف النسخ الأقدم تلقائيًا</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100 backup-stat-card">
+                    <div class="text-muted-ar small">آخر نسخة تلقائية</div>
+                    <div class="fw-bold fs-5">@(Model.LastAutomaticBackupAtUtc.HasValue ?
+                                                                                FormatBackupDateTime(Model.LastAutomaticBackupAtUtc.Value) : "لا توجد")</div>
+                        <div class="small text-muted">تُنشأ النسخة تلقائيًا يوميًا</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="border rounded-3 p-3 h-100 backup-panel">
+                        <h2 class="h5 mb-3">إنشاء نسخة الآن</h2>
+                        <p class="text-muted-ar">يحفظ النظام نسخة ZIP من قاعدة البيانات فقط داخل مجلد النسخ الاحتياطي.</p>
+                        <form asp-action="CreateBackup" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-success w-100">إنشاء نسخة احتياطية</button>
+                        </form>
+                        <div class="form-text mt-2">النسخ الناتج يظهر مباشرة في القائمة ويمكن تنزيله من نفس الصفحة.</div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="border rounded-3 p-3 h-100 backup-panel">
+                        <h2 class="h5 mb-3">استعادة نسخة احتياطية</h2>
+                        <p class="text-muted-ar">
+                            ارفع ملف ZIP صادر من هذه الصفحة لاستعادة قاعدة البيانات فقط. يتحقق النظام من سلامة الملف
+                            وينشئ نسخة أمان قبل الاستبدال.
+                        </p>
+                        <form asp-action="RestoreBackup" method="post" enctype="multipart/form-data" class="mt-3"
+                              data-confirm-message="سيتم استبدال قاعدة البيانات الحالية بعد أخذ نسخة أمان والتحقق من ملف الاسترجاع. هل تريد المتابعة؟">
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label class="form-label">ملف النسخة الاحتياطية</label>
+                                <input type="file" name="backupFile" class="form-control" accept=".zip" required />
+                            </div>
+                            <button type="submit" class="btn btn-outline-primary w-100">استعادة النسخة</button>
+                        </form>
+                        <div class="app-inline-note app-inline-note-warning mt-3 mb-0">
+                            الاسترجاع يرفض الملفات التالفة أو غير الآمنة، ويعيد القاعدة السابقة تلقائيًا إذا فشل التحقق بعد الاستبدال.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h2 class="h5 mb-0">النسخ المتوفرة</h2>
+                    <span class="badge bg-dark backup-count-badge">@Model.Backups.Count ملف</span>
+                </div>
+
+                @if (Model.Backups.Any())
+                {
+                    <div class="table-responsive backup-table-wrap">
+                        <table class="table table-striped align-middle permit-list-table app-data-table backup-table">
+                            <thead>
+                                <tr>
+                                    <th>اسم الملف</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>الحجم</th>
+                                    <th>تنزيل</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Backups)
+                                {
+                                    <tr>
+                                        <td class="ltr-field">@item.FileName</td>
+                                        <td>@item.CreatedAtLocalText</td>
+                                        <td>@item.SizeText</td>
+                                        <td>
+                                            <a asp-action="DownloadBackup" asp-route-fileName="@item.FileName"
+                                                   class="btn btn-sm btn-outline-secondary">
+                                                تنزيل
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="app-inline-note app-inline-note-muted mb-0">لا توجد نسخ احتياطية حتى الآن.</div>
+                }
+            </div>
+        </div>

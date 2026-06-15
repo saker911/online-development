@@ -1,0 +1,765 @@
+@using System.Reflection
+@using System.Linq
+@using System.Text.Json
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@using VehiclePermitSystemWeb.Services.Permits
+@using VehiclePermitSystemWeb.Services.Visits
+@using VehiclePermitSystemWeb.Services.Users
+@using VehiclePermitSystemWeb.Services.Reports
+@using VehiclePermitSystemWeb.Services.Administration
+@using VehiclePermitSystemWeb.Services.Display
+@inject IUserAdminService UserAdminService
+@inject IPermitService PermitService
+@inject IVisitService VisitService
+@inject IAccessControlService AccessControlService
+@inject IReportsDashboardService ReportsDashboardService
+@inject IDisplayDeviceService DisplayDeviceService
+
+@{
+    var notifications = new List<(string Id, string Message, string Type)>();
+
+    string NormalizeNotificationType(string? type)
+    {
+        return type?.Trim().ToLowerInvariant() switch
+        {
+            "success" => "success",
+            "danger" => "danger",
+            "error" => "danger",
+            "warning" => "warning",
+            _ => "info",
+        };
+    }
+
+    void AddNotification(string? message, string? type = "info")
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        var normalizedMessage = message.Trim();
+        var normalizedType = NormalizeNotificationType(type);
+
+        if (notifications.Any(notification =>
+            string.Equals(notification.Message, normalizedMessage, StringComparison.Ordinal)
+            && string.Equals(notification.Type, normalizedType, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        notifications.Add((Guid.NewGuid().ToString("N"), normalizedMessage, normalizedType));
+    }
+
+    void ImportQueuedNotifications(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return;
+        }
+
+        try
+        {
+            var queuedNotifications = JsonSerializer.Deserialize<List<Dictionary<string, string?>>>(
+                payload,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web)
+            );
+
+            if (queuedNotifications == null)
+            {
+                return;
+            }
+
+            foreach (var notification in queuedNotifications)
+            {
+                notification.TryGetValue("message", out var message);
+                notification.TryGetValue("type", out var type);
+                AddNotification(message, type);
+            }
+        }
+        catch (JsonException)
+        {
+        }
+    }
+
+    string? BuildModelStateToastMessage()
+    {
+        if (ViewData.ModelState.ErrorCount == 0)
+        {
+            return null;
+        }
+
+        var messages = ViewData.ModelState
+            .Values.SelectMany(entry => entry.Errors)
+            .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "تحقق من الحقول المدخلة." : error.ErrorMessage.Trim())
+            .Where(message => !string.IsNullOrWhiteSpace(message))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (messages.Count == 0)
+        {
+            return null;
+        }
+
+        if (messages.Count == 1)
+        {
+            return messages[0];
+        }
+
+        var requiredOnly = messages.All(message =>
+            message.Contains("مطلوب", StringComparison.Ordinal)
+            || message.Contains("required", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("must not be empty", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("should not be empty", StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (requiredOnly)
+        {
+            return "أكمل الحقول الإلزامية المطلوبة.";
+        }
+
+        return messages.FirstOrDefault(message =>
+                !message.Contains("مطلوب", StringComparison.Ordinal)
+                && !message.Contains("required", StringComparison.OrdinalIgnoreCase)
+                && !message.Contains("must not be empty", StringComparison.OrdinalIgnoreCase)
+                && !message.Contains("should not be empty", StringComparison.OrdinalIgnoreCase)
+            )
+            ?? "تحقق من الحقول المدخلة.";
+    }
+
+    var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+    var currentUsername = User.Identity?.Name ?? string.Empty;
+    var currentUser = isAuthenticated ? UserAdminService.GetUserAccount(currentUsername) : null;
+    var administrationSettings = UserAdminService.GetAdministrationSettings();
+    var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
+    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
+    var requiresPasswordChange = isAuthenticated && (currentUser?.MustChangePassword ?? false);
+    var pageToastMessage = ViewData["PageToastMessage"] as string;
+    var pageToastType = ViewData["PageToastType"] as string;
+    var canApprovePermits = User.HasPermission(AppPermissions.ApprovePermit);
+    var canReviewUnauthorizedExit = User.HasPermission(AppPermissions.ReviewUnauthorizedExit);
+    var canStopPermit = User.HasPermission(AppPermissions.StopPermit);
+    var canViewVisits = AccessControlService.CanViewVisits(currentUser);
+    var canViewPermits = AccessControlService.CanViewPermits(currentUser);
+    var canApproveDetainedVisits = User.HasPermission(AppPermissions.ApproveDetainedVisit);
+    var canManageDepartments = User.HasPermission(AppPermissions.ManageDepartments);
+    var canManageAdministration = User.HasPermission(AppPermissions.ManageAdministration);
+    var pendingDisplayDeviceCount = canManageAdministration ? DisplayDeviceService.GetPendingCount() : 0;
+    var canViewSecurityAlerts = canApprovePermits || canReviewUnauthorizedExit || canStopPermit;
+    var canViewNotificationCenter = isAuthenticated
+        && !requiresPasswordChange
+        && (canViewSecurityAlerts || canViewVisits);
+    var notificationCenter = canViewSecurityAlerts
+        ? ReportsDashboardService.BuildNotificationCenterModel(4, currentUsername)
+        : new NotificationCenterViewModel();
+    var pendingWorkflowSection = notificationCenter.Sections.FirstOrDefault(section =>
+        string.Equals(section.Key, "PendingWorkflow", StringComparison.OrdinalIgnoreCase)
+    );
+    var underReviewSection = notificationCenter.Sections.FirstOrDefault(section =>
+        string.Equals(section.Key, "UnderReview", StringComparison.OrdinalIgnoreCase)
+    );
+    var stoppedPermitsSection = notificationCenter.Sections.FirstOrDefault(section =>
+        string.Equals(section.Key, "StoppedPermits", StringComparison.OrdinalIgnoreCase)
+    );
+    var pendingPermitsSection = notificationCenter.Sections.FirstOrDefault(section =>
+        string.Equals(section.Key, "PendingPermits", StringComparison.OrdinalIgnoreCase)
+    );
+    var underReviewItems = canReviewUnauthorizedExit
+        ? underReviewSection?.Items ?? new List<NotificationItemViewModel>()
+        : new List<NotificationItemViewModel>();
+    var stoppedPermits = (canApprovePermits || canStopPermit)
+        ? stoppedPermitsSection?.Items ?? new List<NotificationItemViewModel>()
+        : new List<NotificationItemViewModel>();
+    var pendingPermits = canApprovePermits
+        ? pendingPermitsSection?.Items ?? new List<NotificationItemViewModel>()
+        : new List<NotificationItemViewModel>();
+    var pendingWorkflowCount = canReviewUnauthorizedExit ? pendingWorkflowSection?.Count ?? 0 : 0;
+    var underReviewCount = canReviewUnauthorizedExit ? underReviewSection?.Count ?? 0 : 0;
+    var stoppedPermitCount = (canApprovePermits || canStopPermit)
+        ? stoppedPermitsSection?.Count ?? 0
+        : 0;
+    var pendingPermitCount = canApprovePermits ? pendingPermitsSection?.Count ?? 0 : 0;
+    var securityAlertCount = pendingWorkflowCount + underReviewCount + stoppedPermitCount;
+    var stoppedPermitsReturnUrl = Url.Action("StoppedPermits", "Reports");
+    var pendingPermitsReturnUrl = $"{Url.Action("Permits", "Reports")}#pending-permit-requests";
+    var recentActivities = canViewSecurityAlerts
+        ? PermitService.GetRecentPermitActivities(120, currentUsername).ToList()
+        : new List<PermitActivity>();
+    var violationItems = recentActivities
+        .Where(activity =>
+            activity.OccurredAt >= DateTime.Today
+            && (
+                string.Equals(activity.ActionType, "SecurityViolation", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(activity.ActionType, "NoReturnViolation", StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        .OrderByDescending(activity => activity.OccurredAt)
+        .Take(4)
+        .ToList();
+    var violationCount = recentActivities.Count(activity =>
+        activity.OccurredAt >= DateTime.Today
+        && (
+            string.Equals(activity.ActionType, "SecurityViolation", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(activity.ActionType, "NoReturnViolation", StringComparison.OrdinalIgnoreCase)
+        )
+    );
+    var visitAlertCandidates = canViewVisits
+        ? VisitService
+            .GetAllVisits()
+            .Where(visit =>
+                (
+                    string.Equals(visit.ApprovalStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+                    && AccessControlService.CanApproveVisit(visit, currentUser)
+                )
+                || (
+                    string.Equals(visit.Status, "Suspended", StringComparison.OrdinalIgnoreCase)
+                    && AccessControlService.CanAccessVisit(visit, currentUser)
+                )
+            )
+            .OrderByDescending(visit => visit.VisitDate)
+            .ToList()
+        : new List<Visit>();
+    var visitNotificationCount = visitAlertCandidates.Count;
+    var visitAlerts = visitAlertCandidates.Take(4).ToList();
+    var securityAlertItems = new List<NotificationItemViewModel>();
+    if (canReviewUnauthorizedExit)
+    {
+        securityAlertItems.AddRange(
+            pendingWorkflowSection?.Items ?? Enumerable.Empty<NotificationItemViewModel>()
+        );
+        securityAlertItems.AddRange(underReviewItems);
+    }
+    if (canApprovePermits || canStopPermit)
+    {
+        securityAlertItems.AddRange(stoppedPermits);
+    }
+    securityAlertItems = securityAlertItems.Take(4).ToList();
+    var notificationCenterTotalCount = violationCount + pendingPermitCount + visitNotificationCount + securityAlertCount;
+    var hideShell = ViewData["HideShell"] as bool? ?? false;
+    var pageBodyClass = ViewData["BodyClass"] as string;
+    var currentController = ViewContext.RouteData.Values["Controller"]?.ToString() ?? string.Empty;
+    var currentAction = ViewContext.RouteData.Values["Action"]?.ToString() ?? string.Empty;
+    var bodyClass = string.Join(
+        " ",
+        new[] { hideShell ? "display-kiosk-body" : string.Empty, pageBodyClass ?? string.Empty }
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+    );
+
+    ImportQueuedNotifications(TempData.Peek("__ToastNotifications") as string);
+    TempData.Remove("__ToastNotifications");
+    AddNotification(TempData["SuccessMessage"] as string, "success");
+    AddNotification(TempData["ErrorMessage"] as string, "danger");
+    AddNotification(TempData["AdministrationSaved"] as string, "success");
+    AddNotification(TempData["DisplaySettingsSaved"] as string, "success");
+    AddNotification(TempData["BackupMessage"] as string, "info");
+    AddNotification(TempData["UserSaved"] as string, "success");
+    AddNotification(TempData["UserSaveError"] as string, "danger");
+    AddNotification(TempData["DepartmentSaved"] as string, "success");
+    AddNotification(TempData["PasswordChanged"] as string, "success");
+    AddNotification(TempData["ProfileSaved"] as string, "success");
+    AddNotification(TempData["ProfileError"] as string, "danger");
+    AddNotification(TempData["KeyError"] as string, "danger");
+    if (pendingDisplayDeviceCount > 0)
+    {
+        AddNotification($"يوجد {pendingDisplayDeviceCount} طلب اعتماد شاشة عرض بانتظار المراجعة.", "info");
+    }
+    AddNotification(
+        pageToastMessage,
+        string.IsNullOrWhiteSpace(pageToastType) ? "danger" : pageToastType
+    );
+    AddNotification(BuildModelStateToastMessage(), "danger");
+
+    var notificationContainerClass = string.Equals(pageBodyClass, "login-page-body", StringComparison.Ordinal)
+        ? "app-notify-container app-notify-container-login"
+        : "app-notify-container";
+    var appVersion = Assembly.GetEntryAssembly()?
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+        .InformationalVersion ?? "1.0.0";
+    var hideShellMetaClass = string.Equals(pageBodyClass, "login-page-body", StringComparison.Ordinal)
+        ? "app-system-meta app-system-meta-login"
+        : "app-system-meta app-system-meta-kiosk";
+
+    var isActive = new Func<string, string, bool>((controller, action) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase)
+    );
+
+    var isControllerActive = new Func<string, bool>(controller =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+    );
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>@ViewData["Title"] - نظام التصاريح</title>
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+            (function () {
+                var key = 'vps_theme';
+                var root = document.documentElement;
+                var stored = null;
+                try {
+                    stored = localStorage.getItem(key);
+                } catch (error) {
+                    stored = null;
+                }
+
+                var theme = stored === 'night' || stored === 'dark' ? 'dark' : 'light';
+                root.setAttribute('data-theme', theme);
+                root.style.backgroundColor = theme === 'dark' ? '#050914' : '#f8fafc';
+                root.style.colorScheme = theme;
+            })();
+    </script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/theme-vars.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site-primitives.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site-content.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site-shell.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site-account.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/auth-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/date-fields.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/notification-toasts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/administration-edit.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/users-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-forms.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-tables.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-pages.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-effects.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+    <link rel="stylesheet" href="~/css/visual-refresh.css" asp-append-version="true" />
+</head>
+
+<body class="@bodyClass">
+    <div class="@notificationContainerClass" role="region" aria-label="الإشعارات">
+        @foreach (var notification in notifications)
+        {
+            var icon = notification.Type == "success" ? "✓" : notification.Type == "danger" ? "!" : notification.Type ==
+  "warning" ? "⚠" : "ℹ";
+            <div class="app-notify app-notify-@notification.Type" role="alert" aria-live="polite">
+                <div class="app-notify-icon" aria-hidden="true">@icon</div>
+                <div class="app-notify-text">@notification.Message</div>
+                <button class="app-notify-close" aria-label="إغلاق">✕</button>
+                <div class="app-notify-bar" aria-hidden="true"></div>
+            </div>
+        }
+    </div>
+
+    <div class="modal fade" id="confirmActionModal" tabindex="-1" aria-hidden="true"
+         aria-labelledby="confirmActionModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content app-confirm-modal border-0">
+                <div class="app-confirm-icon" aria-hidden="true">⚠</div>
+                <div class="app-confirm-title" id="confirmActionModalLabel">تأكيد العملية</div>
+                <div class="app-confirm-message" id="confirmActionModalMessage">هل تريد المتابعة؟</div>
+                <div class="app-confirm-actions">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionModalConfirm">متابعة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!hideShell)
+    {
+        <div class="app-shell">
+            <header class="app-topbar">
+                <a class="app-brand" asp-controller="Home" asp-action="Index">
+                    <span class="app-brand-mark">
+                        <img src="~/@organizationLogoPath" alt="شعار @organizationName" />
+                    </span>
+                    <span class="app-brand-copy">
+                        <strong>نظام التصاريح</strong>
+                        <span>@organizationName</span>
+                    </span>
+                </a>
+
+                <div class="app-topbar-actions">
+                    <button class="btn icon-only-trigger app-sidebar-toggle" type="button" data-sidebar-toggle
+                            aria-label="فتح القائمة" aria-controls="appSidebar" aria-expanded="false">
+                        <span class="app-sidebar-toggle-bars" aria-hidden="true">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </span>
+                    </button>
+
+                    @if (canViewNotificationCenter)
+                    {
+                        <div class="nav-item dropdown notification-bell-dropdown">
+                            <button id="notificationBellDropdown" class="btn notification-bell-trigger icon-only-trigger"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                                    aria-label="الإشعارات" type="button">
+                                <img src="~/icons/bell.svg" alt="" class="nav-icon-small" />
+                                @if (notificationCenterTotalCount > 0)
+                                {
+                                    <span class="notification-bell-badge">@notificationCenterTotalCount</span>
+                                }
+                            </button>
+
+                            <div class="dropdown-menu dropdown-menu-end notif-dd" aria-labelledby="notificationBellDropdown">
+                                <div class="notif-dd-head">
+                                    <span class="notif-dd-title">الإشعارات</span>
+                                    <a class="notif-dd-viewall" asp-controller="Reports" asp-action="Index">عرض الكل</a>
+                                </div>
+
+                                @if (notificationCenterTotalCount > 0)
+                                {
+                                    <div class="notif-dd-body">
+                                        @foreach (var item in violationItems)
+                                        {
+                                            <a class="notif-dd-row" asp-controller="Reports" asp-action="PermitActivity"
+                                                   asp-route-activityQuery="@item.PermitNumber">
+                                                <span class="notif-dd-ic notif-ic-red">
+                                                    <img src="~/icons/violation.svg" alt="" />
+                                                </span>
+                                                <span class="notif-dd-dot"></span>
+                                                <div class="notif-dd-info">
+                                                    <span class="notif-dd-name">@item.ActionLabel</span>
+                                                    <span class="notif-dd-time">@item.Message</span>
+                                                </div>
+                                            </a>
+                                        }
+                                        @foreach (var permit in pendingPermits.Take(4))
+                                        {
+                                            <a class="notif-dd-row" asp-controller="Permits" asp-action="Details"
+                                                   asp-route-id="@permit.PermitNumber" asp-route-returnUrl="@pendingPermitsReturnUrl"
+                                                   asp-route-focusActions="true">
+                                                <span class="notif-dd-ic notif-ic-green">
+                                                    <img src="~/icons/approvals.svg" alt="" />
+                                                </span>
+                                                <span class="notif-dd-dot"></span>
+                                                <div class="notif-dd-info">
+                                                    <span class="notif-dd-name">طلب اعتماد</span>
+                                                    <span class="notif-dd-time">@permit.DriverName · @permit.Subtitle</span>
+                                                </div>
+                                            </a>
+                                        }
+                                        @foreach (var visit in visitAlerts)
+                                        {
+                                            <a class="notif-dd-row" asp-controller="Visits" asp-action="Details"
+                                                   asp-route-id="@visit.VisitId">
+                                                <span class="notif-dd-ic notif-ic-blue">
+                                                    <img src="~/icons/visit.svg" alt="" />
+                                                </span>
+                                                <span class="notif-dd-dot"></span>
+                                                <div class="notif-dd-info">
+                                                    <span class="notif-dd-name">@visit.VisitorName</span>
+                                                    <span class="notif-dd-time">زيارة · @visit.ApprovalStatusDisplay</span>
+                                                </div>
+                                            </a>
+                                        }
+                                        @foreach (var item in securityAlertItems)
+                                        {
+                                            var secHref = !string.IsNullOrWhiteSpace(item.SequenceId);
+                                            if (secHref)
+                                            {
+                                                <a class="notif-dd-row" asp-controller="Reports" asp-action="PermitActivity"
+                                                       asp-route-activityQuery="@item.PermitNumber"
+                                                       asp-route-selectedSequenceId="@item.SequenceId">
+                                                    <span class="notif-dd-ic notif-ic-purple">
+                                                        <img src="~/icons/notifications.svg" alt="" />
+                                                    </span>
+                                                    <span class="notif-dd-dot"></span>
+                                                    <div class="notif-dd-info">
+                                                        <span class="notif-dd-name">تنبيه أمني</span>
+                                                        <span class="notif-dd-time">@item.DriverName · @item.Subtitle</span>
+                                                    </div>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="notif-dd-row" asp-controller="Permits" asp-action="Details"
+                                                       asp-route-id="@item.PermitNumber" asp-route-returnUrl="@stoppedPermitsReturnUrl"
+                                                       asp-route-focusActions="true">
+                                                    <span class="notif-dd-ic notif-ic-purple">
+                                                        <img src="~/icons/notifications.svg" alt="" />
+                                                    </span>
+                                                    <span class="notif-dd-dot"></span>
+                                                    <div class="notif-dd-info">
+                                                        <span class="notif-dd-name">تنبيه أمني</span>
+                                                        <span class="notif-dd-time">@item.DriverName · @item.Subtitle</span>
+                                                    </div>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                    <div class="notif-dd-foot">
+                                        <a asp-controller="Reports" asp-action="Index">
+                                            <img src="~/icons/bell.svg" alt="" class="notif-dd-foot-ic" />
+                                            عرض جميع الإشعارات
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="notif-dd-empty">
+                                        <img src="~/icons/bell.svg" alt="" class="notif-dd-empty-bell" />
+                                        <div class="notif-dd-empty-msg">لا توجد إشعارات جديدة</div>
+                                        <div class="notif-dd-empty-sub">ستظهر هنا إشعاراتك فور وصولها.</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @* Theme toggle *@
+                    <button class="btn icon-only-trigger theme-toggle-btn" type="button" title="تبديل الوضع ليلي/نهاري"
+                            aria-label="تبديل الوضع">
+                        <span class="theme-toggle-icon" aria-hidden="true">☀</span>
+                    </button>
+
+                    @if (isAuthenticated)
+                    {
+                        <div class="nav-item dropdown user-menu">
+                            <button id="accountDropdown" class="btn dropdown-toggle user-menu-toggle icon-only-trigger"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-label="الحساب" type="button"
+                                    aria-expanded="false">
+                                <img src="~/icons/account.svg" alt="" class="nav-icon" />
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end user-menu-panel" aria-labelledby="accountDropdown">
+                                <div class="user-menu-header">
+                                    <div class="fw-bold">@(currentUser?.DisplayName ?? User.FindFirst("DisplayName")?.Value)
+                                    </div>
+                                    <div class="small text-muted">@currentUsername</div>
+                                    <div class="small text-muted">@(User.FindFirst("RoleDisplayName")?.Value ??
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        AppRoles.GetDisplayName(currentUser?.Role))</div>
+                                    </div>
+                                    <div class="dropdown-divider"></div>
+                                    <div class="user-menu-detail-list">
+                                        <div class="user-menu-detail-row">
+                                            <span>الاسم الكامل</span>
+                                            <strong>@(string.IsNullOrWhiteSpace(currentUser?.FullName) ? (currentUser?.DisplayName
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ?? "-") : currentUser?.FullName)</strong>
+                                            </div>
+                                            <div class="user-menu-detail-row">
+                                                <span>القسم</span>
+                                                <strong>@(string.IsNullOrWhiteSpace(currentUser?.Department) ? "-" :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    currentUser?.Department)</strong>
+                                                </div>
+                                                <div class="user-menu-detail-row">
+                                                    <span>الهاتف</span>
+                                                    <strong class="ltr-field">@(string.IsNullOrWhiteSpace(currentUser?.PhoneNumber) ? "-" :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            currentUser?.PhoneNumber)</strong>
+                                                    </div>
+                                                </div>
+                                                <a class="dropdown-item user-menu-link" asp-controller="Account" asp-action="Profile">
+                                                    <img src="~/icons/account.svg" alt="" class="menu-icon" />
+                                                    <span>بياناتي</span>
+                                                </a>
+                                                <a class="dropdown-item user-menu-link" asp-controller="Account" asp-action="ChangePassword">
+                                                    <img src="~/icons/password.svg" alt="" class="menu-icon" />
+                                                    <span>تغيير الرقم السري</span>
+                                                </a>
+                                                <form method="post" asp-controller="Account" asp-action="Logout" class="d-block">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="dropdown-item user-menu-link w-100 text-end">
+                                                        <img src="~/icons/logout.svg" alt="" class="menu-icon" />
+                                                        <span>تسجيل خروج</span>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    }
+                    else
+                                    {
+                                        <a class="btn app-ghost-pill" asp-controller="Account" asp-action="Login">تسجيل الدخول</a>
+                                    }
+                                </div>
+                            </header>
+
+                            <div class="app-workspace">
+                                <aside class="app-sidebar" id="appSidebar" data-sidebar>
+                                    <div class="app-sidebar-card">
+                                        <div class="app-sidebar-logo-wrap">
+                                            <img src="~/@organizationLogoPath" alt="شعار @organizationName" />
+                                        </div>
+                                        <div class="app-sidebar-card-copy">
+                                            <span>أهلًا بك</span>
+                                            <strong>@(currentUser?.DisplayName ?? User.FindFirst("DisplayName")?.Value ??
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      "المستخدم")</strong>
+                                                <small>@(User.FindFirst("RoleDisplayName")?.Value ??
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    AppRoles.GetDisplayName(currentUser?.Role))</small>
+                                                </div>
+                                            </div>
+
+                                            <nav class="app-sidebar-nav" aria-label="القائمة الرئيسية">
+                                                <a class="app-sidebar-link @(isActive("Home", "Index") ? "active" : string.Empty)"
+                                                       asp-controller="Home" asp-action="Index">
+                                                    <img src="~/icons/home.svg" alt="" class="app-sidebar-icon" />
+                                                    <span>الرئيسة</span>
+                                                </a>
+                                                @if (canViewPermits)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Permits") ? "active" : string.Empty)"
+                                                           asp-controller="Permits" asp-action="Index">
+                                                        <img src="~/icons/permit.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>التصاريح</span>
+                                                    </a>
+                                                }
+                                                @if (canViewVisits)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Visits") ? "active" : string.Empty)"
+                                                           asp-controller="Visits" asp-action="Index">
+                                                        <img src="~/icons/visit.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>الزيارات</span>
+                                                    </a>
+                                                }
+                                                @if (User.HasPermission(AppPermissions.ViewDisplays) || canManageAdministration)
+                                                {
+                                                    var displayLinkController = canManageAdministration ? "Administration" : "Display";
+                                                    var displayLinkAction = canManageAdministration ? "DisplaySettings" : "Access";
+                                                    var displayLinkActive =
+                                                        isControllerActive("Display")
+                                                        || (
+                                                            string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase)
+                                                            && (
+                                                                string.Equals(currentAction, "DisplaySettings", StringComparison.OrdinalIgnoreCase)
+                                                                || string.Equals(currentAction, "DisplayDeviceDetails", StringComparison.OrdinalIgnoreCase)
+                                                            )
+                                                        );
+                                                    <a class="app-sidebar-link @(displayLinkActive ? "active" : string.Empty)"
+                                                           asp-controller="@displayLinkController" asp-action="@displayLinkAction">
+                                                        <img src="~/icons/display.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>شاشات العرض</span>
+                                                        @if (pendingDisplayDeviceCount > 0)
+                                                        {
+                                                            <span class="badge bg-danger">@pendingDisplayDeviceCount</span>
+                                                        }
+                                                    </a>
+                                                }
+                                                @if (User.HasPermission(AppPermissions.ScanOperations))
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("ScanConsole") ? "active" : string.Empty)"
+                                                           asp-controller="ScanConsole" asp-action="Index">
+                                                        <img src="~/icons/scan.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>مسح باركود</span>
+                                                    </a>
+                                                }
+                                                @if (canViewPermits || canViewVisits)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Reports") ? "active" : string.Empty)"
+                                                           asp-controller="Reports" asp-action="Index">
+                                                        <img src="~/icons/reports.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>التقارير</span>
+                                                    </a>
+                                                }
+                                                @if (User.HasPermission(AppPermissions.ViewDashboard))
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Monitoring") ? "active" : string.Empty)"
+                                                           asp-controller="Monitoring" asp-action="Index">
+                                                        <img src="~/icons/monitoring.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>المراقبة</span>
+                                                    </a>
+                                                }
+                                                @if (User.HasPermission(AppPermissions.ManageUsers))
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Users") ? "active" : string.Empty)"
+                                                           asp-controller="Users" asp-action="Index">
+                                                        <img src="~/icons/users.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>المستخدمون والصلاحيات</span>
+                                                    </a>
+                                                }
+                                                @if (User.HasPermission(AppPermissions.ManageDelegations))
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Delegations") ? "active" : string.Empty)"
+                                                           asp-controller="Delegations" asp-action="Index">
+                                                        <img src="~/icons/delegations.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>التفويضات</span>
+                                                    </a>
+                                                }
+                                                @if (canManageDepartments || canManageAdministration)
+                                                {
+                                                    @if (canManageDepartments)
+                                                    {
+                                                        <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && (string.Equals(currentAction, "Leadership", StringComparison.OrdinalIgnoreCase) || string.Equals(currentAction, "Departments", StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty)"
+                                                               asp-controller="Administration" asp-action="Leadership">
+                                                            <img src="~/icons/departments.svg" alt="" class="app-sidebar-icon" />
+                                                            <span>مركز القيادات</span>
+                                                        </a>
+                                                    }
+                                                    <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Edit", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
+                                                           asp-controller="Administration" asp-action="Edit">
+                                                        <img src="~/icons/administration-data.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>بيانات الإدارة</span>
+                                                    </a>
+                                                    <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Backup", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
+                                                           asp-controller="Administration" asp-action="Backup">
+                                                        <img src="~/icons/backup.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>النسخ الاحتياطي</span>
+                                                    </a>
+                                                }
+                                            </nav>
+
+                                            <div class="app-sidebar-footer">
+                                                <div class="app-sidebar-support">
+                                                    <span>مساعدة والدعم</span>
+                                                    <small>واجهة موحدة وسريعة</small>
+                                                </div>
+                                                <div class="app-sidebar-version">الإصدار @appVersion</div>
+                                            </div>
+                                        </aside>
+                                        <div class="app-sidebar-backdrop" data-sidebar-close hidden aria-hidden="true"></div>
+
+                                        <main role="main" class="app-main">
+                                            <div class="app-main-surface">
+                                                @RenderBody()
+                                            </div>
+                                        </main>
+                                    </div>
+
+                                    <footer class="app-footer border-top footer text-muted">
+                                        <div class="container-fluid app-shell-container">
+                                            <span>&copy; 2026 - نظام إدارة تصاريح المركبات</span>
+                                            <div class="app-footer-meta">
+                                                <span>الإصدار @appVersion</span>
+                                            </div>
+                                        </div>
+                                    </footer>
+                                </div>
+                            }
+    else
+                            {
+                                <main role="main" class="display-kiosk-main">
+                                    @RenderBody()
+                                </main>
+                                <div class="@hideShellMetaClass">
+                                    <div>الإصدار @appVersion</div>
+                                </div>
+                            }
+
+                            <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+                            <script src="~/js/app-notifications.js" asp-append-version="true"></script>
+                            <script src="~/js/app-validation.js" asp-append-version="true"></script>
+                            <script src="~/js/app-date-fields.js" asp-append-version="true"></script>
+                            <script src="~/js/app-combobox.js" asp-append-version="true"></script>
+                            <script src="~/js/app-report-pagination.js" asp-append-version="true"></script>
+                            <script src="~/js/site.js" asp-append-version="true"></script>
+                            <script src="~/js/sidebar-toggle.js" asp-append-version="true"></script>
+                            <script src="~/js/dropdown-handling.js" asp-append-version="true"></script>
+                            <script src="~/js/toast-notifications.js" asp-append-version="true"></script>
+                            <script src="~/js/confirm-action-modal.js" asp-append-version="true"></script>
+                            <script src="~/js/permit-action-hubs.js" asp-append-version="true"></script>
+                            <script src="~/js/theme-toggle.js" asp-append-version="true"></script>
+                            @await RenderSectionAsync("Scripts", required: false)
+                            <script src="~/js/form-persist.js" asp-append-version="true"></script>
+                        </body>
+
+                    </html>

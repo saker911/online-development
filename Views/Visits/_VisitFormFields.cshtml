@@ -1,0 +1,170 @@
+@model VehiclePermitSystemWeb.Models.Entities.Visit
+
+@{
+    var companions = (Model.Companions ?? new List<VehiclePermitSystemWeb.Models.Entities.VisitCompanion>())
+        .Where(c => c != null && !c.IsEmpty)
+        .OrderBy(c => c.SortOrder)
+        .ThenBy(c => c.Id)
+        .ToList();
+}
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label asp-for="VisitorName" class="form-label">اسم الزائر الرئيسي</label>
+        <input asp-for="VisitorName" class="form-control" required />
+        <span asp-validation-for="VisitorName" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="VisitLocation" class="form-label">مكان الزيارة</label>
+        <input asp-for="VisitLocation" class="form-control" required />
+        <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="NationalId" class="form-label">رقم هوية الزائر الرئيسي</label>
+        <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
+             pattern="[12][0-9]{9}" placeholder="1024722918" required />
+         <div class="form-text text-muted-ar">رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.</div>
+        <span asp-validation-for="NationalId" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="PhoneNumber" class="form-label">جوال الزائر الرئيسي</label>
+        <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" maxlength="10"
+             pattern="05[0-9]{8}" placeholder="0501234567" required />
+         <div class="form-text text-muted-ar">رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05.</div>
+        <span asp-validation-for="PhoneNumber" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Purpose" class="form-label">الغرض من الزيارة</label>
+        <input asp-for="Purpose" class="form-control" required />
+        <span asp-validation-for="Purpose" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="VisitedPersonType" class="form-label">صفة الشخص المُزار</label>
+        <select asp-for="VisitedPersonType" class="form-select" data-visited-person-type>
+            <option value="Host">مضيف</option>
+            <option value="Employee">موظف</option>
+            <option value="Detained">موقوف</option>
+            <option value="Prisoner">نزيل / سجين</option>
+            <option value="Other">جهة أخرى</option>
+        </select>
+        <span asp-validation-for="VisitedPersonType" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="VisitedPersonName" class="form-label" data-visited-person-label>اسم الشخص المُزار</label>
+        <input asp-for="VisitedPersonName" class="form-control" required />
+        <div class="form-text text-muted-ar">هذا الحقل هو الشخص المقصود بالزيارة، سواء كان مضيفًا أو موقوفًا أو نزيلًا.
+        </div>
+        <span asp-validation-for="VisitedPersonName" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4 date-field-shell" data-date-field data-date-display-mode="hijri">
+        <div class="date-field-head">
+            <label asp-for="VisitDate" class="form-label mb-0">موعد الزيارة</label>
+        </div>
+        <div class="date-input-shell">
+            <input type="datetime-local" asp-for="VisitDate" asp-format="{0:yyyy-MM-ddTHH:mm}"
+                   class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA" data-hijri-source
+                   data-sync-browser-now="@(ViewData["InitializeCurrentTime"] as bool? == true ? "true" : "")"
+                   data-date-min-today="true" required />
+            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="VisitDate"
+                 data-empty-text="يوم/شهر/سنة - الوقت">
+                @(Model.VisitDate != default ? DateHelper.ToArabicHijri(Model.VisitDate) : "سيظهر التاريخ هنا بعد الاختيار")
+            </div>
+            <label class="date-hijri-toggle" dir="rtl">
+                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                <input type="checkbox" checked data-date-hijri-switch />
+                <span class="date-hijri-toggle-track"></span>
+            </label>
+        </div>
+        <div class="form-text text-muted-ar">يجب أن يكون الموعد اليوم نفسه وبنفس وقت النظام أو بعده مباشرة.
+            هذا الحقل يمثل موعد الحضور وليس وقت الدخول.</div>
+            <span asp-validation-for="VisitDate" class="field-validation-error small"></span>
+        </div>
+        <div class="col-12">
+            <div class="visit-companions-panel rounded-3 p-3">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h2 class="h6 mb-1">المرافقون</h2>
+                        <div class="text-muted-ar small">أضف المرافقين المرتبطين بنفس الزيارة. يبقى الزائر الرئيسي في الحقول
+                            الأساسية أعلاه.</div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-add-companion>إضافة مرافق</button>
+                    </div>
+
+                    <div class="d-grid gap-3" data-companions-container>
+                        @for (var i = 0; i < companions.Count; i++)
+                        {
+                            <div class="visit-companion-row rounded-3 p-3" data-companion-row>
+                                <input type="hidden" name="Companions[@i].Id" value="@companions[i].Id" data-companion-field="Id" />
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <strong>مرافق @(i + 1)</strong>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" data-remove-companion>إزالة</button>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">الاسم</label>
+                                        <input class="form-control" value="@companions[i].FullName"
+                                               data-companion-field="FullName" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">رقم الهوية</label>
+                                        <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                                                 pattern="[12][0-9]{9}" placeholder="1024722918" value="@companions[i].NationalId" data-companion-field="NationalId" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">رقم الجوال</label>
+                                        <input class="form-control ltr-field" inputmode="numeric" maxlength="10"
+                                                 pattern="05[0-9]{8}" placeholder="0501234567" value="@companions[i].PhoneNumber" data-companion-field="PhoneNumber" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">العلاقة</label>
+                                        <input class="form-control" value="@companions[i].Relationship"
+                                               data-companion-field="Relationship" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="text-muted-ar small mt-3" data-empty-companions-message @(companions.Count > 0 ? "hidden" :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        null)>
+                        لا يوجد مرافقون مضافون لهذه الزيارة.
+                    </div>
+
+                    <template data-companion-template>
+                        <div class="visit-companion-row rounded-3 p-3" data-companion-row>
+                            <input type="hidden" value="0" data-companion-field="Id" />
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong>مرافق جديد</strong>
+                                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-companion>إزالة</button>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">الاسم</label>
+                                    <input class="form-control" data-companion-field="FullName" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">رقم الهوية</label>
+                                    <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                                         pattern="[12][0-9]{9}" placeholder="1024722918" data-companion-field="NationalId" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">رقم الجوال</label>
+                                    <input class="form-control ltr-field" inputmode="numeric" maxlength="10"
+                                         pattern="05[0-9]{8}" placeholder="0501234567" data-companion-field="PhoneNumber" />
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">العلاقة</label>
+                                    <input class="form-control" data-companion-field="Relationship" />
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">انتهاء الزيارة</label>
+                <div class="form-control-plaintext text-muted-ar">
+                    ينتهي التصريح تلقائيا بعد دخول الزائر، أو بعد يوم واحد من الدخول إذا لم يتم الخروج.
+                </div>
+            </div>
+        </div>

@@ -1,0 +1,166 @@
+<script nonce="@(Context.Items["CspScriptNonce"])">
+    document.addEventListener("DOMContentLoaded", function () {
+        const form = document.querySelector("form.needs-validation");
+        const purposeInput = document.getElementById("Purpose");
+        const visitedPersonTypeInput = document.getElementById("VisitedPersonType");
+        const visitedPersonLabel = document.querySelector("[data-visited-person-label]");
+        const visitDateInput = document.getElementById("VisitDate");
+        const companionsContainer = document.querySelector("[data-companions-container]");
+        const addCompanionButton = document.querySelector("[data-add-companion]");
+        const companionTemplate = document.querySelector("template[data-companion-template]");
+        const emptyCompanionsMessage = document.querySelector("[data-empty-companions-message]");
+
+        const detainedKeywords = ["موقوف", "توقيف", "مسجون", "سجين", "نزيل"];
+
+        const syncVisitDateLimits = () => {
+            if (!visitDateInput) {
+                return;
+            }
+
+            const now = new Date();
+            const minDate = new Date(now);
+            const maxDate = new Date(now);
+            maxDate.setHours(23, 59, 0, 0);
+
+            const toLocalInputValue = (date) => {
+                const pad = (value) => String(value).padStart(2, "0");
+                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+            };
+
+            visitDateInput.min = toLocalInputValue(minDate);
+            visitDateInput.max = toLocalInputValue(maxDate);
+
+            if (!visitDateInput.value) {
+                visitDateInput.value = toLocalInputValue(now);
+                visitDateInput.dispatchEvent(new Event("input", { bubbles: true }));
+                visitDateInput.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        };
+
+        const inferVisitedPersonType = () => {
+            if (!purposeInput || !visitedPersonTypeInput) {
+                return;
+            }
+
+            const purpose = (purposeInput.value || "").toLowerCase();
+            const isDetained = detainedKeywords.some((keyword) => purpose.includes(keyword));
+
+            if ((visitedPersonTypeInput.value || "") === "Host" && isDetained) {
+                visitedPersonTypeInput.value = purpose.includes("نزيل") || purpose.includes("سجين") || purpose.includes("مسجون")
+                    ? "Prisoner"
+                    : "Detained";
+            }
+        };
+
+        const syncVisitedPersonLabel = () => {
+            if (!visitedPersonLabel || !visitedPersonTypeInput) {
+                return;
+            }
+
+            const labelMap = {
+                Host: "اسم الشخص المُزار",
+                Employee: "اسم الموظف المُزار",
+                Detained: "اسم الموقوف",
+                Prisoner: "اسم النزيل / السجين",
+                Other: "اسم الجهة أو الشخص المُزار"
+            };
+
+            visitedPersonLabel.textContent = labelMap[visitedPersonTypeInput.value] || "اسم الشخص المُزار";
+        };
+
+        const toggleEmptyCompanionsState = () => {
+            if (!emptyCompanionsMessage || !companionsContainer) {
+                return;
+            }
+
+            emptyCompanionsMessage.hidden = companionsContainer.querySelectorAll("[data-companion-row]").length > 0;
+        };
+
+        const reindexCompanionRows = () => {
+            if (!companionsContainer) {
+                return;
+            }
+
+            companionsContainer.querySelectorAll("[data-companion-row]").forEach((row, index) => {
+                const title = row.querySelector("strong");
+                if (title) {
+                    title.textContent = `مرافق ${index + 1}`;
+                }
+
+                row.querySelectorAll("[data-companion-field]").forEach((field) => {
+                    const propertyName = field.getAttribute("data-companion-field");
+                    if (!propertyName) {
+                        return;
+                    }
+
+                    field.setAttribute("name", `Companions[${index}].${propertyName}`);
+                    field.setAttribute("id", `Companions_${index}__${propertyName}`);
+                });
+            });
+
+            toggleEmptyCompanionsState();
+        };
+
+        const addCompanionRow = () => {
+            if (!companionsContainer || !companionTemplate) {
+                return;
+            }
+
+            const fragment = companionTemplate.content.cloneNode(true);
+            companionsContainer.appendChild(fragment);
+            reindexCompanionRows();
+        };
+
+        inferVisitedPersonType();
+        syncVisitedPersonLabel();
+        syncVisitDateLimits();
+        reindexCompanionRows();
+
+        if (purposeInput) {
+            purposeInput.addEventListener("input", () => {
+                inferVisitedPersonType();
+                syncVisitedPersonLabel();
+            });
+            purposeInput.addEventListener("change", () => {
+                inferVisitedPersonType();
+                syncVisitedPersonLabel();
+            });
+        }
+
+        if (visitedPersonTypeInput) {
+            visitedPersonTypeInput.addEventListener("change", syncVisitedPersonLabel);
+        }
+
+        if (addCompanionButton) {
+            addCompanionButton.addEventListener("click", addCompanionRow);
+        }
+
+        if (companionsContainer) {
+            companionsContainer.addEventListener("click", (event) => {
+                const button = event.target.closest("[data-remove-companion]");
+                if (!button) {
+                    return;
+                }
+
+                const row = button.closest("[data-companion-row]");
+                if (row) {
+                    row.remove();
+                    reindexCompanionRows();
+                }
+            });
+        }
+
+        if (!form) {
+            return;
+        }
+
+        form.addEventListener("submit", function (event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            form.classList.add("was-validated");
+        });
+    });
+</script>

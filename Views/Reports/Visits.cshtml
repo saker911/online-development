@@ -1,0 +1,402 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@model ReportsDashboardViewModel
+
+@functions {
+    private static string FormatReportDate(DateTime? value) =>
+    VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.FormatWithDay(value);
+
+    private static string FormatNumericDate(DateTime? value) =>
+    value.HasValue ? value.Value.ToString("yyyy/MM/dd", System.Globalization.CultureInfo.InvariantCulture) : "-";
+
+    private static string FormatNumericTime(DateTime? value) =>
+    value.HasValue
+        ? $"{value.Value.ToString("hh:mm", System.Globalization.CultureInfo.InvariantCulture)} {(value.Value.Hour < 12 ? "صباحًا" : "مساءً")}"
+        : "-";
+}
+
+@{
+    ViewData["Title"] = "تقارير الزيارات";
+    var canViewPermits = User.HasPermission(AppPermissions.ViewPermits);
+    var today = DateTime.Today;
+    var daysSinceSaturday = ((int)today.DayOfWeek - (int)DayOfWeek.Saturday + 7) % 7;
+    var weekStart = today.AddDays(-daysSinceSaturday);
+    var printVisitsUrl = "/Reports/PrintVisitsReport?visitQuickRange="
+    + Uri.EscapeDataString(Model.VisitQuickRange ?? "All")
+    + "&visitStatusFilter="
+    + Uri.EscapeDataString(Model.VisitStatusFilter ?? "All");
+
+    if (Model.VisitDayDate.HasValue)
+    {
+        printVisitsUrl += "&visitDayDate=" + Uri.EscapeDataString(Model.VisitDayDate.Value.ToString("yyyy-MM-dd"));
+    }
+
+    if (Model.VisitFromDate.HasValue)
+    {
+        printVisitsUrl += "&visitFromDate=" + Uri.EscapeDataString(Model.VisitFromDate.Value.ToString("yyyy-MM-dd"));
+    }
+
+    if (Model.VisitToDate.HasValue)
+    {
+        printVisitsUrl += "&visitToDate=" + Uri.EscapeDataString(Model.VisitToDate.Value.ToString("yyyy-MM-dd"));
+    }
+
+    if (!string.IsNullOrWhiteSpace(Model.VisitQuery))
+    {
+        printVisitsUrl += "&visitQuery=" + Uri.EscapeDataString(Model.VisitQuery);
+    }
+
+    var visitsHeader = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPanelHeaderViewModel
+    {
+        Title = "التقرير التفصيلي للزيارات",
+        Subtitle = "يعرض فقط النتائج المطابقة للفلاتر الحالية.",
+        Badge = $"{Model.VisitQuickRangeDisplay} - {Model.VisitStatusFilterDisplay}",
+    };
+}
+
+<div class="reports-page-shell">
+    <section class="reports-hero card-permit">
+        <div>
+            <span class="reports-kicker">تقارير الزيارات</span>
+            <h1 class="mb-2">تقارير الزيارات اليومية والفترية</h1>
+            <p class="text-muted-ar mb-0">يمكنك الطباعة حسب اليوم الحالي أو الأسبوع أو الشهر أو يوم محدد أو من تاريخ إلى
+                تاريخ، مع فلترة الحالة والبحث النصي.</p>
+            </div>
+            <div class="reports-hero-actions">
+                <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
+                @if (canViewPermits)
+                {
+                    <a asp-action="Permits" class="report-mini-action report-mini-action-solid"><span>تقارير التصاريح</span></a>
+                }
+                <a href="@printVisitsUrl" class="report-mini-action report-mini-action-success" target="_blank"><span>طباعة
+                    التقرير
+                    الحالي</span></a>
+                </div>
+            </section>
+
+            <section class="report-grid report-grid-two mt-4">
+                <div class="report-inner-panel">
+                    <div class="report-panel-header">
+                        <div>
+                            <h2>اختيار سريع للفترة</h2>
+                            <span class="text-muted-ar">اختر فترة شائعة بضغطة واحدة، ثم عدّل الحالة أو البحث عند الحاجة.</span>
+                        </div>
+                    </div>
+                    <div class="report-chip-row">
+                        <a asp-action="Visits" asp-route-visitQuickRange="All"
+                               class="report-mini-action @(Model.VisitQuickRange == "All" ? "report-mini-action-solid" : string.Empty)"><span>كل
+                            الفترات</span></a>
+                            <a asp-action="Visits" asp-route-visitQuickRange="Daily"
+                               class="report-mini-action @(Model.VisitQuickRange == "Daily" ? "report-mini-action-success" : string.Empty)"><span>اليوم</span></a>
+                            <a asp-action="Visits" asp-route-visitQuickRange="Weekly"
+                               class="report-mini-action @(Model.VisitQuickRange == "Weekly" ? "report-mini-action-success" : string.Empty)"><span>الأسبوع</span></a>
+                            <a asp-action="Visits" asp-route-visitQuickRange="Monthly"
+                               class="report-mini-action @(Model.VisitQuickRange == "Monthly" ? "report-mini-action-success" : string.Empty)"><span>الشهر</span></a>
+                            <a asp-action="Visits" asp-route-visitQuickRange="SpecificDay"
+                                   asp-route-visitDayDate="@today.ToString("yyyy-MM-dd")"
+                                   class="report-mini-action @(Model.VisitQuickRange == "SpecificDay" ? "report-mini-action-success" : string.Empty)"><span>يوم
+                                محدد</span></a>
+                                <a asp-action="Visits" asp-route-visitQuickRange="DateRange"
+                                       asp-route-visitFromDate="@weekStart.ToString("yyyy-MM-dd")"
+                                       asp-route-visitToDate="@today.ToString("yyyy-MM-dd")"
+                                       class="report-mini-action @(Model.VisitQuickRange == "DateRange" ? "report-mini-action-success" : string.Empty)"><span>من
+                                    تاريخ إلى تاريخ</span></a>
+                                </div>
+                            </div>
+
+                            <div class="report-inner-panel">
+                                <div class="report-panel-header">
+                                    <div>
+                                        <h2>طباعة سريعة</h2>
+                                        <span class="text-muted-ar">طباعة مباشرة للفترات الأكثر استخدامًا دون الحاجة إلى إعادة ضبط الفلاتر
+                                            كل مرة.</span>
+                                        </div>
+                                    </div>
+                                    <div class="report-quick-grid">
+                                        <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Daily"
+                                               class="report-quick-card report-quick-card-visit" target="_blank">
+                                            <span class="report-quick-card-kicker">PDF</span>
+                                            <strong>طباعة تقرير اليوم</strong>
+                                            <small>كل زيارات اليوم الحالي.</small>
+                                        </a>
+                                        <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Weekly"
+                                               class="report-quick-card report-quick-card-visit" target="_blank">
+                                            <span class="report-quick-card-kicker">PDF</span>
+                                            <strong>طباعة تقرير الأسبوع</strong>
+                                            <small>من بداية الأسبوع حتى الآن.</small>
+                                        </a>
+                                        <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Monthly"
+                                               class="report-quick-card report-quick-card-visit" target="_blank">
+                                            <span class="report-quick-card-kicker">PDF</span>
+                                            <strong>طباعة تقرير الشهر</strong>
+                                            <small>سجل كامل للشهر الحالي.</small>
+                                        </a>
+                                        <a href="@printVisitsUrl" class="report-quick-card" target="_blank">
+                                            <span class="report-quick-card-kicker">مخصص</span>
+                                            <strong>طباعة التصفية الحالية</strong>
+                                            <small>بنفس الفترة والحالة والبحث المعروض الآن.</small>
+                                        </a>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div class="reports-stat-grid reports-stat-grid-visits mt-4">
+                                <div class="report-stat report-stat-success"><span class="report-stat-label">السجلات
+                                    المعروضة</span><strong>@Model.TotalVisits</strong></div>
+                                    <div class="report-stat report-stat-warning"><span class="report-stat-label">بانتظار
+                                        الاعتماد</span><strong>@Model.PendingApprovalVisits</strong></div>
+                                        <div class="report-stat report-stat-primary"><span class="report-stat-label">بانتظار
+                                            الوصول</span><strong>@Model.AwaitingArrivalVisits</strong></div>
+                                            <div class="report-stat report-stat-dark"><span class="report-stat-label">داخل
+                                                الزيارة</span><strong>@Model.InsideVisits</strong></div>
+                                                <div class="report-stat"><span class="report-stat-label">منتهية</span><strong>@Model.CompletedVisits</strong>
+                                                </div>
+                                            </div>
+
+                                            <section class="report-inner-panel mt-4">
+                                                <div class="report-panel-header">
+                                                    <div>
+                                                        <h2>فلاتر تقرير الزيارات</h2>
+                                                        <span class="text-muted-ar">اختر نوع الفترة ثم اليوم المحدد أو من/إلى عند الحاجة، ويمكنك أيضًا تحديد
+                                                            حالة الزيارة أو البحث باسم أو هوية أو رقم زيارة.</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <form asp-action="Visits" method="get" class="report-search-form" id="visitReportFiltersForm">
+                                                        <input type="hidden" name="page" value="1" />
+                                                        <div class="report-search-box">
+                                                            <label class="form-label mb-1">نوع الفترة</label>
+                                                            <select name="visitQuickRange" class="form-select" id="visitQuickRangeSelect">
+                                                                <option value="All" selected="@(Model.VisitQuickRange == "All")">كل الفترات</option>
+                                                                <option value="Daily" selected="@(Model.VisitQuickRange == "Daily")">يومي</option>
+                                                                <option value="Weekly" selected="@(Model.VisitQuickRange == "Weekly")">أسبوعي</option>
+                                                                <option value="Monthly" selected="@(Model.VisitQuickRange == "Monthly")">شهري</option>
+                                                                <option value="SpecificDay" selected="@(Model.VisitQuickRange == "SpecificDay")">يوم محدد</option>
+                                                                <option value="DateRange" selected="@(Model.VisitQuickRange == "DateRange")">من تاريخ إلى تاريخ
+                                                                </option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div class="report-search-box">
+                                                            <label class="form-label mb-1">حالة الزيارة</label>
+                                                            <select name="visitStatusFilter" class="form-select">
+                                                                <option value="All" selected="@(Model.VisitStatusFilter == "All")">كل الحالات</option>
+                                                                <option value="PendingApproval" selected="@(Model.VisitStatusFilter == "PendingApproval")">بانتظار
+                                                                    الاعتماد</option>
+                                                                    <option value="AwaitingArrival" selected="@(Model.VisitStatusFilter == "AwaitingArrival")">بانتظار
+                                                                        الوصول</option>
+                                                                        <option value="Inside" selected="@(Model.VisitStatusFilter == "Inside")">داخل الزيارة</option>
+                                                                        <option value="Completed" selected="@(Model.VisitStatusFilter == "Completed")">منتهية</option>
+                                                                        <option value="Rejected" selected="@(Model.VisitStatusFilter == "Rejected")">مرفوضة</option>
+                                                                        <option value="Suspended" selected="@(Model.VisitStatusFilter == "Suspended")">موقوفة</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="report-search-box report-filter-conditional" data-filter-group="SpecificDay">
+                                                                    <label class="form-label mb-1">اليوم المحدد</label>
+                                                                    <input type="date" name="visitDayDate" id="visitDayDateInput"
+                                                                           value="@(Model.VisitDayDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                                                                </div>
+
+                                                                <div class="report-search-box report-filter-conditional" data-filter-group="DateRange">
+                                                                    <label class="form-label mb-1">من تاريخ</label>
+                                                                    <input type="date" name="visitFromDate" id="visitFromDateInput"
+                                                                           value="@(Model.VisitFromDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                                                                </div>
+
+                                                                <div class="report-search-box report-filter-conditional" data-filter-group="DateRange">
+                                                                    <label class="form-label mb-1">إلى تاريخ</label>
+                                                                    <input type="date" name="visitToDate" id="visitToDateInput"
+                                                                           value="@(Model.VisitToDate?.ToString("yyyy-MM-dd"))" class="form-control" />
+                                                                </div>
+
+                                                                <div class="report-search-box">
+                                                                    <label class="form-label mb-1">البحث</label>
+                                                                    <input type="text" name="visitQuery" value="@Model.VisitQuery" class="form-control"
+                                                                           placeholder="رقم الزيارة أو اسم الزائر أو الهوية أو الغرض أو المضيف" />
+                                                                </div>
+
+                                                                <div class="report-search-box">
+                                                                    <label class="form-label mb-1">عدد الصفوف</label>
+                                                                    <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                                                                        <option value="5" selected="@(Model.VisitPageSize == 5)">5</option>
+                                                                        <option value="10" selected="@(Model.VisitPageSize == 10)">10</option>
+                                                                        <option value="20" selected="@(Model.VisitPageSize == 20)">20</option>
+                                                                        <option value="50" selected="@(Model.VisitPageSize == 50)">50</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div class="report-inline-controls report-inline-controls-tight report-filter-actions">
+                                                                    <button type="submit" class="report-mini-action report-mini-action-success"><span>تطبيق
+                                                                        الفلاتر</span></button>
+                                                                        <a href="@printVisitsUrl" class="report-mini-action report-mini-action-solid"
+                                                                           target="_blank"><span>طباعة التقرير</span></a>
+                                                                        <a asp-action="Visits" class="report-mini-action"><span>مسح</span></a>
+                                                                    </div>
+
+                                                                    <div class="report-helper-note">
+                                                                        ستظهر حقول التاريخ المطلوبة فقط حسب نوع الفترة المختار، بينما يبقى البحث وحالة الزيارة متاحين في كل
+                                                                        الحالات.
+                                                                    </div>
+                                                                </form>
+                                                            </section>
+
+                                                            <section class="report-grid report-grid-two mt-4">
+                                                                <div class="report-inner-panel">
+                                                                    <div class="report-panel-header">
+                                                                        <div>
+                                                                            <h2>ملخص التصفية الحالية</h2><span class="text-muted-ar">الوصف الحالي المستخدم أيضًا داخل ملف
+                                                                            PDF.</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="report-summary-card mb-0">@Model.VisitFilterSummary</div>
+                                                                </div>
+
+                                                                <div class="report-inner-panel">
+                                                                    <div class="report-panel-header">
+                                                                        <div>
+                                                                            <h2>مؤشرات عامة</h2><span class="text-muted-ar">ملخص سريع لنشاط الزيارات خلال اليوم والأسبوع
+                                                                            والشهر.</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="report-strip">
+                                                                        @foreach (var metric in Model.VisitMetrics)
+                                                                        {
+                                                                            <div class="metric-card metric-card-visit">
+                                                                                <span>@metric.Label</span><strong>@metric.Count</strong><small>@metric.Description</small>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </section>
+
+                                                            <section class="report-inner-panel mt-4" id="report-data-table">
+                                                                <partial name="_ReportPanelHeader" model="visitsHeader" />
+
+                                                                @if (Model.Visits.Any())
+                                                                {
+                                                                    <div class="table-responsive report-scroll-table">
+                                                                        <table class="table table-striped align-middle report-table report-table-fixed mb-0">
+                                                                            <thead>
+                                                                                <tr>
+                                                                                    <th>رقم الزيارة</th>
+                                                                                    <th>الزائر</th>
+                                                                                    <th>تفاصيل الزيارة</th>
+                                                                                    <th>المواعيد</th>
+                                                                                    <th>الحالة</th>
+                                                                                </tr>
+                                                                            </thead>
+                                                                            <tbody>
+                                                                                @foreach (var item in Model.Visits)
+                                                                                {
+                                                                                    <tr>
+                                                                                        <td>@item.VisitId</td>
+                                                                                        <td>
+                                                                                            <div class="permit-primary-text">@item.VisitorName</div>
+                                                                                            <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <div class="permit-primary-text">@item.SubjectDisplay</div>
+                                                                                            <div class="permit-secondary-text">@item.Purpose</div>
+                                                                                            <div class="permit-secondary-text">المرافقون: @item.CompanionSummary</div>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <div class="permit-primary-text date-text">@FormatNumericDate(item.VisitDate)</div>
+                                                                                            <div class="permit-secondary-text date-text">وقت الزيارة: @FormatNumericTime(item.VisitDate)</div>
+                                                                                            <div class="permit-secondary-text date-text">الدخول: @FormatNumericTime(item.EntryTime)</div>
+                                                                                            <div class="permit-secondary-text date-text">الخروج: @FormatNumericTime(item.ExitTime)</div>
+                                                                                        </td>
+                                                                                        <td>
+                                                                                            <div class="permit-primary-text">@item.StatusDisplay</div>
+                                                                                            <div class="permit-secondary-text">@item.ApprovalStatusDisplay</div>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                }
+                                                                            </tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <partial name="_ReportEmptyState" model='"لا توجد زيارات مطابقة للفلاتر الحالية."' />
+                                                                }
+
+                                                                @{
+                                                                    var visitPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
+                                                                    {
+                                                                        ActionName = "Visits",
+                                                                        AriaLabel = "ترقيم صفحات الزيارات في التقارير",
+                                                                        Fragment = "report-data-table",
+                                                                        Theme = "success",
+                                                                        CurrentPage = Model.VisitPage,
+                                                                        TotalPages = Model.VisitTotalPages,
+                                                                        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+                                                                        {
+                                                                            ["pageSize"] = Model.VisitPageSize,
+                                                                            ["visitQuickRange"] = Model.VisitQuickRange,
+                                                                            ["visitStatusFilter"] = Model.VisitStatusFilter,
+                                                                            ["visitQuery"] = Model.VisitQuery,
+                                                                            ["visitDayDate"] = Model.VisitDayDate?.ToString("yyyy-MM-dd"),
+                                                                            ["visitFromDate"] = Model.VisitFromDate?.ToString("yyyy-MM-dd"),
+                                                                            ["visitToDate"] = Model.VisitToDate?.ToString("yyyy-MM-dd"),
+                                                                        },
+                                                                    };
+                                                                }
+                                                                <partial name="_ReportPagination" model="visitPagination" />
+                                                            </section>
+                                                        </div>
+
+                                                        <script nonce="@(Context.Items["CspScriptNonce"])">
+                                                            (() => {
+                                                                const rangeSelect = document.getElementById('visitQuickRangeSelect');
+                                                                if (!rangeSelect) {
+                                                                    return;
+                                                                }
+
+                                                                const groupedFields = document.querySelectorAll('.report-filter-conditional');
+                                                                const dayInput = document.getElementById('visitDayDateInput');
+                                                                const fromInput = document.getElementById('visitFromDateInput');
+                                                                const toInput = document.getElementById('visitToDateInput');
+
+                                                                const syncFilters = () => {
+                                                                    const mode = rangeSelect.value;
+
+                                                                    groupedFields.forEach((group) => {
+                                                                        const shouldShow = group.dataset.filterGroup === mode;
+                                                                        group.classList.toggle('is-hidden', !shouldShow);
+
+                                                                        group.querySelectorAll('input').forEach((input) => {
+                                                                            input.disabled = !shouldShow;
+                                                                        });
+                                                                    });
+
+                                                                    if (mode !== 'SpecificDay' && dayInput) {
+                                                                        dayInput.disabled = true;
+                                                                    }
+
+                                                                    if (mode !== 'DateRange') {
+                                                                        if (fromInput) {
+                                                                            fromInput.disabled = true;
+                                                                        }
+
+                                                                        if (toInput) {
+                                                                            toInput.disabled = true;
+                                                                        }
+                                                                    }
+                                                                };
+
+                                                                rangeSelect.addEventListener('change', syncFilters);
+                                                                syncFilters();
+                                                            })();
+                                                        </script>

@@ -1,0 +1,101 @@
+@using VehiclePermitSystemWeb.Services.Administration
+@inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
+
+@{
+    ViewData["Title"] = "اكتملت التهيئة";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "login-page-body";
+    var administrationSettings = UserAdminService.GetAdministrationSettings();
+    var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
+    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
+}
+
+<style nonce="@(Context.Items["CspStyleNonce"])">
+    .setup-success-card {
+        width: min(760px, calc(100vw - 2rem));
+        padding: 2.4rem;
+        text-align: center;
+    }
+
+    .setup-success-badge {
+        width: 5.5rem;
+        height: 5.5rem;
+        margin: 0 auto 1.4rem;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-size: 2rem;
+        color: #052b20;
+        background: radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(74, 222, 128, 0.92));
+        box-shadow: 0 22px 40px rgba(74, 222, 128, 0.25);
+    }
+
+    .setup-success-title {
+        font-size: clamp(1.8rem, 2vw, 2.3rem);
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+    }
+
+    .setup-success-subtitle {
+        max-width: 34rem;
+        margin: 0 auto 1.4rem;
+        color: rgba(255, 255, 255, 0.76);
+        line-height: 1.9;
+    }
+
+    .setup-success-panel {
+        margin: 1.6rem auto 0;
+        max-width: 30rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 1.15rem;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1.15rem 1.2rem;
+    }
+
+    .setup-success-spinner {
+        width: 2.4rem;
+        height: 2.4rem;
+        margin: 0 auto 0.85rem;
+        border-radius: 999px;
+        border: 3px solid rgba(255, 255, 255, 0.14);
+        border-top-color: rgba(56, 189, 248, 0.95);
+        animation: setup-success-spin 0.9s linear infinite;
+    }
+
+    .setup-success-link {
+        margin-top: 1rem;
+    }
+
+    @@keyframes setup-success-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<div class="login-page-shell">
+    <div class="login-page-overlay"></div>
+
+    <section class="login-page-card setup-success-card">
+        <img src="~/@organizationLogoPath" alt="شعار @organizationName" class="login-page-watermark" />
+        <div class="setup-success-badge">✓</div>
+        <div class="login-page-kicker">تهيئة النظام</div>
+        <h1 class="setup-success-title">تم إعداد النظام بنجاح</h1>
+        <p class="setup-success-subtitle">تم إنشاء حساب مالك النظام وحفظ بيانات الإدارة وتفعيل جلسة العمل الحالية. سيتم
+            تحويلك الآن تلقائيًا إلى لوحة التحكم.</p>
+
+            <div class="setup-success-panel">
+                <div class="setup-success-spinner"></div>
+                <strong>جاري تحويلك...</strong>
+                <div class="setup-success-link">
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">الدخول الآن</a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        window.setTimeout(() => {
+            window.location.assign('@Url.Action("Index", "Home")');
+        }, 2600);
+    </script>

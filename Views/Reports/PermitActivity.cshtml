@@ -1,0 +1,397 @@
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportsDashboardViewModel
+
+@functions {
+    private static string FormatReportDate(DateTime? value) =>
+    VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.FormatWithDay(value);
+
+    private static string FormatReportTime(DateTime? value) =>
+    value.HasValue
+        ? $"{value.Value.ToString("hh:mm", System.Globalization.CultureInfo.InvariantCulture)} {(value.Value.Hour < 12 ? "صباحًا" : "مساءً")}"
+        : "-";
+
+    private static string FormatReasonCode(string? reasonCode) => reasonCode switch
+    {
+        "SecurityViolation" => "مخالفة أمنية",
+        "NoReturnViolation" => "عدم العودة",
+        "LateReturn" => "عودة متأخرة",
+        "LateAttendance" => "تأخر حضور",
+        "LateCheckout" => "تأخر انصراف",
+        "OverrideEntry" => "دخول استثنائي",
+        "ExitAuthorized" => "خروج بإذن",
+        "ExitFinal" => "خروج نهائي",
+        "ExitUnauthorized" => "خروج بدون إذن",
+        "PendingUnauthorizedExit" => "محاولة معلقة",
+        "DeniedAttemptClosed" => "أغلقت دون مخالفة",
+        "UnauthorizedExitConfirmed" => "مخالفة مؤكدة",
+        "ReturnAfterUnauthorizedExit" => "عودة بعد خروج غير مصرح",
+        "UnauthorizedExitNeedsReview" => "مراجعة إدارية",
+        "AdministrativeReviewConfirmed" => "اعتماد إداري للمخالفة",
+        "AdministrativeReviewDismissed" => "إغلاق إداري دون مخالفة",
+        "NoReturnWarning" => "تنبيه تأخر العودة",
+        "DuplicateIgnored" => "تجاهل تكرار",
+        _ => string.IsNullOrWhiteSpace(reasonCode) ? "-" : reasonCode,
+    };
+
+    private static string FormatClassificationStatus(string? status) => status switch
+    {
+        "Pending" => "معلّق",
+        "ClosedWithoutViolation" => "أغلقت دون مخالفة",
+        "ConfirmedViolation" => "مخالفة مؤكدة",
+        "NeedsAdministrativeReview" => "تحتاج مراجعة",
+        "Completed" => "مكتمل",
+        "Stopped" => "أوقف التصريح",
+        "System" => "نظامي",
+        _ => string.IsNullOrWhiteSpace(status) ? "-" : status,
+    };
+
+    private static string FormatOperator(VehiclePermitSystemWeb.Models.Entities.PermitActivity item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.GateOperatorName))
+        {
+            return string.IsNullOrWhiteSpace(item.GateOperatorAccount)
+                ? item.GateOperatorName
+                : $"{item.GateOperatorName} ({item.GateOperatorAccount})";
+        }
+
+        return string.IsNullOrWhiteSpace(item.RecordedBy) ? "-" : item.RecordedBy;
+    }
+}
+
+@{
+    ViewData["Title"] = "سجل الحركة";
+    var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+    var canReviewUnauthorizedExit = User.HasPermission(AppPermissions.ReviewUnauthorizedExit);
+    var activityPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
+    {
+        ActionName = "PermitActivity",
+        AriaLabel = "ترقيم صفحات سجل الحركة",
+        Fragment = "report-data-table",
+        Theme = "primary",
+        CurrentPage = Model.PermitActivityPage,
+        TotalPages = Model.PermitActivityTotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["pageSize"] = Model.PermitActivityPageSize,
+            ["activityQuery"] = Model.ActivityQuery,
+            ["selectedSequenceId"] = Model.SelectedSequenceId,
+        },
+    };
+    var activityHeader = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPanelHeaderViewModel
+    {
+        Title = "نتائج سجل الحركة",
+        Subtitle = "نتائج منفصلة عن تقارير التصاريح حتى لا تختلط الجداول والطباعة.",
+    };
+}
+
+<div class="reports-page-shell">
+    <section class="reports-hero card-permit">
+        <div>
+            <span class="reports-kicker">سجل الحركة</span>
+            <h1 class="mb-2">بحث وطباعة سجل دخول وخروج الموظفين</h1>
+            <p class="text-muted-ar mb-0">تم فصل السجل عن تقارير التصاريح ليصبح البحث والطباعة أوضح وأسهل.</p>
+        </div>
+        <div class="reports-hero-actions">
+            <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
+            <a asp-action="Permits" class="report-mini-action report-mini-action-solid"><span>تقارير التصاريح</span></a>
+            @if (canViewVisits)
+            {
+                <a asp-action="Visits" class="report-mini-action report-mini-action-success"><span>تقارير
+                    الزيارات</span></a>
+                }
+                <a asp-action="PrintPermitActivityReport" asp-route-activityQuery="@Model.ActivityQuery"
+                   class="report-mini-action" target="_blank"><span>طباعة السجل</span></a>
+                @if (canReviewUnauthorizedExit)
+                {
+                    <a asp-action="UnauthorizedExitWorkflow" class="report-mini-action report-mini-action-warning"><span>مسار مخالفات الخروج</span></a>
+                    <a href="#review-queue" class="report-mini-action report-mini-action-warning"><span>طابور المراجعة</span></a>
+                }
+            </div>
+        </section>
+
+        <div class="reports-stat-grid mt-4">
+            <div class="report-stat report-stat-success"><span class="report-stat-label">نتائج
+                السجل</span><strong>@Model.TotalPermitActivities</strong></div>
+                <div class="report-stat"><span class="report-stat-label">حركات
+                    اليوم</span><strong>@Model.TodayPermitActivities</strong></div>
+                        <div class="report-stat report-stat-warning"><span class="report-stat-label">حالات تحتاج
+                            مراجعة</span><strong>@Model.UnauthorizedExitReviewCount</strong></div>
+                        <div class="report-stat report-stat-dark"><span class="report-stat-label">تسلسلات
+                            مرصودة</span><strong>@Model.SequencedPermitActivityCount</strong></div>
+                        <div class="report-stat report-stat-success"><span class="report-stat-label">نسبة الحضور
+                            المنضبط</span><strong>@Model.AttendanceCommitmentPercent%</strong></div>
+                        <div class="report-stat report-stat-warning"><span class="report-stat-label">تأخر
+                            الحضور</span><strong>@Model.LateAttendanceCount</strong></div>
+                        <div class="report-stat report-stat-success"><span class="report-stat-label">نسبة الانصراف
+                            المنضبط</span><strong>@Model.CheckoutCommitmentPercent%</strong></div>
+                        <div class="report-stat report-stat-warning"><span class="report-stat-label">تأخر
+                            الانصراف</span><strong>@Model.LateCheckoutCount</strong></div>
+                </div>
+
+                <section class="report-inner-panel mt-4">
+                    <div class="report-panel-header">
+                        <div>
+                            <h2>بحث السجل</h2>
+                            <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو الحركة أو الرسالة أو المصدر ثم اطبع السجل
+                                الناتج.</span>
+                            </div>
+                        </div>
+
+                        <form asp-action="PermitActivity" method="get" class="report-search-form">
+                            <input type="hidden" name="page" value="1" />
+                            <input type="hidden" name="selectedSequenceId" value="@Model.SelectedSequenceId" />
+                            <div class="report-search-box">
+                                <label class="form-label mb-1">البحث</label>
+                                <input name="activityQuery" value="@Model.ActivityQuery" class="form-control"
+                                       placeholder="رقم التصريح أو الاسم أو الحركة أو المصدر أو رقم التسلسل" />
+                            </div>
+                            <div class="report-search-box">
+                                <label class="form-label mb-1">عدد الصفوف</label>
+                                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                                    <option value="5" selected="@(Model.PermitActivityPageSize == 5)">5</option>
+                                    <option value="10" selected="@(Model.PermitActivityPageSize == 10)">10</option>
+                                    <option value="20" selected="@(Model.PermitActivityPageSize == 20)">20</option>
+                                    <option value="50" selected="@(Model.PermitActivityPageSize == 50)">50</option>
+                                </select>
+                            </div>
+                            <div class="report-inline-controls report-inline-controls-tight">
+                                <button type="submit" class="report-mini-action report-mini-action-solid"><span>بحث</span></button>
+                                <a asp-action="PrintPermitActivityReport" asp-route-activityQuery="@Model.ActivityQuery"
+                                   class="report-mini-action report-mini-action-success" target="_blank"><span>طباعة السجل</span></a>
+                                <a asp-action="PermitActivity" class="report-mini-action"><span>مسح</span></a>
+                            </div>
+                        </form>
+                    </section>
+
+                    @if (canReviewUnauthorizedExit)
+                    {
+                        <section class="report-inner-panel mt-4" id="review-queue">
+                            <div class="report-panel-header">
+                                <div>
+                                    <h2>طابور المراجعة الإدارية</h2>
+                                    <span class="text-muted-ar">الحالات التي انتهت يوميًا على وضع <strong>تحتاج مراجعة</strong> وتنتظر قرارًا إداريًا نهائيًا.</span>
+                                </div>
+                                <span class="report-section-badge">@Model.UnauthorizedExitReviewCount حالة</span>
+                            </div>
+
+                            @if (Model.UnauthorizedExitReviews.Any())
+                            {
+                                <div class="table-responsive report-scroll-table">
+                                    <table class="table table-striped align-middle report-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>التصريح</th>
+                                                <th>الموظف</th>
+                                                <th>تاريخ الرفع</th>
+                                                <th>الجهة</th>
+                                                <th>المشغل</th>
+                                                <th>الوضع الحالي</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in Model.UnauthorizedExitReviews)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <div>@item.PermitNumber</div>
+                                                        <div class="small text-muted ltr-field">@item.SequenceId</div>
+                                                    </td>
+                                                    <td>
+                                                        <div>@item.DriverName</div>
+                                                        <div class="small text-muted">@item.DepartmentName</div>
+                                                    </td>
+                                                    <td class="date-text">
+                                                        <div>@FormatReportDate(item.ReviewRaisedAt)</div>
+                                                        <div class="small text-muted">@FormatReportTime(item.ReviewRaisedAt)</div>
+                                                    </td>
+                                                    <td>
+                                                        <div>@item.GateName</div>
+                                                        <div class="small text-muted">@item.ActivityCount حركة</div>
+                                                    </td>
+                                                    <td>@item.OperatorDisplay</td>
+                                                    <td>
+                                                        <div>@FormatClassificationStatus(item.ClassificationStatus)</div>
+                                                        <div class="small text-muted">@item.ApprovalStatusDisplay · @item.WarningCount تنبيه</div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="report-inline-controls report-inline-controls-tight">
+                                                            <a asp-action="PermitActivity"
+                                                               asp-route-activityQuery="@Model.ActivityQuery"
+                                                               asp-route-selectedSequenceId="@item.SequenceId"
+                                                               asp-route-pageSize="@Model.PermitActivityPageSize"
+                                                               class="report-mini-action"><span>عرض التسلسل</span></a>
+                                                            <form asp-action="ResolveUnauthorizedExitReview" method="post" data-single-submit-form>
+                                                                <input type="hidden" name="sequenceId" value="@item.SequenceId" />
+                                                                <input type="hidden" name="activityQuery" value="@Model.ActivityQuery" />
+                                                                <input type="hidden" name="pageSize" value="@Model.PermitActivityPageSize" />
+                                                                <button type="submit" name="resolution" value="dismiss" class="report-mini-action" data-pending-text="انتظار...">
+                                                                    <span>إغلاق دون مخالفة</span>
+                                                                </button>
+                                                            </form>
+                                                            <form asp-action="ResolveUnauthorizedExitReview" method="post" data-single-submit-form>
+                                                                <input type="hidden" name="sequenceId" value="@item.SequenceId" />
+                                                                <input type="hidden" name="activityQuery" value="@Model.ActivityQuery" />
+                                                                <input type="hidden" name="pageSize" value="@Model.PermitActivityPageSize" />
+                                                                <button type="submit" name="resolution" value="confirm" class="report-mini-action report-mini-action-warning" data-pending-text="انتظار...">
+                                                                    <span>اعتماد المخالفة</span>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <partial name="_ReportEmptyState" model='"لا توجد حالات معلقة للمراجعة الإدارية حاليًا."' />
+                            }
+                        </section>
+                    }
+
+                    @if (Model.SelectedSequenceActivities.Any())
+                    {
+                        <section class="report-inner-panel mt-4" id="sequence-timeline">
+                            <div class="report-panel-header">
+                                <div>
+                                    <h2>التسلسل الزمني للحالة</h2>
+                                    <span class="text-muted-ar">استعراض جميع الخطوات المرتبطة بالتسلسل المختار من أول محاولة حتى آخر قرار.</span>
+                                </div>
+                                <span class="report-section-badge ltr-field">@Model.SelectedSequenceId</span>
+                            </div>
+
+                            @if (Model.SelectedUnauthorizedExitReview != null)
+                            {
+                                <div class="report-info-grid mb-3">
+                                    <div class="report-info-item"><span>التصريح</span><strong>@Model.SelectedUnauthorizedExitReview.PermitNumber</strong></div>
+                                    <div class="report-info-item"><span>الموظف</span><strong>@Model.SelectedUnauthorizedExitReview.DriverName</strong></div>
+                                    <div class="report-info-item"><span>رفعت للمراجعة</span><strong>@FormatReportDate(Model.SelectedUnauthorizedExitReview.ReviewRaisedAt)</strong></div>
+                                    <div class="report-info-item"><span>الحالة</span><strong>@FormatClassificationStatus(Model.SelectedUnauthorizedExitReview.ClassificationStatus)</strong></div>
+                                    <div class="report-info-item"><span>الجهة</span><strong>@Model.SelectedUnauthorizedExitReview.GateName</strong></div>
+                                    <div class="report-info-item"><span>المشغل</span><strong>@Model.SelectedUnauthorizedExitReview.OperatorDisplay</strong></div>
+                                </div>
+                                <div class="text-muted-ar mb-3">@Model.SelectedUnauthorizedExitReview.SummaryMessage</div>
+                            }
+
+                            <div class="table-responsive report-scroll-table">
+                                <table class="table table-striped align-middle report-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>الوقت</th>
+                                            <th>الحركة</th>
+                                            <th>التصنيف</th>
+                                            <th>المشغل</th>
+                                            <th>الرسالة</th>
+                                            <th>البوابة / الوسيلة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.SelectedSequenceActivities)
+                                        {
+                                            <tr>
+                                                <td class="date-text">
+                                                    <div>@FormatReportDate(item.OccurredAt)</div>
+                                                    <div class="small text-muted">@FormatReportTime(item.OccurredAt)</div>
+                                                </td>
+                                                <td>@item.ActionLabel</td>
+                                                <td>@FormatClassificationStatus(item.ClassificationStatus)<div class="small text-muted">@FormatReasonCode(item.ReasonCode)</div></td>
+                                                <td>@FormatOperator(item)</td>
+                                                <td>@item.Message</td>
+                                                <td>@(string.IsNullOrWhiteSpace(item.GateName) ? item.Source : item.GateName)<div class="small text-muted">@(string.IsNullOrWhiteSpace(item.ExecutionMethod) ? "-" : item.ExecutionMethod)</div></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    }
+
+                    <section class="report-inner-panel mt-4" id="report-data-table">
+                        <partial name="_ReportPanelHeader" model="activityHeader" />
+
+                        @if (Model.FilteredPermitActivities.Any())
+                        {
+                            <div class="table-responsive report-scroll-table">
+                                <table class="table table-striped align-middle report-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>رقم التصريح</th>
+                                            <th>الاسم</th>
+                                            <th>الحركة</th>
+                                            <th>التصنيف</th>
+                                            <th>المشغل</th>
+                                            <th>الوقت</th>
+                                            <th>الرسالة</th>
+                                            <th>البوابة / الوسيلة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.FilteredPermitActivities)
+                                        {
+                                            <tr>
+                                                <td>@item.PermitNumber</td>
+                                                <td>@item.DriverName</td>
+                                                <td>@item.ActionLabel</td>
+                                                <td>@FormatClassificationStatus(item.ClassificationStatus)<div class="small text-muted">@FormatReasonCode(item.ReasonCode)</div></td>
+                                                <td>@FormatOperator(item)</td>
+                                                <td class="date-text">@FormatReportTime(item.OccurredAt)</td>
+                                                <td>@item.Message</td>
+                                                <td>@(string.IsNullOrWhiteSpace(item.GateName) ? item.Source : item.GateName)<div class="small text-muted">@(string.IsNullOrWhiteSpace(item.ExecutionMethod) ? "-" : item.ExecutionMethod)</div></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <partial name="_ReportEmptyState" model='"لا توجد حركات مطابقة للبحث الحالي."' />
+                        }
+                    </section>
+
+                    @if (Model.PermitActivityTotalPages > 1)
+                    {
+                        <partial name="_ReportPagination" model="activityPagination" />
+                    }
+                </div>
+
+<script nonce="@(Context.Items["CspScriptNonce"])">
+    (() => {
+        const updatePendingLabel = (button, nextText) => {
+            const label = button.querySelector('span');
+            if (label) {
+                label.textContent = nextText;
+                return;
+            }
+
+            button.textContent = nextText;
+        };
+
+        document.querySelectorAll('form[data-single-submit-form]').forEach((form) => {
+            let submitted = false;
+            form.addEventListener('submit', (event) => {
+                if (submitted) {
+                    event.preventDefault();
+                    return;
+                }
+
+                const submitter = event.submitter instanceof HTMLButtonElement
+                    ? event.submitter
+                    : form.querySelector('button[type="submit"]');
+                if (!submitter) {
+                    return;
+                }
+
+                submitted = true;
+                form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                    button.disabled = true;
+                });
+
+                updatePendingLabel(submitter, submitter.dataset.pendingText || 'انتظار...');
+            });
+        });
+    })();
+</script>

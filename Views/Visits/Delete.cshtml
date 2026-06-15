@@ -1,0 +1,28 @@
+@model VehiclePermitSystemWeb.Models.Entities.Visit
+
+@{
+    ViewData["Title"] = "حذف الزيارة";
+}
+
+<div class="card-visit">
+    <h1 class="h3 mb-3">تأكيد حذف الزيارة</h1>
+    <p>هل تريد حذف الزيارة رقم <strong>@Model.VisitId</strong> للزائر <strong>@Model.VisitorName</strong>؟</p>
+
+    <dl class="row">
+        <dt class="col-sm-3">الغرض</dt>
+        <dd class="col-sm-9">@Model.Purpose</dd>
+        <dt class="col-sm-3">الشخص المُزار</dt>
+        <dd class="col-sm-9">@Model.SubjectDisplay</dd>
+        <dt class="col-sm-3">المرافقون</dt>
+        <dd class="col-sm-9">@Model.CompanionSummary</dd>
+    </dl>
+
+    <form asp-action="Delete" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.VisitId" />
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">تأكيد الحذف</button>
+            <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+        </div>
+    </form>
+</div>

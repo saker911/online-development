@@ -1,0 +1,425 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@model ReportsDashboardViewModel
+
+@functions {
+    private static string FormatReportDate(DateTime? value) =>
+    VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.FormatWithDay(value);
+
+    private static string FormatPrimaryLocation(Permit item)
+    {
+        var department = (item.DepartmentName ?? string.Empty).Trim();
+        var location = (item.LocationDisplay ?? string.Empty).Trim();
+        if (!string.IsNullOrWhiteSpace(department))
+        {
+            return department;
+        }
+
+        return string.IsNullOrWhiteSpace(location) ? "-" : location;
+    }
+
+    private static bool ShouldShowSecondaryLocation(Permit item)
+    {
+        var primaryLocation = FormatPrimaryLocation(item);
+        var location = (item.LocationDisplay ?? string.Empty).Trim();
+        return !string.IsNullOrWhiteSpace(location)
+            && !string.Equals(primaryLocation, location, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+@{
+    ViewData["Title"] = "تقارير التصاريح";
+    var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+    var approvablePermitNumbers = Model.ApprovablePermitNumbers;
+    var hasApprovablePendingPermits = Model.PendingApprovalPermits.Any(item =>
+        approvablePermitNumbers.Contains(item.PermitNumber)
+    );
+    var printPermitsUrl = "/Reports/PrintPermitsReport?permitTypeFilter="
+    + Uri.EscapeDataString(Model.PermitTypeFilter ?? "All");
+
+    if (!string.IsNullOrWhiteSpace(Model.ReportQuery))
+    {
+        printPermitsUrl += "&reportQuery=" + Uri.EscapeDataString(Model.ReportQuery);
+    }
+
+    printPermitsUrl += "&pageSize=" + Model.PermitPageSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var permitPagination = new ReportPaginationViewModel
+    {
+        ActionName = "Permits",
+        AriaLabel = "ترقيم صفحات تقارير التصاريح",
+        Fragment = "report-data-table",
+        Theme = "primary",
+        CurrentPage = Model.PermitPage,
+        TotalPages = Model.PermitTotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["pageSize"] = Model.PermitPageSize,
+            ["permitTypeFilter"] = Model.PermitTypeFilter,
+            ["reportQuery"] = Model.ReportQuery,
+        },
+    };
+    var permitsHeader = new ReportPanelHeaderViewModel
+    {
+        Title = "التقرير التفصيلي للتصاريح",
+        Subtitle = "الجدول الرئيسي للتصاريح بعد تطبيق الفلاتر الحالية.",
+        Badge = Model.PermitTypeFilterDisplay,
+    };
+}
+
+<div class="reports-page-shell">
+    <section class="reports-hero card-permit">
+        <div>
+            <span class="reports-kicker">تقارير التصاريح</span>
+            <h1 class="mb-2">تقارير تصاريح المركبات</h1>
+            <p class="text-muted-ar mb-0">صفحة مستقلة لبحث التصاريح وطباعة تقاريرها وطلبات الاعتماد فقط.</p>
+        </div>
+        <div class="reports-hero-actions">
+            <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
+            @if (canViewVisits)
+            {
+                <a asp-action="Visits" class="report-mini-action report-mini-action-success"><span>تقارير
+                    الزيارات</span></a>
+                }
+                <a href="@printPermitsUrl" class="report-mini-action report-mini-action-solid" target="_blank"><span>طباعة
+                    التصاريح</span></a>
+                    <a asp-action="PermitActivity" class="report-mini-action"><span>مركز السجل</span></a>
+                    <a asp-action="PrintPendingPermitsReport" class="report-mini-action report-mini-action-warning"
+                       target="_blank"><span>طلبات غير معتمدة</span></a>
+                </div>
+            </section>
+
+            <div class="reports-stat-grid mt-4">
+                <div class="report-stat"><span class="report-stat-label">إجمالي
+                    التصاريح</span><strong>@Model.TotalPermits</strong></div>
+                    <div class="report-stat report-stat-primary"><span
+                        class="report-stat-label">معتمدة</span><strong>@Model.ApprovedPermits</strong></div>
+                        <div class="report-stat report-stat-warning"><span class="report-stat-label">قيد
+                            الانتظار</span><strong>@Model.PendingPermits</strong></div>
+                            <div class="report-stat report-stat-dark"><span class="report-stat-label">تصاريح
+                                خروج</span><strong>@Model.ExitPermits</strong></div>
+                                <div class="report-stat report-stat-success"><span class="report-stat-label">حركات
+                                    اليوم</span><strong>@Model.TodayPermitActivities</strong></div>
+                                </div>
+
+                                <section class="report-inner-panel mt-4">
+                                    <div class="report-panel-header">
+                                        <div>
+                                            <h2>فلترة وبحث</h2>
+                                            <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو الهوية أو اللوحة، وحدد نوع التصريح قبل
+                                                الطباعة.</span>
+                                            </div>
+                                            <span class="report-section-badge">@Model.PermitTypeFilterDisplay</span>
+                                        </div>
+
+                                        <form asp-action="Permits" method="get" class="report-search-form">
+                                            <input type="hidden" name="page" value="1" />
+                                            <div class="report-search-box">
+                                                <label class="form-label mb-1">نوع التصريح</label>
+                                                <select name="permitTypeFilter" class="form-select">
+                                                    <option value="All" selected="@(Model.PermitTypeFilter == "All")">الكل</option>
+                                                    <option value="@Permit.PermitTypePermanent"
+                                                            selected="@(Model.PermitTypeFilter == Permit.PermitTypePermanent)">موظف</option>
+                                                    <option value="@Permit.PermitTypeExit"
+                                                            selected="@(Model.PermitTypeFilter == Permit.PermitTypeExit)">خروج</option>
+                                                    <option value="@Permit.PermitTypeVisitor"
+                                                            selected="@(Model.PermitTypeFilter == Permit.PermitTypeVisitor)">زائر</option>
+                                                </select>
+                                            </div>
+                                            <div class="report-search-box">
+                                                <label class="form-label mb-1">البحث</label>
+                                                <input name="reportQuery" value="@Model.ReportQuery" class="form-control"
+                                                       placeholder="رقم التصريح أو الاسم أو الهوية أو اللوحة" />
+                                            </div>
+                                            <div class="report-search-box">
+                                                <label class="form-label mb-1">عدد الصفوف</label>
+                                                <select name="pageSize" class="form-select" onchange="this.form.submit()">
+                                                    <option value="5" selected="@(Model.PermitPageSize == 5)">5</option>
+                                                    <option value="10" selected="@(Model.PermitPageSize == 10)">10</option>
+                                                    <option value="20" selected="@(Model.PermitPageSize == 20)">20</option>
+                                                    <option value="50" selected="@(Model.PermitPageSize == 50)">50</option>
+                                                </select>
+                                            </div>
+                                            <div class="report-inline-controls report-inline-controls-tight">
+                                                <button type="submit" class="report-mini-action report-mini-action-solid"><span>تطبيق</span></button>
+                                                <a href="@printPermitsUrl" class="report-mini-action report-mini-action-success"
+                                                   target="_blank"><span>طباعة التقرير</span></a>
+                                                <a asp-action="Permits" class="report-mini-action"><span>مسح</span></a>
+                                            </div>
+                                        </form>
+                                    </section>
+
+                                    @if (Model.MatchingPermits.Count > 1)
+                                    {
+                                        <section class="report-inner-panel mt-4">
+                                            <div class="report-panel-header">
+                                                <div>
+                                                    <h2>نتائج البحث</h2>
+                                                    <span class="text-muted-ar">اختر تصريحًا واحدًا لعرض التقرير التفصيلي.</span>
+                                                </div>
+                                            </div>
+                                            <div class="table-responsive report-scroll-table">
+                                                <table class="table table-striped align-middle report-table mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>رقم التصريح</th>
+                                                            <th>حامل التصريح</th>
+                                                            <th>الحالة</th>
+                                                            <th>عرض</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var item in Model.MatchingPermits)
+                                                        {
+                                                            <tr>
+                                                                <td>@item.PermitNumber</td>
+                                                                <td>
+                                                                    <div class="permit-primary-text">@item.DriverName</div>
+                                                                    <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                                    <div class="permit-secondary-text">@item.DepartmentName</div>
+                                                                </td>
+                                                                <td>@item.ApprovalStatusDisplay</td>
+                                                                <td><a asp-action="Permits" asp-route-permitTypeFilter="@Model.PermitTypeFilter"
+                                                                           asp-route-reportQuery="@Model.ReportQuery"
+                                                                           asp-route-selectedPermitNumber="@item.PermitNumber"
+                                                                           class="report-mini-action"><span>عرض</span></a></td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </section>
+                                        }
+
+                                        @if (Model.SelectedPermit != null)
+                                        {
+                                            <section class="report-inner-panel mt-4">
+                                                <div class="report-panel-header">
+                                                    <div>
+                                                        <h2>بطاقة التصريح</h2><span class="text-muted-ar">ملخص كامل للتصريح المحدد.</span>
+                                                    </div>
+                                                    <div class="report-inline-controls report-inline-controls-tight">
+                                                        <a asp-action="PermitActivity" asp-route-activityQuery="@Model.SelectedPermit.PermitNumber"
+                                                           class="report-mini-action"><span>سجل التصريح</span></a>
+                                                        <a asp-action="PrintPermitDetailedReport" asp-route-permitNumber="@Model.SelectedPermit.PermitNumber"
+                                                           class="report-mini-action" target="_blank"><span>طباعة تفصيلية</span></a>
+                                                    </div>
+                                                </div>
+                                                <div class="report-info-grid">
+                                                    <div class="report-info-item"><span>رقم التصريح</span><strong>@Model.SelectedPermit.PermitNumber</strong>
+                                                    </div>
+                                                    <div class="report-info-item"><span>@(Model.SelectedPermit.IsVisitorPermit ? "اسم الزائر" :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                "الاسم")</span><strong>@Model.SelectedPermit.DriverName</strong></div>
+                                                        <div class="report-info-item"><span>الهوية</span><strong
+                                                            class="national-id-field">@Model.SelectedPermit.NationalId</strong></div>
+                                                            <div class="report-info-item"><span>@(Model.SelectedPermit.IsVisitorPermit ? "مكان الزيارة" :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     "القسم")</span><strong>@Model.SelectedPermit.LocationDisplay</strong></div>
+                                                                <div class="report-info-item"><span>الجوال</span><strong
+                                                                    class="ltr-field">@Model.SelectedPermit.EmployeePhone</strong></div>
+                                                                    <div class="report-info-item"><span>تاريخ التصريح</span><strong
+                                                                        class="date-text">@(Model.SelectedPermit.PermitDate.HasValue ?
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    HijriDateFormatter.Format(Model.SelectedPermit.PermitDate) : "غير محدد")</strong></div>
+                                                                        <div class="report-info-item"><span>اللوحة</span><strong>@Model.SelectedPermit.PlateNumberDisplay</strong>
+                                                                        </div>
+                                                                        <div class="report-info-item">
+                                                                            <span>الحالة</span><strong>@Model.SelectedPermit.ApprovalStatusDisplay</strong>
+                                                                        </div>
+                                                                        <div class="report-info-item">
+                                                                            <span>الانتهاء</span><strong>@(Model.SelectedPermit.IsVisitorPermit &&
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    !Model.SelectedPermit.ExpiresAt.HasValue ? "يحدد تلقائيا بعد دخول الزائر" :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    FormatReportDate(Model.SelectedPermit.ExpiresAt))</strong>
+                                                                        </div>
+                                                                        <div class="report-info-item"><span>آلية
+                                                                            الحركة</span><strong>@Model.SelectedPermit.ReturnRequirementDisplay</strong></div>
+                                                                        </div>
+                                                                    </section>
+                                                                }
+
+                                                                <section class="report-grid report-grid-two mt-4">
+                                                                    <div class="report-inner-panel">
+                                                                        <div class="report-panel-header">
+                                                                            <div>
+                                                                                <h2>مؤشرات الخروج</h2><span class="text-muted-ar">متابعة يومية وأسبوعية وشهرية لخروج
+                                                                                المركبات.</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="report-strip">
+                                                                            @foreach (var metric in Model.ExitMetrics)
+                                                                            {
+                                                                                <div class="metric-card">
+                                                                                    <span>@metric.Label</span><strong>@metric.Count</strong><small>@metric.Description</small>
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="report-inner-panel">
+                                                                        <div class="report-panel-header">
+                                                                            <div>
+                                                                                <h2>أسماء المصرح لهم</h2><span class="text-muted-ar">قائمة مختصرة للمخولين بالحركة.</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        @if (Model.PermitHolders.Any())
+                                                                        {
+                                                                            <div class="horizontal-card-list">
+                                                                                @foreach (var item in Model.PermitHolders)
+                                                                                {
+                                                                                    <div class="holder-card">
+                                                                                        <div class="holder-name">@item.DriverName</div>
+                                                                                        <div class="holder-meta">@item.PermitNumber · <span
+                                                                                            class="national-id-field">@item.NationalId</span></div>
+                                                                                            <div class="holder-meta">@item.DepartmentName</div>
+                                                                                            <div class="holder-meta">@item.PlateNumberDisplay</div>
+                                                                                        </div>
+                                                                                    }
+                                                                                </div>
+                                                                            }
+                                                                        else
+                                                                            {
+                                                                                <div class="text-muted-ar">لا توجد أسماء معتمدة حاليًا.</div>
+                                                                            }
+                                                                        </div>
+                                                                    </section>
+
+                                                                    <section class="report-inner-panel mt-4" id="report-data-table">
+                                                                        <partial name="_ReportPanelHeader" model="permitsHeader" />
+                                                                        <div class="table-responsive report-scroll-table">
+                                                                            <table class="table table-striped align-middle report-table report-table-fixed mb-0">
+                                                                                <thead>
+                                                                                    <tr>
+                                                                                        <th>رقم التصريح</th>
+                                                                                        <th>حامل التصريح</th>
+                                                                                        <th>الموقع والتواصل</th>
+                                                                                        <th>الحالة</th>
+                                                                                        <th>المركبة</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    @foreach (var item in Model.Permits)
+                                                                                    {
+                                                                                        <tr>
+                                                                                            <td>@item.PermitNumber</td>
+                                                                                            <td>
+                                                                                                <div class="permit-primary-text">@item.DriverName</div>
+                                                                                                <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <div class="permit-primary-text">@FormatPrimaryLocation(item)</div>
+                                                                                                @if (ShouldShowSecondaryLocation(item))
+                                                                                                {
+                                                                                                    <div class="permit-secondary-text">@item.LocationDisplay</div>
+                                                                                                }
+                                                                                                <div class="permit-secondary-text ltr-field">@item.EmployeePhone</div>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <div class="permit-primary-text">@item.ApprovalStatusDisplay</div>
+                                                                                                <div class="permit-secondary-text">@item.ReturnRequirementDisplay</div>
+                                                                                            </td>
+                                                                                            <td>
+                                                                                                <div class="permit-primary-text">@item.PlateNumberDisplay</div>
+                                                                                                <div class="permit-secondary-text date-text">@FormatReportDate(item.PermitDate)</div>
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    }
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+
+                                                                        <partial name="_ReportPagination" model="permitPagination" />
+                                                                    </section>
+
+                                                                    <section class="report-inner-panel mt-4" id="pending-permit-requests">
+                                                                        <div class="report-panel-header">
+                                                                            <div>
+                                                                                <h2>طلبات التصاريح غير المعتمدة</h2><span class="text-muted-ar">اعتماد أو رفض الطلبات مباشرة من هذا
+                                                                                القسم.</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        @if (Model.PendingApprovalPermits.Any())
+                                                                        {
+                                                                            <div class="table-responsive report-scroll-table">
+                                                                                <table class="table table-striped align-middle report-table mb-0">
+                                                                                    <thead>
+                                                                                        <tr>
+                                                                                            <th>رقم التصريح</th>
+                                                                                            <th>حامل التصريح</th>
+                                                                                            <th>الموقع والمركبة</th>
+                                                                                            <th>الحالة</th>
+                                                                                            @if (hasApprovablePendingPermits)
+                                                                                            {
+                                                                                                <th>الإجراء</th>
+                                                                                            }
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        @foreach (var item in Model.PendingApprovalPermits)
+                                                                                        {
+                                                                                            <tr>
+                                                                                                <td>@item.PermitNumber</td>
+                                                                                                <td>
+                                                                                                    <div class="permit-primary-text">@item.DriverName</div>
+                                                                                                    <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                                                                    <div class="permit-secondary-text ltr-field">@item.EmployeePhone</div>
+                                                                                                </td>
+                                                                                                <td>
+                                                                                                    <div class="permit-primary-text">@FormatPrimaryLocation(item)</div>
+                                                                                                    @if (ShouldShowSecondaryLocation(item))
+                                                                                                    {
+                                                                                                        <div class="permit-secondary-text">@item.LocationDisplay</div>
+                                                                                                    }
+                                                                                                    <div class="permit-secondary-text">@item.PlateNumberDisplay</div>
+                                                                                                </td>
+                                                                                                <td>@item.ApprovalStatusDisplay</td>
+                                                                                                @if (approvablePermitNumbers.Contains(item.PermitNumber))
+                                                                                                {
+                                                                                                    <td>
+                                                                                                        <div class="report-inline-controls report-inline-controls-tight">
+                                                                                                            <form asp-action="ApprovePendingPermit" method="post" class="d-inline">
+                                                                                                                @Html.AntiForgeryToken()
+                                                                                                                <input type="hidden" name="id" value="@item.PermitNumber" />
+                                                                                                                <button type="submit"
+                                                                                                                        class="report-mini-action report-mini-action-success report-mini-button-only action-icon-btn"
+                                                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                                                        data-bs-title="اعتماد" title="اعتماد"
+                                                                                                                        aria-label="اعتماد التصريح @item.PermitNumber">
+                                                                                                                    <span class="action-icon-glyph" aria-hidden="true">✓</span>
+                                                                                                                    <span class="visually-hidden">اعتماد</span>
+                                                                                                                </button>
+                                                                                                            </form>
+                                                                                                            <form asp-action="RejectPendingPermit" method="post" class="d-inline">
+                                                                                                                @Html.AntiForgeryToken()
+                                                                                                                <input type="hidden" name="id" value="@item.PermitNumber" />
+                                                                                                                <button type="submit"
+                                                                                                                        class="report-mini-action report-mini-action-danger report-mini-button-only action-icon-btn"
+                                                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                                                        data-bs-title="رفض" title="رفض"
+                                                                                                                        aria-label="رفض التصريح @item.PermitNumber">
+                                                                                                                    <span class="action-icon-glyph" aria-hidden="true">✕</span>
+                                                                                                                    <span class="visually-hidden">رفض</span>
+                                                                                                                </button>
+                                                                                                            </form>
+                                                                                                        </div>
+                                                                                                    </td>
+                                                                                                }
+                                                                                            </tr>
+                                                                                        }
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            </div>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <partial name="_ReportEmptyState" model='"لا توجد طلبات غير معتمدة حاليًا."' />
+                                                                        }
+                                                                    </section>
+                                                                </div>

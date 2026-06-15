@@ -1,0 +1,133 @@
+@using System.Globalization
+@model VehiclePermitSystemWeb.Models.ViewModels.Reports.UserActivityReportViewModel
+
+@{
+    ViewData["Title"] = "سجل عمليات المستخدمين";
+    var activityPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
+    {
+        ActionName = "ActivityLog",
+        AriaLabel = "ترقيم صفحات سجل العمليات",
+        Theme = "primary",
+        CurrentPage = Model.CurrentPage,
+        TotalPages = Model.TotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["query"] = Model.Query,
+            ["actionType"] = Model.ActionType,
+            ["username"] = Model.Username,
+        },
+    };
+}
+
+<div class="users-activity-shell">
+    <div class="users-activity-hero app-card-surface">
+        <div>
+            <span class="users-section-kicker">المراجعة والتدقيق</span>
+            <h1>سجل عمليات المستخدمين</h1>
+            <p>مسار موحد لمراجعة الإضافة والتعديل والتفعيل وتغيير كلمات المرور وتسجيل الدخول والخروج.</p>
+        </div>
+        <div class="users-activity-hero-stats">
+            <div class="users-index-stat"><span>إجمالي العمليات</span><strong>@Model.TotalCount</strong></div>
+            <div class="users-index-stat"><span>الصفحة الحالية</span><strong>@Model.CurrentPage /
+                @Model.TotalPages</strong></div>
+            </div>
+        </div>
+
+        <div class="users-card app-card-surface">
+            <div class="users-card-header users-card-header-inline users-card-header-wrap">
+                <div>
+                    <span class="users-section-kicker">الفلاتر</span>
+                    <h2>فلترة التقرير</h2>
+                </div>
+                <div class="users-inline-actions">
+                    <a asp-action="Index" class="btn btn-secondary btn-sm">رجوع للوحة المستخدمين</a>
+                    <a asp-action="PrintActivityLog" asp-route-query="@Model.Query" asp-route-actionType="@Model.ActionType"
+                       asp-route-username="@Model.Username" class="btn btn-outline-primary btn-sm">طباعة التقرير</a>
+                </div>
+            </div>
+
+            <form method="get" class="users-filter-grid">
+                <div>
+                    <label class="form-label">بحث</label>
+                    <input name="query" value="@Model.Query" class="form-control"
+                           placeholder="اسم المستخدم، الرسالة، أو نوع العملية" />
+                </div>
+                <div>
+                    <label class="form-label">نوع العملية</label>
+                    <select name="actionType" class="form-select">
+                        <option value="">كل الأنواع</option>
+                        @foreach (var actionType in Model.AvailableActionTypes)
+                        {
+                            <option value="@actionType"
+                                    selected="@(string.Equals(Model.ActionType, actionType, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                @actionType</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">المستخدم</label>
+                        <select name="username" class="form-select" data-smart-select="true"
+                                data-smart-select-placeholder="ابحث عن المستخدم أو اختره">
+                            <option value="">كل المستخدمين</option>
+                            @foreach (var username in Model.AvailableUsers)
+                            {
+                                <option value="@username"
+                                        selected="@(string.Equals(Model.Username, username, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                    @username</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="users-filter-actions">
+                            <button type="submit" class="btn btn-primary">تصفية</button>
+                            <a asp-action="ActivityLog" class="btn btn-outline-secondary">مسح</a>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="users-card app-card-surface">
+                    @if (Model.Activities.Count == 0)
+                    {
+                        <div class="users-empty-state">
+                            <h3>لا توجد عمليات مطابقة</h3>
+                            <p>جرّب تغيير معايير البحث أو إزالة بعض الفلاتر الحالية.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="users-activity-list">
+                            @foreach (var activity in Model.Activities)
+                            {
+                                var activityPrimaryName = string.IsNullOrWhiteSpace(activity.DisplayName) ? activity.Username :
+                        activity.DisplayName;
+                                var activitySecondaryName = string.IsNullOrWhiteSpace(activity.Username) ||
+                        string.Equals(activityPrimaryName, activity.Username, StringComparison.OrdinalIgnoreCase) ? string.Empty :
+                        activity.Username;
+
+                                <article class="users-activity-log-card">
+                                    <div class="users-activity-log-head">
+                                        <div>
+                                            <span class="users-activity-badge">@activity.ActionLabel</span>
+                                            <strong>@activityPrimaryName</strong>
+                                            @if (!string.IsNullOrWhiteSpace(activitySecondaryName))
+                                            {
+                                                <small class="ltr-field">@activitySecondaryName</small>
+                                            }
+                                        </div>
+                                        <time
+                                        class="ltr-field">@VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.Format(activity.OccurredAt)</time>
+                                    </div>
+                                    <p>@activity.Message</p>
+                                    <div class="users-activity-log-meta">@activity.GetActorDisplay() <span>•</span>
+                                        <span>@activity.ActionType</span>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    @await Html.PartialAsync("_ReportPagination", activityPagination)
+                }
+            </div>

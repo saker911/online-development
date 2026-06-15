@@ -1,0 +1,13 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Delegations.DelegationManagementViewModel
+
+@{
+    ViewData["Title"] = "تعديل التفويض";
+}
+
+<div class="users-index-shell users-index-shell-compact delegations-page-shell">
+    @await Html.PartialAsync("_DelegationEditor", Model)
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

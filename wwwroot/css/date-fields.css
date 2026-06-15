@@ -1,0 +1,429 @@
+.hijri-source-input {
+    border-color: #dbe3ef;
+}
+
+/* ── Arabic Custom Date Picker ─────────────────────────────── */
+.ar-datepicker {
+    position: fixed;
+    z-index: 1050;
+    width: 280px;
+    background: #ffffff;
+    border: 1px solid #d0d9e6;
+    border-radius: var(--t-surface-radius, 8px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.06);
+    padding: 12px;
+    font-family: inherit;
+    direction: rtl;
+    user-select: none;
+    animation: arDpFadeIn 0.15s ease;
+}
+
+@keyframes arDpFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ar-dp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 0 2px;
+}
+
+.ar-dp-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1e3a5f;
+}
+
+.ar-dp-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: var(--t-input-radius, 8px);
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ar-dp-nav:hover {
+    background: #e2e8f0;
+    color: #1e3a5f;
+}
+
+.ar-dp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.ar-dp-weekdays span {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #94a3b8;
+    padding: 4px 0;
+}
+
+.ar-dp-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.ar-dp-empty {
+    aspect-ratio: 1;
+}
+
+.ar-dp-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border: none;
+    border-radius: var(--t-input-radius, 8px);
+    background: transparent;
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    padding: 0;
+}
+
+.ar-dp-day:hover:not([disabled]) {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.ar-dp-today {
+    background: #f0fdf4;
+    color: #166534;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1.5px #22c55e;
+}
+
+.ar-dp-selected {
+    background: #1e3a5f !important;
+    color: #fff !important;
+    font-weight: 700;
+}
+
+.ar-dp-disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.ar-dp-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.ar-dp-today-btn,
+.ar-dp-clear-btn {
+    border: none;
+    background: transparent;
+    color: #2563eb;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: var(--t-input-radius, 8px);
+    transition: background 0.15s ease;
+}
+
+.ar-dp-today-btn:hover,
+.ar-dp-clear-btn:hover {
+    background: #eff6ff;
+}
+
+.ar-dp-clear-btn {
+    color: #dc2626;
+}
+
+.ar-dp-clear-btn:hover {
+    background: #fef2f2;
+}
+
+/* ── End Arabic Custom Date Picker ───────────────────────── */
+
+.date-field-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+    max-width: 320px;
+}
+
+.date-input-shell {
+    position: relative;
+    cursor: pointer;
+}
+
+.date-input-shell::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 10px;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") no-repeat center;
+    background-size: 20px 20px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+input[type="datetime-local"].date-native-hidden,
+input[type="date"].date-native-hidden {
+    color: transparent;
+    caret-color: transparent;
+    min-height: var(--t-control-height, 38px);
+    background: var(--t-surface, #ffffff);
+    border-color: var(--t-border, #dbe3ef);
+    color-scheme: light;
+    cursor: pointer;
+    border-radius: var(--t-input-radius, 8px);
+}
+
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-text,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-month-field,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-day-field,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-year-field,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-minute-field,
+input[type="datetime-local"].date-native-hidden::-webkit-datetime-edit-ampm-field,
+input[type="date"].date-native-hidden::-webkit-datetime-edit,
+input[type="date"].date-native-hidden::-webkit-datetime-edit-text,
+input[type="date"].date-native-hidden::-webkit-datetime-edit-month-field,
+input[type="date"].date-native-hidden::-webkit-datetime-edit-day-field,
+input[type="date"].date-native-hidden::-webkit-datetime-edit-year-field {
+    color: transparent;
+}
+
+input[type="datetime-local"].date-native-hidden::-webkit-calendar-picker-indicator,
+input[type="date"].date-native-hidden::-webkit-calendar-picker-indicator {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    position: relative;
+    z-index: 6;
+    pointer-events: none;
+}
+
+.date-field-head {
+    display: block;
+}
+
+.date-field-mode-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.28rem;
+}
+
+/* ── Hijri toggle switch (below date-input-shell) ── */
+.date-hijri-toggle {
+    position: static;
+    z-index: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    direction: rtl;
+    cursor: pointer;
+    pointer-events: auto;
+    margin: 0;
+    user-select: none;
+    padding: 0.1rem 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.date-hijri-toggle-label {
+    font-size: 0.64rem;
+    font-weight: 600;
+    color: var(--t-text-secondary, #475569);
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.date-hijri-toggle-label.visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.date-hijri-toggle input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.date-hijri-toggle-track {
+    position: relative;
+    display: inline-block;
+    width: 30px;
+    height: 16px;
+    background: #94a3b8;
+    border-radius: var(--t-input-radius, 8px);
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.date-hijri-toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    inset-inline-start: 2px;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+.date-hijri-toggle input[type="checkbox"]:checked~.date-hijri-toggle-track {
+    background: #1e7a5f;
+}
+
+.date-hijri-toggle input[type="checkbox"]:checked~.date-hijri-toggle-track::after {
+    transform: translateX(-12px);
+}
+
+.date-hijri-toggle-scale {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    direction: rtl;
+}
+
+.date-hijri-toggle-scale-item {
+    min-width: 0.7rem;
+    text-align: center;
+    font-size: 0.54rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #94a3b8;
+    transition: color 0.2s ease, opacity 0.2s ease;
+    opacity: 0.72;
+}
+
+.date-hijri-toggle-scale-item.active {
+    color: #1e7a5f;
+    opacity: 1;
+}
+
+.date-hijri-toggle[data-mode="gregorian"] .date-hijri-toggle-scale-item.active {
+    color: #2563eb;
+}
+
+.date-inline-preview {
+    display: block;
+    padding: 0.5rem 0.7rem;
+    border-radius: var(--t-input-radius, 8px);
+    border: 1px dashed var(--t-border, #cdd8e6);
+    background: var(--t-surface-soft, #f8fbff);
+    color: var(--t-text-secondary, #475569);
+    font-weight: 500;
+    min-height: var(--t-control-height, 38px);
+    line-height: 1.4;
+    font-size: 0.78rem;
+}
+
+.date-inline-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-inline-start: 2.45rem;
+    padding-inline-end: 2.4rem;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #334155;
+    pointer-events: none;
+    z-index: 2;
+    direction: rtl;
+    text-align: center;
+    unicode-bidi: plaintext;
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.leave-request-form-grid .form-label {
+    margin-bottom: 0.35rem;
+}
+
+.leave-reason-input {
+    min-height: 78px;
+    resize: vertical;
+}
+
+.leave-date-caption {
+    margin-top: 0.1rem;
+    padding-inline: 0.2rem;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: var(--t-text-muted, #64748b);
+}
+
+.leave-request-form-grid .form-control,
+.leave-request-form-grid .form-select {
+    min-height: var(--t-control-height, 38px);
+    border-radius: var(--t-input-radius, 8px);
+}
+
+@media (max-width: 991.98px) {
+    .date-inline-overlay {
+        padding-inline-start: 2.35rem;
+        padding-inline-end: 2.35rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .date-inline-overlay {
+        padding-inline-start: 2.2rem;
+        padding-inline-end: 2.2rem;
+        font-size: 0.74rem;
+    }
+
+    .leave-date-caption {
+        font-size: 0.68rem;
+    }
+}

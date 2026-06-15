@@ -1,0 +1,1562 @@
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Users.UserEditViewModel
+
+@{
+    var isCreateRoute = string.Equals(
+        ViewContext.RouteData.Values["Action"]?.ToString(),
+        "Create",
+        StringComparison.OrdinalIgnoreCase
+    );
+    var isNew = isCreateRoute || string.IsNullOrWhiteSpace(Model.OriginalUsername);
+    var editedUsername = string.IsNullOrWhiteSpace(Model.OriginalUsername)
+        ? Model.Username
+        : Model.OriginalUsername;
+    var isEditingCurrentUser = !isNew
+        && string.Equals(editedUsername, User.Identity?.Name, StringComparison.OrdinalIgnoreCase);
+    var canEditAdministrativeFields = isNew || !isEditingCurrentUser;
+    var canManageOwnGateSettings = isEditingCurrentUser && Model.CanScanOperations;
+    var showGateSettingsSection = canEditAdministrativeFields || canManageOwnGateSettings;
+    var usernameLabel = Model.IsSuperAdmin ? "رقم هوية مالك النظام" : "اسم المستخدم";
+    var selfEditSummaryText = canManageOwnGateSettings
+        ? "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الهوية أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور وPIN البوابة عند توفر الصلاحية."
+        : "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الهوية أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور من هذه الشاشة.";
+    var resetTemporaryPasswordUrl = Url.Action("ResetTemporaryPassword", "Users", new { id = Model.Username }) ?? string.Empty;
+    var resetTemporaryOperatorPinUrl = Url.Action("ResetTemporaryOperatorPin", "Users", new { id = Model.Username }) ?? string.Empty;
+    var applyRoleDefaultsUrl = Url.Action("ApplyRoleDefaults", "Users") ?? string.Empty;
+    var currentRoleDisplay = AppRoles.GetDisplayName(Model.Role, Model.IsSuperAdmin);
+    var currentDepartmentDisplay = string.IsNullOrWhiteSpace(Model.Department) ? "غير مرتبط" : Model.Department;
+    var canPrintUserBadge = !isNew && !string.IsNullOrWhiteSpace(Model.Username);
+    var canManageOperatorBadge = !isNew && Model.CanScanOperations;
+    var createFlowReturnUrl = ViewData["CreateFlowReturnUrl"] as string;
+    var cancelUrl = isNew && !string.IsNullOrWhiteSpace(createFlowReturnUrl)
+        ? createFlowReturnUrl
+        : (Url.Action("Index", "Users") ?? "/Users");
+    var permissionGroups = AppPermissions.EditorGroups;
+    var totalPermissions = AppPermissions.TotalPermissionCount;
+    var grantedPermissionsCount = permissionGroups
+        .SelectMany(group => group.Permissions)
+        .Count(permission => IsPermissionGranted(Model, permission.UserFlagPropertyName));
+    var orderedRoleOptions = AppRoles
+        .OrderedRoles
+        .Select(role => new { Value = role, Text = AppRoles.GetDisplayName(role) })
+        .ToList();
+    var wizardSteps = new[]
+    {
+        new { Number = 1, Title = "الهوية", Description = "الاسم، الهوية، وبيانات التواصل" },
+        new { Number = 2, Title = "الإدارة", Description = "الدور، القسم، والربط الإداري" },
+        new { Number = 3, Title = "الاعتماد", Description = "كلمة المرور وإعدادات البوابة" },
+        new { Number = 4, Title = "الصلاحيات", Description = "الصلاحيات والمراجعة النهائية" },
+    };
+    var activeWizardStep = Model.WizardStep < 1
+        ? 1
+        : Model.WizardStep > wizardSteps.Length
+            ? wizardSteps.Length
+            : Model.WizardStep;
+    var generalManagerAdministrationName = ViewData["GeneralManagerAdministrationName"] as string ?? string.Empty;
+    var generalManagerAdministrationOrganization = ViewData["GeneralManagerAdministrationOrganization"] as string ?? string.Empty;
+    var canAssignGeneralManager = ViewData["CanAssignGeneralManager"] as bool? ?? false;
+    var currentGeneralManagerName = ViewData["CurrentGeneralManagerName"] as string ?? string.Empty;
+    var currentGeneralManagerUsername = ViewData["CurrentGeneralManagerUsername"] as string ?? string.Empty;
+    var currentGeneralManagerActionSummary = ViewData["CurrentGeneralManagerActionSummary"] as string ?? string.Empty;
+}
+
+@functions {
+    private static bool IsPermissionGranted(VehiclePermitSystemWeb.Models.ViewModels.Users.UserEditViewModel model, string propertyName)
+    {
+        var property = typeof(VehiclePermitSystemWeb.Models.ViewModels.Users.UserEditViewModel).GetProperty(propertyName);
+        return property?.PropertyType == typeof(bool) && property.GetValue(model) is true;
+    }
+}
+
+<div class="users-editor-shell">
+    <!-- Hero -->
+    <div class="ue-hero app-card-surface">
+        <div class="ue-hero-content">
+            <div class="ue-hero-identity">
+                <div class="ue-hero-avatars">
+                    <span class="ue-avatar ue-avatar-lg">👤</span>
+                    <span class="ue-avatar ue-avatar-sm">🔧</span>
+                </div>
+                @if (!isNew)
+                {
+                    <span class="ue-hero-username ltr-field">@Model.Username</span>
+                }
+            </div>
+            <div class="ue-hero-copy">
+                @if (isNew)
+                {
+                    <h1>بيانات الحساب الجديد</h1>
+                    <p>أكمل بيانات الهوية والربط الإداري ثم راجع الصلاحيات قبل اعتماد إنشاء المستخدم.</p>
+                }
+                else if (isEditingCurrentUser)
+                {
+                    <h1>تعديل بيانات حسابي</h1>
+                    <p>@Model.FullName — يمكنك تحديث بياناتك الشخصية وكلمة المرور فقط من هذه الشاشة.</p>
+                }
+                else
+                {
+                    <h1>تعديل بيانات</h1>
+                    <p>@Model.FullName — قم بتحديث بيانات المستخدم وصلاحياته</p>
+                }
+            </div>
+        </div>
+        @if (!isNew)
+        {
+            <div class="ue-inline-note ue-inline-note-info">
+                @(isEditingCurrentUser
+                    ? selfEditSummaryText
+                    : "أنت الآن تعدل حسابًا موجودًا. ستُطبق تغييرات الصلاحيات والبيانات بعد الحفظ، وإذا كنت تعدل حسابك الحالي فسيُطلب منك تسجيل الدخول مرة أخرى.")
+            </div>
+        }
+        @if (Model.IsSuperAdmin)
+        {
+            <div class="ue-inline-note ue-inline-note-info">
+                هذا الحساب هو مالك النظام بصلاحيات سيادية. يمكن تعديل رقم الهوية والاسم وكلمة المرور مع بقاء الصلاحيات محفوظة، بينما تبقى الحالة نشطة دائمًا ولا يظهر له قسم أو ربط إداري.
+            </div>
+        }
+    </div>
+
+    @Html.AntiForgeryToken()
+    <input asp-for="OriginalUsername" type="hidden" />
+    <input asp-for="WizardStep" type="hidden" id="users-wizard-step" />
+    <input asp-for="LookupStatus" type="hidden" id="users-lookup-status" />
+    <input asp-for="LookupMessage" type="hidden" id="users-lookup-message" />
+    <input asp-for="LookupRedirectUrl" type="hidden" id="users-lookup-redirect-url" />
+    <input asp-for="LookupReactivateUrl" type="hidden" id="users-lookup-reactivate-url" />
+    <input asp-for="PendingPermitsCount" type="hidden" id="users-pending-permits-count" />
+    <input asp-for="IsSuperAdmin" type="hidden" id="users-is-super-admin" />
+    <div asp-validation-summary="ModelOnly" class="visually-hidden ue-form-summary"></div>
+
+    <div class="ue-wizard-shell" data-users-wizard-shell>
+        <div class="ue-wizard-stepper" role="tablist" aria-label="معالج المستخدم">
+            @foreach (var step in wizardSteps)
+            {
+                <button type="button"
+                        class="ue-wizard-step @(activeWizardStep == step.Number ? "is-active" : activeWizardStep > step.Number ? "is-complete" : string.Empty)"
+                        data-users-wizard-step-jump="@step.Number">
+                    <span class="ue-wizard-step-number">@step.Number</span>
+                    <span class="ue-wizard-step-copy">
+                        <strong>@step.Title</strong>
+                        <small>@step.Description</small>
+                    </span>
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="ue-wizard-ux-grid">
+        <section class="ue-wizard-summary app-card-surface" aria-live="polite">
+            <div class="ue-card-title">
+                <span class="ue-card-icon ue-icon-account">✨</span>
+                <h2>ملخص حي</h2>
+            </div>
+            <div class="ue-summary-grid">
+                <div class="ue-summary-item">
+                    <span>الاسم</span>
+                    <strong data-users-summary-full-name>غير مُدخل</strong>
+                </div>
+                <div class="ue-summary-item">
+                    <span>رقم الهوية</span>
+                    <strong class="ltr-field" data-users-summary-username>غير مُدخل</strong>
+                </div>
+                <div class="ue-summary-item">
+                    <span>الدور</span>
+                    <strong data-users-summary-role>@currentRoleDisplay</strong>
+                </div>
+                <div class="ue-summary-item">
+                    <span>القسم</span>
+                    <strong data-users-summary-department>@currentDepartmentDisplay</strong>
+                </div>
+                <div class="ue-summary-item">
+                    <span>مدير القسم</span>
+                    <strong data-users-summary-department-manager>غير مرتبط</strong>
+                </div>
+                <div class="ue-summary-item">
+                    <span>الصلاحيات</span>
+                    <strong data-users-summary-permissions>@grantedPermissionsCount صلاحية</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="ue-wizard-validation app-card-surface" data-users-wizard-errors hidden aria-live="polite">
+            <div class="ue-card-title">
+                <span class="ue-card-icon ue-icon-perm">⚠️</span>
+                <h2>مطلوب قبل المتابعة</h2>
+            </div>
+            <div class="ue-wizard-validation-body">
+                <p class="ue-wizard-validation-text" data-users-wizard-error-text>أكمل الحقول المطلوبة في هذه الخطوة.</p>
+                <ul class="ue-wizard-validation-list" data-users-wizard-error-list></ul>
+            </div>
+        </section>
+    </div>
+
+    <div class="ue-card app-card-surface" data-users-panel-container>
+        <div class="ue-card-title">
+            <span class="ue-card-icon ue-icon-account">👤</span>
+            <h2>بيانات الحساب</h2>
+        </div>
+        @if (isNew)
+            {
+                <div class="ue-fields-row ue-fields-4 ue-account-primary-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                    <div class="ue-field">
+                        <label asp-for="FullName" class="form-label">الاسم الكامل</label>
+                        <input asp-for="FullName" class="form-control" required />
+                        <span asp-validation-for="FullName" class="field-validation-error small"></span>
+                    </div>
+                    <div class="ue-field ue-field-required">
+                        <label asp-for="Username" class="form-label">رقم الهوية</label>
+                        <input asp-for="Username" class="form-control ltr-field" inputmode="numeric" autocomplete="username" minlength="10"
+                               maxlength="10" pattern="[12][0-9]{9}" placeholder="1024722918" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" required />
+                        <span asp-validation-for="Username" class="field-validation-error small"></span>
+                    </div>
+                    <div class="ue-field">
+                        <label asp-for="PhoneNumber" class="form-label">الجوال</label>
+                        <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" autocomplete="tel" maxlength="10"
+                               pattern="05[0-9]{8}" placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" required />
+                        <span asp-validation-for="PhoneNumber" class="field-validation-error small"></span>
+                    </div>
+                    <div class="ue-field">
+                        <label asp-for="JobTitle" class="form-label">المسمى الوظيفي</label>
+                        <input asp-for="JobTitle" class="form-control" />
+                        <span asp-validation-for="JobTitle" class="field-validation-error small"></span>
+                    </div>
+                </div>
+                <div class="ue-fields-row ue-fields-2 ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                    <div class="ue-field">
+                        <label asp-for="Email" class="form-label">البريد الإلكتروني</label>
+                        <input asp-for="Email" type="email" class="form-control ltr-field" inputmode="email" autocomplete="email" />
+                        <span asp-validation-for="Email" class="field-validation-error small"></span>
+                    </div>
+                    <div class="ue-field">
+                        <label asp-for="EmployeeNumber" class="form-label">رقم الموظف</label>
+                        <input asp-for="EmployeeNumber" class="form-control ltr-field" autocomplete="off" />
+                        <span asp-validation-for="EmployeeNumber" class="field-validation-error small"></span>
+                    </div>
+                </div>
+            }
+            else if (isEditingCurrentUser)
+            {
+                <input asp-for="FullName" type="hidden" />
+                <input asp-for="Username" type="hidden" />
+                <input asp-for="PhoneNumber" type="hidden" />
+                <input asp-for="JobTitle" type="hidden" />
+                <input asp-for="Email" type="hidden" />
+                <input asp-for="EmployeeNumber" type="hidden" />
+                <input asp-for="UserType" type="hidden" />
+
+                <div class="ue-fields-row ue-fields-3 ue-account-primary-row ue-account-readonly-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                    <div class="ue-field">
+                        <label class="form-label">الاسم الكامل</label>
+                        <div class="ue-readonly-info-card ue-readonly-identity-card">
+                            <span class="ue-readonly-role-kicker">بيانات العرض</span>
+                            <strong>@(string.IsNullOrWhiteSpace(Model.FullName) ? "-" : Model.FullName)</strong>
+                        </div>
+                    </div>
+                    <div class="ue-field">
+                        <label class="form-label">الجوال</label>
+                        <div class="ue-readonly-info-card ue-readonly-identity-card">
+                            <span class="ue-readonly-role-kicker">بيانات الاتصال</span>
+                            <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" : Model.PhoneNumber)</strong>
+                        </div>
+                    </div>
+                    <div class="ue-field">
+                        <label class="form-label">المسمى الوظيفي</label>
+                        <div class="ue-readonly-info-card ue-readonly-identity-card">
+                            <span class="ue-readonly-role-kicker">المسمى الحالي</span>
+                            <strong>@(string.IsNullOrWhiteSpace(Model.JobTitle) ? "-" : Model.JobTitle)</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="ue-fields-row ue-fields-2 ue-account-secondary-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                    <div class="ue-field">
+                        <label class="form-label">البريد الإلكتروني</label>
+                        <div class="ue-readonly-info-card ue-readonly-identity-card">
+                            <span class="ue-readonly-role-kicker">بيانات التواصل</span>
+                            <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</strong>
+                        </div>
+                    </div>
+                    <div class="ue-field">
+                        <label class="form-label">رقم الموظف</label>
+                        <div class="ue-readonly-info-card ue-readonly-identity-card">
+                            <span class="ue-readonly-role-kicker">الرقم الداخلي</span>
+                            <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.EmployeeNumber) ? "-" : Model.EmployeeNumber)</strong>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="ue-fields-row ue-fields-3 ue-account-primary-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                    <div class="ue-field">
+                        <label asp-for="FullName" class="form-label">الاسم الكامل</label>
+                        <input asp-for="FullName" class="form-control" required />
+                        <span asp-validation-for="FullName" class="field-validation-error small"></span>
+                    </div>
+                    @if (Model.IsSuperAdmin)
+                    {
+                        <div class="ue-field ue-field-required">
+                            <label asp-for="Username" class="form-label">@usernameLabel</label>
+                            <input asp-for="Username" class="form-control ltr-field" inputmode="numeric" autocomplete="username" minlength="10"
+                                maxlength="10" pattern="[12][0-9]{9}" placeholder="1024722918" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" required />
+                            <div class="form-text">يمكن تغييره لهذا الحساب فقط، بشرط أن يكون رقم هوية أو إقامة من 10 أرقام ويبدأ بـ 1 أو 2 وفريدًا.</div>
+                            <span asp-validation-for="Username" class="field-validation-error small"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input asp-for="Username" type="hidden" />
+                    }
+                    <div class="ue-field">
+                        <label asp-for="PhoneNumber" class="form-label">الجوال</label>
+                        <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" autocomplete="tel" maxlength="10"
+                               pattern="05[0-9]{8}" placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" required />
+                        <span asp-validation-for="PhoneNumber" class="field-validation-error small"></span>
+                    </div>
+                    <div class="ue-field">
+                        <label asp-for="JobTitle" class="form-label">المسمى الوظيفي</label>
+                        <input asp-for="JobTitle" class="form-control" />
+                        <span asp-validation-for="JobTitle" class="field-validation-error small"></span>
+                    </div>
+                </div>
+                <div class="ue-fields-row ue-fields-2 ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                    <div class="ue-field">
+                        <label asp-for="Email" class="form-label">البريد الإلكتروني</label>
+                        <input asp-for="Email" type="email" class="form-control ltr-field" inputmode="email" autocomplete="off"
+                               data-form-persist-ignore data-server-authoritative-value="@Model.Email" data-browser-autofill-block-value="@Model.Username" />
+                        <span asp-validation-for="Email" class="field-validation-error small"></span>
+                    </div>
+                    <div class="ue-field">
+                        <label asp-for="EmployeeNumber" class="form-label">رقم الموظف</label>
+                        <input asp-for="EmployeeNumber" class="form-control ltr-field" autocomplete="off" />
+                        <span asp-validation-for="EmployeeNumber" class="field-validation-error small"></span>
+                    </div>
+                </div>
+            }
+
+            <div class="ue-identity-lookup-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
+                <p class="ue-inline-hint" data-users-lookup-result>
+                    استخدم فحص الهوية السريع قبل المتابعة. إذا كان الرقم مسجلًا مسبقًا فسيتم نقلك إلى شاشة التعديل أو إعادة التفعيل.
+                </p>
+                @if (isNew)
+                {
+                    <div class="ue-identity-lookup-actions">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="users-identity-lookup-btn">فحص الهوية</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" id="users-reactivate-btn" hidden>إعادة التفعيل</button>
+                        <span class="small text-muted" id="users-identity-lookup-hint">يساعدك على اكتشاف المستخدم الموجود قبل إنشاء حساب جديد.</span>
+                    </div>
+                }
+            </div>
+
+            @if (canEditAdministrativeFields)
+            {
+                <div class="ue-fields-row ue-account-admin-row ue-fields-@(Model.IsSuperAdmin ? "2" : "3") ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
+                    <div class="ue-field ue-field-status">
+                        <label class="form-label">حالة المستخدم</label>
+                        @if (Model.IsSuperAdmin)
+                        {
+                            <input asp-for="IsActive" type="hidden" />
+                            <div class="ue-readonly-info-card ue-readonly-info-card-success">
+                                <span class="ue-readonly-role-kicker">الحالة السيادية</span>
+                                <strong>نشط دائمًا</strong>
+                                <small>لا يمكن إيقاف حساب السوبر أدمن من واجهة الإدارة أو من الحفظ اليدوي.</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <label class="ue-status-switch ue-toggle-card @(Model.IsActive ? "is-active" : "is-inactive")">
+                                <input asp-for="IsActive" class="form-check-input" id="users-is-active" />
+                                <span class="ue-toggle-card-copy">
+                                    <strong>تنشيط / إيقاف</strong>
+                                    <small id="users-status-label">@(Model.IsActive ? "الحساب نشط" : "الحساب موقوف")</small>
+                                </span>
+                            </label>
+                        }
+                    </div>
+                    <div class="ue-field">
+                        @if (Model.IsSuperAdmin)
+                        {
+                            <input asp-for="Role" type="hidden" />
+                            <div class="form-label">الدور</div>
+                            <div class="ue-readonly-role-card">
+                                <span class="ue-readonly-role-kicker">الدور الثابت</span>
+                                <strong>مالك النظام</strong>
+                                <small>هذا المسمى سيادي وغير قابل للتغيير لهذا الحساب.</small>
+                            </div>
+                        }
+                        else
+                        {
+                            <label for="users-role-select" class="form-label">الدور</label>
+                            <select asp-for="Role" class="form-select" id="users-role-select" required>
+                                @foreach (var roleOption in orderedRoleOptions)
+                                {
+                                    <option value="@roleOption.Value">@roleOption.Text</option>
+                                }
+                            </select>
+                        }
+                        <span asp-validation-for="Role" class="field-validation-error small"></span>
+                    </div>
+                    @if (!Model.IsSuperAdmin)
+                    {
+                        <div class="ue-field" id="users-department-field">
+                            <label for="users-department-select" class="form-label">القسم</label>
+                                <select asp-for="Department" class="form-select" id="users-department-select"
+                                    data-smart-select="true" data-smart-select-placeholder="ابحث عن القسم أو اختره">
+                                <option value="">-- اختر القسم --</option>
+                                @foreach (var department in Model.DepartmentOptions)
+                                {
+                                    var departmentManagerSummary = Model.DepartmentManagerSummaryByName.TryGetValue(department, out var summary)
+                                        ? summary
+                                        : string.Empty;
+                                    <option value="@department"
+                                            data-manager-summary="@departmentManagerSummary"
+                                            selected="@(string.Equals(Model.Department, department, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">
+                                        @department</option>
+                                    }
+                                </select>
+                                <div class="form-text" id="users-department-scope-note" hidden></div>
+                                <div class="ue-inline-note ue-inline-note-info" id="users-department-manager-note" hidden></div>
+                                <span asp-validation-for="Department" class="field-validation-error small"></span>
+                            </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="ue-fields-row ue-account-admin-row ue-admin-snapshot-row ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
+                    <div class="ue-field ue-field-status">
+                        <label class="form-label">حالة المستخدم</label>
+                        <div class="ue-readonly-info-card ue-readonly-info-card-success">
+                            <span class="ue-readonly-role-kicker">الحالة الحالية</span>
+                            <strong>@(Model.IsActive ? "نشط" : "موقوف")</strong>
+                            <small>تعرض للقراءة فقط داخل حسابك الشخصي.</small>
+                        </div>
+                    </div>
+                    <div class="ue-field">
+                        <label class="form-label">الدور</label>
+                        <div class="ue-readonly-role-card">
+                            <span class="ue-readonly-role-kicker">الدور الحالي</span>
+                            <strong>@currentRoleDisplay</strong>
+                            <small>لا يمكن تغيير الدور من شاشة حسابك.</small>
+                        </div>
+                    </div>
+                    <div class="ue-field">
+                        <label class="form-label">القسم</label>
+                        <div class="ue-readonly-info-card">
+                            <span class="ue-readonly-role-kicker">الارتباط الإداري</span>
+                            <strong>@currentDepartmentDisplay</strong>
+                            <small>يُحدّث فقط من شاشة إنشاء أو تعديل موظف آخر.</small>
+                        </div>
+                    </div>
+                </div>
+            }
+
+                <div class="ue-stats-bar ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
+                    <div class="ue-stat-item">
+                        <span class="ue-stat-icon">🔑</span>
+                        <div><small>إجمالي الصلاحيات</small><strong id="ue-stat-perm"><span
+                            id="ue-granted-count">@grantedPermissionsCount</span> صلاحية</strong></div>
+                        </div>
+                        <div class="ue-stat-item">
+                            <span class="ue-stat-icon">🏷️</span>
+                            <div><small>الدور المختار</small><strong id="ue-stat-role">@currentRoleDisplay</strong></div>
+                        </div>
+                        <div class="ue-stat-item">
+                            <span class="ue-stat-icon">⚡</span>
+                            <div><small>الوضع</small><strong>@(isNew ? "إضافة جديدة" : "تعديل")</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ue-admin-sections">
+                    <!-- الربط الإداري -->
+                    @if (canEditAdministrativeFields && !Model.IsSuperAdmin)
+                    {
+                        <div class="ue-card app-card-surface ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" id="users-general-manager-card" data-users-wizard-panel="2">
+                            <div class="ue-card-title">
+                                <span class="ue-card-icon ue-icon-link">🏢</span>
+                                <h2>الإدارة العامة</h2>
+                            </div>
+                            @if (!canAssignGeneralManager)
+                            {
+                                <div class="ue-inline-note ue-inline-note-warning">
+                                    يجب تهيئة بيانات الإدارة أولًا قبل تعيين مدير عام.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="ue-fields-row ue-fields-2 ue-admin-snapshot-row">
+                                    <div class="ue-readonly-info-card">
+                                        <span class="ue-readonly-role-kicker">الإدارة المرتبطة</span>
+                                        <strong>@(string.IsNullOrWhiteSpace(generalManagerAdministrationName) ? "الإدارة العامة" : generalManagerAdministrationName)</strong>
+                                        <small>@(string.IsNullOrWhiteSpace(generalManagerAdministrationOrganization) ? "رأس الشجرة التنظيمية" : generalManagerAdministrationOrganization)</small>
+                                    </div>
+                                    <div class="ue-readonly-info-card">
+                                        <span class="ue-readonly-role-kicker">المدير العام الحالي</span>
+                                        <strong>@(string.IsNullOrWhiteSpace(currentGeneralManagerName) ? "لا يوجد" : currentGeneralManagerName)</strong>
+                                        <small>@(string.IsNullOrWhiteSpace(currentGeneralManagerUsername) ? currentGeneralManagerActionSummary : $"{currentGeneralManagerUsername} - {currentGeneralManagerActionSummary}")</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="ue-card app-card-surface ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" id="users-manager-card" data-users-wizard-panel="2">
+                            <div class="ue-card-title">
+                                <span class="ue-card-icon ue-icon-link">🔗</span>
+                                <h2>الربط الإداري</h2>
+                            </div>
+                            <div class="ue-fields-row ue-fields-2">
+                                <div class="ue-field" id="users-manager-username-field">
+                                    <label asp-for="ManagerUsername" class="form-label">اسم مستخدم المدير المباشر</label>
+                                    <input asp-for="ManagerUsername" class="form-control ltr-field" />
+                                    <div class="form-text">يمكن تركه فارغًا أو تفعيل الربط التلقائي.</div>
+                                    <span asp-validation-for="ManagerUsername" class="field-validation-error small"></span>
+                                </div>
+                                <div class="ue-field">
+                                    <label class="ue-compact-switch ue-toggle-card">
+                                        <span class="ue-toggle-card-copy">
+                                            <strong>ربط تلقائي بمدير القسم</strong>
+                                            <small>تعبئة اسم المدير تلقائيًا عند الحفظ.</small>
+                                        </span>
+                                        <input asp-for="AutoBindManager" class="form-check-input" id="users-auto-bind-manager-toggle" />
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="ue-inline-note" id="users-manager-auto-note" hidden>
+                                    تم تفعيل الربط التلقائي — سيُربط المستخدم بمدير القسم عند الحفظ إذا كان القسم مرتبطًا بمدير مسجل.
+                                </div>
+                            </div>
+                    }
+
+                    <!-- بيانات الاعتماد -->
+                    <div class="ue-card app-card-surface ue-wizard-panel @(activeWizardStep == 3 ? string.Empty : "is-hidden")" data-users-wizard-panel="3">
+                        <div class="ue-card-title">
+                            <span class="ue-card-icon ue-icon-lock">🔒</span>
+                            <h2>بيانات الاعتماد</h2>
+                        </div>
+                        <div class="ue-fields-row @(canEditAdministrativeFields ? "ue-fields-2" : "ue-fields-1")">
+                            <div class="ue-field">
+                                @if (isNew)
+                                {
+                                    <div class="form-label">كلمة المرور المؤقتة</div>
+                                    <div class="form-text ue-field-hint">
+                                        يتم توليد كلمة مرور مؤقتة عشوائية ويُجبر المستخدم على تغييرها عند أول دخول.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <label asp-for="NewPassword" class="form-label">إعادة تعيين كلمة المرور</label>
+                                    <input asp-for="NewPassword" type="password" class="form-control ltr-field" />
+                                    <div class="form-text">اتركه فارغًا لعدم تغيير كلمة المرور.</div>
+                                }
+                                <span asp-validation-for="NewPassword" class="field-validation-error small"></span>
+                            </div>
+                            @if (canEditAdministrativeFields)
+                            {
+                                <div class="ue-field">
+                                    <label class="ue-compact-switch ue-toggle-card">
+                                        <span class="ue-toggle-card-copy">
+                                            <strong>تحميل صلاحيات الدور الافتراضية</strong>
+                                            <small>يعيد توزيع الصلاحيات بحسب الدور قبل الحفظ.</small>
+                                        </span>
+                                        <input asp-for="ApplyRoleDefaults" class="form-check-input" />
+                                        </label>
+                                    </div>
+                            }
+                            </div>
+                            @if (!isNew && canEditAdministrativeFields)
+                            {
+                                <div class="ue-perm-toolbar">
+                                    @if (!Model.IsSuperAdmin)
+                                    {
+                                        <button type="submit"
+                                            formaction="@resetTemporaryPasswordUrl"
+                                            formmethod="post"
+                                            formnovalidate
+                                            data-skip-validation="true"
+                                            class="btn btn-outline-warning btn-sm">إعادة تعيين كلمة المرور المؤقتة</button>
+                                    }
+                                    @if (canPrintUserBadge)
+                                    {
+                                        <a asp-action="PrintUserBadge" asp-route-id="@Model.Username" class="btn btn-outline-secondary btn-sm"
+                                           target="_blank">طباعة بطاقة الموظف</a>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                    @if (showGateSettingsSection)
+                    {
+                        <!-- إعدادات البوابة -->
+                        <div class="ue-card app-card-surface ue-wizard-panel @(activeWizardStep == 3 ? string.Empty : "is-hidden")" id="users-gate-card" data-users-wizard-panel="3">
+                            <div class="ue-card-title">
+                                <span class="ue-card-icon ue-icon-gate">🚧</span>
+                                <h2>إعدادات مشغل البوابة</h2>
+                            </div>
+                            @if (canEditAdministrativeFields)
+                            {
+                                <div class="ue-fields-row ue-fields-3">
+                                    <div class="ue-field">
+                                        <label asp-for="OperatorBadgeCode" class="form-label">باركود المشغل</label>
+                                        <input asp-for="OperatorBadgeCode" class="form-control ltr-field" placeholder="GATE-1234567890" />
+                                        <span asp-validation-for="OperatorBadgeCode" class="field-validation-error small"></span>
+                                    </div>
+                                    <div class="ue-field">
+                                        <label asp-for="TemporaryOperatorPin" class="form-label">PIN مؤقت</label>
+                                        <input asp-for="TemporaryOperatorPin" class="form-control ltr-field" inputmode="numeric"
+                                               maxlength="6" placeholder="مثال: 482913" />
+                                        <span asp-validation-for="TemporaryOperatorPin" class="field-validation-error small"></span>
+                                    </div>
+                                    <div class="ue-field">
+                                        <label class="ue-compact-switch ue-toggle-card">
+                                            <span class="ue-toggle-card-copy">
+                                                <strong>إجبار تغيير PIN</strong>
+                                                <small>عند أول دخول لمشغل البوابة.</small>
+                                            </span>
+                                            <input asp-for="MustChangeOperatorPin" class="form-check-input" id="users-must-change-pin" />
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="ue-fields-row ue-fields-3">
+                                    <div class="ue-field">
+                                        <label class="form-label">باركود المشغل</label>
+                                        <div class="ue-readonly-info-card">
+                                            <span class="ue-readonly-role-kicker">الرمز الحالي</span>
+                                            <strong class="ltr-field">@Model.OperatorBadgeCode</strong>
+                                            <small>يبقى ثابتًا لهذا الحساب ويستخدم عند طباعة بطاقة المشغل.</small>
+                                        </div>
+                                    </div>
+                                    <div class="ue-field">
+                                        <label asp-for="TemporaryOperatorPin" class="form-label">PIN مؤقت جديد</label>
+                                        <input asp-for="TemporaryOperatorPin" class="form-control ltr-field" inputmode="numeric"
+                                               maxlength="6" placeholder="مثال: 482913" />
+                                        <div class="form-text">يمكنك تغيير PIN البوابة لحسابك إذا كانت صلاحية التشغيل مفعلة.</div>
+                                        <span asp-validation-for="TemporaryOperatorPin" class="field-validation-error small"></span>
+                                    </div>
+                                    <div class="ue-field">
+                                        <label class="ue-compact-switch ue-toggle-card">
+                                            <span class="ue-toggle-card-copy">
+                                                <strong>إجبار تغيير PIN</strong>
+                                                <small>يُطبق على دخول مشغل البوابة التالي لهذا الحساب.</small>
+                                            </span>
+                                            <input asp-for="MustChangeOperatorPin" class="form-check-input" id="users-must-change-pin" />
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                            @if (canManageOperatorBadge)
+                            {
+                                <div class="ue-perm-toolbar">
+                                        <button type="submit"
+                                            formaction="@resetTemporaryOperatorPinUrl"
+                                            formmethod="post"
+                                            formnovalidate
+                                            data-skip-validation="true"
+                                            class="btn btn-outline-warning btn-sm">إعادة تعيين PIN المؤقت</button>
+                                    <a asp-action="PrintOperatorBadge" asp-route-id="@Model.Username"
+                                       class="btn btn-outline-secondary btn-sm" target="_blank">طباعة بطاقة مشغل البوابة</a>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (!canEditAdministrativeFields)
+                    {
+                        <div class="ue-card app-card-surface ue-card-muted">
+                            <div class="ue-card-title">
+                                <span class="ue-card-icon">🧭</span>
+                                <h2>البيانات الإدارية المقفلة</h2>
+                            </div>
+                            <div class="ue-fields-row ue-fields-2 ue-admin-snapshot-row">
+                                <div class="ue-readonly-info-card">
+                                    <span class="ue-readonly-role-kicker">إجمالي الصلاحيات الحالية</span>
+                                    <strong>@grantedPermissionsCount صلاحية</strong>
+                                    <small>الصلاحيات الحالية معروضة فقط ولا يمكن تعديلها من حسابك.</small>
+                                </div>
+                                <div class="ue-readonly-info-card">
+                                    <span class="ue-readonly-role-kicker">إدارة الحساب</span>
+                                    <strong>مقفلة للحساب الذاتي</strong>
+                                    <small>إذا احتجت تعديل الدور أو القسم أو الربط أو بقية الصلاحيات، افتح الحساب من شاشة موظف آخر مخول.</small>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                        <!-- الصلاحيات -->
+                        <div class="ue-card app-card-surface ue-permissions-card ue-wizard-panel @(activeWizardStep == 4 ? string.Empty : "is-hidden") @(canEditAdministrativeFields ? string.Empty : "is-readonly")" data-users-wizard-panel="4">
+                            <div class="ue-card-title">
+                                <span class="ue-card-icon ue-icon-perm">🛡️</span>
+                                <h2>الصلاحيات</h2>
+                            </div>
+                            <p class="ue-card-subtitle">
+                                @(canEditAdministrativeFields
+                                    ? "اختر الصلاحيات المطلوبة حسب مجموعات العمل. يمكن تطبيق قالب الدور ثم تعديل أي صلاحية قبل الحفظ."
+                                    : "هذه صلاحيات الحساب الحالية للعرض فقط. صلاحية تشغيل البوابة ستبقى ظاهرة هنا حتى أثناء تعديل حسابك الشخصي.")
+                            </p>
+
+                            @if (canEditAdministrativeFields)
+                            {
+                                <div class="ue-perm-toolbar">
+                                        <button type="submit" formaction="@applyRoleDefaultsUrl"
+                                            formnovalidate
+                                            data-skip-validation="true"
+                                            class="btn btn-outline-primary btn-sm">
+                                        🔄 إعادة صلاحيات الدور
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="ue-select-template-btn">
+                                        ✅ تحديد من القالب
+                                    </button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="ue-inline-note ue-inline-note-info">
+                                    تستطيع مراجعة جميع الصلاحيات الحالية، لكن تعديلها يتم فقط من شاشة تعديل مستخدم آخر مخول بالإدارة.
+                                </div>
+                            }
+
+                            <div class="ue-perm-search-row">
+                                <div class="ue-perm-search">
+                                    <input type="text" class="form-control form-control-sm" id="ue-perm-search"
+                                           placeholder="ابحث عن صلاحية..." />
+                                </div>
+                                <span class="ue-perm-counter">المحدد: <strong id="ue-perm-selected">@grantedPermissionsCount</strong> من
+                                    <strong>@totalPermissions</strong></span>
+                                </div>
+
+                                <!-- مجموعات الصلاحيات -->
+                                <div class="ue-perm-groups" id="ue-perm-groups">
+                                    @foreach (var group in permissionGroups)
+                                    {
+                                        var grantedInGroup = group.Permissions.Count(permission => IsPermissionGranted(Model, permission.UserFlagPropertyName));
+                                        <div class="ue-perm-group" data-group="@group.Key">
+                                            <div class="ue-perm-group-head" data-toggle-group="@group.Key">
+                                                <span class="ue-perm-arrow" aria-hidden="true">❯</span>
+                                                <label class="ue-group-switch" onclick="event.stopPropagation()">
+                                                    <input type="checkbox" class="form-check-input ue-group-toggle"
+                                                           data-group-toggle="@group.Key"
+                                                           @(canEditAdministrativeFields ? null : "disabled") />
+                                                </label>
+                                                <span class="ue-perm-icons" aria-hidden="true">
+                                                    <span class="ue-perm-gicon">@group.PrimaryIcon</span>
+                                                    <span class="ue-perm-gicon">@group.SecondaryIcon</span>
+                                                </span>
+                                                <span class="ue-perm-heading-copy">
+                                                    <strong class="ue-perm-gname">@group.Title</strong>
+                                                    <span class="ue-perm-gdesc">@group.Description</span>
+                                                </span>
+                                                <span class="ue-perm-badge @(grantedInGroup > 0 ? "ue-badge-active" : string.Empty)" data-group-count="@group.Key">@grantedInGroup من @group.Permissions.Count</span>
+                                            </div>
+                                            <div class="ue-perm-group-body" data-group-body="@group.Key">
+                                                @foreach (var permission in group.Permissions)
+                                                {
+                                                    var inputId = string.IsNullOrWhiteSpace(permission.InputId)
+                                                        ? permission.UserFlagPropertyName
+                                                        : permission.InputId;
+                                                    var isGranted = IsPermissionGranted(Model, permission.UserFlagPropertyName);
+
+                                                    <label class="ue-perm-item@(canEditAdministrativeFields ? string.Empty : " is-readonly")" data-perm-name="@permission.DisplayName">
+                                                        <input type="checkbox"
+                                                               id="@inputId"
+                                                               name="@permission.UserFlagPropertyName"
+                                                               value="true"
+                                                               class="form-check-input ue-perm-input"
+                                                               data-group-member="@group.Key"
+                                                               @(isGranted ? "checked" : null)
+                                                               @(canEditAdministrativeFields ? null : "disabled") />
+                                                        <span class="ue-perm-item-copy">
+                                                            <strong>@permission.ItemLabel</strong>
+                                                            <small>@permission.DisplayName</small>
+                                                        </span>
+                                                    </label>
+                                                    @if (canEditAdministrativeFields)
+                                                    {
+                                                        <input type="hidden" name="@permission.UserFlagPropertyName" value="false" />
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                        </div>
+
+                                                                                                                <!-- إجراءات الحفظ -->
+                                                                                                                <div class="ue-actions app-card-surface ue-wizard-panel @(activeWizardStep == 4 ? string.Empty : "is-hidden")" data-users-wizard-panel="4">
+                                                                                                                    <div class="ue-actions-end">
+                                                                                                                        <a href="@cancelUrl" class="btn btn-secondary btn-sm">✓ إلغاء</a>
+                                                                                                                        @if (isNew)
+                                                                                                                        {
+                                                                                                                            <button type="submit" name="SaveAndCreate" value="true" class="btn btn-outline-secondary btn-sm">حفظ
+                                                                                                                                وإضافة مستخدم</button>
+                                                                                                                            }
+                                                                                                                            <button type="submit" class="btn btn-primary btn-sm" data-edit-submit="@(isNew ? "false" : "true")" data-edit-scope="@(isEditingCurrentUser ? "self" : "admin")">💾
+                                                                                                                                @(isNew ? "إضافة المستخدم" : isEditingCurrentUser ? "حفظ بياناتي" : "حفظ التغييرات")</button>
+                                                                                                                            </div>
+                                                                                                                            @if (!isNew)
+                                                                                                                            {
+                                                                                                                                <div class="ue-actions-start">
+                                                                                                                                    @if (!Model.IsSuperAdmin && canEditAdministrativeFields)
+                                                                                                                                    {
+                                                                                                                                        <button type="submit"
+                                                                                                                                                formaction="@Url.Action("Deactivate", "Users", new { id = Model.Username })"
+                                                                                                                                                formmethod="post"
+                                                                                                                                            formnovalidate
+                                                                                                                                            data-skip-validation="true"
+                                                                                                                                                class="btn btn-outline-danger btn-sm"
+                                                                                                                                                onclick="return confirm('هل أنت متأكد من تعطيل هذا الحساب؟');">🗑️ تعطيل المستخدم</button>
+                                                                                                                                    }
+                                                                                                                                </div>
+                                                                                                                            }
+                                                                                                                        </div>
+                                                                                                                </div>
+
+                                                                                                                <div class="ue-wizard-nav">
+                                                                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-users-wizard-prev>السابق</button>
+                                                                                                                    <button type="button" class="btn btn-primary btn-sm" data-users-wizard-next>التالي</button>
+                                                                                                                </div>
+
+                                                                                                                <script nonce="@(Context.Items["CspScriptNonce"])">
+                                                                                                                    document.addEventListener("DOMContentLoaded", function () {
+                                                                                                                        const form = document.querySelector(".users-editor-form");
+                                                                                                                        const roleSelect = document.getElementById("users-role-select");
+                                                                                                                        const statusToggle = document.getElementById("users-is-active");
+                                                                                                                        const scanToggle = document.getElementById("users-scan-toggle");
+                                                                                                                        const manageUsersToggle = document.getElementById("users-manage-users-toggle");
+                                                                                                                        const manageDepartmentsToggle = document.getElementById("users-manage-departments-toggle");
+                                                                                                                        const manageAdministrationToggle = document.getElementById("users-manage-administration-toggle");
+                                                                                                                        const autoBindManagerToggle = document.getElementById("users-auto-bind-manager-toggle");
+                                                                                                                        const isSuperAdminInput = document.getElementById("users-is-super-admin");
+                                                                                                                        const generalManagerCard = document.getElementById("users-general-manager-card");
+                                                                                                                        const managerCard = document.getElementById("users-manager-card");
+                                                                                                                        const managerUsernameField = document.getElementById("users-manager-username-field");
+                                                                                                                        const managerAutoNote = document.getElementById("users-manager-auto-note");
+                                                                                                                        const departmentField = document.getElementById("users-department-field");
+                                                                                                                        const departmentSelect = document.getElementById("users-department-select");
+                                                                                                                        const departmentScopeNote = document.getElementById("users-department-scope-note");
+                                                                                                                        const gateCard = document.getElementById("users-gate-card");
+                                                                                                                        const statusLabel = document.getElementById("users-status-label");
+                                                                                                                        const permSelectedEl = document.getElementById("ue-perm-selected");
+                                                                                                                        const grantedCountEl = document.getElementById("ue-granted-count");
+                                                                                                                        const statRoleEl = document.getElementById("ue-stat-role");
+                                                                                                                        const permInputs = Array.from(document.querySelectorAll(".ue-perm-input"));
+                                                                                                                        const totalPerms = @totalPermissions;
+                                                                                                                        const wizardMaxStep = @wizardSteps.Length;
+                                                                                                                        const wizardStepInput = document.getElementById("users-wizard-step");
+                                                                                                                        const wizardShell = document.querySelector("[data-users-wizard-shell]");
+                                                                                                                        const wizardPanels = Array.from(document.querySelectorAll("[data-users-wizard-panel]"));
+                                                                                                                        const wizardPanelContainers = Array.from(document.querySelectorAll("[data-users-panel-container]"));
+                                                                                                                        const wizardStepTabs = Array.from(document.querySelectorAll("[data-users-wizard-step-jump]"));
+                                                                                                                        const wizardPrevButtons = Array.from(document.querySelectorAll("[data-users-wizard-prev]"));
+                                                                                                                        const wizardNextButtons = Array.from(document.querySelectorAll("[data-users-wizard-next]"));
+                                                                                                                        const wizardSaveNote = document.querySelector("[data-users-wizard-save-note]");
+                                                                                                                        const identityLookupButton = document.getElementById("users-identity-lookup-btn");
+                                                                                                                        const reactivateButton = document.getElementById("users-reactivate-btn");
+                                                                                                                        const identityLookupResult = document.querySelector("[data-users-lookup-result]");
+                                                                                                                        const lookupStatusInput = document.getElementById("users-lookup-status");
+                                                                                                                        const lookupMessageInput = document.getElementById("users-lookup-message");
+                                                                                                                        const lookupRedirectUrlInput = document.getElementById("users-lookup-redirect-url");
+                                                                                                                        const lookupReactivateUrlInput = document.getElementById("users-lookup-reactivate-url");
+                                                                                                                        const pendingPermitsInput = document.getElementById("users-pending-permits-count");
+                                                                                                                        const requestVerificationToken = form ? form.querySelector('input[name="__RequestVerificationToken"]') : null;
+                                                                                                                            const liveSummaryFullName = document.querySelector("[data-users-summary-full-name]");
+                                                                                                                            const liveSummaryUsername = document.querySelector("[data-users-summary-username]");
+                                                                                                                            const liveSummaryRole = document.querySelector("[data-users-summary-role]");
+                                                                                                                            const liveSummaryDepartment = document.querySelector("[data-users-summary-department]");
+                                                                                                                            const liveSummaryDepartmentManager = document.querySelector("[data-users-summary-department-manager]");
+                                                                                                                            const liveSummaryPermissions = document.querySelector("[data-users-summary-permissions]");
+                                                                                                                            const wizardValidationBox = document.querySelector("[data-users-wizard-errors]");
+                                                                                                                            const wizardValidationText = document.querySelector("[data-users-wizard-error-text]");
+                                                                                                                            const wizardValidationList = document.querySelector("[data-users-wizard-error-list]");
+                                                                                                                            const departmentManagerNote = document.getElementById("users-department-manager-note");
+                                                                                                                            const departmentOptions = Array.from(document.querySelectorAll("#users-department-select option"));
+                                                                                                                            const validationRequestedSteps = new Set();
+                                                                                                                        function updateWizardSaveNote(message) {
+                                                                                                                            if (!wizardSaveNote) {
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            wizardSaveNote.textContent = message || "تم حفظ مسودة التسجيل تلقائيًا داخل هذا المتصفح.";
+                                                                                                                        }
+
+                                                                                                                        const roleDisplayMap = {
+                                                                                                                            "@AppRoles.SystemAdmin": "مشرف نظام",
+                                                                                                                            "@AppRoles.GeneralManager": "مدير عام",
+                                                                                                                            "@AppRoles.Manager": "مدير",
+                                                                                                                            "@AppRoles.Employee": "موظف",
+                                                                                                                            "@AppRoles.GateSecurity": "أمن البوابة",
+                                                                                                                            "@AppRoles.Receptionist": "موظف استقبال"
+                                                                                                                        };
+
+                                                                                                                        // === Accordion toggle ===
+                                                                                                                        document.querySelectorAll("[data-toggle-group]").forEach(function (head) {
+                                                                                                                            head.addEventListener("click", function (e) {
+                                                                                                                                if (e.target.closest(".ue-group-switch")) return;
+                                                                                                                                const groupName = head.getAttribute("data-toggle-group");
+                                                                                                                                const body = document.querySelector('[data-group-body="' + groupName + '"]');
+                                                                                                                                const arrow = head.querySelector(".ue-perm-arrow");
+                                                                                                                                const isOpen = body.classList.toggle("ue-open");
+                                                                                                                                arrow.classList.toggle("ue-arrow-open", isOpen);
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        // === Group toggle-all ===
+                                                                                                                        document.querySelectorAll(".ue-group-toggle").forEach(function (toggle) {
+                                                                                                                            toggle.addEventListener("change", function () {
+                                                                                                                                const groupName = toggle.getAttribute("data-group-toggle");
+                                                                                                                                const members = document.querySelectorAll('[data-group-member="' + groupName + '"]');
+                                                                                                                                members.forEach(function (m) { m.checked = toggle.checked; });
+                                                                                                                                refreshCounts();
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        // === Individual permission change ===
+                                                                                                                        permInputs.forEach(function (input) {
+                                                                                                                            input.addEventListener("change", function () {
+                                                                                                                                refreshCounts();
+                                                                                                                                refreshGroupToggles();
+                                                                                                                                    updateLiveSummary();
+                                                                                                                                    syncStepperState();
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        // === Search ===
+                                                                                                                        var searchInput = document.getElementById("ue-perm-search");
+                                                                                                                        if (searchInput) {
+                                                                                                                            searchInput.addEventListener("input", function () {
+                                                                                                                                var q = searchInput.value.trim().toLowerCase();
+                                                                                                                                document.querySelectorAll(".ue-perm-item").forEach(function (item) {
+                                                                                                                                    var name = (item.getAttribute("data-perm-name") || "").toLowerCase();
+                                                                                                                                    item.style.display = (!q || name.includes(q)) ? "" : "none";
+                                                                                                                                });
+                                                                                                                                // Show all groups that have visible items
+                                                                                                                                document.querySelectorAll(".ue-perm-group").forEach(function (group) {
+                                                                                                                                    var body = group.querySelector("[data-group-body]");
+                                                                                                                                    var hasVisible = Array.from(body.querySelectorAll(".ue-perm-item")).some(function (i) { return i.style.display !== "none"; });
+                                                                                                                                    group.style.display = hasVisible ? "" : "none";
+                                                                                                                                    if (q && hasVisible) {
+                                                                                                                                        body.classList.add("ue-open");
+                                                                                                                                        group.querySelector(".ue-perm-arrow").classList.add("ue-arrow-open");
+                                                                                                                                    }
+                                                                                                                                });
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        // === Template button (select all / deselect all) ===
+                                                                                                                        var templateBtn = document.getElementById("ue-select-template-btn");
+                                                                                                                        if (templateBtn) {
+                                                                                                                            templateBtn.addEventListener("click", function () {
+                                                                                                                                var allChecked = permInputs.every(function (i) { return i.checked; });
+                                                                                                                                permInputs.forEach(function (i) { i.checked = !allChecked; });
+                                                                                                                                refreshCounts();
+                                                                                                                                refreshGroupToggles();
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        function refreshCounts() {
+                                                                                                                            if (permInputs.length === 0) {
+                                                                                                                                return;
+                                                                                                                            }
+                                                                                                                            var count = permInputs.filter(function (i) { return i.checked; }).length;
+                                                                                                                            if (permSelectedEl) permSelectedEl.textContent = count;
+                                                                                                                            if (grantedCountEl) grantedCountEl.textContent = count;
+                                                                                                                                updateLiveSummary();
+                                                                                                                        }
+
+                                                                                                                        function refreshGroupToggles() {
+                                                                                                                            document.querySelectorAll(".ue-group-toggle").forEach(function (toggle) {
+                                                                                                                                var groupName = toggle.getAttribute("data-group-toggle");
+                                                                                                                                var members = Array.from(document.querySelectorAll('[data-group-member="' + groupName + '"]'));
+                                                                                                                                var allChecked = members.length > 0 && members.every(function (m) { return m.checked; });
+                                                                                                                                toggle.checked = allChecked;
+                                                                                                                                // Update count badge
+                                                                                                                                var countEl = document.querySelector('[data-group-count="' + groupName + '"]');
+                                                                                                                                if (countEl) {
+                                                                                                                                    var checkedCount = members.filter(function (m) { return m.checked; }).length;
+                                                                                                                                    countEl.textContent = checkedCount + " من " + members.length;
+                                                                                                                                    countEl.classList.toggle("ue-badge-active", checkedCount > 0);
+                                                                                                                                }
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        function refreshRoleState() {
+                                                                                                                            var roleValue = roleSelect ? roleSelect.value : "@Model.Role";
+                                                                                                                            var isSuperAdmin = isSuperAdminInput?.value === "true";
+                                                                                                                            var roleText = isSuperAdmin ? "مالك النظام" : (roleDisplayMap[roleValue] || "مستخدم النظام");
+                                                                                                                            var isGeneralManager = roleValue === "@AppRoles.GeneralManager";
+                                                                                                                            if (statRoleEl) statRoleEl.textContent = roleText;
+
+                                                                                                                            var hideManagerCard = isSuperAdmin || roleValue === "@AppRoles.GeneralManager" || roleValue === "@AppRoles.SystemAdmin";
+                                                                                                                            if (generalManagerCard) generalManagerCard.hidden = !isGeneralManager || isSuperAdmin;
+                                                                                                                            if (managerCard) managerCard.hidden = hideManagerCard;
+                                                                                                                            if (departmentSelect) {
+                                                                                                                                departmentSelect.disabled = isGeneralManager || isSuperAdmin;
+                                                                                                                                if (isGeneralManager || isSuperAdmin) {
+                                                                                                                                    departmentSelect.value = "";
+                                                                                                                                }
+                                                                                                                            }
+                                                                                                                            if (departmentField) {
+                                                                                                                                departmentField.classList.toggle("opacity-75", isGeneralManager || isSuperAdmin);
+                                                                                                                            }
+                                                                                                                            if (departmentScopeNote) {
+                                                                                                                                departmentScopeNote.hidden = !(isGeneralManager || isSuperAdmin);
+                                                                                                                                departmentScopeNote.textContent = isGeneralManager ? "المدير العام يرتبط بالإدارة العامة فقط ولا يحتاج اختيار قسم." : "";
+                                                                                                                            }
+                                                                                                                            if (gateCard) gateCard.hidden = !(scanToggle && scanToggle.checked || roleValue === "@AppRoles.GateSecurity");
+                                                                                                                            refreshManagerBindingState();
+                                                                                                                        }
+
+                                                                                                                        function refreshStatusState() {
+                                                                                                                            if (!statusToggle) {
+                                                                                                                                return;
+                                                                                                                            }
+                                                                                                                            if (statusLabel) statusLabel.textContent = statusToggle.checked ? "نشط" : "موقوف";
+                                                                                                                            var statusCard = document.querySelector('.ue-status-switch');
+                                                                                                                            if (statusCard) {
+                                                                                                                                statusCard.classList.toggle('is-active', statusToggle.checked);
+                                                                                                                                statusCard.classList.toggle('is-inactive', !statusToggle.checked);
+                                                                                                                            }
+                                                                                                                        }
+
+                                                                                                                        function refreshManagerBindingState() {
+                                                                                                                            var autoBindEnabled = autoBindManagerToggle?.checked === true;
+                                                                                                                            if (managerUsernameField) managerUsernameField.hidden = autoBindEnabled;
+                                                                                                                            if (managerAutoNote) managerAutoNote.hidden = !autoBindEnabled;
+                                                                                                                        }
+
+                                                                                                                            function getFieldLabel(field) {
+                                                                                                                                if (!field) {
+                                                                                                                                    return "";
+                                                                                                                                }
+
+                                                                                                                                var explicitLabel = document.querySelector('label[for="' + field.id + '"]');
+                                                                                                                                if (explicitLabel) {
+                                                                                                                                    return explicitLabel.textContent.trim();
+                                                                                                                                }
+
+                                                                                                                                var fieldContainer = field.closest(".ue-field");
+                                                                                                                                var fallbackLabel = fieldContainer ? fieldContainer.querySelector(".form-label") : null;
+                                                                                                                                return fallbackLabel ? fallbackLabel.textContent.trim() : field.name || "";
+                                                                                                                            }
+
+                                                                                                                            function getStepPanels(step) {
+                                                                                                                                return wizardPanels.filter(function (item) {
+                                                                                                                                    return parseInt(item.getAttribute("data-users-wizard-panel") || "0", 10) === step;
+                                                                                                                                });
+                                                                                                                            }
+
+                                                                                                                            function collectPanelFields(step) {
+                                                                                                                                return getStepPanels(step).flatMap(function (panel) {
+                                                                                                                                    return Array.from(panel.querySelectorAll("input, select, textarea"));
+                                                                                                                                }).filter(function (field) {
+                                                                                                                                   if (!field.name || field.disabled) {
+                                                                                                                                       return false;
+                                                                                                                                   }
+
+                                                                                                                                    var type = (field.getAttribute("type") || field.type || "").toLowerCase();
+                                                                                                                                    return type !== "hidden" && type !== "button" && type !== "submit" && type !== "reset" && type !== "image";
+                                                                                                                                });
+                                                                                                                            }
+
+                                                                                                                            function isPanelValid(step) {
+                                                                                                                                return collectPanelFields(step).every(function (field) {
+                                                                                                                                    return field.checkValidity();
+                                                                                                                                });
+                                                                                                                            }
+
+                                                                                                                            function getFirstInvalidField(step) {
+                                                                                                                                return collectPanelFields(step).find(function (field) {
+                                                                                                                                    return !field.checkValidity();
+                                                                                                                                }) || null;
+                                                                                                                            }
+
+                                                                                                                            function stepHasServerValidationErrors(step) {
+                                                                                                                                return getStepPanels(step).some(function (panel) {
+                                                                                                                                    var hasFieldMessage = Array.from(panel.querySelectorAll(".field-validation-error")).some(function (message) {
+                                                                                                                                        return ((message.textContent || "").trim().length > 0);
+                                                                                                                                    });
+                                                                                                                                    if (hasFieldMessage) {
+                                                                                                                                        return true;
+                                                                                                                                    }
+
+                                                                                                                                    return panel.querySelector(".input-validation-error, .is-invalid") !== null;
+                                                                                                                                });
+                                                                                                                            }
+
+                                                                                                                            function shouldShowStepValidation(step) {
+                                                                                                                                return validationRequestedSteps.has(step) || stepHasServerValidationErrors(step);
+                                                                                                                            }
+
+                                                                                                                            function setFieldErrorState(field, hasError) {
+                                                                                                                                var fieldBox = field ? field.closest(".ue-field") : null;
+                                                                                                                                if (!fieldBox) {
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                fieldBox.classList.toggle("has-error", hasError);
+                                                                                                                            }
+
+                                                                                                                             function updateDepartmentManagerNote() {
+                                                                                                                                if (!departmentSelect || !departmentManagerNote) {
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                var selectedOption = departmentSelect.selectedOptions && departmentSelect.selectedOptions.length > 0
+                                                                                                                                    ? departmentSelect.selectedOptions[0]
+                                                                                                                                    : null;
+                                                                                                                                 var summary = cleanDepartmentManagerSummary(selectedOption?.getAttribute("data-manager-summary") || "");
+                                                                                                                                var selectedRole = roleSelect ? roleSelect.value : "";
+                                                                                                                                var isManagerRole = selectedRole === "@AppRoles.DepartmentManager";
+
+                                                                                                                                if (!isManagerRole || !summary) {
+                                                                                                                                    departmentManagerNote.hidden = true;
+                                                                                                                                    departmentManagerNote.textContent = "";
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                 departmentManagerNote.hidden = false;
+                                                                                                                                 departmentManagerNote.textContent = summary;
+                                                                                                                             }
+
+                                                                                                                             function cleanDepartmentManagerSummary(summary) {
+                                                                                                                                 var value = (summary || "").trim();
+                                                                                                                                 if (!value) {
+                                                                                                                                     return "";
+                                                                                                                                 }
+
+                                                                                                                                 return value
+                                                                                                                                     .replace(/^المدير\s+الحالي\s*[:：-]?\s*/i, "")
+                                                                                                                                     .replace(/^مدير\s+القسم\s+الحالي\s*[:：-]?\s*/i, "")
+                                                                                                                                     .replace(/^مدير\s+القسم\s*[:：-]?\s*/i, "")
+                                                                                                                                     .split(" - ")[0]
+                                                                                                                                     .split(" — ")[0]
+                                                                                                                                     .trim();
+                                                                                                                             }
+
+                                                                                                                             function updateLiveSummary() {
+                                                                                                                                if (liveSummaryFullName) liveSummaryFullName.textContent = (document.getElementById("FullName")?.value || "").trim() || "غير مُدخل";
+                                                                                                                                if (liveSummaryUsername) liveSummaryUsername.textContent = (document.getElementById("Username")?.value || "").trim() || "غير مُدخل";
+
+                                                                                                                                var roleValue = roleSelect ? roleSelect.value : "@Model.Role";
+                                                                                                                                var isSuperAdmin = isSuperAdminInput?.value === "true";
+                                                                                                                                var roleText = isSuperAdmin ? "مالك النظام" : (roleDisplayMap[roleValue] || "مستخدم النظام");
+                                                                                                                                if (liveSummaryRole) liveSummaryRole.textContent = roleText;
+
+                                                                                                                                var departmentText = departmentSelect && departmentSelect.selectedOptions && departmentSelect.selectedOptions.length > 0
+                                                                                                                                    ? departmentSelect.selectedOptions[0].textContent.trim()
+                                                                                                                                    : "";
+                                                                                                                                if (liveSummaryDepartment) liveSummaryDepartment.textContent = departmentText || "غير مرتبط";
+
+                                                                                                                                var selectedOption = departmentSelect && departmentSelect.selectedOptions && departmentSelect.selectedOptions.length > 0
+                                                                                                                                    ? departmentSelect.selectedOptions[0]
+                                                                                                                                    : null;
+                                                                                                                                 var managerSummary = cleanDepartmentManagerSummary(selectedOption?.getAttribute("data-manager-summary") || "");
+                                                                                                                                 if (liveSummaryDepartmentManager) {
+                                                                                                                                     liveSummaryDepartmentManager.textContent = managerSummary || "غير مرتبط";
+                                                                                                                                 }
+
+                                                                                                                                if (liveSummaryPermissions) {
+                                                                                                                                    liveSummaryPermissions.textContent = grantedCountEl ? grantedCountEl.textContent + " صلاحية" : "0 صلاحية";
+                                                                                                                                }
+                                                                                                                            }
+
+                                                                                                                            function updateValidationSummary(step) {
+                                                                                                                                if (!wizardValidationBox || !wizardValidationList || !wizardValidationText) {
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                var invalidField = getFirstInvalidField(step);
+                                                                                                                                if (!invalidField || !shouldShowStepValidation(step)) {
+                                                                                                                                    wizardValidationBox.hidden = true;
+                                                                                                                                    wizardValidationList.innerHTML = "";
+                                                                                                                                    wizardValidationText.textContent = "أكمل الحقول المطلوبة في هذه الخطوة.";
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                var fieldItems = collectPanelFields(step)
+                                                                                                                                    .filter(function (field) { return !field.checkValidity(); })
+                                                                                                                                    .map(function (field) {
+                                                                                                                                        return "<li>" + getFieldLabel(field) + "</li>";
+                                                                                                                                    })
+                                                                                                                                    .join("");
+
+                                                                                                                                wizardValidationList.innerHTML = fieldItems;
+                                                                                                                                wizardValidationText.textContent = "أكمل الحقول التالية للانتقال بأمان.";
+                                                                                                                                wizardValidationBox.hidden = false;
+                                                                                                                            }
+
+                                                                                                                            function setHiddenPanelControls(panel, hidden) {
+                                                                                                                                panel.toggleAttribute("inert", hidden);
+                                                                                                                                panel.setAttribute("aria-hidden", hidden ? "true" : "false");
+                                                                                                                            }
+
+                                                                                                                            function validateAndStay(step) {
+                                                                                                                                var isValid = isPanelValid(step);
+                                                                                                                                validationRequestedSteps.add(step);
+                                                                                                                                form?.classList.add("was-validated");
+                                                                                                                                markFieldErrorsFromStep(step);
+                                                                                                                                updateValidationSummary(step);
+                                                                                                                                syncStepperState();
+
+                                                                                                                                if (!isValid) {
+                                                                                                                                    var invalidField = getFirstInvalidField(step);
+                                                                                                                                    if (invalidField && typeof invalidField.focus === "function") {
+                                                                                                                                        invalidField.focus({ preventScroll: true });
+                                                                                                                                    }
+                                                                                                                                }
+
+                                                                                                                                return isValid;
+                                                                                                                            }
+
+                                                                                                                            function validateAllWizardSteps() {
+                                                                                                                                for (var step = 1; step <= wizardMaxStep; step += 1) {
+                                                                                                                                    if (!isPanelValid(step)) {
+                                                                                                                                        setWizardStep(step, false);
+                                                                                                                                        validateAndStay(step);
+                                                                                                                                        return false;
+                                                                                                                                    }
+                                                                                                                                }
+
+                                                                                                                                if (wizardValidationBox) {
+                                                                                                                                    wizardValidationBox.hidden = true;
+                                                                                                                                }
+                                                                                                                                return true;
+                                                                                                                            }
+
+                                                                                                                            function syncStepperState() {
+                                                                                                                                var currentStep = getWizardStep();
+                                                                                                                                var stepValidity = {};
+
+                                                                                                                                for (var step = 1; step <= wizardMaxStep; step += 1) {
+                                                                                                                                    stepValidity[step] = isPanelValid(step);
+                                                                                                                                }
+
+                                                                                                                                var highestUnlockedStep = 1;
+                                                                                                                                for (var stepIndex = 1; stepIndex < currentStep; stepIndex += 1) {
+                                                                                                                                    if (!stepValidity[stepIndex]) {
+                                                                                                                                        highestUnlockedStep = stepIndex;
+                                                                                                                                        break;
+                                                                                                                                    }
+                                                                                                                                    highestUnlockedStep = Math.min(stepIndex + 1, wizardMaxStep);
+                                                                                                                                }
+
+                                                                                                                                wizardStepTabs.forEach(function (tab) {
+                                                                                                                                    var tabStep = parseInt(tab.getAttribute("data-users-wizard-step-jump") || "0", 10);
+                                                                                                                                    var isCurrent = tabStep === currentStep;
+                                                                                                                                    var isComplete = tabStep < currentStep && stepValidity[tabStep];
+                                                                                                                                    var isLocked = tabStep > highestUnlockedStep;
+                                                                                                                                    var isError = tabStep === currentStep && !stepValidity[currentStep] && shouldShowStepValidation(currentStep);
+
+                                                                                                                                    tab.classList.toggle("is-active", isCurrent);
+                                                                                                                                    tab.classList.toggle("is-complete", isComplete);
+                                                                                                                                    tab.classList.toggle("is-locked", isLocked);
+                                                                                                                                    tab.classList.toggle("is-error", isError);
+                                                                                                                                    tab.disabled = isLocked;
+                                                                                                                                    tab.setAttribute("aria-disabled", isLocked ? "true" : "false");
+                                                                                                                                });
+
+                                                                                                                                wizardPrevButtons.forEach(function (button) {
+                                                                                                                                    button.disabled = currentStep <= 1;
+                                                                                                                                });
+
+                                                                                                                                wizardNextButtons.forEach(function (button) {
+                                                                                                                                    var currentValid = stepValidity[currentStep];
+                                                                                                                                    button.hidden = currentStep >= wizardMaxStep;
+                                                                                                                                    button.disabled = false;
+                                                                                                                                   button.textContent = currentStep === wizardMaxStep - 1 ? "المراجعة" : "التالي";
+                                                                                                                                });
+
+                                                                                                                                updateValidationSummary(currentStep);
+                                                                                                                                updateLiveSummary();
+                                                                                                                            }
+
+                                                                                                                        function getWizardStep() {
+                                                                                                                            var value = parseInt(wizardStepInput?.value || "1", 10);
+                                                                                                                            if (Number.isNaN(value) || value < 1) {
+                                                                                                                                return 1;
+                                                                                                                            }
+                                                                                                                            return Math.min(value, wizardMaxStep);
+                                                                                                                        }
+
+                                                                                                                       function setWizardStep(nextStep, focusPanel) {
+                                                                                                                           if (!wizardStepInput) {
+                                                                                                                               return;
+                                                                                                                           }
+                                                                                                                           var step = Math.max(1, Math.min(nextStep, wizardMaxStep));
+                                                                                                                           wizardStepInput.value = String(step);
+                                                                                                                            updateWizardSaveNote("تم حفظ بيانات الخطوة السابقة كمسودة محلية. يمكنك الرجوع لها ما دمت على نفس المتصفح.");
+                                                                                                                           syncWizardState(focusPanel !== false);
+                                                                                                                       }
+
+                                                                                                                        function syncWizardState(shouldFocus) {
+                                                                                                                            if (!wizardShell || !wizardStepInput) {
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            var step = getWizardStep();
+                                                                                                                                 wizardPanels.forEach(function (panel) {
+                                                                                                                                var panelStep = parseInt(panel.getAttribute("data-users-wizard-panel") || "0", 10);
+                                                                                                                                    var hidden = panelStep !== step;
+                                                                                                                                    panel.classList.toggle("is-hidden", hidden);
+                                                                                                                                     setHiddenPanelControls(panel, hidden);
+                                                                                                                             });
+                                                                                                                             wizardPanelContainers.forEach(function (container) {
+                                                                                                                                 var hasVisiblePanel = Array.from(container.querySelectorAll("[data-users-wizard-panel]")).some(function (panel) {
+                                                                                                                                     return !panel.classList.contains("is-hidden");
+                                                                                                                                 });
+                                                                                                                                 container.classList.toggle("is-hidden", !hasVisiblePanel);
+                                                                                                                             });
+                                                                                                                                 syncStepperState();
+
+                                                                                                                            if (shouldFocus) {
+                                                                                                                                var activePanel = wizardPanels.find(function (panel) {
+                                                                                                                                    return parseInt(panel.getAttribute("data-users-wizard-panel") || "0", 10) === step;
+                                                                                                                                });
+                                                                                                                                var focusable = activePanel ? activePanel.querySelector("input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([type='button']):not([disabled])") : null;
+                                                                                                                                if (focusable && typeof focusable.focus === "function") {
+                                                                                                                                    focusable.focus({ preventScroll: true });
+                                                                }
+                                                                                                                            }
+                                                                                                                        }
+
+                                                                                                                        function setLookupResult(status, message, data) {
+                                                                                                                            if (lookupStatusInput) lookupStatusInput.value = status || "";
+                                                                                                                            if (lookupMessageInput) lookupMessageInput.value = message || "";
+                                                                                                                            if (lookupRedirectUrlInput) lookupRedirectUrlInput.value = data?.editUrl || "";
+                                                                                                                            if (lookupReactivateUrlInput) lookupReactivateUrlInput.value = data?.reactivateUrl || "";
+                                                                                                                            if (pendingPermitsInput && typeof data?.pendingPermitsCount === "number") {
+                                                                                                                                pendingPermitsInput.value = String(data.pendingPermitsCount);
+                                                                                                                            }
+                                                                                                                            if (!identityLookupResult) {
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            var details = [];
+                                                                                                                            if (data?.displayName) details.push(data.displayName);
+                                                                                                                            if (data?.role) details.push(data.role);
+                                                                                                                            if (data?.department) details.push(data.department);
+                                                                                                                            if (typeof data?.pendingPermitsCount === "number") {
+                                                                                                                                details.push(data.pendingPermitsCount + " طلبًا معلقًا");
+                                                                                                                            }
+                                                                                                                            identityLookupResult.textContent = details.length > 0 ? message + " — " + details.join(" · ") : message;
+                                                                                                                            if (reactivateButton) {
+                                                                                                                                reactivateButton.hidden = status !== "inactive";
+                                                                                                                            }
+                                                                                                                        }
+
+                                                                                                                        async function performIdentityLookup() {
+                                                                                                                            if (!form) {
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            var usernameInput = form.querySelector("#Username");
+                                                                                                                            var username = usernameInput ? usernameInput.value.trim() : "";
+                                                                                                                            if (!/^[12]\d{9}$/.test(username)) {
+                                                                                                                                setLookupResult("invalid", "رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.");
+                                                                                                                                if (usernameInput) {
+                                                                                                                                    usernameInput.focus();
+                                                                                                                                }
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            setLookupResult("loading", "جاري فحص الهوية...");
+                                                                                                                            var lookupUrl = "@Url.Action("WizardIdentityLookup", "Users")" + "?username=" + encodeURIComponent(username);
+                                                                                                                            var response = await fetch(lookupUrl, {
+                                                                                                                                headers: { "Accept": "application/json" },
+                                                                                                                                credentials: "same-origin"
+                                                                                                                            });
+                                                                                                                            var data = await response.json();
+                                                                                                                            setLookupResult(data.status || "", data.message || "", data);
+
+                                                                                                                            if (data.status === "active" && data.editUrl) {
+                                                                                                                                window.location.assign(data.editUrl);
+                                                                                                                                return;
+                                                                                                                            }
+                                                                                                                        }
+
+                                                                                                                        async function reactivateLookupUser() {
+                                                                                                                            if (!form || !lookupReactivateUrlInput || !lookupReactivateUrlInput.value) {
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            var usernameInput = form.querySelector("#Username");
+                                                                                                                            var username = usernameInput ? usernameInput.value.trim() : "";
+                                                                                                                            var token = requestVerificationToken ? requestVerificationToken.value : "";
+                                                                                                                            if (!username || !token) {
+                                                                                                                                return;
+                                                                                                                            }
+
+                                                                                                                            var response = await fetch(lookupReactivateUrlInput.value, {
+                                                                                                                                method: "POST",
+                                                                                                                                headers: {
+                                                                                                                                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+                                                                                                                                },
+                                                                                                                                credentials: "same-origin",
+                                                                                                                                body: new URLSearchParams({
+                                                                                                                                    __RequestVerificationToken: token,
+                                                                                                                                    username: username
+                                                                                                                                }).toString()
+                                                                                                                            });
+                                                                                                                            var data = await response.json();
+                                                                                                                            setLookupResult(data.status || "", data.message || "", data);
+
+                                                                                                                            if (data.status === "reactivated" && data.editUrl) {
+                                                                                                                                window.location.assign(data.editUrl);
+                                                                                                                            }
+                                                                                                                        }
+
+                                                                                                                        wizardStepTabs.forEach(function (tab) {
+                                                                                                                            tab.addEventListener("click", function () {
+                                                                                                                                    var targetStep = parseInt(tab.getAttribute("data-users-wizard-step-jump") || "1", 10);
+                                                                                                                                    if (targetStep > getWizardStep() + 1) {
+                                                                                                                                        syncStepperState();
+                                                                                                                                        return;
+                                                                                                                                    }
+
+                                                                                                                                    var currentStep = getWizardStep();
+                                                                                                                                    if (targetStep > currentStep && !isPanelValid(currentStep)) {
+                                                                                                                                        validateAndStay(currentStep);
+                                                                                                                                        return;
+                                                                                                                                    }
+
+                                                                                                                                    setWizardStep(targetStep);
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        wizardPrevButtons.forEach(function (button) {
+                                                                                                                            button.addEventListener("click", function () {
+                                                                                                                                setWizardStep(getWizardStep() - 1);
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        wizardNextButtons.forEach(function (button) {
+                                                                                                                            button.addEventListener("click", function () {
+                                                                                                                                var currentStep = getWizardStep();
+                                                                                                                                if (!validateAndStay(currentStep)) {
+                                                                                                                                    return;
+                                                                                                                                }
+                                                                                                                                setWizardStep(currentStep + 1);
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        if (identityLookupButton) {
+                                                                                                                            identityLookupButton.addEventListener("click", function () {
+                                                                                                                                performIdentityLookup();
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        if (reactivateButton) {
+                                                                                                                            reactivateButton.addEventListener("click", function () {
+                                                                                                                                reactivateLookupUser();
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                            [document.getElementById("FullName"), document.getElementById("Username"), document.getElementById("PhoneNumber"), document.getElementById("JobTitle")].forEach(function (field) {
+                                                                                                                                if (field) {
+                                                                                                                                    field.addEventListener("input", function () {
+                                                                                                                                        updateLiveSummary();
+                                                                                                                                            syncStepperState();
+                                                                                                                                    });
+                                                                                                                                }
+                                                                                                                            });
+
+                                                                                                                            [departmentSelect, autoBindManagerToggle, statusToggle, scanToggle, manageUsersToggle, manageDepartmentsToggle, manageAdministrationToggle].forEach(function (field) {
+                                                                                                                                if (field) {
+                                                                                                                                    field.addEventListener("change", function () {
+                                                                                                                                        updateLiveSummary();
+                                                                                                                                        updateDepartmentManagerNote();
+                                                                                                                                            syncStepperState();
+                                                                                                                                    });
+                                                                                                                                }
+                                                                                                                            });
+
+                                                                                                                            function markFieldErrorsFromStep(step) {
+                                                                                                                                wizardPanels.forEach(function (panel) {
+                                                                                                                                    var panelStep = parseInt(panel.getAttribute("data-users-wizard-panel") || "0", 10);
+                                                                                                                                    Array.from(panel.querySelectorAll(".ue-field")).forEach(function (fieldBox) {
+                                                                                                                                        fieldBox.classList.remove("has-error");
+                                                                                                                                    });
+                                                                                                                                    if (panelStep === step) {
+                                                                                                                                        collectPanelFields(step).forEach(function (field) {
+                                                                                                                                            setFieldErrorState(field, !field.checkValidity());
+                                                                                                                                        });
+                                                                                                                                    }
+                                                                                                                                });
+                                                                                                                            }
+
+                                                                                                                       if (form) {
+                                                                                                                            form.addEventListener("input", function (event) {
+                                                                                                                                if (event.target && event.target.matches && event.target.matches("input, textarea, select")) {
+                                                                                                                                    updateWizardSaveNote("تم تحديث المسودة تلقائيًا.");
+                                                                                                                                }
+                                                                                                                            });
+
+                                                                                                                            form.addEventListener("change", function (event) {
+                                                                                                                                if (event.target && event.target.matches && event.target.matches("input, textarea, select")) {
+                                                                                                                                    updateWizardSaveNote("تم تحديث المسودة تلقائيًا.");
+                                                                                                                                }
+                                                                                                                            });
+
+                                                                                                                            form.addEventListener("submit", function (event) {
+                                                                                                                                const submitter = event.submitter;
+                                                                                                                                const requiresEditConfirmation = submitter?.dataset.editSubmit === "true";
+                                                                                                                                const skipValidation = submitter?.formNoValidate || submitter?.dataset.skipValidation === "true";
+                                                                                                                                const confirmMessage = submitter?.dataset.editScope === "self"
+                                                                                                                                    ? "سيتم تحديث بيانات حسابك الشخصية فقط. هل تريد المتابعة؟"
+                                                                                                                                    : "سيتم تحديث بيانات المستخدم وصلاحياته. هل تريد المتابعة؟";
+
+                                                                                                                                    if (!skipValidation && getWizardStep() < wizardMaxStep) {
+                                                                                                                                    event.preventDefault();
+                                                                                                                                    event.stopPropagation();
+                                                                                                                                        if (!isPanelValid(getWizardStep())) {
+                                                                                                                                            form.classList.add("was-validated");
+                                                                                                                                            markFieldErrorsFromStep(getWizardStep());
+                                                                                                                                            syncStepperState();
+                                                                                                                                        return;
+                                                                                                                                    }
+
+                                                                                                                                    setWizardStep(getWizardStep() + 1);
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                if (!skipValidation && !validateAllWizardSteps()) {
+                                                                                                                                   event.preventDefault();
+                                                                                                                                   event.stopPropagation();
+                                                                                                                                   return;
+                                                                                                                               }
+
+                                                                                                                                if (requiresEditConfirmation && !window.confirm(confirmMessage)) {
+                                                                                                                                    event.preventDefault();
+                                                                                                                                    event.stopPropagation();
+                                                                                                                                    return;
+                                                                                                                                }
+
+                                                                                                                                if (!skipValidation) {
+                                                                                                                                    form.classList.add("was-validated");
+                                                                                                                                }
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        [roleSelect, statusToggle, scanToggle, manageUsersToggle, manageDepartmentsToggle, manageAdministrationToggle, autoBindManagerToggle].forEach(function (el) {
+                                                                                                                            if (el) el.addEventListener("change", function () {
+                                                                                                                                refreshCounts();
+                                                                                                                                refreshRoleState();
+                                                                                                                                refreshStatusState();
+                                                                                                                                refreshGroupToggles();
+                                                                                                                                    updateDepartmentManagerNote();
+                                                                                                                                    updateLiveSummary();
+                                                                                                                                    syncStepperState();
+                                                                                                                            });
+                                                                                                                        });
+
+                                                                                                                        refreshCounts();
+                                                                                                                        refreshGroupToggles();
+                                                                                                                        refreshRoleState();
+                                                                                                                        refreshStatusState();
+                                                                                                                        refreshManagerBindingState();
+                                                                                                                            updateDepartmentManagerNote();
+                                                                                                                            updateLiveSummary();
+                                                                                                                            syncStepperState();
+                                                                                                                            syncWizardState(false);
+                                                                                                                    });
+                                                                                                                </script>

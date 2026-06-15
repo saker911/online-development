@@ -1,0 +1,125 @@
+@using Microsoft.AspNetCore.Routing
+@model VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
+
+@functions {
+    private IReadOnlyList<int> BuildVisiblePages()
+    {
+        var pages = new List<int>();
+
+        void AddPage(int pageNumber)
+        {
+            if (pageNumber < 1 || pageNumber > Model.TotalPages || pages.Contains(pageNumber))
+            {
+                return;
+            }
+
+            pages.Add(pageNumber);
+        }
+
+        if (Model.TotalPages <= 7)
+        {
+            for (var pageNumber = 1; pageNumber <= Model.TotalPages; pageNumber++)
+            {
+                AddPage(pageNumber);
+            }
+
+            return pages;
+        }
+
+        AddPage(1);
+        AddPage(Model.CurrentPage - 1);
+        AddPage(Model.CurrentPage);
+        AddPage(Model.CurrentPage + 1);
+        AddPage(Model.TotalPages);
+
+        pages.Sort();
+        return pages;
+    }
+
+    private RouteValueDictionary BuildRouteValues(int pageNumber)
+    {
+        var routeValues = new RouteValueDictionary(Model.RouteValues)
+        {
+            ["page"] = pageNumber,
+        };
+
+        return routeValues;
+    }
+
+    private string BuildPageUrl(int pageNumber)
+    {
+        var path = Url.Action(Model.ActionName, BuildRouteValues(pageNumber)) ?? "#";
+        return string.IsNullOrWhiteSpace(Model.Fragment) ? path : $"{path}#{Model.Fragment}";
+    }
+}
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="@Model.AriaLabel" class="report-pagination mt-4">
+        <ul class="pagination justify-content-center flex-wrap gap-2 mb-0 app-pagination">
+            <li class="page-item border-0">
+                @if (Model.CurrentPage > 1)
+                {
+                    <a class="btn pagination-nav @($"btn-outline-{Model.Theme}")" href="@BuildPageUrl(1)">الأولى</a>
+                }
+                else
+                {
+                    <span class="btn pagination-nav btn-outline-secondary disabled">الأولى</span>
+                }
+            </li>
+            <li class="page-item border-0">
+                @if (Model.CurrentPage > 1)
+                {
+                    <a class="btn pagination-nav @($"btn-outline-{Model.Theme}")" href="@BuildPageUrl(Model.CurrentPage - 1)">السابق</a>
+                }
+                else
+                {
+                    <span class="btn pagination-nav btn-outline-secondary disabled">السابق</span>
+                }
+            </li>
+
+            @{
+                var visiblePages = BuildVisiblePages();
+                var previousPage = 0;
+            }
+
+            @foreach (var pageNumber in visiblePages)
+            {
+                if (previousPage != 0 && pageNumber - previousPage > 1)
+                {
+                    <li class="page-item border-0">
+                        <span class="btn pagination-ellipsis btn-outline-secondary disabled">…</span>
+                    </li>
+                }
+
+                var buttonClass = pageNumber == Model.CurrentPage ? $"btn btn-{Model.Theme}" : $"btn btn-outline-{Model.Theme}";
+                <li class="page-item border-0">
+                    <a class="@buttonClass" href="@BuildPageUrl(pageNumber)">@pageNumber.ToString(System.Globalization.CultureInfo.InvariantCulture)</a>
+                </li>
+
+                previousPage = pageNumber;
+            }
+
+            <li class="page-item border-0">
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a class="btn pagination-nav @($"btn-outline-{Model.Theme}")" href="@BuildPageUrl(Model.CurrentPage + 1)">التالي</a>
+                }
+                else
+                {
+                    <span class="btn pagination-nav btn-outline-secondary disabled">التالي</span>
+                }
+            </li>
+            <li class="page-item border-0">
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a class="btn pagination-nav @($"btn-outline-{Model.Theme}")" href="@BuildPageUrl(Model.TotalPages)">الأخيرة</a>
+                }
+                else
+                {
+                    <span class="btn pagination-nav btn-outline-secondary disabled">الأخيرة</span>
+                }
+            </li>
+        </ul>
+    </nav>
+}

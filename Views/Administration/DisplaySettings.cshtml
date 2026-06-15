@@ -1,0 +1,262 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Display.DisplaySettingsViewModel
+
+@{
+    ViewData["Title"] = "شاشات العرض";
+    var devices = Model.DeviceManagement;
+}
+
+<div class="card-permit">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h1 class="mb-1">شاشات العرض</h1>
+            <p class="text-muted-ar mb-0">إدارة الروابط، مفتاح التهيئة، الشبكة، واعتماد أجهزة شاشات العرض من مكان واحد.</p>
+        </div>
+        <a asp-action="Edit" class="btn btn-outline-secondary">بيانات الإدارة</a>
+    </div>
+
+    <div class="app-inline-note app-inline-note-warning mb-4">
+        عند توليد مفتاح جديد ستتوقف أي روابط تهيئة أو طلبات تستخدم المفتاح القديم حتى يتم تحديث الرابط.
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="app-card-surface h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <div class="fw-bold">رابط ربط شاشة العرض</div>
+                        <div class="small text-muted">انسخ هذا الرابط إلى الجهاز الجديد ليظهر نموذج ربط واعتماد الشاشة مباشرة.</div>
+                    </div>
+                    <a href="@Model.RegistrationUrl" target="_blank" class="btn btn-primary btn-sm">فتح الربط</a>
+                </div>
+                <div class="input-group mb-2" dir="ltr">
+                    <input class="form-control ltr-field" value="@Model.RegistrationUrl" readonly data-copy-source="display-registration-url" />
+                    <button class="btn btn-outline-secondary" type="button" data-copy-target="display-registration-url">نسخ</button>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="@Model.GateDisplayUrl" target="_blank" class="btn btn-outline-primary btn-sm">شاشة البوابة</a>
+                    <a href="@Model.VisitsDisplayUrl" target="_blank" class="btn btn-outline-primary btn-sm">شاشة الزيارات</a>
+                    <span class="small text-muted align-self-center">روابط البوابة والزيارات تعمل بعد اعتماد الجهاز.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="app-card-surface h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <div class="fw-bold">مفتاح الوصول</div>
+                        <div class="small text-muted">مخزن في إعدادات الإدارة: DisplayAccessKey.</div>
+                    </div>
+                    <form asp-action="RotateDisplayAccessKey" method="post" data-confirm-message="سيتم إبطال المفتاح القديم. هل تريد توليد مفتاح جديد؟">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-warning btn-sm">توليد مفتاح جديد</button>
+                    </form>
+                </div>
+                <div class="input-group" dir="ltr">
+                    <input class="form-control ltr-field" value="@Model.MaskedDisplayAccessKey" readonly data-secret-mask="@Model.MaskedDisplayAccessKey" data-secret-value="@Model.DisplayAccessKey" />
+                    <button class="btn btn-outline-secondary" type="button" data-toggle-secret>إظهار</button>
+                </div>
+                <div class="small text-muted mt-2">لا يتم إرسال المفتاح في query string. رابط طلب الاعتماد يضعه في جزء محلي من الرابط لتعبئة النموذج فقط.</div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="app-card-surface p-3">
+                <div class="fw-bold mb-3">إعدادات الشبكة</div>
+                <form asp-action="DisplaySettings" method="post" data-confirm-message="هل تريد حفظ إعدادات الشبكة وشاشات العرض؟">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Id" type="hidden" />
+                    <input asp-for="DisplayAccessKey" type="hidden" />
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label asp-for="DisplayBaseUrl" class="form-label">عنوان الوصول الخارجي</label>
+                            <input asp-for="DisplayBaseUrl" class="form-control" dir="ltr" placeholder="http://10.3.25.1:5001" />
+                            <span asp-validation-for="DisplayBaseUrl" class="text-danger"></span>
+                            <div class="form-text">إذا تركته فارغًا فسيستخدم النظام عنوان الطلب الحالي عند بناء الروابط.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label asp-for="AllowedClientIpRanges" class="form-label">عناوين IP المسموح بها</label>
+                            <textarea asp-for="AllowedClientIpRanges" class="form-control" rows="3" dir="ltr"
+                                      placeholder="10.3.25.x&#10;10.3.100.x"></textarea>
+                            <span asp-validation-for="AllowedClientIpRanges" class="text-danger"></span>
+                            <div class="form-text">تبقى إعدادات الشبكة من نفس إعدادات الإدارة ولا يتم إنشاء مخزن جديد لها.</div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">حفظ إعدادات الشبكة</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="report-stat-card"><span>المعتمدة</span><strong>@devices.ApprovedCount</strong></div></div>
+        <div class="col-md-3"><div class="report-stat-card"><span>تعمل الآن</span><strong>@devices.OnlineCount</strong></div></div>
+        <div class="col-md-3"><div class="report-stat-card"><span>غير متصلة</span><strong>@devices.OfflineCount</strong></div></div>
+        <div class="col-md-3"><div class="report-stat-card"><span>طلبات معلقة</span><strong>@devices.PendingCount</strong></div></div>
+    </div>
+
+    @foreach (var group in new[] {
+        ("طلبات الشاشات الجديدة", devices.PendingDevices),
+        ("الشاشات المعتمدة", devices.ApprovedDevices),
+        ("الشاشات المرفوضة", devices.RejectedDevices),
+        ("الشاشات المعطلة", devices.DisabledDevices)
+    })
+    {
+        <h2 class="h5 mt-4">@group.Item1</h2>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>الشاشة</th>
+                        <th>الموقع</th>
+                        <th>IP</th>
+                        <th>User-Agent</th>
+                        <th>تاريخ الطلب</th>
+                        <th>آخر ظهور</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in group.Item2)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@item.ScreenName</strong>
+                                @if (!string.IsNullOrWhiteSpace(item.Description))
+                                {
+                                    <div class="small text-muted">@item.Description</div>
+                                }
+                            </td>
+                            <td>@item.ScreenLocation</td>
+                            <td class="ltr-field">@(!string.IsNullOrWhiteSpace(item.LastIpAddress) ? item.LastIpAddress : item.IpAddress)</td>
+                            <td class="small">@item.UserAgentSummary</td>
+                            <td>@HijriDateFormatter.Format(item.CreatedAtUtc.ToLocalTime())</td>
+                            <td>@(item.LastSeenUtc.HasValue ? HijriDateFormatter.Format(item.LastSeenUtc.Value.ToLocalTime()) : "-")</td>
+                            <td><span class="badge bg-secondary">@item.StatusText</span></td>
+                            <td>
+                                <div class="record-row-actions display-device-row-actions">
+                                    @if (item.Status == DisplayDeviceStatuses.Pending)
+                                    {
+                                        <form asp-action="ApproveDisplayDevice" method="post" class="record-icon-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="record-icon-action record-icon-action-success" data-bs-toggle="tooltip"
+                                                    data-bs-title="اعتماد" title="اعتماد" aria-label="اعتماد شاشة @item.ScreenName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="m5 12 4 4L19 6" fill="none" stroke="currentColor"
+                                                          stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                        <form asp-action="RejectDisplayDevice" method="post" class="record-icon-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="record-icon-action record-icon-action-danger" data-bs-toggle="tooltip"
+                                                    data-bs-title="رفض" title="رفض" aria-label="رفض شاشة @item.ScreenName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor"
+                                                          stroke-width="1.9" stroke-linecap="round" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (item.Status == DisplayDeviceStatuses.Approved)
+                                    {
+                                        <form asp-action="DisableDisplayDevice" method="post" class="record-icon-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="record-icon-action record-icon-action-warning" data-bs-toggle="tooltip"
+                                                    data-bs-title="تعطيل" title="تعطيل" aria-label="تعطيل شاشة @item.ScreenName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M12 3v8M7 5.8a8 8 0 1 0 10 0" fill="none"
+                                                          stroke="currentColor" stroke-width="1.8"
+                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                        <form asp-action="RotateDisplayDeviceToken" method="post" class="record-icon-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="record-icon-action record-icon-action-primary" data-bs-toggle="tooltip"
+                                                    data-bs-title="تدوير الرمز" title="تدوير الرمز"
+                                                    aria-label="تدوير رمز شاشة @item.ScreenName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M21 12a9 9 0 0 1-15.5 6.2M3 12A9 9 0 0 1 18.5 5.8M18 3v4h-4M6 21v-4h4"
+                                                          fill="none" stroke="currentColor" stroke-width="1.8"
+                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (item.Status == DisplayDeviceStatuses.Disabled)
+                                    {
+                                        <form asp-action="ActivateDisplayDevice" method="post" class="record-icon-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button class="record-icon-action record-icon-action-success" data-bs-toggle="tooltip"
+                                                    data-bs-title="تنشيط" title="تنشيط" aria-label="تنشيط شاشة @item.ScreenName">
+                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path d="M8 5v14l11-7-11-7Z" fill="none" stroke="currentColor"
+                                                          stroke-width="1.8" stroke-linejoin="round" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    }
+                                    <a asp-action="DisplayDeviceDetails" asp-route-id="@item.Id" class="record-icon-action"
+                                       data-bs-toggle="tooltip" data-bs-title="التفاصيل" title="التفاصيل"
+                                       aria-label="عرض تفاصيل شاشة @item.ScreenName">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M5 4h14v16H5V4Zm3 5h8M8 13h8M8 17h5" fill="none"
+                                                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                                        </svg>
+                                    </a>
+                                    <form asp-action="DeleteDisplayDevice" method="post" class="record-icon-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button class="record-icon-action record-icon-action-danger" data-bs-toggle="tooltip"
+                                                data-bs-title="حذف" title="حذف" aria-label="حذف شاشة @item.ScreenName">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7l1-3h4l1 3"
+                                                      fill="none" stroke="currentColor" stroke-width="1.8"
+                                                      stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!group.Item2.Any())
+                    {
+                        <tr><td colspan="8" class="text-muted">لا توجد عناصر.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        document.querySelectorAll('[data-copy-target]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const source = document.querySelector('[data-copy-source="' + button.dataset.copyTarget + '"]');
+                if (!source) return;
+                navigator.clipboard?.writeText(source.value);
+            });
+        });
+
+        document.querySelectorAll('[data-toggle-secret]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const input = button.parentElement?.querySelector('[data-secret-value]');
+                if (!input) return;
+                const showing = input.value === input.dataset.secretValue;
+                input.value = showing ? input.dataset.secretMask : input.dataset.secretValue;
+                button.textContent = showing ? 'إظهار' : 'إخفاء';
+            });
+        });
+    </script>
+}

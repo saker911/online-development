@@ -1,0 +1,223 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@model DelegationManagementViewModel
+
+@{
+    ViewData["Title"] = "إدارة التفويضات";
+
+    string BuildGrantedPermissionsSummary(Delegation delegation)
+    {
+        var permissionKeys = string.Equals(
+            delegation.ScopeType,
+            DelegationScopeTypes.Full,
+            StringComparison.OrdinalIgnoreCase
+        )
+            ? Model.DelegatorPermissionKeys.GetValueOrDefault(delegation.DelegatorUsername, new List<string>())
+            : delegation.Permissions.Select(item => item.PermissionKey).ToList();
+
+        if (permissionKeys.Count == 0)
+        {
+            return "لا توجد صلاحيات قابلة للتفويض حاليًا";
+        }
+
+        return string.Join("، ", permissionKeys.Select(AppPermissions.GetDisplayName));
+    }
+
+    string FormatDelegationDateTime(DateTime value) =>
+        VehiclePermitSystemWeb.Utilities.Dates.DateHelper.ToGregorianDateTime12(value);
+}
+
+<div class="users-index-shell users-index-shell-compact delegations-page-shell">
+    <div class="users-index-hero app-card-surface">
+        <div class="users-index-hero-copy">
+            <span class="users-section-kicker">مسار التفويض الكامل</span>
+            <h1>إدارة التفويضات المؤقتة</h1>
+            <p>إنشاء تفويضات كاملة أو مخصصة، تتبع حالتها الزمنية، وإدارتها دون كسر صلاحيات النطاق الحالية.</p>
+            <div class="users-index-actions">
+                <a asp-action="Audit" class="btn btn-outline-primary btn-sm">تقرير الاعتمادات بالتفويض</a>
+            </div>
+        </div>
+        <div class="users-index-hero-stats">
+            <div class="users-index-stat"><span>إجمالي التفويضات</span><strong>@Model.Delegations.Count</strong></div>
+            <div class="users-index-stat">
+                <span>نشطة</span><strong>@Model.StatusCounts.GetValueOrDefault(DelegationStatuses.Active)</strong></div>
+                <div class="users-index-stat">
+                    <span>مجدولة</span><strong>@Model.StatusCounts.GetValueOrDefault(DelegationStatuses.Scheduled)</strong>
+                </div>
+                <div class="users-index-stat">
+                    <span>منتهية/ملغاة</span><strong>@(Model.StatusCounts.GetValueOrDefault(DelegationStatuses.Expired) +
+                                        Model.StatusCounts.GetValueOrDefault(DelegationStatuses.Cancelled))</strong></div>
+                </div>
+            </div>
+
+            @await Html.PartialAsync("_DelegationEditor", Model)
+
+            <div class="app-card-surface p-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                    <div>
+                        <span class="users-section-kicker">تقرير التفويضات</span>
+                        <h2 class="h4 mb-1">القائمة الحالية</h2>
+                        <p class="text-muted mb-0">فلترة حسب الحالة أو المستخدم، مع أوامر الإلغاء والتعديل والتمديد.</p>
+                    </div>
+                </div>
+
+                <form method="get" id="delegations-filter-form" class="row g-3 mb-4" data-preserve-scroll-on-submit="true">
+                    <div class="col-md-4">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="">الكل</option>
+                            <option value="@DelegationStatuses.Scheduled"
+                                    selected="@(Model.StatusFilter == DelegationStatuses.Scheduled)">مجدول</option>
+                            <option value="@DelegationStatuses.Active"
+                                    selected="@(Model.StatusFilter == DelegationStatuses.Active)">نشط</option>
+                            <option value="@DelegationStatuses.Expired"
+                                    selected="@(Model.StatusFilter == DelegationStatuses.Expired)">منتهي</option>
+                            <option value="@DelegationStatuses.Cancelled"
+                                    selected="@(Model.StatusFilter == DelegationStatuses.Cancelled)">ملغي</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">المفوِّض</label>
+                        <select name="delegatorUsername" class="form-select" data-smart-select="true"
+                            data-smart-select-placeholder="ابحث عن المفوِّض أو اختره">
+                            <option value="">الكل</option>
+                            @foreach (var user in Model.AvailableUsers)
+                            {
+                                <option value="@user.Username" selected="@(Model.DelegatorFilter == user.Username)">
+                                    @Model.UserDisplayNames.GetValueOrDefault(user.Username)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">المفوَّض إليه</label>
+                                <select name="delegateeUsername" class="form-select" data-smart-select="true"
+                                    data-smart-select-placeholder="ابحث عن المفوَّض إليه أو اختره">
+                                <option value="">الكل</option>
+                                @foreach (var user in Model.AvailableUsers)
+                                {
+                                    <option value="@user.Username" selected="@(Model.DelegateeFilter == user.Username)">
+                                        @Model.UserDisplayNames.GetValueOrDefault(user.Username)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">تطبيق</button>
+                                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">إعادة تعيين</a>
+                            </div>
+                        </form>
+
+                        @if (Model.Delegations.Count == 0)
+                        {
+                            <div class="users-empty-state">
+                                <h3>لا توجد تفويضات مطابقة</h3>
+                                <p>أنشئ أول تفويض أو غيّر الفلاتر الحالية.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table align-middle app-data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>رقم التفويض</th>
+                                            <th>من</th>
+                                            <th>إلى</th>
+                                            <th>النطاق</th>
+                                            <th>الفترة</th>
+                                            <th>الحالة</th>
+                                            <th>أنشئ بواسطة</th>
+                                            <th>آخر تحديث</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var delegation in Model.Delegations)
+                                        {
+                                            var statusBadge = delegation.Status switch
+                                            {
+                                                DelegationStatuses.Active => "bg-success-subtle text-success",
+                                                DelegationStatuses.Scheduled => "bg-info-subtle text-info",
+                                                DelegationStatuses.Cancelled => "bg-danger-subtle text-danger",
+                                                _ => "bg-secondary-subtle text-secondary",
+                                            };
+                                            <tr>
+                                                <td>
+                                                    <strong>@delegation.DelegationNumber</strong>
+                                                    <div class="small text-muted">@delegation.Id</div>
+                                                </td>
+                                                <td>@Model.UserDisplayNames.GetValueOrDefault(delegation.DelegatorUsername,
+                                                                                delegation.DelegatorUsername)</td>
+                                                    <td>@Model.UserDisplayNames.GetValueOrDefault(delegation.DelegateeUsername,
+                                                                                    delegation.DelegateeUsername)</td>
+                                                        <td>
+                                                            <div>@(delegation.ScopeType == DelegationScopeTypes.Full ? "كامل" : "مخصص")</div>
+                                                            <div class="small text-muted">@BuildGrantedPermissionsSummary(delegation)</div>
+                                                            </td>
+                                                            <td>
+                                                                <div class="ltr-field">@FormatDelegationDateTime(delegation.StartAt)</div>
+                                                                <div class="small text-muted ltr-field">@FormatDelegationDateTime(delegation.EndAt)</div>
+                                                            </td>
+                                                            <td><span class="badge rounded-pill @statusBadge">@delegation.Status</span></td>
+                                                            <td>@delegation.CreatedByUsername</td>
+                                                            <td>
+                                                                <div class="ltr-field">@FormatDelegationDateTime(delegation.UpdatedAt ?? delegation.CreatedAt)</div>
+                                                                <div class="small text-muted">@delegation.LastUpdatedByUsername</div>
+                                                            </td>
+                                                            <td>
+                                                                <div class="record-row-actions delegation-row-actions">
+                                                                    <a asp-action="Edit" asp-route-id="@delegation.Id"
+                                                                       class="record-icon-action record-icon-action-warning"
+                                                                       data-bs-toggle="tooltip" data-bs-title="تعديل / تمديد"
+                                                                       title="تعديل / تمديد"
+                                                                       aria-label="تعديل أو تمديد التفويض @delegation.DelegationNumber">
+                                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                            <path d="M4 20h4l10.3-10.3a1.4 1.4 0 0 0 0-2L16.3 5.7a1.4 1.4 0 0 0-2 0L4 16v4zM13.5 6.5l4 4"
+                                                                                  fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                  stroke-linecap="round" stroke-linejoin="round" />
+                                                                        </svg>
+                                                                    </a>
+                                                                    @if (delegation.Status != DelegationStatuses.Cancelled && delegation.Status !=
+                                                                                                    DelegationStatuses.Expired)
+                                                                    {
+                                                                        <form asp-action="Cancel" method="post" class="record-icon-form delegation-cancel-form">
+                                                                            <input type="hidden" name="id" value="@delegation.Id" />
+                                                                            <input type="text" name="reason" class="form-control form-control-sm"
+                                                                                   placeholder="سبب الإلغاء (اختياري)"
+                                                                                   aria-label="سبب إلغاء التفويض @delegation.DelegationNumber" />
+                                                                            <button type="submit" class="record-icon-action record-icon-action-danger"
+                                                                                    data-bs-toggle="tooltip" data-bs-title="إلغاء التفويض"
+                                                                                    title="إلغاء التفويض"
+                                                                                    aria-label="إلغاء التفويض @delegation.DelegationNumber">
+                                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                    <path d="m6 6 12 12M18 6 6 18" fill="none"
+                                                                                          stroke="currentColor" stroke-width="1.9"
+                                                                                          stroke-linecap="round" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </form>
+                                                                    }
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            @section Scripts {
+                                <partial name="_ValidationScriptsPartial" />
+                            }

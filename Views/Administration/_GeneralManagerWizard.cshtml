@@ -1,0 +1,1688 @@
+@using System.Text.Json
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@model VehiclePermitSystemWeb.Models.ViewModels.Departments.DepartmentManagementViewModel
+
+@{
+    var openGeneralManagerWizard = (ViewData["OpenGeneralManagerWizard"] as bool?) == true;
+    var hasCurrentGeneralManager = !string.IsNullOrWhiteSpace(Model.CurrentGeneralManagerUsername);
+    var currentGeneralManagerDisplay = string.IsNullOrWhiteSpace(Model.CurrentGeneralManagerName)
+        ? "لا يوجد مدير عام حاليًا"
+        : Model.CurrentGeneralManagerName;
+    var selectedWizardStep = Model.GeneralManagerAssignment.WizardStep < 1
+        ? 1
+        : Model.GeneralManagerAssignment.WizardStep > 5
+            ? 5
+            : Model.GeneralManagerAssignment.WizardStep;
+    var shouldResumeWizardState = openGeneralManagerWizard;
+    var selectedExistingUser = Model.GeneralManagerCandidateOptions.FirstOrDefault(user =>
+        string.Equals(
+            user.Username,
+            Model.GeneralManagerAssignment.ExistingUserUsername,
+            StringComparison.OrdinalIgnoreCase
+        )
+    );
+    var selectedExistingUserDepartment = string.IsNullOrWhiteSpace(selectedExistingUser?.Department)
+        ? "بدون قسم"
+        : selectedExistingUser!.Department;
+    var selectedNewUserDepartmentName = Model.Departments.FirstOrDefault(department =>
+        department.Id == Model.GeneralManagerAssignment.NewUserDepartmentId
+    )?.Name ?? "غير محدد";
+    var selectionModeOptions = new[]
+    {
+        new
+        {
+            Value = GeneralManagerSelectionModes.ExistingUser,
+            Label = "اختيار مستخدم موجود",
+            Description = "استخدم حسابًا موجودًا في النظام ليصبح هو المدير العام الجديد بعد التنفيذ.",
+        },
+        new
+        {
+            Value = GeneralManagerSelectionModes.CreateNew,
+            Label = "إنشاء مدير عام جديد",
+            Description = "يمكن استكمال حساب المدير العام من هنا عند الحاجة، مع بقاء شاشة المستخدمين هي المسار الأساسي لإنشاء الحسابات.",
+        },
+    };
+    var previousActionOptions = new[]
+    {
+        new { Value = GeneralManagerPreviousActions.EndAssignment, Label = "إنهاء تكليف" },
+        new { Value = GeneralManagerPreviousActions.InternalTransfer, Label = "نقل داخلي" },
+        new { Value = GeneralManagerPreviousActions.ExternalTransfer, Label = "نقل خارجي" },
+        new { Value = GeneralManagerPreviousActions.Retirement, Label = "تقاعد" },
+        new { Value = GeneralManagerPreviousActions.Resignation, Label = "استقالة" },
+        new { Value = GeneralManagerPreviousActions.Archive, Label = "أرشفة" },
+        new { Value = GeneralManagerPreviousActions.ReturnToEmployee, Label = "العودة لوظيفة موظف" },
+    };
+    var assignmentTypeOptions = new[]
+    {
+        new
+        {
+            Value = GeneralManagerAssignmentTypes.Permanent,
+            Label = "مثبت",
+            Description = "يعتمد كمدير عام رسمي مرتبط بالإدارة بشكل دائم.",
+        },
+        new
+        {
+            Value = GeneralManagerAssignmentTypes.Acting,
+            Label = "مكلف",
+            Description = "يسجل كمدير عام مكلف بصيغة تكليف مع نفس الربط الآلي للإدارة.",
+        },
+    };
+    var selectedSelectionModeLabel = selectionModeOptions
+        .FirstOrDefault(option =>
+            string.Equals(
+                option.Value,
+                Model.GeneralManagerAssignment.SelectionMode,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )?.Label ?? "اختيار مستخدم موجود";
+    var selectedPreviousActionLabel = previousActionOptions
+        .FirstOrDefault(option =>
+            string.Equals(
+                option.Value,
+                Model.GeneralManagerAssignment.PreviousGeneralManagerAction,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )?.Label ?? "إنهاء تكليف";
+    var selectedAssignmentTypeLabel = assignmentTypeOptions
+        .FirstOrDefault(option =>
+            string.Equals(
+                option.Value,
+                Model.GeneralManagerAssignment.AssignmentType,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )?.Label ?? "مثبت";
+    var selectedCandidateLabel = selectedExistingUser == null
+        ? "لم يحدد بعد"
+        : $"{selectedExistingUser.DisplayName} ({selectedExistingUser.Username})";
+    var selectedExistingUserSearchLabel = selectedExistingUser == null
+        ? string.Empty
+        : $"{selectedExistingUser.DisplayName} ({selectedExistingUser.Username}) - {selectedExistingUserDepartment} - {(selectedExistingUser.IsActive ? "نشط" : "موقوف")}";
+    var selectedNewCandidateLabel = string.IsNullOrWhiteSpace(Model.GeneralManagerAssignment.NewUserFullName)
+        ? (string.IsNullOrWhiteSpace(Model.GeneralManagerAssignment.NewUserUsername)
+            ? "لم يحدد بعد"
+            : Model.GeneralManagerAssignment.NewUserUsername)
+        : $"{Model.GeneralManagerAssignment.NewUserFullName} ({Model.GeneralManagerAssignment.NewUserUsername})";
+    var candidateMapJson = JsonSerializer.Serialize(
+        Model.GeneralManagerCandidateOptions.ToDictionary(
+            user => user.Username,
+            user => new
+            {
+                username = user.Username,
+                fullName = user.DisplayName,
+                phoneNumber = user.PhoneNumber,
+                jobTitle = string.IsNullOrWhiteSpace(user.JobTitle) ? "غير محدد" : user.JobTitle,
+                department = string.IsNullOrWhiteSpace(user.Department) ? "بدون قسم" : user.Department,
+                status = user.IsActive ? "نشط" : "موقوف",
+                isActive = user.IsActive,
+            },
+            StringComparer.OrdinalIgnoreCase
+        )
+    );
+}
+
+<style nonce="@(Context.Items["CspStyleNonce"])">
+    .general-manager-wizard-modal .modal-dialog {
+        max-width: 980px;
+    }
+
+    .general-manager-wizard-modal .modal-content {
+        border: 0;
+        border-radius: 1.15rem;
+        font-size: 0.92rem;
+        background: var(--t-modal-bg, var(--bs-body-bg, #fff));
+        color: var(--t-text, var(--bs-body-color, #212529));
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+    }
+
+    .general-manager-wizard-modal .modal-header,
+    .general-manager-wizard-modal .modal-body,
+    .general-manager-wizard-modal .modal-footer {
+        padding-inline: 1rem;
+    }
+
+    .general-manager-wizard-modal .modal-header,
+    .general-manager-wizard-modal .modal-footer {
+        padding-block: 0.85rem;
+    }
+
+    .general-manager-wizard-modal .modal-body {
+        padding-block: 0.9rem 1rem;
+    }
+
+    .general-manager-wizard-modal .modal-title {
+        font-size: 1.02rem;
+    }
+
+    .general-manager-wizard-modal .text-muted.small,
+    .general-manager-wizard-modal small,
+    .general-manager-wizard-modal .small {
+        font-size: 0.74rem !important;
+    }
+
+    .general-manager-wizard-modal .manager-handover-stepper {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.55rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-choice-grid.is-two-column {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.6rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-step {
+        min-height: auto;
+        padding: 0.72rem 0.76rem;
+        border-radius: 0.95rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-step .fw-semibold {
+        font-size: 0.85rem;
+        margin-bottom: 0.12rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-step-number {
+        width: 1.55rem;
+        height: 1.55rem;
+        font-size: 0.76rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-panel-shell {
+        padding: 0.88rem 0.92rem;
+        border-radius: 0.95rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-choice {
+        padding: 0.78rem 0.84rem;
+        border-radius: 0.9rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-choice strong {
+        font-size: 0.88rem;
+    }
+
+    .general-manager-wizard-modal .form-label {
+        font-size: 0.77rem;
+        margin-bottom: 0.32rem;
+    }
+
+    .general-manager-wizard-modal .form-control,
+    .general-manager-wizard-modal .form-select {
+        min-height: calc(1.5em + 0.76rem + 2px);
+        padding: 0.42rem 0.72rem;
+        font-size: 0.83rem;
+        border-radius: 0.8rem;
+    }
+
+    .general-manager-wizard-modal .field-validation-error {
+        font-size: 0.72rem;
+    }
+
+    .general-manager-wizard-details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        gap: 0.55rem;
+    }
+
+    .general-manager-wizard-details-item {
+        border: 1px solid var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+        border-radius: 0.78rem;
+        background: var(--t-surface-alt, rgba(33, 37, 41, 0.03));
+        padding: 0.65rem 0.75rem;
+    }
+
+    .general-manager-wizard-details-item span {
+        display: block;
+        color: var(--t-text-muted, var(--bs-secondary-color, #6c757d));
+        font-size: 0.72rem;
+        margin-bottom: 0.14rem;
+    }
+
+    .general-manager-wizard-change-list {
+        margin: 0;
+        padding-right: 1rem;
+        font-size: 0.8rem;
+    }
+
+    .general-manager-wizard-change-list li+li {
+        margin-top: 0.28rem;
+    }
+
+    .general-manager-wizard-modal .manager-handover-summary-item {
+        padding: 0.7rem 0.78rem;
+        border-radius: 0.78rem;
+    }
+
+    .general-manager-wizard-modal .modal-footer .btn {
+        padding: 0.42rem 0.9rem;
+        font-size: 0.81rem;
+        border-radius: 999px;
+    }
+
+    .general-manager-user-picker {
+        position: relative;
+    }
+
+    .general-manager-user-picker-control {
+        position: relative;
+    }
+
+    .general-manager-user-picker-input {
+        padding-inline-start: 2.4rem;
+        padding-inline-end: 4.3rem;
+        text-align: right;
+        background: linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--t-surface-alt, var(--bs-body-bg, #fff)) 92%, transparent),
+            color-mix(in srgb, var(--t-surface, var(--bs-body-bg, #fff)) 96%, transparent)
+        );
+        color: var(--t-text, var(--bs-body-color, #212529));
+        border-color: var(--t-border-subtle, var(--bs-border-color, #d0d7de));
+    }
+
+    .general-manager-user-picker-input::placeholder {
+        color: var(--t-text-muted, var(--bs-secondary-color, #64748b));
+    }
+
+    .general-manager-user-picker-toggle,
+    .general-manager-user-picker-clear {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1.85rem;
+        height: 1.85rem;
+        border: 0;
+        padding: 0;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        color: var(--t-text-muted, #64748b);
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .general-manager-user-picker-toggle:hover,
+    .general-manager-user-picker-toggle:focus-visible,
+    .general-manager-user-picker-clear:hover,
+    .general-manager-user-picker-clear:focus-visible {
+        background: color-mix(in srgb, var(--t-surface-soft, rgba(148, 163, 184, 0.12)) 78%, transparent);
+        color: var(--t-text, var(--bs-body-color, #212529));
+        outline: 0;
+    }
+
+    .general-manager-user-picker-toggle {
+        inset-inline-start: 0.42rem;
+    }
+
+    .general-manager-user-picker-clear {
+        inset-inline-end: 0.42rem;
+        font-size: 1rem;
+    }
+
+    .general-manager-user-picker-toggle::before {
+        content: "";
+        width: 0.48rem;
+        height: 0.48rem;
+        border-right: 1.7px solid currentColor;
+        border-bottom: 1.7px solid currentColor;
+        transform: rotate(45deg);
+        margin-top: -0.16rem;
+        transition: transform 0.18s ease, margin-top 0.18s ease;
+    }
+
+    .general-manager-user-picker.is-open .general-manager-user-picker-toggle::before {
+        transform: rotate(225deg);
+        margin-top: 0.12rem;
+    }
+
+    .general-manager-user-picker-panel {
+        position: absolute;
+        top: calc(100% + 0.3rem);
+        inset-inline: 0;
+        z-index: 45;
+        border-radius: 0.95rem;
+        background: color-mix(in srgb, var(--t-modal-bg, var(--bs-body-bg, #fff)) 94%, transparent);
+        box-shadow: 0 18px 44px rgba(15, 23, 42, 0.24);
+        border: 1px solid var(--t-border-subtle, rgba(148, 163, 184, 0.2));
+        padding: 0.34rem;
+        backdrop-filter: blur(12px);
+    }
+
+    .general-manager-user-picker-options {
+        display: grid;
+        gap: 0.18rem;
+        max-height: 250px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .general-manager-user-picker-option {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        border-radius: 0.78rem;
+        padding: 0.55rem 0.72rem;
+        text-align: right;
+        color: var(--t-text, #0f172a);
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .general-manager-user-picker-option strong {
+        display: block;
+        font-size: 0.82rem;
+        line-height: 1.4;
+        font-weight: 700;
+    }
+
+    .general-manager-user-picker-option small {
+        display: block;
+        margin-top: 0.12rem;
+        color: var(--t-text-muted, #64748b);
+        font-size: 0.71rem;
+        line-height: 1.45;
+    }
+
+    .general-manager-user-picker-option:hover,
+    .general-manager-user-picker-option.is-active {
+        background: color-mix(in srgb, var(--t-blue-soft, rgba(37, 99, 235, 0.14)) 72%, transparent);
+        color: var(--t-text, #0f172a);
+    }
+
+    .general-manager-user-picker-option.is-selected {
+        background: color-mix(in srgb, var(--t-green-soft, rgba(25, 135, 84, 0.16)) 68%, transparent);
+        color: var(--t-text, #0f172a);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t-green, #198754) 38%, transparent);
+    }
+
+    .general-manager-user-picker-empty {
+        padding: 0.72rem 0.7rem 0.45rem;
+        text-align: center;
+        font-size: 0.75rem;
+        color: var(--t-text-muted, var(--bs-secondary-color, #64748b));
+    }
+
+    @@media (max-width: 991.98px) {
+        .general-manager-wizard-modal .manager-handover-stepper {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 575.98px) {
+        .general-manager-wizard-modal .manager-handover-stepper {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="modal fade" id="generalManagerReplaceConfirmModal" tabindex="-1"
+     aria-labelledby="generalManagerReplaceConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content app-card-surface border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title" id="generalManagerReplaceConfirmModalLabel">تأكيد تبديل المدير العام</h5>
+                <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"
+                        aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                يوجد مدير عام حالي قائم، هل تريد تبديله؟
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">لا</button>
+                <button type="button" class="btn btn-dark" id="confirmOpenGeneralManagerWizardButton">نعم</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade manager-handover-modal general-manager-wizard-modal" id="generalManagerWizardModal" tabindex="-1"
+     aria-labelledby="generalManagerWizardModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form asp-action="AssignGeneralManager" method="post" id="generalManagerWizardForm" novalidate>
+                @Html.AntiForgeryToken()
+                <input asp-for="GeneralManagerAssignment.WizardStep" type="hidden" />
+
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title" id="generalManagerWizardModalLabel">تعيين / تغيير المدير العام</h5>
+                        <div class="text-muted small mt-1">
+                            @(hasCurrentGeneralManager
+                                ? $"المدير العام الحالي: {currentGeneralManagerDisplay} ({Model.CurrentGeneralManagerUsername})"
+                                : "لا يوجد مدير عام حاليًا. سيبدأ المعالج مباشرة بتعيين المدير الجديد.")
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal"
+                            aria-label="إغلاق"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+                    <div class="manager-handover-stepper" id="generalManagerWizardStepper">
+                        <div class="manager-handover-step" data-general-manager-step-indicator="1">
+                            <span class="manager-handover-step-number">1</span>
+                            <div class="fw-semibold">نوع التعيين الجديد</div>
+                            <div class="text-muted small">اختر هل ستستخدم حسابًا موجودًا أم ستنشئ مديرًا عامًا جديدًا.
+                            </div>
+                        </div>
+                        <div class="manager-handover-step" data-general-manager-step-indicator="2">
+                            <span class="manager-handover-step-number">2</span>
+                            <div class="fw-semibold">بيانات المرشح</div>
+                            <div class="text-muted small">اختر المستخدم أو أدخل بيانات المدير العام الجديد مع التحقق
+                                الكامل.</div>
+                            </div>
+                            <div class="manager-handover-step" data-general-manager-step-indicator="3">
+                                <span class="manager-handover-step-number">3</span>
+                                <div class="fw-semibold">وضع المدير السابق</div>
+                                <div class="text-muted small">حدد ما الذي سيحدث للمدير العام السابق عند وجوده.</div>
+                            </div>
+                            <div class="manager-handover-step" data-general-manager-step-indicator="4">
+                                <span class="manager-handover-step-number">4</span>
+                                <div class="fw-semibold">حالة المنصب</div>
+                                <div class="text-muted small">حدد هل سيشغل المنصب بصفة مثبتة أم تكليف.</div>
+                            </div>
+                            <div class="manager-handover-step" data-general-manager-step-indicator="5">
+                                <span class="manager-handover-step-number">5</span>
+                                <div class="fw-semibold">مراجعة نهائية</div>
+                                <div class="text-muted small">راجع كل التغييرات الناتجة قبل التنفيذ النهائي.</div>
+                            </div>
+                        </div>
+
+                        <div class="manager-handover-step-panel" data-general-manager-step-panel="1">
+                            <div class="manager-handover-panel-shell is-muted mb-3">
+                                <div class="fw-semibold mb-3">اختر نوع التعيين الجديد</div>
+                                <div class="manager-handover-choice-grid is-two-column">
+                                    @foreach (var option in selectionModeOptions)
+                                    {
+                                        <button type="button"
+                                                class="manager-handover-choice @(string.Equals(Model.GeneralManagerAssignment.SelectionMode, option.Value, StringComparison.OrdinalIgnoreCase) ? "is-active" : string.Empty)"
+                                                data-general-manager-selection="@option.Value">
+                                            <strong>@option.Label</strong>
+                                            <small>@option.Description</small>
+                                        </button>
+                                    }
+                                </div>
+                                <select asp-for="GeneralManagerAssignment.SelectionMode" class="form-select d-none"
+                                        id="GeneralManagerAssignment_SelectionMode">
+                                    @foreach (var option in selectionModeOptions)
+                                    {
+                                        <option value="@option.Value">@option.Label</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="manager-handover-step-panel" data-general-manager-step-panel="2" hidden>
+                            <div class="manager-handover-panel-shell">
+                                <div class="fw-semibold mb-2">بيانات المرشح للمنصب</div>
+                                <div class="text-muted small mb-3">سيُستخدم الحساب المختار أو المنشأ الجديد كمصدر وحيد لربط
+                                    بيانات المدير العام دون أي ربط يدوي.</div>
+
+                                    <div id="generalManagerExistingUserFields">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label asp-for="GeneralManagerAssignment.ExistingUserUsername"
+                                                       class="form-label">المستخدم الموجود</label>
+                                                <div class="general-manager-user-picker" id="generalManagerExistingUserPicker">
+                                                    <div class="general-manager-user-picker-control">
+                                                        <input type="text"
+                                                               class="form-control general-manager-user-picker-input"
+                                                               id="GeneralManagerAssignment_ExistingUserUsernameSearch"
+                                                               placeholder="ابحث بالاسم أو رقم الهوية أو القسم"
+                                                               autocomplete="off"
+                                                               role="combobox"
+                                                               aria-autocomplete="list"
+                                                               aria-expanded="false"
+                                                               aria-haspopup="listbox"
+                                                               aria-controls="generalManagerExistingUserPickerList"
+                                                               value="@selectedExistingUserSearchLabel" />
+                                                        <button type="button"
+                                                                class="general-manager-user-picker-toggle"
+                                                                id="generalManagerExistingUserPickerToggle"
+                                                                aria-label="فتح قائمة المستخدمين"></button>
+                                                        <button type="button"
+                                                                class="general-manager-user-picker-clear"
+                                                                id="generalManagerExistingUserPickerClear"
+                                                                aria-label="مسح الاختيار"
+                                                                @(selectedExistingUser == null ? "hidden" : null)>×</button>
+                                                    </div>
+                                                    <div class="general-manager-user-picker-panel"
+                                                         id="generalManagerExistingUserPickerPanel"
+                                                         hidden>
+                                                        <div class="general-manager-user-picker-options"
+                                                             id="generalManagerExistingUserPickerList"
+                                                             role="listbox">
+                                                            @foreach (var user in Model.GeneralManagerCandidateOptions)
+                                                            {
+                                                                var userDepartment = string.IsNullOrWhiteSpace(user.Department) ? "بدون قسم" : user.Department;
+                                                                var userStatus = user.IsActive ? "نشط" : "موقوف";
+                                                                var userSearchLabel = $"{user.DisplayName} ({user.Username}) - {userDepartment} - {userStatus}";
+                                                                var isSelectedUser = string.Equals(user.Username, Model.GeneralManagerAssignment.ExistingUserUsername, StringComparison.OrdinalIgnoreCase);
+                                                                <button type="button"
+                                                                        class="general-manager-user-picker-option @(isSelectedUser ? "is-selected" : string.Empty)"
+                                                                        data-general-manager-user-option="true"
+                                                                        data-value="@user.Username"
+                                                                        data-label="@userSearchLabel"
+                                                                        data-search="@($"{user.DisplayName} {user.Username} {userDepartment} {userStatus}")"
+                                                                        role="option"
+                                                                        aria-selected="@(isSelectedUser ? "true" : "false")">
+                                                                    <strong>@user.DisplayName (@user.Username)</strong>
+                                                                    <small>@userDepartment · @userStatus</small>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                        <div class="general-manager-user-picker-empty text-muted"
+                                                             id="generalManagerExistingUserPickerEmpty"
+                                                             hidden>لا توجد نتائج مطابقة.</div>
+                                                    </div>
+                                                </div>
+                                                <select asp-for="GeneralManagerAssignment.ExistingUserUsername"
+                                                        class="form-select d-none"
+                                                        data-general-manager-picker="true"
+                                                        data-general-manager-picker-input-id="GeneralManagerAssignment_ExistingUserUsernameSearch"
+                                                        id="GeneralManagerAssignment_ExistingUserUsername">
+                                                    <option value="">-- اختر المستخدم --</option>
+                                                    @foreach (var user in Model.GeneralManagerCandidateOptions)
+                                                    {
+                                                        var userDepartment = string.IsNullOrWhiteSpace(user.Department) ? "بدون قسم" : user.Department;
+                                                        var userStatus = user.IsActive ? "نشط" : "موقوف";
+                                                        <option value="@user.Username">@user.DisplayName (@user.Username) -
+                                                            @userDepartment - @userStatus</option>
+                                                        }
+                                                    </select>
+                                                    <span asp-validation-for="GeneralManagerAssignment.ExistingUserUsername"
+                                                          class="field-validation-error small"></span>
+                                                </div>
+                                            </div>
+
+                                            <div class="manager-handover-panel-shell is-muted mt-3">
+                                                <div class="fw-semibold mb-3">بيانات المستخدم المختار</div>
+                                                <div class="general-manager-wizard-details-grid">
+                                                    <div class="general-manager-wizard-details-item">
+                                                        <span>الاسم</span>
+                                                        <strong
+                                                            data-general-manager-existing-detail="fullName">@(selectedExistingUser?.DisplayName
+                                                                                                                                                                        ?? "غير محدد")</strong>
+                                                        </div>
+                                                        <div class="general-manager-wizard-details-item">
+                                                            <span>رقم الهوية</span>
+                                                            <strong
+                                                                data-general-manager-existing-detail="username">@(selectedExistingUser?.Username
+                                                                                                                                                                                ?? "غير محدد")</strong>
+                                                            </div>
+                                                            <div class="general-manager-wizard-details-item">
+                                                                <span>الجوال</span>
+                                                                <strong
+                                                                    data-general-manager-existing-detail="phoneNumber">@(selectedExistingUser?.PhoneNumber
+                                                                                                                                                                                        ?? "غير محدد")</strong>
+                                                                </div>
+                                                                <div class="general-manager-wizard-details-item">
+                                                                    <span>المسمى الوظيفي</span>
+                                                                    <strong
+                                                                        data-general-manager-existing-detail="jobTitle">@(selectedExistingUser?.JobTitle
+                                                                                                                                                                                                ?? "غير محدد")</strong>
+                                                                    </div>
+                                                                    <div class="general-manager-wizard-details-item">
+                                                                        <span>القسم الحالي</span>
+                                                                        <strong
+                                                                        data-general-manager-existing-detail="department">@selectedExistingUserDepartment</strong>
+                                                                    </div>
+                                                                    <div class="general-manager-wizard-details-item">
+                                                                        <span>الحالة</span>
+                                                                        <strong data-general-manager-existing-detail="status">@(selectedExistingUser
+                                                                                                                                                                                                        == null ? "غير محدد" : selectedExistingUser.IsActive ? "نشط" :
+                                                                                                                                                                   "موقوف")</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div id="generalManagerCreateUserFields">
+                                                                <div class="row g-3">
+                                                                    <div class="col-md-4">
+                                                                        <label asp-for="GeneralManagerAssignment.NewUserUsername" class="form-label">رقم
+                                                                            الهوية</label>
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserUsername"
+                                                                                   class="form-control ltr-field" id="GeneralManagerAssignment_NewUserUsername"
+                                                                                      inputmode="numeric" maxlength="10" pattern="[12][0-9]{9}"
+                                                                                      placeholder="1024722918" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" />
+                                                                            <span asp-validation-for="GeneralManagerAssignment.NewUserUsername"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <label asp-for="GeneralManagerAssignment.NewUserFullName"
+                                                                                   class="form-label">الاسم الكامل</label>
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserFullName" class="form-control"
+                                                                                   id="GeneralManagerAssignment_NewUserFullName" />
+                                                                            <span asp-validation-for="GeneralManagerAssignment.NewUserFullName"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <label asp-for="GeneralManagerAssignment.NewUserPhoneNumber"
+                                                                                   class="form-label">الجوال</label>
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserPhoneNumber"
+                                                                                   class="form-control ltr-field"
+                                                                                   id="GeneralManagerAssignment_NewUserPhoneNumber" inputmode="numeric"
+                                                                                      maxlength="10" pattern="05[0-9]{8}"
+                                                                                      placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" />
+                                                                            <span asp-validation-for="GeneralManagerAssignment.NewUserPhoneNumber"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <label asp-for="GeneralManagerAssignment.NewUserPassword"
+                                                                                   class="form-label">كلمة المرور</label>
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserPassword" class="form-control"
+                                                                                   type="password" id="GeneralManagerAssignment_NewUserPassword" />
+                                                                            <span asp-validation-for="GeneralManagerAssignment.NewUserPassword"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <label asp-for="GeneralManagerAssignment.NewUserConfirmPassword"
+                                                                                   class="form-label">تأكيد كلمة المرور</label>
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserConfirmPassword"
+                                                                                   class="form-control" type="password"
+                                                                                   id="GeneralManagerAssignment_NewUserConfirmPassword" />
+                                                                            <span asp-validation-for="GeneralManagerAssignment.NewUserConfirmPassword"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <label asp-for="GeneralManagerAssignment.NewUserJobTitle"
+                                                                                   class="form-label">المسمى الوظيفي</label>
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserJobTitle" class="form-control"
+                                                                                   id="GeneralManagerAssignment_NewUserJobTitle" />
+                                                                            <span asp-validation-for="GeneralManagerAssignment.NewUserJobTitle"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-8">
+                                                                            <input asp-for="GeneralManagerAssignment.NewUserDepartmentId"
+                                                                                   type="hidden" value="0"
+                                                                                   id="GeneralManagerAssignment_NewUserDepartmentId" />
+                                                                            <label class="form-label">الإدارة العامة</label>
+                                                                            <div class="manager-handover-panel-shell is-muted">
+                                                                                <strong>@(string.IsNullOrWhiteSpace(Model.AdministrationDepartment?.Name) ? "الإدارة العامة" : Model.AdministrationDepartment.Name)</strong>
+                                                                                <div class="small text-muted">المدير العام يرتبط برأس الشجرة التنظيمية ولا يحتاج اختيار قسم.</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-md-4">
+                                                                            <div class="form-check mt-4 pt-2">
+                                                                                <input asp-for="GeneralManagerAssignment.NewUserIsActive"
+                                                                                       class="form-check-input"
+                                                                                       id="GeneralManagerAssignment_NewUserIsActive" />
+                                                                                <label asp-for="GeneralManagerAssignment.NewUserIsActive"
+                                                                                       class="form-check-label">الحالة نشطة</label>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="manager-handover-step-panel" data-general-manager-step-panel="3" hidden>
+                                                            @if (hasCurrentGeneralManager)
+                                                            {
+                                                                <div class="manager-handover-panel-shell is-muted mb-3">
+                                                                    <div class="fw-semibold mb-2">المدير العام السابق</div>
+                                                                    <div class="general-manager-wizard-details-grid">
+                                                                        <div class="general-manager-wizard-details-item">
+                                                                            <span>الاسم</span>
+                                                                            <strong>@currentGeneralManagerDisplay</strong>
+                                                                        </div>
+                                                                        <div class="general-manager-wizard-details-item">
+                                                                            <span>رقم الهوية</span>
+                                                                            <strong>@Model.CurrentGeneralManagerUsername</strong>
+                                                                        </div>
+                                                                        <div class="general-manager-wizard-details-item">
+                                                                            <span>المسمى الحالي</span>
+                                                                            <strong>@(string.IsNullOrWhiteSpace(Model.CurrentGeneralManagerJobTitle) ? "غير محدد" : Model.CurrentGeneralManagerJobTitle)</strong>
+                                                                        </div>
+                                                                        <div class="general-manager-wizard-details-item">
+                                                                            <span>الجوال</span>
+                                                                            <strong>@(string.IsNullOrWhiteSpace(Model.CurrentGeneralManagerPhoneNumber) ? "غير محدد" : Model.CurrentGeneralManagerPhoneNumber)</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="manager-handover-panel-shell">
+                                                                    <div class="fw-semibold mb-3">حدد وضع المدير العام السابق</div>
+                                                                    <div class="row g-3">
+                                                                        <div class="col-md-6">
+                                                                            <label asp-for="GeneralManagerAssignment.PreviousGeneralManagerAction"
+                                                                                   class="form-label">الإجراء</label>
+                                                                            <select asp-for="GeneralManagerAssignment.PreviousGeneralManagerAction"
+                                                                                    class="form-select" id="GeneralManagerAssignment_PreviousGeneralManagerAction">
+                                                                                @foreach (var option in previousActionOptions)
+                                                                                {
+                                                                                    <option value="@option.Value">@option.Label</option>
+                                                                                }
+                                                                            </select>
+                                                                            <span asp-validation-for="GeneralManagerAssignment.PreviousGeneralManagerAction"
+                                                                                  class="field-validation-error small"></span>
+                                                                        </div>
+                                                                        <div class="col-md-6" id="generalManagerInternalTransferFields">
+                                                                            <label asp-for="GeneralManagerAssignment.PreviousGeneralManagerTargetDepartmentId"
+                                                                                   class="form-label">القسم الجديد</label>
+                                                                            <select asp-for="GeneralManagerAssignment.PreviousGeneralManagerTargetDepartmentId"
+                                                                                    class="form-select"
+                                                                                    id="GeneralManagerAssignment_PreviousGeneralManagerTargetDepartmentId">
+                                                                                <option value="0">-- اختر القسم --</option>
+                                                                                @foreach (var department in Model.Departments)
+                                                                                {
+                                                                                    <option value="@department.Id">@department.Name</option>
+                                                                                }
+                                                                            </select>
+                                                                            <span
+                                                                            asp-validation-for="GeneralManagerAssignment.PreviousGeneralManagerTargetDepartmentId"
+                                                                            class="field-validation-error small"></span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="manager-handover-panel-shell is-muted">
+                                                                    <div class="fw-semibold mb-2">لا يوجد مدير عام سابق</div>
+                                                                    <div class="text-muted small">سيتم تجاوز هذه الخطوة لأن المنصب غير مشغول حاليًا، وسيُركز
+                                                                        التنفيذ على تعيين المدير العام الجديد وربطه بالإدارة تلقائيًا.</div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+
+                                                            <div class="manager-handover-step-panel" data-general-manager-step-panel="4" hidden>
+                                                                <div class="manager-handover-panel-shell is-muted">
+                                                                    <div class="fw-semibold mb-3">نوع شغل المنصب الجديد</div>
+                                                                    <div class="manager-handover-choice-grid is-two-column mb-3">
+                                                                        @foreach (var option in assignmentTypeOptions)
+                                                                        {
+                                                                            <button type="button"
+                                                                                    class="manager-handover-choice @(string.Equals(Model.GeneralManagerAssignment.AssignmentType, option.Value, StringComparison.OrdinalIgnoreCase) ? "is-active" : string.Empty)"
+                                                                                    data-general-manager-assignment-type="@option.Value">
+                                                                                <strong>@option.Label</strong>
+                                                                                <small>@option.Description</small>
+                                                                            </button>
+                                                                        }
+                                                                    </div>
+                                                                    <select asp-for="GeneralManagerAssignment.AssignmentType" class="form-select d-none"
+                                                                            id="GeneralManagerAssignment_AssignmentType">
+                                                                        @foreach (var option in assignmentTypeOptions)
+                                                                        {
+                                                                            <option value="@option.Value">@option.Label</option>
+                                                                        }
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="manager-handover-step-panel" data-general-manager-step-panel="5" hidden>
+                                                                <div class="manager-handover-panel-shell is-muted mb-3">
+                                                                    <div class="fw-semibold mb-3">الملخص النهائي</div>
+                                                                    <div class="manager-handover-summary-grid">
+                                                                        <div class="manager-handover-summary-item">
+                                                                            <span>المدير الجديد</span>
+                                                                            <strong
+                                                                                data-general-manager-summary="candidate">@(string.Equals(Model.GeneralManagerAssignment.SelectionMode,
+                                                                                                                                                                                                        GeneralManagerSelectionModes.CreateNew, StringComparison.OrdinalIgnoreCase) ?
+                                                                                                                                                                                                        selectedNewCandidateLabel : selectedCandidateLabel)</strong>
+                                                                            </div>
+                                                                            <div class="manager-handover-summary-item">
+                                                                                <span>طريقة التعيين</span>
+                                                                                <strong
+                                                                                data-general-manager-summary="selectionMode">@selectedSelectionModeLabel</strong>
+                                                                            </div>
+                                                                            <div class="manager-handover-summary-item">
+                                                                                <span>حالة المنصب</span>
+                                                                                <strong
+                                                                                data-general-manager-summary="assignmentType">@selectedAssignmentTypeLabel</strong>
+                                                                            </div>
+                                                                            <div class="manager-handover-summary-item">
+                                                                                <span>إجراء المدير السابق</span>
+                                                                                <strong data-general-manager-summary="previousAction">@(hasCurrentGeneralManager ?
+                                                                                                                                                                                                                selectedPreviousActionLabel : "لا يوجد مدير عام سابق")</strong>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="manager-handover-panel-shell">
+                                                                            <div class="fw-semibold mb-2">التغييرات الناتجة</div>
+                                                                            <ul class="general-manager-wizard-change-list" id="generalManagerWizardChangesList">
+                                                                                <li>سيتم تعيين المدير العام الجديد وربطه بالإدارة تلقائيًا.</li>
+                                                                            </ul>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="modal-footer justify-content-between">
+                                                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                                                    <div class="d-flex gap-2">
+                                                                        <button type="button" class="btn btn-outline-secondary"
+                                                                                id="generalManagerWizardPreviousButton">السابق</button>
+                                                                        <button type="button" class="btn btn-dark" id="generalManagerWizardNextButton">التالي</button>
+                                                                        <button type="submit" class="btn btn-dark" id="generalManagerWizardSubmitButton"
+                                                                            hidden>تنفيذ</button>
+                                                                    </div>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <script nonce="@(Context.Items["CspScriptNonce"])">
+                                                    document.addEventListener("DOMContentLoaded", function () {
+                                                        const candidateMap = @Html.Raw(candidateMapJson);
+                                                        const openButton = document.getElementById("openGeneralManagerWizardButton");
+                                                        const confirmModalElement = document.getElementById("generalManagerReplaceConfirmModal");
+                                                        const wizardModalElement = document.getElementById("generalManagerWizardModal");
+                                                        const wizardForm = document.getElementById("generalManagerWizardForm");
+                                                        const confirmOpenWizardButton = document.getElementById("confirmOpenGeneralManagerWizardButton");
+                                                        const selectionModeInput = document.getElementById("GeneralManagerAssignment_SelectionMode");
+                                                        const assignmentTypeInput = document.getElementById("GeneralManagerAssignment_AssignmentType");
+                                                        const wizardStepInput = document.getElementById("GeneralManagerAssignment_WizardStep");
+                                                        const existingUserSelect = document.getElementById("GeneralManagerAssignment_ExistingUserUsername");
+                                                        const existingUserPicker = document.getElementById("generalManagerExistingUserPicker");
+                                                        const existingUserSearchInput = document.getElementById("GeneralManagerAssignment_ExistingUserUsernameSearch");
+                                                        const existingUserPickerToggle = document.getElementById("generalManagerExistingUserPickerToggle");
+                                                        const existingUserPickerClear = document.getElementById("generalManagerExistingUserPickerClear");
+                                                        const existingUserPickerPanel = document.getElementById("generalManagerExistingUserPickerPanel");
+                                                        const existingUserPickerEmpty = document.getElementById("generalManagerExistingUserPickerEmpty");
+                                                        const existingUserPickerOptions = Array.from(document.querySelectorAll("[data-general-manager-user-option='true']"));
+                                                        const newUserUsernameInput = document.getElementById("GeneralManagerAssignment_NewUserUsername");
+                                                        const newUserFullNameInput = document.getElementById("GeneralManagerAssignment_NewUserFullName");
+                                                        const newUserPhoneInput = document.getElementById("GeneralManagerAssignment_NewUserPhoneNumber");
+                                                        const newUserPasswordInput = document.getElementById("GeneralManagerAssignment_NewUserPassword");
+                                                        const newUserConfirmPasswordInput = document.getElementById("GeneralManagerAssignment_NewUserConfirmPassword");
+                                                        const newUserJobTitleInput = document.getElementById("GeneralManagerAssignment_NewUserJobTitle");
+                                                        const newUserDepartmentSelect = document.getElementById("GeneralManagerAssignment_NewUserDepartmentId");
+                                                        const previousActionSelect = document.getElementById("GeneralManagerAssignment_PreviousGeneralManagerAction");
+                                                        const previousDepartmentSelect = document.getElementById("GeneralManagerAssignment_PreviousGeneralManagerTargetDepartmentId");
+                                                        const existingFields = document.getElementById("generalManagerExistingUserFields");
+                                                        const createFields = document.getElementById("generalManagerCreateUserFields");
+                                                        const internalTransferFields = document.getElementById("generalManagerInternalTransferFields");
+                                                        const previousButton = document.getElementById("generalManagerWizardPreviousButton");
+                                                        const nextButton = document.getElementById("generalManagerWizardNextButton");
+                                                        const submitButton = document.getElementById("generalManagerWizardSubmitButton");
+                                                        const stepPanels = Array.from(document.querySelectorAll("[data-general-manager-step-panel]"));
+                                                        const stepIndicators = Array.from(document.querySelectorAll("[data-general-manager-step-indicator]"));
+                                                        const selectionButtons = Array.from(document.querySelectorAll("[data-general-manager-selection]"));
+                                                        const assignmentButtons = Array.from(document.querySelectorAll("[data-general-manager-assignment-type]"));
+                                                        const changesList = document.getElementById("generalManagerWizardChangesList");
+                                                        const summaryCandidate = document.querySelector('[data-general-manager-summary="candidate"]');
+                                                        const summarySelectionMode = document.querySelector('[data-general-manager-summary="selectionMode"]');
+                                                        const summaryAssignmentType = document.querySelector('[data-general-manager-summary="assignmentType"]');
+                                                        const summaryPreviousAction = document.querySelector('[data-general-manager-summary="previousAction"]');
+                                                        const hasCurrentGeneralManager = @hasCurrentGeneralManager.ToString().ToLowerInvariant();
+                                                        const initialWizardStep = @selectedWizardStep;
+                                                        const shouldResumeWizardState = @shouldResumeWizardState.ToString().ToLowerInvariant();
+                                                        let currentStep = initialWizardStep;
+                                                        let existingUserActiveIndex = -1;
+
+                                                        if (!wizardModalElement || !selectionModeInput || !assignmentTypeInput) {
+                                                            return;
+                                                        }
+
+                                                        if (wizardModalElement.parentElement !== document.body) {
+                                                            document.body.appendChild(wizardModalElement);
+                                                        }
+
+                                                        if (confirmModalElement && confirmModalElement.parentElement !== document.body) {
+                                                            document.body.appendChild(confirmModalElement);
+                                                        }
+
+                                                        const wizardModal = window.bootstrap ? bootstrap.Modal.getOrCreateInstance(wizardModalElement) : null;
+                                                        const confirmModal = confirmModalElement && window.bootstrap
+                                                            ? bootstrap.Modal.getOrCreateInstance(confirmModalElement)
+                                                            : null;
+
+                                                        function getVisibleValidationField(field) {
+                                                            if (!field) {
+                                                                return null;
+                                                            }
+
+                                                            if (field.matches && field.matches("select[data-general-manager-picker='true']")) {
+                                                                const inputId = field.dataset.generalManagerPickerInputId;
+                                                                return inputId ? document.getElementById(inputId) : field;
+                                                            }
+
+                                                            if (field.matches && field.matches("select[data-smart-select='true']")) {
+                                                                const wrapper = field.closest("[data-smart-select-wrapper='true']");
+                                                                return wrapper ? wrapper.querySelector(".smart-select-input") : field;
+                                                            }
+
+                                                            return field;
+                                                        }
+
+                                                        function getFieldMessageHost(field) {
+                                                            if (!field || !field.parentElement) {
+                                                                return null;
+                                                            }
+
+                                                            return field.parentElement.querySelector(".field-validation-error, .field-validation-valid");
+                                                        }
+
+                                                        function clearValidationState(field) {
+                                                            const target = getVisibleValidationField(field);
+                                                            const messageHost = getFieldMessageHost(field);
+                                                            if (!target) {
+                                                                return;
+                                                            }
+
+                                                            if (typeof target.setCustomValidity === "function") {
+                                                                target.setCustomValidity("");
+                                                            }
+
+                                                            target.classList.remove("is-invalid");
+                                                            target.removeAttribute("aria-invalid");
+
+                                                            if (messageHost) {
+                                                                messageHost.textContent = "";
+                                                            }
+                                                        }
+
+                                                        function showValidationState(field, message) {
+                                                            const target = getVisibleValidationField(field);
+                                                            const messageHost = getFieldMessageHost(field);
+                                                            if (!target) {
+                                                                return false;
+                                                            }
+
+                                                            if (typeof target.setCustomValidity === "function") {
+                                                                target.setCustomValidity(message);
+                                                            }
+
+                                                            target.classList.add("is-invalid");
+                                                            target.setAttribute("aria-invalid", "true");
+
+                                                            if (messageHost) {
+                                                                messageHost.textContent = message;
+                                                            }
+
+                                                            if (typeof target.focus === "function") {
+                                                                target.focus();
+                                                            }
+
+                                                            if (target === field && typeof target.reportValidity === "function") {
+                                                                target.reportValidity();
+                                                            }
+
+                                                            return false;
+                                                        }
+
+                                                        function toggleVisibility(element, isVisible) {
+                                                            if (!element) {
+                                                                return;
+                                                            }
+
+                                                            element.hidden = !isVisible;
+                                                        }
+
+                                                        function normalizeExistingUserPickerText(value) {
+                                                            return (value || "").trim().replace(/\s+/g, " ").toLowerCase();
+                                                        }
+
+                                                        function getExistingUserPickerLabel(option) {
+                                                            return (option?.dataset.label || "").trim();
+                                                        }
+
+                                                        function getExistingUserPickerVisibleOptions() {
+                                                            return existingUserPickerOptions.filter(function (option) {
+                                                                return !option.hidden;
+                                                            });
+                                                        }
+
+                                                        function setExistingUserPickerOpen(isOpen) {
+                                                            if (!existingUserPicker || !existingUserPickerPanel || !existingUserSearchInput) {
+                                                                return;
+                                                            }
+
+                                                            existingUserPicker.classList.toggle("is-open", isOpen);
+                                                            existingUserPickerPanel.hidden = !isOpen;
+                                                            existingUserSearchInput.setAttribute("aria-expanded", isOpen ? "true" : "false");
+                                                        }
+
+                                                        function setExistingUserPickerActiveOption(option) {
+                                                            existingUserPickerOptions.forEach(function (item) {
+                                                                item.classList.remove("is-active");
+                                                            });
+
+                                                            if (!option || option.hidden) {
+                                                                existingUserActiveIndex = -1;
+                                                                existingUserSearchInput?.removeAttribute("aria-activedescendant");
+                                                                return;
+                                                            }
+
+                                                            option.classList.add("is-active");
+                                                            existingUserActiveIndex = existingUserPickerOptions.indexOf(option);
+                                                            if (existingUserSearchInput) {
+                                                                if (!option.id) {
+                                                                    option.id = `general-manager-user-option-${existingUserActiveIndex}`;
+                                                                }
+                                                                existingUserSearchInput.setAttribute("aria-activedescendant", option.id);
+                                                            }
+                                                            option.scrollIntoView({ block: "nearest" });
+                                                        }
+
+                                                        function syncExistingUserPickerSelectionState() {
+                                                            const selectedValue = existingUserSelect ? existingUserSelect.value : "";
+                                                            let selectedOption = null;
+
+                                                            existingUserPickerOptions.forEach(function (option) {
+                                                                const isSelected = !!selectedValue && option.dataset.value === selectedValue;
+                                                                option.classList.toggle("is-selected", isSelected);
+                                                                option.setAttribute("aria-selected", isSelected ? "true" : "false");
+                                                                if (isSelected) {
+                                                                    selectedOption = option;
+                                                                }
+                                                            });
+
+                                                            if (existingUserPickerClear) {
+                                                                existingUserPickerClear.hidden = !selectedValue && !(existingUserSearchInput && existingUserSearchInput.value.trim());
+                                                            }
+
+                                                            return selectedOption;
+                                                        }
+
+                                                        function dispatchExistingUserSelectionChange() {
+                                                            if (!existingUserSelect) {
+                                                                return;
+                                                            }
+
+                                                            existingUserSelect.dispatchEvent(new Event("input", { bubbles: true }));
+                                                            existingUserSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                                                        }
+
+                                                        function commitExistingUserSelection(option) {
+                                                            if (!existingUserSelect || !existingUserSearchInput || !option) {
+                                                                return;
+                                                            }
+
+                                                            existingUserSelect.value = option.dataset.value || "";
+                                                            existingUserSearchInput.value = getExistingUserPickerLabel(option);
+                                                            clearValidationState(existingUserSelect);
+                                                            syncExistingUserPickerSelectionState();
+                                                            setExistingUserPickerActiveOption(option);
+                                                            dispatchExistingUserSelectionChange();
+                                                            setExistingUserPickerOpen(false);
+                                                        }
+
+                                                        function clearExistingUserSelection(keepTypedValue) {
+                                                            if (!existingUserSelect || !existingUserSearchInput) {
+                                                                return;
+                                                            }
+
+                                                            const selectionChanged = !!existingUserSelect.value;
+                                                            existingUserSelect.value = "";
+                                                            if (!keepTypedValue) {
+                                                                existingUserSearchInput.value = "";
+                                                            }
+                                                            syncExistingUserPickerSelectionState();
+                                                            setExistingUserPickerActiveOption(null);
+
+                                                            if (selectionChanged) {
+                                                                dispatchExistingUserSelectionChange();
+                                                            }
+                                                        }
+
+                                                        function filterExistingUserPickerOptions(query) {
+                                                            const needle = normalizeExistingUserPickerText(query);
+                                                            let firstVisibleOption = null;
+
+                                                            existingUserPickerOptions.forEach(function (option) {
+                                                                const haystack = normalizeExistingUserPickerText(option.dataset.search || getExistingUserPickerLabel(option));
+                                                                const matches = !needle || haystack.includes(needle);
+                                                                option.hidden = !matches;
+                                                                if (matches && !firstVisibleOption) {
+                                                                    firstVisibleOption = option;
+                                                                }
+                                                            });
+
+                                                            if (existingUserPickerEmpty) {
+                                                                existingUserPickerEmpty.hidden = !!firstVisibleOption;
+                                                            }
+
+                                                            setExistingUserPickerActiveOption(firstVisibleOption);
+                                                        }
+
+                                                        function syncExistingUserPickerFromSelection() {
+                                                            const selectedOption = syncExistingUserPickerSelectionState();
+                                                            if (existingUserSearchInput && selectedOption) {
+                                                                existingUserSearchInput.value = getExistingUserPickerLabel(selectedOption);
+                                                            }
+                                                        }
+
+                                                        function isStrongPassword(value) {
+                                                            return value.length >= 8
+                                                                && /[A-Z]/.test(value)
+                                                                && /[a-z]/.test(value)
+                                                                && /\d/.test(value)
+                                                                && /[^A-Za-z0-9]/.test(value);
+                                                        }
+
+                                                        function getSelectionModeLabel() {
+                                                            return selectionModeInput.value === "@GeneralManagerSelectionModes.CreateNew"
+                                                                ? "إنشاء مدير عام جديد"
+                                                                : "اختيار مستخدم موجود";
+                                                        }
+
+                                                        function getAssignmentTypeLabel() {
+                                                            return assignmentTypeInput.value === "@GeneralManagerAssignmentTypes.Acting"
+                                                                ? "مكلف"
+                                                                : "مثبت";
+                                                        }
+
+                                                        function getPreviousActionLabel() {
+                                                            if (!hasCurrentGeneralManager) {
+                                                                return "لا يوجد مدير عام سابق";
+                                                            }
+
+                                                            return previousActionSelect
+                                                                ? previousActionSelect.options[previousActionSelect.selectedIndex]?.text || "إنهاء تكليف"
+                                                                : "إنهاء تكليف";
+                                                        }
+
+                                                        function getSelectedCandidateLabel() {
+                                                            if (selectionModeInput.value === "@GeneralManagerSelectionModes.CreateNew") {
+                                                                const fullName = newUserFullNameInput ? newUserFullNameInput.value.trim() : "";
+                                                                const username = newUserUsernameInput ? newUserUsernameInput.value.trim() : "";
+                                                                if (!fullName && !username) {
+                                                                    return "لم يحدد بعد";
+                                                                }
+
+                                                                return fullName
+                                                                    ? (username ? `${fullName} (${username})` : fullName)
+                                                                    : username;
+                                                            }
+
+                                                            if (!existingUserSelect || !existingUserSelect.value) {
+                                                                return "لم يحدد بعد";
+                                                            }
+
+                                                            const selectedCandidate = candidateMap[existingUserSelect.value];
+                                                            if (!selectedCandidate) {
+                                                                return existingUserSelect.value;
+                                                            }
+
+                                                            return `${selectedCandidate.fullName} (${selectedCandidate.username})`;
+                                                        }
+
+                                                        function renderExistingCandidateDetails() {
+                                                            const selectedUsername = existingUserSelect ? existingUserSelect.value : "";
+                                                            const candidate = selectedUsername ? candidateMap[selectedUsername] : null;
+                                                            const fallback = {
+                                                                fullName: "غير محدد",
+                                                                username: "غير محدد",
+                                                                phoneNumber: "غير محدد",
+                                                                jobTitle: "غير محدد",
+                                                                department: "بدون قسم",
+                                                                status: "غير محدد"
+                                                            };
+
+                                                            ["fullName", "username", "phoneNumber", "jobTitle", "department", "status"].forEach(function (key) {
+                                                                const target = document.querySelector(`[data-general-manager-existing-detail='${key}']`);
+                                                                if (!target) {
+                                                                    return;
+                                                                }
+
+                                                                target.textContent = candidate ? (candidate[key] || fallback[key]) : fallback[key];
+                                                            });
+                                                        }
+
+                                                        function syncSelectionModeState() {
+                                                            const createNew = selectionModeInput.value === "@GeneralManagerSelectionModes.CreateNew";
+
+                                                            toggleVisibility(existingFields, !createNew);
+                                                            toggleVisibility(createFields, createNew);
+
+                                                            if (createNew) {
+                                                                setExistingUserPickerOpen(false);
+                                                            }
+
+                                                            if (existingUserSelect) {
+                                                                existingUserSelect.required = !createNew;
+                                                                if (createNew) {
+                                                                    clearValidationState(existingUserSelect);
+                                                                }
+                                                            }
+
+                                                            [newUserUsernameInput, newUserFullNameInput, newUserPhoneInput, newUserPasswordInput, newUserConfirmPasswordInput, newUserJobTitleInput].forEach(function (field) {
+                                                                if (!field) {
+                                                                    return;
+                                                                }
+
+                                                                field.required = createNew;
+                                                                if (!createNew) {
+                                                                    clearValidationState(field);
+                                                                }
+                                                            });
+
+                                                            if (newUserDepartmentSelect) {
+                                                                newUserDepartmentSelect.required = false;
+                                                                newUserDepartmentSelect.value = "0";
+                                                                clearValidationState(newUserDepartmentSelect);
+                                                            }
+
+                                                            selectionButtons.forEach(function (button) {
+                                                                button.classList.toggle("is-active", button.dataset.generalManagerSelection === selectionModeInput.value);
+                                                            });
+
+                                                            renderExistingCandidateDetails();
+                                                            syncSummary();
+                                                        }
+
+                                                        function syncPreviousActionState() {
+                                                            const isInternalTransfer = hasCurrentGeneralManager
+                                                                && previousActionSelect
+                                                                && previousActionSelect.value === "@GeneralManagerPreviousActions.InternalTransfer";
+
+                                                            toggleVisibility(internalTransferFields, isInternalTransfer);
+                                                            if (previousDepartmentSelect) {
+                                                                previousDepartmentSelect.required = !!isInternalTransfer;
+                                                                if (!isInternalTransfer) {
+                                                                    clearValidationState(previousDepartmentSelect);
+                                                                }
+                                                            }
+
+                                                            syncSummary();
+                                                        }
+
+                                                        function syncAssignmentTypeState() {
+                                                            assignmentButtons.forEach(function (button) {
+                                                                button.classList.toggle("is-active", button.dataset.generalManagerAssignmentType === assignmentTypeInput.value);
+                                                            });
+
+                                                            syncSummary();
+                                                        }
+
+                                                        function syncSummary() {
+                                                            if (summaryCandidate) {
+                                                                summaryCandidate.textContent = getSelectedCandidateLabel();
+                                                            }
+
+                                                            if (summarySelectionMode) {
+                                                                summarySelectionMode.textContent = getSelectionModeLabel();
+                                                            }
+
+                                                            if (summaryAssignmentType) {
+                                                                summaryAssignmentType.textContent = getAssignmentTypeLabel();
+                                                            }
+
+                                                            if (summaryPreviousAction) {
+                                                                summaryPreviousAction.textContent = getPreviousActionLabel();
+                                                            }
+
+                                                            if (changesList) {
+                                                                const changes = [];
+                                                                if (selectionModeInput.value === "@GeneralManagerSelectionModes.CreateNew") {
+                                                                    changes.push("سيتم استكمال حساب مدير عام جديد من هذا المعالج ثم اعتماده مباشرة، مع بقاء شاشة المستخدمين هي المسار الأساسي لإنشاء الحسابات.");
+                                                                } else {
+                                                                    changes.push("سيُستخدم الحساب المختار ويُعاد تشكيل صلاحياته ليصبح مديرًا عامًا مرتبطًا بالإدارة.");
+                                                                }
+
+                                                                changes.push("سيتم ربط الإدارة تلقائيًا بالحساب الجديد مع مزامنة الاسم والمسمى والجوال.");
+                                                                changes.push(`سيشغل المنصب بصفة ${getAssignmentTypeLabel()}.`);
+
+                                                                if (hasCurrentGeneralManager) {
+                                                                    changes.push(`سيتم تطبيق إجراء المدير العام السابق: ${getPreviousActionLabel()}.`);
+                                                                    if (
+                                                                        previousActionSelect
+                                                                        && previousActionSelect.value === "@GeneralManagerPreviousActions.InternalTransfer"
+                                                                        && previousDepartmentSelect
+                                                                        && previousDepartmentSelect.value !== "0"
+                                                                    ) {
+                                                                        const targetDepartmentName = previousDepartmentSelect.options[previousDepartmentSelect.selectedIndex]?.text || "القسم المحدد";
+                                                                        changes.push(`سيُنقل المدير العام السابق إلى قسم ${targetDepartmentName}.`);
+                                                                    }
+                                                                } else {
+                                                                    changes.push("لا يوجد مدير عام سابق، لذا لن تُطبق إجراءات سحب أو أرشفة على حساب سابق.");
+                                                                }
+
+                                                                changesList.innerHTML = changes.map(change => `<li>${change}</li>`).join("");
+                                                            }
+                                                        }
+
+                                                        function setStep(step) {
+                                                            currentStep = Math.min(5, Math.max(1, step));
+
+                                                            stepPanels.forEach(function (panel) {
+                                                                const panelStep = Number(panel.dataset.generalManagerStepPanel || "1");
+                                                                panel.hidden = panelStep !== currentStep;
+                                                            });
+
+                                                            stepIndicators.forEach(function (indicator) {
+                                                                const indicatorStep = Number(indicator.dataset.generalManagerStepIndicator || "1");
+                                                                indicator.classList.toggle("is-active", indicatorStep === currentStep);
+                                                                indicator.classList.toggle("is-complete", indicatorStep < currentStep);
+                                                            });
+
+                                                            if (wizardStepInput) {
+                                                                wizardStepInput.value = String(currentStep);
+                                                            }
+
+                                                            if (previousButton) {
+                                                                previousButton.hidden = currentStep === 1;
+                                                            }
+
+                                                            if (nextButton) {
+                                                                nextButton.hidden = currentStep >= 5;
+                                                            }
+
+                                                            if (submitButton) {
+                                                                submitButton.hidden = currentStep !== 5;
+                                                            }
+
+                                                            syncSummary();
+                                                        }
+
+                                                        function resetWizardProgress() {
+                                                            setStep(1);
+                                                        }
+
+                                                        function validateStep(step) {
+                                                            if (step === 1) {
+                                                                return true;
+                                                            }
+
+                                                            if (step === 2) {
+                                                                if (selectionModeInput.value === "@GeneralManagerSelectionModes.ExistingUser") {
+                                                                    if (!existingUserSelect || !existingUserSelect.value.trim()) {
+                                                                        return showValidationState(existingUserSelect, "اختر المستخدم المرشح لتولي منصب المدير العام.");
+                                                                    }
+
+                                                                    return true;
+                                                                }
+
+                                                                if (!newUserUsernameInput || !/^[12]\d{9}$/.test(newUserUsernameInput.value.trim())) {
+                                                                    return showValidationState(newUserUsernameInput, "رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.");
+                                                                }
+
+                                                                if (!newUserFullNameInput || !newUserFullNameInput.value.trim()) {
+                                                                    return showValidationState(newUserFullNameInput, "الاسم الكامل مطلوب.");
+                                                                }
+
+                                                                if (!newUserPhoneInput || !/^05\d{8}$/.test(newUserPhoneInput.value.trim())) {
+                                                                    return showValidationState(newUserPhoneInput, "رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05.");
+                                                                }
+
+                                                                if (!newUserPasswordInput || !isStrongPassword(newUserPasswordInput.value)) {
+                                                                    return showValidationState(newUserPasswordInput, "كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وحرف صغير ورقم ورمز خاص.");
+                                                                }
+
+                                                                if (!newUserConfirmPasswordInput || newUserConfirmPasswordInput.value !== newUserPasswordInput.value) {
+                                                                    return showValidationState(newUserConfirmPasswordInput, "تأكيد كلمة المرور غير مطابق.");
+                                                                }
+
+                                                                if (!newUserJobTitleInput || !newUserJobTitleInput.value.trim()) {
+                                                                    return showValidationState(newUserJobTitleInput, "المسمى الوظيفي مطلوب.");
+                                                                }
+
+                                                                return true;
+                                                            }
+
+                                                            if (step === 3 && hasCurrentGeneralManager) {
+                                                                if (
+                                                                    previousActionSelect
+                                                                    && previousActionSelect.value === "@GeneralManagerPreviousActions.InternalTransfer"
+                                                                    && previousDepartmentSelect
+                                                                    && previousDepartmentSelect.value === "0"
+                                                                ) {
+                                                                    return showValidationState(previousDepartmentSelect, "اختر القسم الجديد للمدير العام السابق.");
+                                                                }
+
+                                                                return true;
+                                                            }
+
+                                                            return true;
+                                                        }
+
+                                                        if (openButton) {
+                                                            openButton.addEventListener("click", function () {
+                                                                if (!wizardModal) {
+                                                                    return;
+                                                                }
+
+                                                                if (!shouldResumeWizardState) {
+                                                                    resetWizardProgress();
+                                                                }
+
+                                                                if (hasCurrentGeneralManager && confirmModal) {
+                                                                    confirmModal.show();
+                                                                    return;
+                                                                }
+
+                                                                wizardModal.show();
+                                                            });
+                                                        }
+
+                                                        if (confirmOpenWizardButton) {
+                                                            confirmOpenWizardButton.addEventListener("click", function () {
+                                                                if (confirmModal) {
+                                                                    confirmModal.hide();
+                                                                }
+
+                                                                if (wizardModal) {
+                                                                    if (!shouldResumeWizardState) {
+                                                                        resetWizardProgress();
+                                                                    }
+                                                                    wizardModal.show();
+                                                                }
+                                                            });
+                                                        }
+
+                                                        if (wizardModalElement) {
+                                                            wizardModalElement.addEventListener("hidden.bs.modal", function () {
+                                                                if (!shouldResumeWizardState) {
+                                                                    resetWizardProgress();
+                                                                }
+                                                            });
+                                                        }
+
+                                                        if (confirmModalElement) {
+                                                            confirmModalElement.addEventListener("hidden.bs.modal", function () {
+                                                                if (!wizardModalElement?.classList.contains("show") && !shouldResumeWizardState) {
+                                                                    resetWizardProgress();
+                                                                }
+                                                            });
+                                                        }
+
+                                                        selectionButtons.forEach(function (button) {
+                                                            button.addEventListener("click", function () {
+                                                                selectionModeInput.value = button.dataset.generalManagerSelection || selectionModeInput.value;
+                                                                syncSelectionModeState();
+                                                            });
+                                                        });
+
+                                                        existingUserPickerOptions.forEach(function (option, index) {
+                                                            if (!option.id) {
+                                                                option.id = `general-manager-existing-user-option-${index}`;
+                                                            }
+
+                                                            option.addEventListener("click", function () {
+                                                                commitExistingUserSelection(option);
+                                                            });
+                                                        });
+
+                                                        if (existingUserSearchInput) {
+                                                            existingUserSearchInput.addEventListener("focus", function () {
+                                                                filterExistingUserPickerOptions(existingUserSearchInput.value);
+                                                                setExistingUserPickerOpen(true);
+                                                            });
+
+                                                            existingUserSearchInput.addEventListener("click", function () {
+                                                                filterExistingUserPickerOptions(existingUserSearchInput.value);
+                                                                setExistingUserPickerOpen(true);
+                                                            });
+
+                                                            existingUserSearchInput.addEventListener("input", function () {
+                                                                clearValidationState(existingUserSelect);
+                                                                clearExistingUserSelection(true);
+                                                                filterExistingUserPickerOptions(existingUserSearchInput.value);
+                                                                setExistingUserPickerOpen(true);
+                                                            });
+
+                                                            existingUserSearchInput.addEventListener("keydown", function (event) {
+                                                                const visibleOptions = getExistingUserPickerVisibleOptions();
+
+                                                                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                                                                    event.preventDefault();
+                                                                    if (existingUserPickerPanel?.hidden) {
+                                                                        filterExistingUserPickerOptions(existingUserSearchInput.value);
+                                                                        setExistingUserPickerOpen(true);
+                                                                    }
+
+                                                                    if (!visibleOptions.length) {
+                                                                        return;
+                                                                    }
+
+                                                                    let nextIndex = visibleOptions.findIndex(function (option) {
+                                                                        return option.classList.contains("is-active");
+                                                                    });
+
+                                                                    if (nextIndex === -1) {
+                                                                        nextIndex = 0;
+                                                                    } else {
+                                                                        nextIndex = event.key === "ArrowDown"
+                                                                            ? Math.min(nextIndex + 1, visibleOptions.length - 1)
+                                                                            : Math.max(nextIndex - 1, 0);
+                                                                    }
+
+                                                                    setExistingUserPickerActiveOption(visibleOptions[nextIndex]);
+                                                                    return;
+                                                                }
+
+                                                                if (event.key === "Enter") {
+                                                                    if (existingUserPickerPanel?.hidden) {
+                                                                        return;
+                                                                    }
+
+                                                                    event.preventDefault();
+                                                                    const activeOption = existingUserPickerOptions[existingUserActiveIndex] || visibleOptions[0];
+                                                                    if (activeOption) {
+                                                                        commitExistingUserSelection(activeOption);
+                                                                    }
+                                                                    return;
+                                                                }
+
+                                                                if (event.key === "Escape") {
+                                                                    if (!existingUserPickerPanel?.hidden) {
+                                                                        event.preventDefault();
+                                                                        setExistingUserPickerOpen(false);
+                                                                    }
+                                                                }
+                                                            });
+                                                        }
+
+                                                        if (existingUserPickerToggle) {
+                                                            existingUserPickerToggle.addEventListener("click", function (event) {
+                                                                event.preventDefault();
+                                                                if (existingUserPickerPanel?.hidden) {
+                                                                    filterExistingUserPickerOptions(existingUserSearchInput ? existingUserSearchInput.value : "");
+                                                                    setExistingUserPickerOpen(true);
+                                                                    existingUserSearchInput?.focus();
+                                                                    return;
+                                                                }
+
+                                                                setExistingUserPickerOpen(false);
+                                                            });
+                                                        }
+
+                                                        if (existingUserPickerClear) {
+                                                            existingUserPickerClear.addEventListener("click", function (event) {
+                                                                event.preventDefault();
+                                                                clearValidationState(existingUserSelect);
+                                                                clearExistingUserSelection(false);
+                                                                filterExistingUserPickerOptions("");
+                                                                existingUserSearchInput?.focus();
+                                                            });
+                                                        }
+
+                                                        document.addEventListener("click", function (event) {
+                                                            if (!existingUserPicker || existingUserPicker.contains(event.target)) {
+                                                                return;
+                                                            }
+
+                                                            setExistingUserPickerOpen(false);
+                                                        });
+
+                                                        assignmentButtons.forEach(function (button) {
+                                                            button.addEventListener("click", function () {
+                                                                assignmentTypeInput.value = button.dataset.generalManagerAssignmentType || assignmentTypeInput.value;
+                                                                syncAssignmentTypeState();
+                                                            });
+                                                        });
+
+                                                        [existingUserSelect, newUserUsernameInput, newUserFullNameInput, newUserPhoneInput, newUserPasswordInput, newUserConfirmPasswordInput, newUserJobTitleInput, newUserDepartmentSelect, previousActionSelect, previousDepartmentSelect].forEach(function (field) {
+                                                            if (!field) {
+                                                                return;
+                                                            }
+
+                                                            field.addEventListener("change", function () {
+                                                                clearValidationState(field);
+                                                                renderExistingCandidateDetails();
+                                                                syncPreviousActionState();
+                                                                syncSummary();
+                                                            });
+
+                                                            field.addEventListener("input", function () {
+                                                                clearValidationState(field);
+                                                                syncSummary();
+                                                            });
+                                                        });
+
+                                                        stepIndicators.forEach(function (indicator) {
+                                                            indicator.addEventListener("click", function () {
+                                                                const targetStep = Number(indicator.dataset.generalManagerStepIndicator || currentStep);
+                                                                if (targetStep <= currentStep || validateStep(currentStep)) {
+                                                                    setStep(targetStep);
+                                                                }
+                                                            });
+                                                        });
+
+                                                        if (previousButton) {
+                                                            previousButton.addEventListener("click", function () {
+                                                                setStep(currentStep - 1);
+                                                            });
+                                                        }
+
+                                                        if (nextButton) {
+                                                            nextButton.addEventListener("click", function () {
+                                                                if (!validateStep(currentStep)) {
+                                                                    return;
+                                                                }
+
+                                                                setStep(currentStep + 1);
+                                                            });
+                                                        }
+
+                                                        if (wizardForm) {
+                                                            wizardForm.addEventListener("submit", function (event) {
+                                                                if (!validateStep(4)) {
+                                                                    event.preventDefault();
+                                                                    return;
+                                                                }
+
+                                                                setStep(5);
+                                                            });
+                                                        }
+
+                                                        syncSelectionModeState();
+                                                        syncPreviousActionState();
+                                                        syncAssignmentTypeState();
+                                                        syncExistingUserPickerFromSelection();
+                                                        filterExistingUserPickerOptions(existingUserSearchInput ? existingUserSearchInput.value : "");
+                                                        setExistingUserPickerOpen(false);
+                                                        renderExistingCandidateDetails();
+                                                        setStep(currentStep);
+
+                                                        if (shouldResumeWizardState && wizardModal) {
+                                                            wizardModal.show();
+                                                        }
+                                                    });
+                                                </script>

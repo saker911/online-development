@@ -1,0 +1,27 @@
+@model VehiclePermitSystemWeb.Models.Entities.Permit
+
+@{
+    ViewData["Title"] = "حذف التصريح";
+}
+
+<div class="card-permit">
+    <h1 class="h3 mb-3">تأكيد حذف التصريح</h1>
+    <p>هل تريد حذف التصريح رقم <strong>@Model.PermitNumber</strong> الخاص بالموظف <strong>@Model.DriverName</strong>؟
+    </p>
+
+    <dl class="row">
+        <dt class="col-sm-3">رقم اللوحة</dt>
+        <dd class="col-sm-9">@Model.PlateNumberDisplay</dd>
+        <dt class="col-sm-3">الإدارة</dt>
+        <dd class="col-sm-9">@Model.DepartmentName</dd>
+    </dl>
+
+    <form asp-action="Delete" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.PermitNumber" />
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">تأكيد الحذف</button>
+            <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+        </div>
+    </form>
+</div>

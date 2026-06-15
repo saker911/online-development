@@ -1,0 +1,619 @@
+@using System.Globalization
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitIndexViewModel
+
+@{
+    ViewData["Title"] = "إدارة التصاريح";
+
+    var totalPermits = Model.Permits.Count;
+    var approvedPermits = Model.Permits.Count(p =>
+        string.Equals(p.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+    );
+    var pendingPermits = Model.Permits.Count(p =>
+        string.Equals(p.ApprovalStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+    );
+    var archivedPermits = Model.Permits.Count(p => p.ArchivedAt.HasValue);
+    var operationalAlerts = Model.Permits.Count(p =>
+        p.PendingExitRequest || p.HasPendingUnauthorizedExit || p.HasTemporaryExitPermission
+    );
+    var hasResults = Model.Permits.Any();
+    var hasSearch = !string.IsNullOrWhiteSpace(Model.SearchTerm);
+    var currentUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+
+    var canCreatePermit = User.HasPermission(AppPermissions.CreatePermit);
+    var canViewPermits = User.HasPermission(AppPermissions.ViewPermits);
+    var canEditPermit = User.HasPermission(AppPermissions.EditPermit);
+    var canApproveLeaveRequest = User.HasPermission(AppPermissions.ApproveLeaveRequest);
+    var canStopPermit = User.HasPermission(AppPermissions.StopPermit);
+    var approvablePermitNumbers = Model.ApprovablePermitNumbers;
+
+    var permitPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
+    {
+        ActionName = "Index",
+        AriaLabel = "ترقيم صفحات التصاريح",
+        Theme = "primary",
+        CurrentPage = Model.CurrentPage,
+        TotalPages = Model.TotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["searchTerm"] = Model.SearchTerm,
+            ["pageSize"] = 5,
+            ["searchBy"] = Model.SearchBy,
+        },
+    };
+}
+
+@functions {
+    private static bool CanRenderIssuedArtifacts(string status)
+    {
+        return string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatPermitTime(DateTime? value)
+    {
+        return value.HasValue
+            ? VehiclePermitSystemWeb.Utilities.Dates.DateHelper.ToGregorianClock12(value.Value)
+            : "--:--";
+    }
+
+    private static string FormatPermitDate(DateTime? value)
+    {
+        return value.HasValue
+            ? VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.Format(value.Value)
+            : "غير محدد";
+    }
+
+    private static string GetPermitStateClass(string status)
+    {
+        return string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase)
+            ? "permit-state-badge is-approved"
+            : string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)
+                ? "permit-state-badge is-pending"
+                : string.Equals(status, "Out", StringComparison.OrdinalIgnoreCase)
+                    ? "permit-state-badge is-info"
+                    : string.Equals(status, "Returned", StringComparison.OrdinalIgnoreCase)
+                        ? "permit-state-badge is-neutral"
+                        : string.Equals(status, "Late", StringComparison.OrdinalIgnoreCase)
+                            ? "permit-state-badge is-warning"
+                            : string.Equals(status, "Expired", StringComparison.OrdinalIgnoreCase)
+                                ? "permit-state-badge is-warning"
+                                : "permit-state-badge is-danger";
+    }
+
+    private static string GetPermitStateNote(VehiclePermitSystemWeb.Models.Entities.Permit permit)
+    {
+        if (permit.PendingExitRequest)
+        {
+            return permit.PendingExitRequestDisplay;
+        }
+
+        if (permit.HasPendingUnauthorizedExit)
+        {
+            return permit.PendingUnauthorizedExitDisplay;
+        }
+
+        if (permit.HasTemporaryExitPermission)
+        {
+            return permit.TemporaryExitPermissionDisplay;
+        }
+
+        if (permit.ArchivedAt.HasValue)
+        {
+            return "تمت أرشفة التصريح";
+        }
+
+        if (permit.RequiresReturn && permit.ExpectedReturnTime.HasValue)
+        {
+            return $"العودة المتوقعة {FormatPermitTime(permit.ExpectedReturnTime)}";
+        }
+
+        if (permit.ExpiresAt.HasValue)
+        {
+            return $"ينتهي {FormatPermitDate(permit.ExpiresAt)}";
+        }
+
+        return permit.GateActionDescription;
+    }
+}
+
+<div class="records-page-shell records-page-shell-permits">
+    <section class="records-page-hero card-permit app-card-surface">
+        <div class="records-page-hero-copy">
+            <span class="records-page-kicker">إدارة التصاريح</span>
+            <h1>التصاريح وحالة التنفيذ</h1>
+            <p class="text-muted-ar mb-0">
+                متابعة الطلبات، الحالات التشغيلية، والانتقال السريع إلى الإجراءات اليومية بدون ازدحام بصري أو عناصر تثقل
+                الصفحة.
+            </p>
+
+            <div class="records-page-chip-list">
+                <span class="records-page-chip">الموقوفة: @Model.StoppedPermitsCount</span>
+                <span class="records-page-chip">أرشفة ظاهرة: @archivedPermits</span>
+                <span class="records-page-chip">تنبيهات تشغيلية: @operationalAlerts</span>
+                @if (hasSearch)
+                {
+                    <span class="records-page-chip records-page-chip-accent">البحث: @Model.SearchTerm</span>
+                }
+                else
+                {
+                    <span class="records-page-chip">العرض الحالي: كل السجلات المتاحة ضمن صلاحياتك</span>
+                }
+            </div>
+        </div>
+
+        <div class="records-page-stats">
+            <div class="permit-stat-card permit-stat-card-pending">
+                <span class="permit-stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path
+                        d="M12 6a1 1 0 0 1 1 1v4.38l2.24 1.3a1 1 0 1 1-1 1.74l-2.74-1.58A1 1 0 0 1 11 12V7a1 1 0 0 1 1-1Zm0-4a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z"
+                        fill="currentColor" />
+                    </svg>
+                </span>
+                <div class="permit-stat-copy">
+                    <span>بانتظار التنفيذ</span>
+                    <strong>@pendingPermits</strong>
+                </div>
+            </div>
+            <div class="permit-stat-card permit-stat-card-approved">
+                <span class="permit-stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path d="M9.55 17.3 4.7 12.45l1.4-1.4 3.45 3.45 8.35-8.35 1.4 1.4-9.75 9.75Z"
+                              fill="currentColor" />
+                    </svg>
+                </span>
+                <div class="permit-stat-copy">
+                    <span>تصاريح نشطة</span>
+                    <strong>@approvedPermits</strong>
+                </div>
+            </div>
+            <div class="permit-stat-card permit-stat-card-total">
+                <span class="permit-stat-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                        <path
+                        d="M7 4A2 2 0 0 0 5 6v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.83A2 2 0 0 0 18.41 8L15 4.59A2 2 0 0 0 13.59 4H7Zm0 2h6v3a1 1 0 0 0 1 1h3v8H7V6Z"
+                        fill="currentColor" />
+                    </svg>
+                </span>
+                <div class="permit-stat-copy">
+                    <span>إجمالي المعروض</span>
+                    <strong>@totalPermits</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="records-page-toolbar-card card-permit app-card-surface">
+        <div class="records-page-toolbar-main">
+            <form method="get" class="permit-dashboard-search">
+                <div class="permit-dashboard-search-field">
+                    <input name="searchTerm" value="@Model.SearchTerm" class="form-control permit-search-input"
+                           placeholder="ابحث برقم التصريح أو اسم حامل التصريح..." />
+                    <button type="submit" class="permit-dashboard-search-icon" aria-label="بحث">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                            d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm8.91 11.5 1.59 1.59-1.41 1.41-1.59-1.59-1.59-1.59 1.41-1.41 1.59 1.59Z"
+                            fill="currentColor" />
+                        </svg>
+                    </button>
+                </div>
+            </form>
+
+            <div class="permit-action-hub permit-page-filter-hub">
+                <button type="button" class="permit-action-trigger permit-page-filter-trigger" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" class="permit-button-icon" focusable="false" aria-hidden="true">
+                        <path d="M4 6h16v2H4V6Zm3 5h10v2H7v-2Zm3 5h4v2h-4v-2Z" fill="currentColor" />
+                    </svg>
+                    <span>تصفية</span>
+                </button>
+                <div class="permit-action-popover" hidden>
+                    <div class="permit-action-section">
+                        <div class="permit-action-section-title">فلاتر البحث</div>
+                        <div class="permit-action-grid permit-action-grid-single">
+                            <a asp-action="Index" class="permit-action-tile permit-action-tile-secondary">كل
+                                التصاريح</a>
+                                <a asp-action="Index" class="permit-action-tile permit-action-tile-secondary">إعادة ضبط
+                                    البحث</a>
+                                </div>
+                            </div>
+                            @if (canViewPermits || canEditPermit)
+                            {
+                                <div class="permit-action-section permit-action-section-spaced">
+                                    <div class="permit-action-section-title">السجلات</div>
+                                    <div class="permit-action-grid">
+                                        @if (canViewPermits)
+                                        {
+                                            <a asp-controller="Reports" asp-action="StoppedPermits"
+                                               class="permit-action-tile permit-action-tile-secondary">التصاريح الموقوفة</a>
+                                            <a asp-controller="Reports" asp-action="PrintPendingPermitsReport" target="_blank"
+                                               class="permit-action-tile permit-action-tile-secondary">طلبات غير معتمدة</a>
+                                        }
+                                        @if (canEditPermit)
+                                        {
+                                            <form asp-action="CancelExpired" method="post" class="permit-action-form">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="permit-action-tile permit-action-tile-outline-danger">أرشفة
+                                                    المنتهية</button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                <div class="permit-action-section permit-action-section-spaced">
+                                    <div class="permit-action-section-title">التقارير</div>
+                                    <div class="permit-action-grid permit-action-grid-single">
+                                        <a asp-controller="Reports" asp-action="Index"
+                                           class="permit-action-tile permit-action-tile-secondary">التقارير</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (canCreatePermit)
+                        {
+                            <a asp-action="Create" class="btn btn-primary permit-dashboard-primary-action">
+                                <svg viewBox="0 0 24 24" class="permit-button-icon" focusable="false" aria-hidden="true">
+                                    <path d="M11 5h2v14h-2V5Zm-6 6h14v2H5v-2Z" fill="currentColor" />
+                                </svg>
+                                <span>إصدار تصريح جديد</span>
+                            </a>
+                        }
+                    </div>
+
+                    <div class="records-page-toolbar-actions">
+                        @if (canViewPermits)
+                        {
+                            <a asp-controller="Reports" asp-action="StoppedPermits" class="btn btn-outline-secondary btn-sm">
+                                الموقوفة <span class="badge rounded-pill bg-secondary ms-1">@Model.StoppedPermitsCount</span>
+                            </a>
+                            <a asp-controller="Reports" asp-action="PrintPendingPermitsReport" class="btn btn-outline-secondary btn-sm"
+                               target="_blank">طلبات معلقة</a>
+                        }
+                        @if (canEditPermit)
+                        {
+                            <form asp-action="CancelExpired" method="post" class="records-inline-form"
+                                  data-confirm-message="هل تريد أرشفة التصاريح المنتهية؟">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm">أرشفة المنتهية</button>
+                            </form>
+                        }
+                        <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-secondary btn-sm">التقارير</a>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">إعادة ضبط</a>
+                    </div>
+                </section>
+
+                <section class="records-page-table-card card-permit app-card-surface permit-reference-shell">
+                    <div class="records-page-table-head">
+                        <div>
+                            <h2>قائمة التصاريح</h2>
+                            <p class="text-muted-ar mb-0">
+                                @if (hasSearch)
+                                {
+                                    <span>نتائج البحث الحالية عن: <strong>@Model.SearchTerm</strong></span>
+                                }
+                                else
+                                {
+                                    <span>عرض مركّز للسجلات المتاحة ضمن صلاحياتك الحالية.</span>
+                                }
+                            </p>
+                        </div>
+                        <div class="records-page-table-meta">
+                            <span class="records-page-meta-chip">الصفحة @Model.CurrentPage من @Math.Max(Model.TotalPages, 1)</span>
+                            <span class="records-page-meta-chip">عدد السجلات: @totalPermits</span>
+                        </div>
+                    </div>
+
+                    @if (!hasResults)
+                    {
+                        <div class="records-page-empty-state">
+                            <div class="records-page-empty-illustration" aria-hidden="true">📄</div>
+                            <h3>لا توجد نتائج مطابقة</h3>
+                            <p class="text-muted-ar mb-0">
+                                @if (hasSearch)
+                                {
+                                    <span>جرّب تغيير عبارة البحث أو إعادة ضبط الفلاتر لعرض السجلات المتاحة.</span>
+                                }
+                                else
+                                {
+                                    <span>لا توجد تصاريح مرئية حاليًا ضمن نطاق العرض الحالي.</span>
+                                }
+                            </p>
+                            <div class="records-page-empty-actions">
+                                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">إعادة ضبط</a>
+                                @if (canCreatePermit)
+                                {
+                                    <a asp-action="Create" class="btn btn-primary btn-sm">إصدار تصريح جديد</a>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="app-table-shell permit-table-shell">
+                            <div class="table-responsive">
+                                <table class="table align-middle permit-list-table permit-management-table app-data-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>رقم التصريح</th>
+                                            <th>حامل التصريح</th>
+                                            <th>المركبة</th>
+                                            <th>الغرض من الحركة</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.Permits)
+                                        {
+                                            <tr>
+                                                <td data-label="رقم التصريح">
+                                                    <a asp-action="Details" asp-route-id="@item.PermitNumber"
+                                                       class="permit-number-pill permit-id-accent text-decoration-none">@item.PermitNumber</a>
+                                                </td>
+                                                <td data-label="حامل التصريح">
+                                                    <div class="permit-holder-cell">
+                                                        <span class="permit-holder-avatar" aria-hidden="true">
+                                                            <svg viewBox="0 0 24 24" class="permit-holder-avatar-icon" focusable="false"
+                                                                 aria-hidden="true">
+                                                                <path
+                                                                d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.87 0-7 2.02-7 4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5C19 16.02 15.87 14 12 14Z"
+                                                                fill="currentColor" />
+                                                            </svg>
+                                                        </span>
+                                                        <div class="permit-holder-copy">
+                                                            <div class="permit-primary-text">@item.DriverName</div>
+                                                            <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td data-label="المركبة">
+                                                    <div class="permit-vehicle-stack">
+                                                        <div class="permit-primary-text"><span
+                                                            class="permit-plate-chip">@item.PlateNumberDisplay</span></div>
+                                                            <div class="permit-secondary-text">@item.VehicleType</div>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="الغرض من الحركة">
+                                                        <div class="permit-movement-copy">
+                                                            <div class="permit-primary-text">@item.ReturnRequirementDisplay</div>
+                                                            @if (!string.IsNullOrWhiteSpace(item.LocationDisplay))
+                                                            {
+                                                                <div class="permit-secondary-text">@item.LocationDisplay</div>
+                                                            }
+                                                            @if (item.OutTime.HasValue)
+                                                            {
+                                                                <div class="permit-secondary-text">خروج @FormatPermitTime(item.OutTime)</div>
+                                                            }
+                                                            else if (item.RequiresReturn && item.ExpectedReturnTime.HasValue)
+                                                            {
+                                                                <div class="permit-secondary-text">خروج @FormatPermitTime(item.ExpectedReturnTime)
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="الحالة">
+                                                        <div class="permit-status-stack">
+                                                            <span
+                                                            class="@GetPermitStateClass(item.ApprovalStatus)">@item.ApprovalStatusDisplay</span>
+                                                            <div class="permit-state-note">@GetPermitStateNote(item)</div>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="الإجراءات">
+                                                        <div class="record-row-actions">
+                                                            <a asp-action="Details" asp-route-id="@item.PermitNumber"
+                                                               class="record-icon-action record-icon-action-primary"
+                                                               data-bs-toggle="tooltip" data-bs-title="تفاصيل" title="تفاصيل"
+                                                               aria-label="تفاصيل التصريح @item.PermitNumber">
+                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <path d="M5 4h14v16H5V4Zm3 5h8M8 13h8M8 17h5" fill="none"
+                                                                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                                                                </svg>
+                                                            </a>
+                                                            @if (canEditPermit && !item.ArchivedAt.HasValue)
+                                                            {
+                                                                <a asp-action="Edit" asp-route-id="@item.PermitNumber"
+                                                                   class="record-icon-action record-icon-action-warning"
+                                                                   data-bs-toggle="tooltip" data-bs-title="تعديل" title="تعديل"
+                                                                   aria-label="تعديل التصريح @item.PermitNumber">
+                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                        <path d="M4 20h4l10.3-10.3a1.4 1.4 0 0 0 0-2L16.3 5.7a1.4 1.4 0 0 0-2 0L4 16v4zM13.5 6.5l4 4"
+                                                                              fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                              stroke-linecap="round" stroke-linejoin="round" />
+                                                                    </svg>
+                                                                </a>
+                                                            }
+                                                            @if (CanRenderIssuedArtifacts(item.ApprovalStatus))
+                                                            {
+                                                                <a asp-action="Print" asp-route-id="@item.PermitNumber"
+                                                                   class="record-icon-action record-icon-action-success"
+                                                                   data-bs-toggle="tooltip" data-bs-title="طباعة" title="طباعة"
+                                                                   aria-label="طباعة التصريح @item.PermitNumber" target="_blank">
+                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                        <path d="M7 8V4h10v4M6 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1M7 14h10v6H7v-6Z"
+                                                                              fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                              stroke-linecap="round" stroke-linejoin="round" />
+                                                                    </svg>
+                                                                </a>
+                                                            }
+                                                            <div class="permit-action-hub">
+                                                                <button type="button" class="permit-action-trigger"
+                                                                        aria-expanded="false" title="المزيد"
+                                                                        aria-label="إجراءات إضافية للتصريح @item.PermitNumber">
+                                                                <svg viewBox="0 0 24 24" class="permit-button-icon" focusable="false"
+                                                                     aria-hidden="true">
+                                                                    <path
+                                                                    d="M12 7a1.75 1.75 0 1 1 0-3.5A1.75 1.75 0 0 1 12 7Zm0 6.75a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Zm0 6.75a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Z"
+                                                                    fill="currentColor" />
+                                                                </svg>
+                                                                <span>إجراءات</span>
+                                                            </button>
+                                                            <div class="permit-action-popover" hidden>
+                                                                <div class="permit-action-grid">
+                                                                    @{
+                                                                        var canApprovePermit = approvablePermitNumbers.Contains(item.PermitNumber);
+                                                                        var canDeletePermit = canEditPermit && !item.ArchivedAt.HasValue;
+                                                                        var isApproved = string.Equals(item.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                                                                        var canPrintLabel = CanRenderIssuedArtifacts(item.ApprovalStatus);
+                                                                        var canLeaveRequest = canApproveLeaveRequest
+                                                                            && isApproved
+                                                                            && item.IsPermanentPermit
+                                                                            && !item.RequiresReturn
+                                                                            && string.Equals(item.CurrentState, "Inside", StringComparison.OrdinalIgnoreCase)
+                                                                            && !item.ArchivedAt.HasValue;
+                                                                        var canStopPermitNow = canStopPermit && isApproved;
+                                                                        var canReactivatePermit = canStopPermit
+                                                                            && (string.Equals(item.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase)
+                                                                                || item.ArchivedAt.HasValue);
+                                                                    }
+                                                                    <div class="permit-action-icon-row">
+                                                                        <a asp-controller="Reports" asp-action="PermitActivity"
+                                                                           asp-route-activityQuery="@item.PermitNumber"
+                                                                           class="permit-action-tile permit-action-tile-secondary action-icon-btn"
+                                                                           data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                           data-bs-title="سجل الحركة" title="سجل الحركة"
+                                                                           aria-label="سجل الحركة للتصريح @item.PermitNumber">
+                                                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                <path d="M12 8v4l3 2M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"
+                                                                                      fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                      stroke-linecap="round" stroke-linejoin="round" />
+                                                                            </svg>
+                                                                            <span class="visually-hidden">سجل الحركة</span>
+                                                                        </a>
+
+                                                                        @if (canPrintLabel)
+                                                                        {
+                                                                                                     <a asp-action="PrintZebraLabel" asp-route-id="@item.PermitNumber"
+                                                                               class="permit-action-tile permit-action-tile-secondary action-icon-btn"
+                                                                               data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                                         data-bs-title="طباعة ملصق Zebra" title="طباعة ملصق Zebra"
+                                                                                                         aria-label="طباعة ملصق Zebra للتصريح @item.PermitNumber"
+                                                                               target="_blank">
+                                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                    <path d="M3 7h18M3 12h18M3 17h18M7 4v3M7 17v3M17 4v3M17 17v3"
+                                                                                          fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                                                </svg>
+                                                                                <span class="visually-hidden">طباعة ملصق Zebra</span>
+                                                                            </a>
+                                                                        }
+
+                                                                        @if (canLeaveRequest)
+                                                                        {
+                                                                            <a asp-action="LeaveRequest" asp-route-id="@item.PermitNumber"
+                                                                               class="permit-action-tile permit-action-tile-success action-icon-btn"
+                                                                               data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                               data-bs-title="استئذان" title="استئذان"
+                                                                               aria-label="استئذان للتصريح @item.PermitNumber">
+                                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                    <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l4-4-4-4M14 12H4"
+                                                                                          fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                                                </svg>
+                                                                                <span class="visually-hidden">استئذان</span>
+                                                                            </a>
+                                                                        }
+
+                                                                        @if (canApprovePermit)
+                                                                        {
+                                                                            <form asp-action="Approve" method="post" class="permit-action-form">
+                                                                                @Html.AntiForgeryToken()
+                                                                                <input type="hidden" name="PermitNumber" value="@item.PermitNumber" />
+                                                                                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                                                                                <button type="submit"
+                                                                                        class="permit-action-tile permit-action-tile-success action-icon-btn"
+                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                        data-bs-title="اعتماد" title="اعتماد"
+                                                                                        aria-label="اعتماد التصريح @item.PermitNumber">
+                                                                                    <span class="action-icon-glyph" aria-hidden="true">✓</span>
+                                                                                    <span class="visually-hidden">اعتماد</span>
+                                                                                </button>
+                                                                            </form>
+                                                                            <form asp-action="Reject" asp-route-id="@item.PermitNumber" method="post"
+                                                                                  class="permit-action-form">
+                                                                                @Html.AntiForgeryToken()
+                                                                                <button type="submit"
+                                                                                        class="permit-action-tile permit-action-tile-outline-danger action-icon-btn"
+                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                        data-bs-title="رفض" title="رفض"
+                                                                                        aria-label="رفض التصريح @item.PermitNumber">
+                                                                                    <span class="action-icon-glyph" aria-hidden="true">✕</span>
+                                                                                    <span class="visually-hidden">رفض</span>
+                                                                                </button>
+                                                                            </form>
+                                                                        }
+
+                                                                        @if (canStopPermitNow)
+                                                                        {
+                                                                            <form asp-action="Stop" asp-route-id="@item.PermitNumber"
+                                                                                  asp-route-returnUrl="@currentUrl" method="post"
+                                                                                  class="permit-action-form">
+                                                                                @Html.AntiForgeryToken()
+                                                                                <button type="submit"
+                                                                                        class="permit-action-tile permit-action-tile-outline-danger action-icon-btn"
+                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                        data-bs-title="إيقاف" title="إيقاف"
+                                                                                        aria-label="إيقاف التصريح @item.PermitNumber">
+                                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                        <rect x="6" y="6" width="12" height="12" rx="2"
+                                                                                              fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                              stroke-linejoin="round" />
+                                                                                    </svg>
+                                                                                    <span class="visually-hidden">إيقاف</span>
+                                                                                </button>
+                                                                            </form>
+                                                                        }
+
+                                                                        @if (canReactivatePermit)
+                                                                        {
+                                                                            <form asp-action="Reactivate" asp-route-id="@item.PermitNumber"
+                                                                                  asp-route-returnUrl="@currentUrl" method="post"
+                                                                                  class="permit-action-form">
+                                                                                @Html.AntiForgeryToken()
+                                                                                <button type="submit"
+                                                                                        class="permit-action-tile permit-action-tile-outline-success action-icon-btn"
+                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                        data-bs-title="إعادة التفعيل" title="إعادة التفعيل"
+                                                                                        aria-label="إعادة تفعيل التصريح @item.PermitNumber">
+                                                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                        <path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"
+                                                                                              fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                              stroke-linecap="round" stroke-linejoin="round" />
+                                                                                    </svg>
+                                                                                    <span class="visually-hidden">إعادة التفعيل</span>
+                                                                                </button>
+                                                                            </form>
+                                                                        }
+
+                                                                        @if (canDeletePermit)
+                                                                        {
+                                                                            <a asp-action="Delete" asp-route-id="@item.PermitNumber"
+                                                                               class="permit-action-tile permit-action-tile-danger action-icon-btn"
+                                                                               data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                               data-bs-title="حذف" title="حذف"
+                                                                               aria-label="حذف التصريح @item.PermitNumber">
+                                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                    <path d="M9 4h6m-8 4h10m-9 0 .7 12h6.6L16 8M10 11v6M14 11v6" fill="none"
+                                                                                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                                                </svg>
+                                                                                <span class="visually-hidden">حذف</span>
+                                                                            </a>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                @if (Model.TotalPages > 1)
+                                {
+                                    <partial name="_ReportPagination" model="permitPagination" />
+                                }
+                            }
+                        </section>
+                    </div>

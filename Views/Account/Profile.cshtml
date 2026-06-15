@@ -1,0 +1,256 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Account.AccountProfileViewModel
+@using VehiclePermitSystemWeb.Security
+
+@{
+    ViewData["Title"] = "بياناتي";
+    var permissionCount = Model.GrantedPermissionKeys.Count;
+    var visiblePermissionGroups = AppPermissions
+        .EditorGroups
+        .Where(group => group.Permissions.Any(permission => Model.GrantedPermissionKeys.Contains(permission.Key)))
+        .ToList();
+    var displayName = string.IsNullOrWhiteSpace(Model.DisplayName) ? Model.Username : Model.DisplayName;
+    var avatarText = string.IsNullOrWhiteSpace(displayName) ? "?" : displayName.Trim()[0].ToString();
+    var managerDisplay = string.IsNullOrWhiteSpace(Model.ManagerDisplayName) ? "غير مرتبط بمدير مباشر" :
+Model.ManagerDisplayName;
+    var linkType = string.IsNullOrWhiteSpace(Model.ManagerUsername) ? "بدون ربط مباشر" : "ارتباط مباشر";
+    var loginPasswordStatus = Model.MustChangePassword
+        ? "مطلوب تغيير كلمة المرور عند الدخول التالي."
+        : "يمكن تغيير كلمة المرور من صفحة مستقلة دون التأثير على بقية الصلاحيات.";
+    var gatePinStatus = Model.CanScanOperations
+        ? (Model.MustChangeOperatorPin
+            ? "مطلوب تغيير PIN البوابة عند الدخول التشغيلي التالي."
+            : "يمكن تغيير PIN البوابة من شاشة الدخول التشغيلي عند الحاجة.")
+        : "غير متاح لأن الحساب لا يملك صلاحية المسح والتشغيل.";
+}
+
+<div class="account-profile-shell">
+    <div class="account-profile-toolbar">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm">العودة إلى القائمة</a>
+    </div>
+
+    <section class="account-profile-overview card-permit app-card-surface app-form-surface compact-form-card">
+        <div class="account-profile-overview-main">
+            <div class="account-profile-overview-copy">
+                <span class="account-profile-kicker">عرض بيانات المستخدم</span>
+                <h1>@displayName</h1>
+                <div class="account-profile-overview-badges">
+                    <span class="account-profile-status-badge @(Model.IsActive ? "is-active" : "is-inactive")">
+                        @(Model.IsActive ? "نشط" : "موقوف")
+                    </span>
+                    <span class="account-profile-inline-badge ltr-field">@Model.Username</span>
+                    <span class="account-profile-inline-badge">@(string.IsNullOrWhiteSpace(Model.RoleDisplayName) ? "-"                        : Model.RoleDisplayName)</span>
+                </div>
+            </div>
+
+            <div class="account-profile-avatar-block">
+                <div class="account-profile-avatar-ring">@avatarText</div>
+                <strong>@displayName</strong>
+                <span>@(string.IsNullOrWhiteSpace(Model.Department) ? "بدون قسم" : Model.Department)</span>
+            </div>
+        </div>
+
+        <div class="account-profile-overview-stats">
+            <div class="account-profile-metric">
+                <span>القسم</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.Department) ? "-" : Model.Department)</strong>
+            </div>
+            <div class="account-profile-metric">
+                <span>الدور</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.RoleDisplayName) ? "-" : Model.RoleDisplayName)</strong>
+            </div>
+            <div class="account-profile-metric">
+                <span>إجمالي الصلاحيات</span>
+                <strong>@permissionCount</strong>
+            </div>
+            <div class="account-profile-metric">
+                <span>التشغيل والمسح</span>
+                <strong>@(Model.CanScanOperations ? "مفعل" : "غير مفعل")</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="account-profile-showcase-grid">
+        <article
+            class="account-profile-display-card account-profile-display-card-account card-permit app-card-surface app-form-surface compact-form-card">
+            <div class="account-profile-display-head">
+                <div>
+                    <span class="account-profile-kicker">بيانات الحساب</span>
+                    <h2>بيانات الحساب</h2>
+                </div>
+                <span class="account-profile-display-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16"
+                         fill="currentColor">
+                        <path
+                        d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 1c-2.761 0-5 1.79-5 4v1h10v-1c0-2.21-2.239-4-5-4Z" />
+                    </svg>
+                </span>
+            </div>
+
+            <div class="account-profile-data-stack account-profile-data-stack-centered">
+                <div class="account-profile-data-row">
+                    <span>اسم المستخدم</span>
+                    <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.Username) ? "-" :
+                                                                                                                                                Model.Username)</strong>
+                    </div>
+                    <div class="account-profile-data-row">
+                        <span>الاسم الكامل</span>
+                        <strong>@(string.IsNullOrWhiteSpace(Model.FullName) ? "-" : Model.FullName)</strong>
+                    </div>
+                    <div class="account-profile-data-row">
+                        <span>الجوال</span>
+                        <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.PhoneNumber) ? "-" :
+                                                                                                                                                                    Model.PhoneNumber)</strong>
+                        </div>
+                        <div class="account-profile-data-row">
+                            <span>البريد الإلكتروني</span>
+                            <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</strong>
+                        </div>
+                        <div class="account-profile-data-row">
+                            <span>القسم</span>
+                            <strong>@(string.IsNullOrWhiteSpace(Model.Department) ? "-" : Model.Department)</strong>
+                        </div>
+                        <div class="account-profile-data-row">
+                            <span>المسمى الوظيفي</span>
+                            <strong>@(string.IsNullOrWhiteSpace(Model.JobTitle) ? "-" : Model.JobTitle)</strong>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="account-profile-display-card card-permit app-card-surface app-form-surface compact-form-card">
+                    <div class="account-profile-display-head">
+                        <div>
+                            <span class="account-profile-kicker account-profile-kicker-warm">بيانات الاعتماد</span>
+                            <h2>بيانات الاعتماد</h2>
+                        </div>
+                        <span class="account-profile-display-icon account-profile-display-icon-warm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16"
+                                 fill="currentColor">
+                                <path
+                                d="M8 1a2.5 2.5 0 0 0-2.5 2.5V6H5a2 2 0 0 0-2 2v4.5A2.5 2.5 0 0 0 5.5 15h5a2.5 2.5 0 0 0 2.5-2.5V8a2 2 0 0 0-2-2h-.5V3.5A2.5 2.5 0 0 0 8 1Zm1.5 5h-3V3.5a1.5 1.5 0 0 1 3 0V6Z" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <div class="account-profile-credential-grid">
+                        <div class="account-profile-credential-box">
+                            <span class="account-profile-mini-kicker">دخول الموقع</span>
+                            <strong>••••••••••••</strong>
+                            <p>@loginPasswordStatus</p>
+                            <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-primary btn-sm">تغيير
+                                كلمة المرور</a>
+                            </div>
+
+                            <div class="account-profile-credential-box @(Model.CanScanOperations ? string.Empty : "is-disabled")">
+                                <span class="account-profile-mini-kicker">صلاحية المسح والبوابة</span>
+                                <strong>@(Model.CanScanOperations ? "PIN البوابة مفعل" : "غير متاح")</strong>
+                                <p>@gatePinStatus</p>
+                                <div class="account-profile-credential-meta">
+                                    <span>باركود المشغل</span>
+                                    <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.OperatorBadgeCode) ? "-" :
+                                                                                                                                                                                                                                    Model.OperatorBadgeCode)</strong>
+                                    </div>
+                                    @if (Model.CanScanOperations)
+                                    {
+                                        <form asp-controller="Account" asp-action="ResetMyTemporaryOperatorPin" method="post"
+                                              class="account-profile-inline-form">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-warning btn-sm">إعادة تعيين PIN المؤقت</button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="account-profile-display-card card-permit app-card-surface app-form-surface compact-form-card">
+                            <div class="account-profile-display-head">
+                                <div>
+                                    <span class="account-profile-kicker account-profile-kicker-cool">الربط الإداري</span>
+                                    <h2>الربط الإداري</h2>
+                                </div>
+                                <span class="account-profile-display-icon account-profile-display-icon-cool">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16"
+                                         fill="currentColor">
+                                        <path
+                                        d="M6 3a3 3 0 1 1-5.999.001A3 3 0 0 1 6 3Zm10 3a3 3 0 1 1-5.999.001A3 3 0 0 1 16 6ZM6 13a3 3 0 1 1-5.999.001A3 3 0 0 1 6 13Zm1-9.5h2v1H7v-1Zm2 8H7v1h2v-1Zm1.854-5.354.708.708-1.5 1.5-.708-.708 1.5-1.5Zm-1.5 2.793 1.5 1.5-.708.708-1.5-1.5.708-.708Z" />
+                                    </svg>
+                                </span>
+                            </div>
+
+                            <div class="account-profile-data-stack">
+                                <div class="account-profile-data-row">
+                                    <span>اسم المدير المباشر</span>
+                                    <strong>@managerDisplay</strong>
+                                </div>
+                                <div class="account-profile-data-row">
+                                    <span>القسم التابع له</span>
+                                    <strong>@(string.IsNullOrWhiteSpace(Model.Department) ? "-" : Model.Department)</strong>
+                                </div>
+                                <div class="account-profile-data-row">
+                                    <span>نوع الارتباط</span>
+                                    <strong>@linkType</strong>
+                                </div>
+                                <div class="account-profile-data-row">
+                                    <span>إدارة الحساب</span>
+                                    <strong>للعرض فقط من هذه الشاشة</strong>
+                                </div>
+                                <div class="account-profile-data-row">
+                                    <span>حالة الحساب</span>
+                                    <strong>@(Model.IsActive ? "يمكن استخدام الحساب" : "الحساب موقوف")</strong>
+                                </div>
+                                <div class="account-profile-data-row">
+                                    <span>إجمالي الصلاحيات</span>
+                                    <strong>@permissionCount صلاحية</strong>
+                                </div>
+                            </div>
+                        </article>
+                    </section>
+
+                    <section class="account-profile-permissions-panel card-permit app-card-surface app-form-surface compact-form-card">
+                        <div class="account-profile-permissions-head">
+                            <div class="account-profile-permissions-copy">
+                                <span class="account-profile-kicker account-profile-kicker-cool">الصلاحيات الممنوحة للمستخدم</span>
+                                <h2>عرض الصلاحيات فقط</h2>
+                                <p>الصلاحيات أدناه معروضة للقراءة فقط. لا يمكن تعديلها من صفحة حسابك الشخصي.</p>
+                            </div>
+                            <span class="account-profile-permission-total">@permissionCount</span>
+                        </div>
+
+                        @if (visiblePermissionGroups.Count == 0)
+                        {
+                            <div class="account-profile-empty-state">لا توجد صلاحيات مفعلة لهذا الحساب حاليًا.</div>
+                        }
+                        else
+                        {
+                            <div class="account-profile-permission-groups">
+                                @foreach (var group in visiblePermissionGroups)
+                                {
+                                    var groupGrantedCount = group.Permissions.Count(permission =>
+                            Model.GrantedPermissionKeys.Contains(permission.Key));
+
+                                    <section class="account-profile-permission-group">
+                                        <div class="account-profile-permission-group-head">
+                                            <div>
+                                                <h3>@group.Title</h3>
+                                                <p>@group.Description</p>
+                                            </div>
+                                            <span class="account-profile-permission-group-badge">@groupGrantedCount /
+                                                @group.Permissions.Count</span>
+                                            </div>
+
+                                            <div class="account-profile-permission-box-grid">
+                                                @foreach (var permission in group.Permissions)
+                                                {
+                                                    var isGranted = Model.GrantedPermissionKeys.Contains(permission.Key);
+
+                                                    <div class="account-profile-permission-box @(isGranted ? "is-granted" : "is-not-granted")">
+                                                        <span class="account-profile-permission-square">@(isGranted ? "✓" : string.Empty)</span>
+                                                        <span>@permission.ItemLabel</span>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </section>
+                                    }
+                                </div>
+                            }
+                        </section>
+                    </div>

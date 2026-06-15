@@ -1,0 +1,583 @@
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Users.UserManagementDashboardViewModel
+
+@{
+    ViewData["Title"] = "المستخدمون والصلاحيات";
+    var totalUsers = Model.Users.Count;
+    var activeUsers = Model.Users.Count(x => x.IsActive);
+    var inactiveUsers = totalUsers - activeUsers;
+    var totalPermissions = Model.PermissionDistribution.Values.Sum();
+    var currentUsername = User.Identity?.Name ?? string.Empty;
+    var recentActivityCount = Model.RecentActivities.Count;
+    var canOpenLeadershipCenter = User.HasPermission(AppPermissions.ManageDepartments);
+    var canViewAuditLogs = User.IsSuperAdmin() || User.IsInRole(AppRoles.GeneralManager) ||
+User.IsInRole(AppRoles.DepartmentManager) ||
+User.IsInRole(AppRoles.SystemAdmin);
+    var topRole = Model.RoleDistribution.OrderByDescending(x => x.Value).FirstOrDefault();
+}
+
+<div class="users-index-shell users-index-shell-compact">
+    @await Html.PartialAsync("_CredentialNotice")
+
+    <div class="users-index-hero app-card-surface">
+        <div class="users-index-hero-copy">
+            <span class="users-section-kicker">إدارة الوصول</span>
+            <div class="users-index-title-row">
+                <span class="users-index-title-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M16 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-4A4.5 4.5 0 0 0 3 18.5V20M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM17 8v6M14 11h6" />
+                    </svg>
+                </span>
+                <h1>المستخدمون والصلاحيات</h1>
+            </div>
+            <p>لوحة حديثة لإدارة الحسابات، فحص توزيع الأدوار، ومراجعة آخر التغييرات مع بحث وفلاتر مباشرة داخل الجدول.
+            </p>
+            <div class="users-index-actions">
+                <a asp-action="Create" class="btn btn-primary btn-sm">إضافة مستخدم</a>
+                @if (canOpenLeadershipCenter)
+                {
+                    <a asp-controller="Administration" asp-action="Leadership" class="btn btn-outline-secondary btn-sm">مركز القيادات</a>
+                }
+                @if (canViewAuditLogs)
+                {
+                    <a asp-action="ActivityLog" class="btn btn-outline-primary btn-sm">سجل العمليات</a>
+                }
+            </div>
+        </div>
+
+        <div class="users-index-hero-stats">
+            <div class="users-index-stat users-index-stat-total"><span>إجمالي المستخدمين</span><strong>@totalUsers</strong><small>حساب مسجل</small></div>
+            <div class="users-index-stat users-index-stat-active"><span>النشطون</span><strong>@activeUsers</strong><small>يمكنهم الدخول الآن</small></div>
+            <div class="users-index-stat users-index-stat-inactive"><span>الموقوفون</span><strong>@inactiveUsers</strong><small>وصولهم معطل</small></div>
+            <div class="users-index-stat users-index-stat-role"><span>أعلى دور انتشارًا</span><strong>@(string.IsNullOrWhiteSpace(topRole.Key)
+                                                                                                                                                                                                                                    ? "-" : topRole.Key)</strong></div>
+            </div>
+        </div>
+
+        <div class="users-index-summary-grid">
+            <div class="users-card app-card-surface">
+                <div class="users-card-header users-card-header-inline">
+                    <div>
+                        <span class="users-section-kicker">التوزيع</span>
+                        <h2>توزيع الأدوار</h2>
+                    </div>
+                    <span class="users-count-pill">@Model.RoleDistribution.Count أدوار</span>
+                </div>
+                <div class="users-mini-list">
+                    @foreach (var item in Model.RoleDistribution)
+                    {
+                        <div class="users-mini-list-row"><span>@item.Key</span><strong>@item.Value</strong></div>
+                    }
+                </div>
+            </div>
+
+            <div class="users-card app-card-surface">
+                <div class="users-card-header users-card-header-inline">
+                    <div>
+                        <span class="users-section-kicker">التغطية</span>
+                        <h2>الصلاحيات الممنوحة</h2>
+                    </div>
+                    <span class="users-count-pill">@totalPermissions مجموع المنح</span>
+                </div>
+                <div class="users-mini-list users-mini-list-scroll">
+                    @foreach (var item in Model.PermissionDistribution)
+                    {
+                        <div class="users-mini-list-row"><span>@item.Key</span><strong>@item.Value</strong></div>
+                    }
+                </div>
+            </div>
+
+            <div class="users-card app-card-surface">
+                <div class="users-card-header users-card-header-inline">
+                    <div>
+                        <span class="users-section-kicker">العرض المباشر</span>
+                        <h2>روابط شاشات العرض</h2>
+                    </div>
+                    <span class="users-count-pill">مباشر</span>
+                </div>
+                <div class="users-link-stack">
+                    <a asp-controller="Display" asp-action="Gate">@Url.Action("Gate", "Display")</a>
+                    <a asp-controller="Display" asp-action="Visits">@Url.Action("Visits", "Display")</a>
+                </div>
+                <p class="users-card-footnote">يمكن فتح هذه الروابط مباشرة للمستخدمين المخولين أو استخدامها مع مفاتيح الوصول
+                    في صفحات العرض.</p>
+                </div>
+            </div>
+
+            @if (canViewAuditLogs)
+            {
+                <div class="users-card app-card-surface">
+                    <div class="users-card-header users-card-header-inline">
+                        <div>
+                            <span class="users-section-kicker">المتابعة</span>
+                            <h2>آخر عمليات المستخدمين</h2>
+                        </div>
+                        <div class="users-inline-actions">
+                            <span class="users-count-pill">@recentActivityCount عملية</span>
+                            <a asp-action="ActivityLog" class="btn btn-outline-primary btn-sm">التقرير الكامل</a>
+                        </div>
+                    </div>
+
+                    @if (Model.RecentActivities.Count == 0)
+                    {
+                        <div class="users-empty-state">
+                            <h3>لا توجد عمليات حديثة</h3>
+                            <p>ستظهر هنا عمليات الإضافة والتعديل والتفعيل وتسجيل الدخول فور حدوثها.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="users-activity-stream">
+                            @foreach (var activity in Model.RecentActivities)
+                            {
+                                var activityPrimaryName = string.IsNullOrWhiteSpace(activity.DisplayName) ? activity.Username :
+                    activity.DisplayName;
+                                <article class="users-activity-item">
+                                    <div class="users-activity-item-head">
+                                        <span class="users-activity-badge">@activity.ActionLabel</span>
+                                        <time
+                                        class="ltr-field">@VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.Format(activity.OccurredAt)</time>
+                                    </div>
+                                    <strong>@activityPrimaryName</strong>
+                                    <p>@activity.Message</p>
+                                    <small>@activity.GetActorDisplay()</small>
+                                </article>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="users-card app-card-surface">
+                <div class="users-card-header users-card-header-inline users-card-header-wrap">
+                    <div>
+                        <span class="users-section-kicker">الفهرسة</span>
+                        <h2>جدول المستخدمين</h2>
+                    </div>
+                    <div class="users-inline-actions users-inline-actions-grow">
+                        <input type="search" class="form-control form-control-sm" id="users-table-search"
+                               placeholder="ابحث بالاسم أو رقم الهوية أو القسم" />
+                        <select class="form-select form-select-sm" id="users-role-filter">
+                            <option value="">كل الأدوار</option>
+                            @foreach (var role in Model.Users
+                                                                                                                    .OrderBy(user => AppRoles.GetSortOrder(user.Role, user.IsSuperAdmin))
+                                                                                                                    .ThenBy(user => AppRoles.GetDisplayName(user))
+                                                                                                                    .Select(AppRoles.GetDisplayName)
+                                                                                                                    .Distinct())
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                        <select class="form-select form-select-sm" id="users-status-filter">
+                            <option value="">كل الحالات</option>
+                            <option value="active">نشط</option>
+                            <option value="inactive">موقوف</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (Model.Users.Count == 0)
+                {
+                    <div class="users-empty-state">
+                        <h3>لا يوجد مستخدمون بعد</h3>
+                        <p>ابدأ بإضافة مستخدم جديد لتظهر هنا بيانات الحسابات وتوزيع الصلاحيات.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="users-filter-summary">
+                        <span>النتائج المعروضة</span>
+                        <strong id="users-visible-count">@totalUsers</strong>
+                        <span>من أصل</span>
+                        <strong>@totalUsers</strong>
+                        <span class="users-page-size-pill">5 موظفين لكل صفحة</span>
+                    </div>
+
+                    <div class="table-responsive users-table-responsive">
+                        <table class="table align-middle app-data-table users-index-table">
+                            <thead>
+                                <tr>
+                                    <th>الحساب</th>
+                                    <th>الدور</th>
+                                    <th>التنظيم</th>
+                                    <th>الوصول الفعلي</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.Users)
+                                {
+                                    var userPrimaryName = string.IsNullOrWhiteSpace(user.FullName)
+                                        ? (string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName)
+                                        : user.FullName;
+                                    var userSecondaryName = string.IsNullOrWhiteSpace(user.DisplayName) ||
+                            string.Equals(userPrimaryName, user.DisplayName, StringComparison.OrdinalIgnoreCase)
+                                        ? user.Username
+                                        : user.DisplayName;
+                                    var grantedPermissions = AppPermissions.GetGrantedPermissions(user).ToList();
+                                    var roleDisplay = AppRoles.GetDisplayName(user);
+                                    var managedDepartmentName = Model.ManagedDepartmentNamesByUsername.TryGetValue(
+                                        user.Username,
+                                        out var resolvedManagedDepartmentName
+                                    )
+                                        ? resolvedManagedDepartmentName
+                                        : string.Empty;
+                                    var managedDepartmentId = Model.ManagedDepartmentIdsByUsername.TryGetValue(
+                                        user.Username,
+                                        out var resolvedManagedDepartmentId
+                                    )
+                                        ? resolvedManagedDepartmentId
+                                        : 0;
+                                    var isDepartmentManagerWithoutManagedDepartment = string.Equals(
+                                        user.Role,
+                                        AppRoles.DepartmentManager,
+                                        StringComparison.OrdinalIgnoreCase
+                                    ) && string.IsNullOrWhiteSpace(managedDepartmentName);
+                                    var accessPreviewPermissions = grantedPermissions.Take(2).ToList();
+                                    var accessRemainingCount = Math.Max(0, grantedPermissions.Count - accessPreviewPermissions.Count);
+                                    var rowSearch = string.Join(' ', new[] { user.Username, userPrimaryName, userSecondaryName,
+                    user.Department, user.JobTitle, roleDisplay }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                                    <tr data-user-row="true" data-role="@roleDisplay"
+                                        data-status="@(user.IsActive ? "active" : "inactive")"
+                                        data-search="@rowSearch.ToLowerInvariant()">
+                                        <td data-label="الحساب">
+                                            <div class="users-table-identity users-table-identity-compact">
+                                                <span class="users-username-pill ltr-field">@user.Username</span>
+                                            </div>
+                                        </td>
+                                        <td data-label="الدور">
+                                            <div class="users-role-cell">
+                                                <span class="users-role-pill">@roleDisplay</span>
+                                                @if (user.IsSuperAdmin)
+                                                {
+                                                    <small class="text-warning fw-semibold">مالك النظام</small>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(user.JobTitle))
+                                                {
+                                                    <small>@user.JobTitle</small>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td data-label="التنظيم">
+                                            <div class="users-org-cell">
+                                                <strong>@(string.IsNullOrWhiteSpace(user.Department) ? "بدون قسم" :
+                                                                                                                                                                                                                                                                                                                                                                                                                user.Department)</strong>
+                                                    @if (!string.IsNullOrWhiteSpace(managedDepartmentName))
+                                                    {
+                                                        <small>يدير: @managedDepartmentName</small>
+                                                    }
+                                                    else if (isDepartmentManagerWithoutManagedDepartment)
+                                                    {
+                                                        <small class="text-warning">بانتظار قسم مُدار</small>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td data-label="الوصول الفعلي">
+                                                <div class="users-access-cell">
+                                                    <div
+                                                        class="users-access-state @(user.IsActive ? "users-access-state-active" : "users-access-state-inactive")">
+                                                        <span class="users-access-state-dot"></span>
+                                                        <span>@(user.IsActive ? "نشط" : "موقوف")</span>
+                                                    </div>
+                                                    <div class="users-access-mini-list">
+                                                        @foreach (var permission in accessPreviewPermissions)
+                                                        {
+                                                            <span class="users-access-mini">@AppPermissions.GetDisplayName(permission)</span>
+                                                        }
+                                                        @if (accessRemainingCount > 0)
+                                                        {
+                                                            <span class="users-access-mini users-access-mini-more">+@accessRemainingCount</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td data-label="الإجراءات">
+                                                <div class="users-actions-inline users-actions-menu">
+                                                    <a asp-controller="@(string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase) ? "Account" : "Users")"
+                                                           asp-action="@(string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase) ? "Profile" : "Edit")"
+                                                           asp-route-id="@(string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase) ? null : user.Username)"
+                                                           class="users-icon-action users-icon-action-primary users-icon-action-tooltip"
+                                                           data-bs-toggle="tooltip"
+                                                           data-bs-title="@(string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase) ? "بياناتي" : "تعديل")"
+                                                           title="@(string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase) ? "بياناتي" : "تعديل")"
+                                                           aria-label="@(string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase) ? $"عرض بياناتي {userPrimaryName}" : $"تعديل المستخدم {userPrimaryName}")">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <path
+                                                            d="M4 20h4l10.3-10.3a1.4 1.4 0 0 0 0-2L16.3 5.7a1.4 1.4 0 0 0-2 0L4 16v4zM13.5 6.5l4 4"
+                                                            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                                            stroke-linejoin="round" />
+                                                        </svg>
+                                                    </a>
+                                                    <a asp-action="PrintUserBadge" asp-route-id="@user.Username"
+                                                       class="users-icon-action users-icon-action-tooltip"
+                                                       data-bs-toggle="tooltip"
+                                                       data-bs-title="بطاقة الموظف"
+                                                       title="بطاقة الموظف"
+                                                       aria-label="طباعة بطاقة الموظف @userPrimaryName"
+                                                       target="_blank">
+                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                            <rect x="3" y="5" width="18" height="14" rx="2" fill="none"
+                                                                  stroke="currentColor" stroke-width="1.8" />
+                                                            <path d="M8 10h.01M11 10h5M11 14h5M8 14h.01" fill="none" stroke="currentColor"
+                                                                  stroke-width="1.8" stroke-linecap="round" />
+                                                        </svg>
+                                                    </a>
+                                                    @if (user.CanScanOperations && !string.IsNullOrWhiteSpace(user.OperatorBadgeCode))
+                                                    {
+                                                        <a asp-action="PrintOperatorBadge" asp-route-id="@user.Username"
+                                                           class="users-icon-action users-icon-action-tooltip"
+                                                           data-bs-toggle="tooltip"
+                                                           data-bs-title="بطاقة البوابة"
+                                                           title="بطاقة البوابة"
+                                                           aria-label="طباعة بطاقة البوابة @userPrimaryName"
+                                                           target="_blank">
+                                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path d="M5 5h4v4H5zM15 5h4v4h-4zM5 15h4v4H5zM12 5v14M15 15h4v4h-4z" fill="none"
+                                                                      stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                                                      stroke-linejoin="round" />
+                                                            </svg>
+                                                        </a>
+                                                    }
+                                                    @if (!string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase)
+                                                                                                                                                                                                                                                                                                    && !user.IsSuperAdmin)
+                                                    {
+                                                        <form asp-action="@(user.IsActive ? "Deactivate" : "Activate")"
+                                                              asp-route-id="@user.Username" method="post" class="users-inline-form"
+                                                              data-confirm-message="@(user.IsActive ? $"هل تريد إيقاف المستخدم {userPrimaryName}؟" : $"هل تريد تفعيل المستخدم {userPrimaryName}؟")">
+                                                            @Html.AntiForgeryToken()
+                                                            <button type="submit"
+                                                                    class="users-icon-action users-icon-action-tooltip @(user.IsActive ? "users-icon-action-danger" : "users-icon-action-success")"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-title="@(user.IsActive ? "إيقاف" : "تفعيل")"
+                                                                    title="@(user.IsActive ? "إيقاف" : "تفعيل")"
+                                                                    aria-label="@(user.IsActive ? "إيقاف" : "تفعيل") المستخدم @userPrimaryName">
+                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <path d="M12 3v8M7 5.8a8 8 0 1 0 10 0" fill="none" stroke="currentColor"
+                                                                          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                                </svg>
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                    <div class="dropdown users-row-dropdown">
+                                                        <button type="button"
+                                                                class="users-icon-action users-icon-action-more"
+                                                                data-bs-toggle="dropdown"
+                                                                aria-expanded="false"
+                                                                aria-label="إجراءات إضافية للمستخدم @userPrimaryName">
+                                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                <path d="M12 6h.01M12 12h.01M12 18h.01" fill="none" stroke="currentColor"
+                                                                      stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                                                            </svg>
+                                                        </button>
+                                                        <div class="dropdown-menu dropdown-menu-end users-action-dropdown">
+                                                            <span class="dropdown-item-text">@roleDisplay</span>
+                                                            @if (!string.IsNullOrWhiteSpace(user.Department))
+                                                            {
+                                                                <span class="dropdown-item-text">القسم: @user.Department</span>
+                                                            }
+                                                            @if (!string.IsNullOrWhiteSpace(managedDepartmentName) && canOpenLeadershipCenter)
+                                                            {
+                                                                <a class="dropdown-item"
+                                                                   asp-controller="Administration"
+                                                                   asp-action="Leadership"
+                                                                   asp-route-managerDepartmentId="@managedDepartmentId">مراجعة التعيين القيادي</a>
+                                                            }
+                                                            @if (user.IsSuperAdmin)
+                                                            {
+                                                                <span class="dropdown-item-text users-current-inline">محمي</span>
+                                                            }
+                                                            else if (string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase))
+                                                            {
+                                                                <span class="dropdown-item-text users-current-inline">الحالي</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="users-pagination-shell" id="users-pagination-shell" hidden>
+                            <div class="users-pagination-nav-group">
+                                <button type="button" class="users-pagination-button" id="users-page-prev">السابق</button>
+                                <button type="button" class="users-pagination-button" id="users-page-next">التالي</button>
+                            </div>
+                            <div class="users-pagination" id="users-pagination"></div>
+                            <span class="users-pagination-info" id="users-page-info"></span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <script nonce="@(Context.Items["CspScriptNonce"])">
+                document.addEventListener("DOMContentLoaded", function () {
+                    const searchInput = document.getElementById("users-table-search");
+                    const roleFilter = document.getElementById("users-role-filter");
+                    const statusFilter = document.getElementById("users-status-filter");
+                    const rows = Array.from(document.querySelectorAll("[data-user-row='true']"));
+                    const visibleCount = document.getElementById("users-visible-count");
+                    const paginationShell = document.getElementById("users-pagination-shell");
+                    const pagination = document.getElementById("users-pagination");
+                    const pageInfo = document.getElementById("users-page-info");
+                    const prevButton = document.getElementById("users-page-prev");
+                    const nextButton = document.getElementById("users-page-next");
+                    const pageSize = 5;
+                    let currentPage = 1;
+
+                    if (window.bootstrap?.Tooltip) {
+                        document.querySelectorAll("[data-bs-toggle='tooltip']").forEach(function (element) {
+                            new window.bootstrap.Tooltip(element, { trigger: "hover focus" });
+                        });
+                    }
+
+                    function createPageButton(pageNumber, label, isActive) {
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className = `users-pagination-button${isActive ? " is-active" : ""}`;
+                        button.textContent = label;
+                        button.setAttribute("aria-label", `الانتقال إلى الصفحة ${pageNumber}`);
+                        if (isActive) {
+                            button.setAttribute("aria-current", "page");
+                        }
+
+                        button.addEventListener("click", function () {
+                            currentPage = pageNumber;
+                            applyUsersTableFilter();
+                        });
+
+                        return button;
+                    }
+
+                    function createEllipsis() {
+                        const ellipsis = document.createElement("span");
+                        ellipsis.className = "users-pagination-ellipsis";
+                        ellipsis.textContent = "...";
+                        return ellipsis;
+                    }
+
+                    function renderPagination(totalPages, totalMatches, currentVisible) {
+                        if (!pagination || !paginationShell) {
+                            return;
+                        }
+
+                        pagination.innerHTML = "";
+
+                        if (pageInfo) {
+                            pageInfo.textContent = totalMatches === 0
+                                ? "لا توجد نتائج مطابقة"
+                                : `صفحة ${currentPage} من ${totalPages} • ${currentVisible} من ${totalMatches}`;
+                        }
+
+                        if (prevButton) {
+                            prevButton.disabled = currentPage <= 1 || totalMatches === 0;
+                        }
+
+                        if (nextButton) {
+                            nextButton.disabled = currentPage >= totalPages || totalMatches === 0;
+                        }
+
+                        if (totalPages <= 1) {
+                            paginationShell.hidden = true;
+                            return;
+                        }
+
+                        paginationShell.hidden = false;
+
+                        let startPage = Math.max(1, currentPage - 2);
+                        let endPage = Math.min(totalPages, startPage + 4);
+                        startPage = Math.max(1, endPage - 4);
+
+                        if (startPage > 1) {
+                            pagination.appendChild(createPageButton(1, "1", currentPage === 1));
+                            if (startPage > 2) {
+                                pagination.appendChild(createEllipsis());
+                            }
+                        }
+
+                        for (let page = startPage; page <= endPage; page += 1) {
+                            pagination.appendChild(createPageButton(page, String(page), currentPage === page));
+                        }
+
+                        if (endPage < totalPages) {
+                            if (endPage < totalPages - 1) {
+                                pagination.appendChild(createEllipsis());
+                            }
+                            pagination.appendChild(createPageButton(totalPages, String(totalPages), currentPage === totalPages));
+                        }
+                    }
+
+                    function applyUsersTableFilter(resetPage) {
+                        const searchValue = (searchInput?.value || "").trim().toLowerCase();
+                        const roleValue = roleFilter?.value || "";
+                        const statusValue = statusFilter?.value || "";
+                        const filteredRows = rows.filter(function (row) {
+                            const matchesSearch = !searchValue || row.dataset.search.includes(searchValue);
+                            const matchesRole = !roleValue || row.dataset.role === roleValue;
+                            const matchesStatus = !statusValue || row.dataset.status === statusValue;
+                            return matchesSearch && matchesRole && matchesStatus;
+                        });
+
+                        const totalMatches = filteredRows.length;
+                        const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
+
+                        if (resetPage) {
+                            currentPage = 1;
+                        }
+
+                        currentPage = Math.min(currentPage, totalPages);
+
+                        const startIndex = (currentPage - 1) * pageSize;
+                        const endIndex = startIndex + pageSize;
+                        const currentVisible = Math.max(0, Math.min(pageSize, totalMatches - startIndex));
+
+                        rows.forEach(function (row) {
+                            row.hidden = true;
+                        });
+
+                        filteredRows.forEach(function (row, index) {
+                            row.hidden = index < startIndex || index >= endIndex;
+                        });
+
+                        if (visibleCount) {
+                            visibleCount.textContent = totalMatches;
+                        }
+
+                        renderPagination(totalPages, totalMatches, currentVisible);
+                    }
+
+                    [searchInput, roleFilter, statusFilter].forEach(function (element) {
+                        if (!element) {
+                            return;
+                        }
+
+                        element.addEventListener("input", function () {
+                            applyUsersTableFilter(true);
+                        });
+                        element.addEventListener("change", function () {
+                            applyUsersTableFilter(true);
+                        });
+                    });
+
+                    if (prevButton) {
+                        prevButton.addEventListener("click", function () {
+                            if (currentPage > 1) {
+                                currentPage -= 1;
+                                applyUsersTableFilter();
+                            }
+                        });
+                    }
+
+                    if (nextButton) {
+                        nextButton.addEventListener("click", function () {
+                            currentPage += 1;
+                            applyUsersTableFilter();
+                        });
+                    }
+
+                    applyUsersTableFilter(true);
+                });
+            </script>

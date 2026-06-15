@@ -1,0 +1,15 @@
+@model MonitoringDashboardViewModel
+@{
+    ViewData["Title"] = "المراقبة التشغيلية";
+    ViewData["BodyClass"] = "monitoring-page-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/monitoring.css" asp-append-version="true" />
+}
+
+@await Html.PartialAsync("_MonitoringDashboardContent", Model)
+
+@section Scripts {
+    <script src="~/js/monitoring-live.js" asp-append-version="true"></script>
+}

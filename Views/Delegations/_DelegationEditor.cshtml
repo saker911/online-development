@@ -1,0 +1,430 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Delegations.DelegationManagementViewModel
+
+@{
+    var editor = Model.Editor;
+    var submitAction = editor.IsEditMode ? "Edit" : "Create";
+    var submitLabel = editor.IsEditMode ? "حفظ التعديلات" : "إنشاء التفويض";
+    var permissionGroups = AppPermissions.EditorGroups;
+    var selectedDelegatorPermissions = Model.DelegatorPermissionKeys.TryGetValue(
+        editor.DelegatorUsername,
+        out var delegatorPermissionKeys
+    )
+        ? delegatorPermissionKeys
+        : new List<string>();
+    var selectedDelegatorPermissionSet = selectedDelegatorPermissions.ToHashSet(StringComparer.Ordinal);
+}
+
+@functions {
+    private static string GetCompactPermissionLabel(
+        VehiclePermitSystemWeb.Security.AppPermissions.PermissionEditorGroup group,
+        VehiclePermitSystemWeb.Security.AppPermissions.PermissionEditorItem permission
+    )
+    {
+        if (!string.IsNullOrWhiteSpace(permission.ItemLabel))
+        {
+            return permission.ItemLabel.Trim();
+        }
+
+        var displayName = permission.DisplayName?.Trim() ?? string.Empty;
+        var prefix = string.IsNullOrWhiteSpace(group.Title) ? string.Empty : $"{group.Title}:";
+
+        return !string.IsNullOrWhiteSpace(prefix) && displayName.StartsWith(prefix, StringComparison.Ordinal)
+            ? displayName[prefix.Length..].Trim()
+            : displayName;
+    }
+}
+
+<div class="app-card-surface p-4 delegation-editor-surface">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+        <div>
+            <span class="users-section-kicker">تفويض مؤقت</span>
+            <h2 class="h4 mb-1">@(editor.IsEditMode ? "تعديل التفويض" : "إنشاء تفويض جديد")</h2>
+            <p class="text-muted mb-0">تفويض كامل أو مخصص مع تفعيل زمني وسجل مركزي متوافق مع الصلاحيات الحالية.</p>
+        </div>
+        @if (editor.IsEditMode)
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary btn-sm">العودة للقائمة</a>
+        }
+    </div>
+
+    <form asp-action="@submitAction" asp-route-id="@(editor.IsEditMode ? editor.Id : null)" method="post"
+          class="row g-3">
+        <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+        <div class="col-md-6">
+            <label asp-for="Editor.DelegatorUsername" class="form-label">المفوِّض</label>
+            <select asp-for="Editor.DelegatorUsername" class="form-select" data-smart-select="true"
+                    data-smart-select-placeholder="ابحث عن المفوِّض أو اختره">
+                <option value="">اختر المفوِّض</option>
+                @foreach (var user in Model.AvailableUsers)
+                {
+                    <option value="@user.Username">@((string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username :
+                                                                                                                                                                                            user.DisplayName)) - @user.Username</option>
+                    }
+                </select>
+                <span asp-validation-for="Editor.DelegatorUsername" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Editor.DelegateeUsername" class="form-label">المفوَّض إليه</label>
+                <select asp-for="Editor.DelegateeUsername" class="form-select" data-smart-select="true"
+                        data-smart-select-placeholder="ابحث عن المفوَّض إليه أو اختره">
+                    <option value="">اختر المفوَّض إليه</option>
+                    @foreach (var user in Model.AvailableUsers)
+                    {
+                        <option value="@user.Username">@((string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username :
+                                                                                                                                                                                                                        user.DisplayName)) - @user.Username</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Editor.DelegateeUsername" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Editor.ScopeType" class="form-label">نوع التفويض</label>
+                    <select asp-for="Editor.ScopeType" class="form-select">
+                        <option value="@DelegationScopeTypes.Full">تفويض كامل</option>
+                        <option value="@DelegationScopeTypes.Custom">تفويض مخصص</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Editor.StartAt" class="form-label">البداية</label>
+                    <input asp-for="Editor.StartAt" type="datetime-local" class="form-control delegation-date-input"
+                           lang="ar-SA" data-delegation-date-input="start" />
+                    <div class="form-text delegation-date-preview" data-delegation-date-preview="start"></div>
+                    <span asp-validation-for="Editor.StartAt" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Editor.EndAt" class="form-label">النهاية</label>
+                    <input asp-for="Editor.EndAt" type="datetime-local" class="form-control delegation-date-input"
+                           lang="ar-SA" data-delegation-date-input="end" />
+                    <div class="form-text delegation-date-preview" data-delegation-date-preview="end"></div>
+                    <span asp-validation-for="Editor.EndAt" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-12">
+                    <label asp-for="Editor.Notes" class="form-label">ملاحظات</label>
+                    <textarea asp-for="Editor.Notes" class="form-control" rows="3"
+                              placeholder="سبب التفويض أو أي ملاحظات تشغيلية"></textarea>
+                </div>
+
+                <div class="col-12">
+                    <div class="app-card-surface border p-3">
+                        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                            <div>
+                                <h3 class="h6 mb-1">الصلاحيات القابلة للتفويض</h3>
+                                <p class="text-muted small mb-0">في التفويض الكامل سيطبق النظام كل الصلاحيات القابلة للتفويض
+                                    التي يملكها المفوِّض مباشرة. في التفويض المخصص اختر ما تحتاجه فقط.</p>
+                                </div>
+                                <span asp-validation-for="Editor.SelectedPermissions" class="text-danger small"></span>
+                            </div>
+
+                            <div class="rounded-3 border bg-light-subtle p-3 mb-3" data-delegation-permission-summary>
+                                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2">
+                                    <strong>الصلاحيات المملوكة للمفوِّض حاليًا</strong>
+                                    <span class="badge rounded-pill text-bg-primary" data-owned-permission-count>
+                                        @selectedDelegatorPermissions.Count صلاحية
+                                    </span>
+                                </div>
+                                <div class="small text-muted" data-owned-permission-message>
+                                    @if (string.IsNullOrWhiteSpace(editor.DelegatorUsername))
+                                    {
+                                        <text>اختر المفوِّض أولًا لعرض الصلاحيات التي يستطيع تفويضها.</text>
+                                    }
+                                    else if (selectedDelegatorPermissions.Count == 0)
+                                    {
+                                        <text>المفوِّض المحدد لا يملك حاليًا أي صلاحية قابلة للتفويض من هذه القائمة.</text>
+                                    }
+                                    else
+                                    {
+                                        <text>المربعات المفتوحة فقط هي التي يستطيع المفوِّض منحها، أما الباقي فمغلق لأنه غير مملوك له
+                                            مباشرة.</text>
+                                        }
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 mt-3" data-owned-permission-list>
+                                        @foreach (var group in permissionGroups)
+                                        {
+                                            foreach (var permission in group.Permissions.Where(permission =>
+                        selectedDelegatorPermissionSet.Contains(permission.Key)))
+                                            {
+                                                <span
+                                                    class="badge rounded-pill delegation-owned-permission-badge">@GetCompactPermissionLabel(group,
+                                                                                permission)</span>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3 delegation-permission-groups">
+                                        @foreach (var group in permissionGroups)
+                                        {
+                                            var ownedInGroup = group.Permissions.Count(permission => selectedDelegatorPermissionSet.Contains(permission.Key));
+                                            <div class="col-lg-6">
+                                                <div class="permission-section-card delegation-permission-card h-100 @(ownedInGroup > 0 ? "has-owned-permissions" : string.Empty)"
+                                                     data-delegation-group-card="@group.Key">
+                                                    <div class="permission-section-header delegation-permission-header">
+                                                        <button type="button"
+                                                                class="delegation-permission-header-toggle collapsed"
+                                                                data-delegation-group-toggle="@group.Key"
+                                                                aria-expanded="false"
+                                                                aria-controls="delegation-group-@group.Key">
+                                                            <span class="delegation-permission-header-copy">
+                                                                <strong>@group.Title</strong>
+                                                                <span class="delegation-permission-count @(ownedInGroup > 0 ? "is-owned" : string.Empty)"
+                                                                      data-delegation-group-count="@group.Key">@group.Permissions.Count صلاحية</span>
+                                                            </span>
+                                                            <span class="delegation-permission-chevron" aria-hidden="true">⌃</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="permission-section-note delegation-permission-note">@group.Description</div>
+                                                    <div id="delegation-group-@group.Key"
+                                                         class="collapse delegation-permission-body"
+                                                         hidden
+                                                         data-delegation-group-body="@group.Key">
+                                                        <div class="permission-grid delegation-permission-grid">
+                                                        @foreach (var permission in group.Permissions)
+                                                        {
+                                                            var isOwnedByDelegator = selectedDelegatorPermissionSet.Contains(permission.Key);
+                                                            var compactLabel = GetCompactPermissionLabel(group, permission);
+                                                            var permissionStatusLabel = isOwnedByDelegator ? "يملكها المفوِّض ويمكن تفويضها" : "غير مملوكة للمفوِّض";
+                                                            <label
+                                                                class="permission-toggle delegation-permission-toggle @(isOwnedByDelegator ? string.Empty : "is-unavailable")"
+                                                                for="delegation-@permission.Key">
+                                                                <input class="form-check-input" type="checkbox" name="Editor.SelectedPermissions"
+                                                                       value="@permission.Key" id="delegation-@permission.Key"
+                                                                       data-delegation-permission-checkbox="true"
+                                                                @(editor.SelectedPermissions.Contains(permission.Key, StringComparer.Ordinal) ?
+                                                                                                                                                                                                                                                                                                                                                                                                                        "checked" : null) @(isOwnedByDelegator ? null : "disabled") />
+                                                                <span class="delegation-permission-copy">
+                                                                    <strong title="@permission.DisplayName">@compactLabel</strong>
+                                                                </span>
+                                                                <span
+                                                                class="delegation-permission-state @(isOwnedByDelegator ? "is-owned" : "is-blocked")"
+                                                                data-permission-state="true" title="@permissionStatusLabel"
+                                                                aria-label="@permissionStatusLabel"></span>
+                                                            </label>
+                                                        }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-primary">@submitLabel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <script nonce="@(Context.Items["CspScriptNonce"])">
+                        (() => {
+                            const permissionMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DelegatorPermissionKeys));
+                            const permissionDisplayNames = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      permissionGroups
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      .SelectMany(group => group.Permissions.Select(permission => new
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              permission.Key,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Label = GetCompactPermissionLabel(group, permission)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 }))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      .ToDictionary(permission => permission.Key, permission => permission.Label, StringComparer.Ordinal)
+                                            ));
+                            const delegatorSelect = document.getElementById('Editor_DelegatorUsername');
+                            const delegateeSelect = document.getElementById('Editor_DelegateeUsername');
+                            const scopeTypeSelect = document.getElementById('Editor_ScopeType');
+                            const permissionCheckboxes = Array.from(document.querySelectorAll('[data-delegation-permission-checkbox="true"]'));
+                            const delegationGroupToggles = Array.from(document.querySelectorAll('[data-delegation-group-toggle]'));
+                            const delegationGroupCards = Array.from(document.querySelectorAll('[data-delegation-group-card]'));
+                            const summaryCount = document.querySelector('[data-owned-permission-count]');
+                            const summaryMessage = document.querySelector('[data-owned-permission-message]');
+                            const summaryList = document.querySelector('[data-owned-permission-list]');
+                            let isSynchronizingDelegationUsers = false;
+
+                            if (!delegatorSelect || !delegateeSelect || !scopeTypeSelect || permissionCheckboxes.length === 0) {
+                                return;
+                            }
+
+                            function setDelegationGroupExpanded(button, body, expanded) {
+                                if (!button || !body) {
+                                    return;
+                                }
+
+                                button.classList.toggle('collapsed', !expanded);
+                                button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                                body.classList.toggle('show', expanded);
+                                body.hidden = !expanded;
+                            }
+
+                            delegationGroupToggles.forEach(function (button) {
+                                const groupKey = button.getAttribute('data-delegation-group-toggle');
+                                const body = groupKey
+                                    ? document.querySelector('[data-delegation-group-body="' + groupKey + '"]')
+                                    : null;
+
+                                setDelegationGroupExpanded(button, body, false);
+
+                                button.addEventListener('click', function () {
+                                    const expanded = button.getAttribute('aria-expanded') === 'true';
+                                    setDelegationGroupExpanded(button, body, !expanded);
+                                });
+                            });
+
+                            function syncSmartSelectDisplay(select) {
+                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+
+                            function updateExcludedUserOption(select, excludedUsername) {
+                                const wrapper = select.closest('[data-smart-select-wrapper]');
+                                const optionButtons = wrapper
+                                    ? Array.from(wrapper.querySelectorAll('.smart-select-option'))
+                                    : [];
+
+                                Array.from(select.options).forEach(function (option, index) {
+                                    const shouldExclude = !!excludedUsername && !!option.value && option.value === excludedUsername;
+                                    option.disabled = shouldExclude;
+                                    option.hidden = shouldExclude;
+
+                                    const button = optionButtons[index];
+                                    if (!button) {
+                                        return;
+                                    }
+
+                                    button.disabled = shouldExclude;
+                                    button.hidden = shouldExclude;
+
+                                    if (shouldExclude) {
+                                        button.classList.remove('is-active');
+                                        button.classList.remove('is-selected');
+                                        button.setAttribute('aria-selected', 'false');
+                                    }
+                                });
+
+                                if (excludedUsername && select.value === excludedUsername) {
+                                    select.value = '';
+                                    syncSmartSelectDisplay(select);
+                                }
+                            }
+
+                            function syncDelegationUserOptions() {
+                                if (isSynchronizingDelegationUsers) {
+                                    return;
+                                }
+
+                                isSynchronizingDelegationUsers = true;
+                                try {
+                                    updateExcludedUserOption(delegateeSelect, delegatorSelect.value || '');
+                                    updateExcludedUserOption(delegatorSelect, delegateeSelect.value || '');
+                                } finally {
+                                    isSynchronizingDelegationUsers = false;
+                                }
+                            }
+
+                            function syncDelegationGroupCounts(ownedSet) {
+                                delegationGroupCards.forEach(function (card) {
+                                    const countElement = card.querySelector('[data-delegation-group-count]');
+                                    const groupCheckboxes = Array.from(card.querySelectorAll('[data-delegation-permission-checkbox="true"]'));
+                                    const ownedInGroup = groupCheckboxes.filter(function (checkbox) {
+                                        return ownedSet.has(checkbox.value);
+                                    }).length;
+
+                                    card.classList.toggle('has-owned-permissions', ownedInGroup > 0);
+
+                                    if (countElement) {
+                                        countElement.textContent = `${ownedInGroup} صلاحية`;
+                                        countElement.classList.toggle('is-owned', ownedInGroup > 0);
+                                    }
+                                });
+                            }
+
+                            function renderOwnedPermissions() {
+                                const delegatorUsername = delegatorSelect.value || '';
+                                const isFullDelegation = scopeTypeSelect.value === '@DelegationScopeTypes.Full';
+                                const ownedPermissions = permissionMap[delegatorUsername] || [];
+                                const ownedSet = new Set(ownedPermissions);
+
+                                if (summaryCount) {
+                                    summaryCount.textContent = `${ownedPermissions.length} صلاحية`;
+                                }
+
+                                if (summaryMessage) {
+                                    if (!delegatorUsername) {
+                                        summaryMessage.textContent = 'اختر المفوِّض أولًا لعرض الصلاحيات التي يستطيع تفويضها.';
+                                    } else if (ownedPermissions.length === 0) {
+                                        summaryMessage.textContent = 'المفوِّض المحدد لا يملك حاليًا أي صلاحية قابلة للتفويض من هذه القائمة.';
+                                    } else if (isFullDelegation) {
+                                        summaryMessage.textContent = 'في التفويض الكامل ستُمنح كل الصلاحيات المفتوحة أدناه تلقائيًا، لذلك تعطَّل مربعات الاختيار اليدوي.';
+                                    } else {
+                                        summaryMessage.textContent = 'المربعات المفتوحة فقط هي التي يستطيع المفوِّض منحها، أما الباقي فمغلق لأنه غير مملوك له مباشرة.';
+                                    }
+                                }
+
+                                if (summaryList) {
+                                    summaryList.innerHTML = '';
+                                    for (const permissionKey of ownedPermissions) {
+                                        const badge = document.createElement('span');
+                                        badge.className = 'badge rounded-pill delegation-owned-permission-badge';
+                                        badge.textContent = permissionDisplayNames[permissionKey] || permissionKey;
+                                        summaryList.appendChild(badge);
+                                    }
+                                }
+
+                                syncDelegationGroupCounts(ownedSet);
+
+                                for (const checkbox of permissionCheckboxes) {
+                                    const permissionKey = checkbox.value;
+                                    const ownsPermission = ownedSet.has(permissionKey);
+                                    const permissionCard = checkbox.closest('.delegation-permission-toggle');
+                                    const permissionState = permissionCard?.querySelector('[data-permission-state="true"]');
+                                    const shouldDisable = isFullDelegation || !ownsPermission;
+
+                                    checkbox.disabled = shouldDisable;
+                                    if (!ownsPermission) {
+                                        checkbox.checked = false;
+                                    }
+
+                                    permissionCard?.classList.toggle('is-unavailable', !ownsPermission);
+                                    permissionCard?.classList.toggle('is-auto-granted', !!ownsPermission && isFullDelegation);
+
+                                    if (permissionState) {
+                                        const nextStatusLabel = !ownsPermission
+                                            ? 'غير مملوكة للمفوِّض'
+                                            : isFullDelegation
+                                                ? 'ستُمنح تلقائيًا مع التفويض الكامل'
+                                                : 'يملكها المفوِّض ويمكن تفويضها';
+                                        permissionState.className = !ownsPermission
+                                            ? 'delegation-permission-state is-blocked'
+                                            : isFullDelegation
+                                                ? 'delegation-permission-state is-auto'
+                                                : 'delegation-permission-state is-owned';
+                                        permissionState.title = nextStatusLabel;
+                                        permissionState.setAttribute('aria-label', nextStatusLabel);
+                                    }
+                                }
+                            }
+
+                            delegatorSelect.addEventListener('change', function () {
+                                syncDelegationUserOptions();
+                                renderOwnedPermissions();
+                            });
+                            delegateeSelect.addEventListener('change', syncDelegationUserOptions);
+                            scopeTypeSelect.addEventListener('change', renderOwnedPermissions);
+                            syncDelegationUserOptions();
+                            renderOwnedPermissions();
+                        })();
+                    </script>

@@ -1,0 +1,137 @@
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportsDashboardViewModel
+
+@{
+    ViewData["Title"] = "التقارير";
+    var canViewPermits = User.HasPermission(AppPermissions.ViewPermits);
+    var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+}
+
+<div class="reports-page-shell">
+    <section class="reports-hero card-permit">
+        <div>
+            <span class="reports-kicker">مركز التقارير</span>
+            <h1 class="mb-2">اختر نوع التقرير</h1>
+            <p class="text-muted-ar mb-0">تم فصل تقارير التصاريح عن تقارير الزيارات لتصبح الطباعة والبحث والفلاتر أوضح
+                وأسرع.</p>
+            </div>
+        </section>
+
+        <section class="report-inner-panel mt-4">
+            <div class="report-panel-header">
+                <div>
+                    <h2>اختصارات سريعة</h2>
+                    <span class="text-muted-ar">دخول مباشر لأكثر العمليات استخدامًا بدون المرور على كل الفلاتر في كل
+                        مرة.</span>
+                    </div>
+                </div>
+
+                <div class="report-quick-grid">
+                    @if (canViewPermits)
+                    {
+                        <a asp-action="Permits" class="report-quick-card">
+                            <span class="report-quick-card-kicker">التصاريح</span>
+                            <strong>فتح مركز تقارير التصاريح</strong>
+                            <small>الطباعة حسب النوع والبحث في التصاريح والطلبات غير المعتمدة.</small>
+                        </a>
+                        <a asp-action="StoppedPermits" class="report-quick-card report-quick-card-warning">
+                            <span class="report-quick-card-kicker">موقوف</span>
+                            <strong>فتح التصاريح الموقوفة</strong>
+                            <small>مراجعة أسباب الإيقاف وإعادة التفعيل من لوحة واحدة.</small>
+                        </a>
+                        <a asp-action="UnauthorizedExitWorkflow" class="report-quick-card report-quick-card-warning">
+                            <span class="report-quick-card-kicker">المسار</span>
+                            <strong>لوحة مخالفات الخروج</strong>
+                            <small>المعلقة وتحت المراجعة والموقوفة والمغلقة في شاشة واحدة.</small>
+                        </a>
+                        <a asp-action="PermitActivity" class="report-quick-card">
+                            <span class="report-quick-card-kicker">السجل</span>
+                            <strong>فتح سجل الحركة</strong>
+                            <small>بحث مستقل في الحركات مع طباعة خاصة بالسجل فقط.</small>
+                        </a>
+                        <a asp-action="PrintPermitsReport" asp-route-permitTypeFilter="All" class="report-quick-card"
+                               target="_blank">
+                            <span class="report-quick-card-kicker">PDF</span>
+                            <strong>طباعة كل التصاريح</strong>
+                            <small>نسخة جاهزة للطباعة لجميع التصاريح الحالية.</small>
+                        </a>
+                    }
+
+                    @if (canViewVisits)
+                    {
+                        <a asp-action="Visits" asp-route-visitQuickRange="Daily" class="report-quick-card report-quick-card-visit">
+                            <span class="report-quick-card-kicker">يومي</span>
+                            <strong>تقارير زيارات اليوم</strong>
+                            <small>فتح الفلاتر على اليوم الحالي مباشرة.</small>
+                        </a>
+                        <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Weekly"
+                               class="report-quick-card report-quick-card-visit" target="_blank">
+                            <span class="report-quick-card-kicker">أسبوعي</span>
+                            <strong>طباعة تقرير الأسبوع</strong>
+                            <small>إخراج مباشر لزيارات الأسبوع الحالي.</small>
+                        </a>
+                    }
+                </div>
+            </section>
+
+            <div class="report-grid report-grid-two mt-4">
+                @if (canViewPermits)
+                {
+                    <section class="report-inner-panel">
+                        <div class="report-panel-header">
+                            <div>
+                                <h2>تقارير تصاريح المركبات</h2>
+                                <span class="text-muted-ar">بحث تفصيلي، تقرير نوع التصريح، والطلبات غير
+                                    المعتمدة.</span>
+                                </div>
+                                <a asp-action="Permits" class="report-mini-action report-mini-action-solid"><span>فتح القسم</span></a>
+                            </div>
+
+                            <div class="reports-stat-grid">
+                                <div class="report-stat"><span class="report-stat-label">إجمالي
+                                    التصاريح</span><strong>@Model.TotalPermits</strong></div>
+                                    <div class="report-stat report-stat-warning"><span class="report-stat-label">قيد
+                                        الانتظار</span><strong>@Model.PendingPermits</strong></div>
+                                        <div class="report-stat report-stat-dark"><span class="report-stat-label">التصاريح
+                                            الموقوفة</span><strong>@Model.StoppedPermitsCount</strong></div>
+                                            <div class="report-stat report-stat-success"><span class="report-stat-label">حركات
+                                                اليوم</span><strong>@Model.TodayPermitActivities</strong></div>
+                                            </div>
+                                        </section>
+                                    }
+
+                                    @if (canViewVisits)
+                                    {
+                                        <section class="report-inner-panel">
+                                            <div class="report-panel-header">
+                                                <div>
+                                                    <h2>تقارير الزيارات</h2>
+                                                    <span class="text-muted-ar">تقارير يومية وأسبوعية وشهرية ويوم محدد ومن تاريخ إلى تاريخ مع طباعة
+                                                        مباشرة.</span>
+                                                    </div>
+                                                    <a asp-action="Visits" class="report-mini-action report-mini-action-success"><span>فتح القسم</span></a>
+                                                </div>
+
+                                                <div class="reports-stat-grid reports-stat-grid-visits">
+                                                    <div class="report-stat report-stat-success"><span class="report-stat-label">إجمالي
+                                                        الزيارات</span><strong>@Model.TotalVisits</strong></div>
+                                                        <div class="report-stat report-stat-warning"><span class="report-stat-label">بانتظار
+                                                            الاعتماد</span><strong>@Model.PendingApprovalVisits</strong></div>
+                                                            <div class="report-stat report-stat-primary"><span class="report-stat-label">داخل
+                                                                الزيارة</span><strong>@Model.InsideVisits</strong></div>
+                                                            </div>
+
+                                                            <div class="report-strip mt-3">
+                                                                @foreach (var metric in Model.VisitMetrics)
+                                                                {
+                                                                    <div class="metric-card metric-card-visit">
+                                                                        <span>@metric.Label</span>
+                                                                        <strong>@metric.Count</strong>
+                                                                        <small>@metric.Description</small>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </section>
+                                                    }
+                                                </div>
+                                            </div>

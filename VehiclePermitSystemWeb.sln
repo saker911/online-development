@@ -1,0 +1,35 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VehiclePermitSystemWeb", "VehiclePermitSystemWeb.csproj", "{9B8E4BD2-D673-9DE0-1CB6-B37C9FBAA620}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D2C664E6-C9D3-49E5-B450-E6AFFEB28440}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PermitBehaviorChecks", "tests\PermitBehaviorChecks\PermitBehaviorChecks.csproj", "{67029BF6-48B3-4465-8E22-C5F4E0C32C32}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9B8E4BD2-D673-9DE0-1CB6-B37C9FBAA620}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B8E4BD2-D673-9DE0-1CB6-B37C9FBAA620}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B8E4BD2-D673-9DE0-1CB6-B37C9FBAA620}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B8E4BD2-D673-9DE0-1CB6-B37C9FBAA620}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67029BF6-48B3-4465-8E22-C5F4E0C32C32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67029BF6-48B3-4465-8E22-C5F4E0C32C32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67029BF6-48B3-4465-8E22-C5F4E0C32C32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67029BF6-48B3-4465-8E22-C5F4E0C32C32}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3C266136-F1CD-4E6F-AC80-03D09EA1A465}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{67029BF6-48B3-4465-8E22-C5F4E0C32C32} = {D2C664E6-C9D3-49E5-B450-E6AFFEB28440}
+	EndGlobalSection
+EndGlobal

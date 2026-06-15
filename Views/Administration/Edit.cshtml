@@ -1,0 +1,364 @@
+@model VehiclePermitSystemWeb.Models.Entities.AdministrationSettings
+
+@{
+    ViewData["Title"] = "بيانات الإدارة";
+    var hasLogo = !string.IsNullOrWhiteSpace(Model.LogoPath);
+    var hasSignatureImage = !string.IsNullOrWhiteSpace(Model.SignatureImagePath);
+    var hasSignatureText = !string.IsNullOrWhiteSpace(Model.SignatureText);
+    var hasWorkdays = !string.IsNullOrWhiteSpace(Model.OfficialWorkDaysCsv);
+    var hasAutoLinkedGeneralManager = !string.IsNullOrWhiteSpace(Model.GeneralManagerUsername);
+    var workdayLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Saturday"] = "السبت",
+        ["Sunday"] = "الأحد",
+        ["Monday"] = "الاثنين",
+        ["Tuesday"] = "الثلاثاء",
+        ["Wednesday"] = "الأربعاء",
+        ["Thursday"] = "الخميس",
+        ["Friday"] = "الجمعة",
+    };
+    var selectedWorkdayLabels = (Model.OfficialWorkDaysCsv ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(day => workdayLabels.TryGetValue(day, out var label) ? label : day)
+        .ToList();
+    var workdaysSummary = selectedWorkdayLabels.Count > 0
+        ? string.Join("، ", selectedWorkdayLabels)
+        : "لم يتم التحديد بعد";
+}
+
+<div class="administration-edit-shell compact-form-shell">
+    <section class="administration-edit-hero card-permit app-card-surface">
+        <div class="administration-edit-hero-copy">
+            <span class="administration-edit-kicker">إدارة الإعدادات</span>
+            <h1 class="mb-2">تعديل بيانات الإدارة</h1>
+            <p class="text-muted-ar mb-0">
+                البيانات هنا تستخدم في الطباعة الرسمية، إعدادات البوابة، وتعبئة النماذج الجديدة. التعديل يحافظ على كل الوظائف الحالية
+                ويؤثر على السجلات الجديدة وما يعتمد على الإعدادات التشغيلية المباشرة.
+            </p>
+        </div>
+
+        <div class="administration-edit-hero-panel">
+            <div class="administration-edit-mini-stat administration-edit-mini-stat-primary">
+                <span>الهوية البصرية</span>
+                <strong>@((hasLogo ? 1 : 0) + (hasSignatureImage ? 1 : 0))</strong>
+            </div>
+            <div class="administration-edit-mini-stat administration-edit-mini-stat-success">
+                <span>إعدادات الدوام</span>
+                <strong>@(hasWorkdays ? "جاهزة" : "تحتاج ضبط")</strong>
+            </div>
+            <div class="administration-edit-mini-stat administration-edit-mini-stat-warning">
+                <span>نص التوقيع</span>
+                <strong>@(hasSignatureText ? "موجود" : "غير محفوظ")</strong>
+            </div>
+        </div>
+    </section>
+
+    <div asp-validation-summary="All" class="visually-hidden form-summary-only"></div>
+
+    <section class="administration-edit-toolbar card-permit app-card-surface">
+        <div class="administration-edit-toolbar-copy">
+            <h2>روابط سريعة</h2>
+            <p class="text-muted-ar mb-0">تنقل سريع إلى النسخ الاحتياطي، شاشات العرض، ومركز التعيين والنقل القيادي.</p>
+        </div>
+        <div class="administration-edit-toolbar-actions">
+            <a asp-action="Backup" class="btn btn-outline-success">النسخ الاحتياطي</a>
+            <a asp-action="DisplaySettings" class="btn btn-outline-primary">إعدادات الشبكة وشاشات العرض</a>
+            <a asp-action="Leadership" class="btn btn-outline-secondary">مركز القيادات</a>
+        </div>
+    </section>
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" class="permit-form administration-edit-form needs-validation" novalidate
+          data-confirm-message="هل تريد حفظ تعديلات بيانات الإدارة؟">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+
+        <div class="administration-edit-grid">
+            <section class="card-permit app-card-surface compact-form-card administration-edit-card administration-edit-card-main">
+                <div class="administration-edit-card-head">
+                    <div>
+                        <span class="administration-edit-card-kicker">البيانات الأساسية</span>
+                        <h2>تعريف الجهة والإدارة</h2>
+                    </div>
+                    <p class="text-muted-ar mb-0">هذه البيانات تظهر في رأس النماذج والطباعة الرسمية والتعريف العام للمنشأة.</p>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="OrganizationName" class="form-label">اسم الجهة</label>
+                        <input asp-for="OrganizationName" class="form-control" />
+                        <span asp-validation-for="OrganizationName" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DepartmentName" class="form-label">اسم الإدارة</label>
+                        <input asp-for="DepartmentName" class="form-control" />
+                        <span asp-validation-for="DepartmentName" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="app-inline-note @(hasAutoLinkedGeneralManager ? "app-inline-note-success" : "app-inline-note-warning") py-2 mb-0">
+                            @if (hasAutoLinkedGeneralManager)
+                            {
+                                <span>يتم جلب بيانات المدير العام تلقائيًا من الحساب النشط @Model.ManagerName (@Model.GeneralManagerUsername) المعتمد للقيادة داخل النظام.</span>
+                            }
+                            else
+                            {
+                                <span>لا يوجد حاليًا حساب نشط بدور مدير عام، لذلك ستبقى بيانات المدير للعرض فقط حتى يتم تعيين مدير عام من مركز التعيين والنقل القيادي.</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="administration-manager-readonly-panel">
+                            <div class="administration-manager-readonly-head">
+                                <div>
+                                    <label class="form-label mb-1">بيانات المدير العام</label>
+                                    <div class="form-text mt-0">تُعرض هذه البيانات فقط وتُحدَّث تلقائيًا من تعيين المدير العام داخل النظام.</div>
+                                </div>
+                                <span class="administration-manager-readonly-badge">@(hasAutoLinkedGeneralManager ? "مربوطة تلقائيًا" : "بانتظار التعيين")</span>
+                            </div>
+                            <div class="administration-manager-readonly-grid">
+                                <div class="administration-manager-readonly-item">
+                                    <span>اسم المدير</span>
+                                    <strong>@(string.IsNullOrWhiteSpace(Model.ManagerName) ? "-" : Model.ManagerName)</strong>
+                                </div>
+                                <div class="administration-manager-readonly-item">
+                                    <span>المسمى الإداري</span>
+                                    <strong>@(string.IsNullOrWhiteSpace(Model.ManagerTitle) ? "-" : Model.ManagerTitle)</strong>
+                                </div>
+                                <div class="administration-manager-readonly-item administration-manager-readonly-item-wide">
+                                    <span>رقم الجوال</span>
+                                    <strong>@(string.IsNullOrWhiteSpace(Model.ManagerPhoneNumber) ? "-" : Model.ManagerPhoneNumber)</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Phone" class="form-label">الهاتف</label>
+                        <input asp-for="Phone" class="form-control" />
+                        <div class="form-text">رقم هاتف الإدارة المستخدم في رأس التقارير والمخاطبات، ولا يغيّر جوال المدير العام.</div>
+                        <span asp-validation-for="Phone" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Address" class="form-label">العنوان</label>
+                        <input asp-for="Address" class="form-control" />
+                        <span asp-validation-for="Address" class="field-validation-error"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card-permit app-card-surface compact-form-card administration-edit-card administration-edit-card-side administration-brand-card">
+                <div class="administration-edit-card-head">
+                    <div>
+                        <span class="administration-edit-card-kicker">الهوية البصرية</span>
+                        <h2>الشعار والتوقيع</h2>
+                    </div>
+                    <p class="text-muted-ar mb-0">معاينة مباشرة للملفات الحالية قبل الاستبدال، مع الحفاظ على نفس آلية الرفع والحفظ.</p>
+                </div>
+
+                <div class="administration-brand-grid">
+                    <div class="administration-media-panel">
+                        <label class="form-label">شعار الإدارة</label>
+                        <div class="administration-media-preview @(hasLogo ? string.Empty : "is-empty")">
+                            @if (hasLogo)
+                            {
+                                <img src="~/@Model.LogoPath" alt="الشعار الحالي" />
+                            }
+                            else
+                            {
+                                <div class="administration-media-placeholder">
+                                    <strong>لا يوجد شعار محفوظ</strong>
+                                    <span>يمكن رفع ملف PNG أو JPG أو WEBP</span>
+                                </div>
+                            }
+                        </div>
+                        <input type="file" name="logoFile" class="form-control" accept=".png,.jpg,.jpeg,.webp" />
+                        @if (hasLogo)
+                        {
+                            <label class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" name="removeLogo" value="true" />
+                                <span class="form-check-label">إزالة الشعار الحالي واستخدام الأيقونة المحايدة</span>
+                            </label>
+                        }
+                    </div>
+
+                    <div class="administration-media-panel">
+                        <label class="form-label">توقيع المدير</label>
+                        <div class="administration-media-preview administration-media-preview-signature @(hasSignatureImage ? string.Empty : "is-empty")">
+                            @if (hasSignatureImage)
+                            {
+                                <img src="~/@Model.SignatureImagePath" alt="توقيع المدير" />
+                            }
+                            else
+                            {
+                                <div class="administration-media-placeholder">
+                                    <strong>لا يوجد توقيع محفوظ</strong>
+                                    <span>سيظهر النص الإلكتروني بدل الصورة عند الحاجة</span>
+                                </div>
+                            }
+                        </div>
+                        <input type="file" name="signatureFile" class="form-control" accept=".png,.jpg,.jpeg,.webp" />
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <label asp-for="SignatureText" class="form-label">نص التوقيع الإلكتروني</label>
+                    <textarea asp-for="SignatureText" class="form-control" rows="3" placeholder="مثال: يعتمد إلكترونيًا من مدير الإدارة"></textarea>
+                    <span asp-validation-for="SignatureText" class="field-validation-error"></span>
+                </div>
+            </section>
+
+            <section class="card-permit app-card-surface compact-form-card administration-edit-card administration-work-card">
+                <div class="administration-edit-card-head administration-edit-card-head-highlight">
+                    <div>
+                        <span class="administration-edit-card-kicker administration-edit-card-kicker-highlight">الإعدادات التشغيلية</span>
+                        <h2>الدوام وأيام العمل الرسمية</h2>
+                    </div>
+                    <p class="text-muted-ar mb-0">هذه القيم تؤثر مباشرة على سياسات البوابة، التأخير، والمعالجة اليومية للتصاريح.</p>
+                </div>
+
+                <div class="administration-work-summary">
+                    <div class="administration-work-summary-item">
+                        <span>بداية الدوام</span>
+                        <strong>@Model.WorkStartTime</strong>
+                    </div>
+                    <div class="administration-work-summary-item">
+                        <span>نهاية الدوام</span>
+                        <strong>@Model.WorkEndTime</strong>
+                    </div>
+                    <div class="administration-work-summary-item">
+                        <span>سماح الحضور</span>
+                        <strong>@Model.AttendanceGraceMinutes دقيقة</strong>
+                    </div>
+                    <div class="administration-work-summary-item">
+                        <span>سماح الانصراف</span>
+                        <strong>@Model.WorkEndExitGraceMinutes دقيقة</strong>
+                    </div>
+                    <div class="administration-work-summary-item">
+                        <span>سماح عودة الاستئذان</span>
+                        <strong>@Model.LateReturnGraceMinutes دقيقة</strong>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="WorkStartTime" class="form-label">بداية الدوام</label>
+                        <input asp-for="WorkStartTime" type="time" step="60" class="form-control" />
+                        <span asp-validation-for="WorkStartTime" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="WorkEndTime" class="form-label">نهاية الدوام</label>
+                        <input asp-for="WorkEndTime" type="time" step="60" class="form-control" />
+                        <span asp-validation-for="WorkEndTime" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="AttendanceGraceMinutes" class="form-label">سماح الحضور بالدقائق</label>
+                        <input asp-for="AttendanceGraceMinutes" type="number" min="0" step="1" class="form-control" />
+                        <span asp-validation-for="AttendanceGraceMinutes" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="WorkEndExitGraceMinutes" class="form-label">فترة إغلاق الانصراف بالدقائق</label>
+                        <input asp-for="WorkEndExitGraceMinutes" type="number" min="0" step="1" class="form-control" />
+                        <span asp-validation-for="WorkEndExitGraceMinutes" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="LateReturnGraceMinutes" class="form-label">سماح عودة الاستئذان بالدقائق</label>
+                        <input asp-for="LateReturnGraceMinutes" type="number" min="0" step="1" class="form-control" />
+                        <span asp-validation-for="LateReturnGraceMinutes" class="field-validation-error"></span>
+                    </div>
+                </div>
+
+                <div class="administration-workdays-panel mt-4">
+                    <div class="administration-workdays-head">
+                        <div>
+                            <h3>أيام الدوام الرسمي</h3>
+                            <p class="text-muted-ar mb-0">اختر الأيام التي تُعتمد فيها قواعد الدوام والإغلاق اليومي.</p>
+                        </div>
+                        <span class="administration-workdays-hint" id="officialWorkdaysSummary">@workdaysSummary</span>
+                    </div>
+
+                    <div class="administration-workdays-grid">
+                        @{
+                            var days = new[] { "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" };
+                            var dayNamesAr = new[] { "السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة" };
+                        }
+                        @for (int i = 0; i < days.Length; i++)
+                        {
+                            var day = days[i];
+                            var dayAr = dayNamesAr[i];
+                            <label class="administration-workday-item" for="workday_@day">
+                                <input class="form-check-input official-workday-checkbox" type="checkbox" id="workday_@day"
+                                       value="@day"
+                                       onchange="window.collectOfficialWorkdays && window.collectOfficialWorkdays()" />
+                                <span class="administration-workday-indicator" aria-hidden="true"></span>
+                                <span class="administration-workday-name">@dayAr</span>
+                            </label>
+                        }
+                    </div>
+                    <input type="hidden" asp-for="OfficialWorkDaysCsv" id="OfficialWorkDaysCsv" />
+                </div>
+            </section>
+        </div>
+
+        <div class="administration-edit-actions card-permit app-card-surface">
+            <div>
+                <strong>جاهز للحفظ</strong>
+                <div class="text-muted-ar">سيتم الاحتفاظ بجميع السلوكيات الحالية مع تحسين العرض فقط.</div>
+            </div>
+            <div class="administration-edit-actions-buttons">
+                <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">عودة</a>
+                <button type="submit" class="btn btn-primary">حفظ البيانات</button>
+            </div>
+        </div>
+    </form>
+</div>
+<script nonce="@(Context.Items["CspScriptNonce"])">
+    (function () {
+        function loadWorkdays() {
+            var csv = '@(Model.OfficialWorkDaysCsv ?? "")';
+            var arr = csv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            document.querySelectorAll('.official-workday-checkbox').forEach(function (cb) {
+                cb.checked = arr.indexOf(cb.value) !== -1;
+            });
+            document.getElementById('OfficialWorkDaysCsv').value = arr.join(',');
+            updateWorkdaysSummary(arr);
+        }
+
+        function updateWorkdaysSummary(selected) {
+            var labels = {
+                Saturday: 'السبت',
+                Sunday: 'الأحد',
+                Monday: 'الاثنين',
+                Tuesday: 'الثلاثاء',
+                Wednesday: 'الأربعاء',
+                Thursday: 'الخميس',
+                Friday: 'الجمعة'
+            };
+            var summary = document.getElementById('officialWorkdaysSummary');
+            if (summary) {
+                summary.textContent = selected.length
+                    ? selected.map(function (day) { return labels[day] || day; }).join('، ')
+                    : 'لم يتم التحديد بعد';
+            }
+        }
+
+        function collectWorkdays() {
+            var selected = Array.from(document.querySelectorAll('.official-workday-checkbox'))
+                .filter(function (cb) { return cb.checked; })
+                .map(function (cb) { return cb.value; });
+            document.getElementById('OfficialWorkDaysCsv').value = selected.join(',');
+            updateWorkdaysSummary(selected);
+        }
+        window.collectOfficialWorkdays = collectWorkdays;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            loadWorkdays();
+            document.querySelectorAll('.official-workday-checkbox').forEach(function (checkbox) {
+                checkbox.addEventListener('change', collectWorkdays);
+            });
+            var form = document.querySelector('form[asp-action="Edit"]') || document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    collectWorkdays();
+                });
+            }
+        });
+    })();
+</script>

@@ -1,0 +1,56 @@
+body {
+    background: var(--t-page-gradient, var(--t-page-bg, #f8fafc));
+    color: var(--t-text, #0f172a);
+}
+
+.text-muted-ar {
+    color: var(--muted);
+}
+
+.ltr-field {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: plaintext;
+}
+
+.national-id-field {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: plaintext;
+}
+
+input[type="number"],
+input[inputmode="numeric"],
+.national-id-field {
+    direction: ltr;
+    text-align: center;
+    unicode-bidi: plaintext;
+}
+
+.date-text {
+    font-family: 'JF Flat Regular', 'Tajawal', 'DIN Next LT Arabic', 'DINNextLTArabic', Tahoma, Arial, sans-serif;
+    letter-spacing: 0;
+    word-spacing: 0;
+    white-space: nowrap;
+    font-feature-settings: 'liga' 1, 'calt' 1;
+}
+
+.app-main-surface .table,
+.app-main-surface .table-responsive .table {
+    font-size: 0.75rem;
+    line-height: 1.45;
+    font-weight: 400;
+}
+
+.app-main-surface .table> :not(caption)>*>* {
+    padding: 0.55rem 0.7rem;
+}
+
+.app-main-surface .table td,
+.app-main-surface .table th {
+    vertical-align: middle;
+}
+
+.app-main-surface .table-responsive {
+    border-radius: 12px;
+}

@@ -1,0 +1,336 @@
+@model VehiclePermitSystemWeb.Models.Entities.Permit
+
+@{
+    ViewData["Title"] = "تعديل التصريح";
+    var departmentOptions = (IEnumerable<string>)(ViewBag.DepartmentOptions ?? Array.Empty<string>());
+    var approvalRoutesJson = ViewBag.DepartmentApprovalRoutesJson as string ?? "{}";
+    var approvalRouteHint = ViewBag.ApprovalRouteHint as string
+        ?? "سيُوجَّه الطلب إلى مدير القسم أولًا، ويمكنه رفعه إلى المدير العام إذا لم تتوفر لديه صلاحية الاعتماد.";
+}
+
+<h1>تعديل التصريح</h1>
+
+@if (ViewData["PermitConflicts"] is IEnumerable<VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitConflictViewModel> conflicts &&
+conflicts.Any())
+{
+    <div class="app-inline-note app-inline-note-warning mb-4">
+        <div class="fw-bold mb-1">تم العثور على تصريح آخر مطابق بنفس الاسم أو رقم الهوية أو رقم اللوحة.</div>
+        <div class="mb-3">راجع التصريح المتكرر قبل الحفظ أو افتحه مباشرة إذا كان هو المقصود.</div>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle app-data-table permit-conflict-table mb-0">
+                <thead>
+                    <tr>
+                        <th>رقم التصريح</th>
+                        <th>الاسم</th>
+                        <th>رقم الهوية</th>
+                        <th>رقم اللوحة</th>
+                        <th>سبب التطابق</th>
+                        <th>الحالة</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var conflict in conflicts)
+                    {
+                        <tr>
+                            <td>@conflict.PermitNumber</td>
+                            <td>@conflict.DriverName</td>
+                            <td class="national-id-field">@conflict.NationalId</td>
+                            <td>@conflict.PlateNumber</td>
+                            <td>@conflict.ReasonsDisplay</td>
+                            <td>@conflict.ApprovalStatusDisplay / @conflict.PermitTypeDisplay</td>
+                            <td>
+                                <a asp-action="Edit" asp-route-id="@conflict.PermitNumber"
+                                   class="btn btn-sm btn-outline-primary">فتح التعديل</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<div class="compact-form-shell">
+    <form asp-action="Edit" method="post"
+          class="card-permit app-card-surface app-form-surface compact-form-card permit-form needs-validation" novalidate>
+        @Html.AntiForgeryToken()
+        <input asp-for="PermitNumber" type="hidden" />
+        <input asp-for="ApprovalStatus" type="hidden" />
+        <input asp-for="PermitType" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="permitTypeSelect" class="form-label">نوع التصريح</label>
+                <select asp-for="PermitType" class="form-select" id="permitTypeSelect" disabled>
+                    <option value="@VehiclePermitSystemWeb.Models.Entities.Permit.PermitTypePermanent">موظف</option>
+                    <option value="@VehiclePermitSystemWeb.Models.Entities.Permit.PermitTypeVisitor">زائر</option>
+                </select>
+                <div class="form-text text-muted-ar">نوع التصريح ثابت بعد الإنشاء ولا يمكن تغييره من هنا.</div>
+            </div>
+            <div class="col-md-4" id="returnRequirementGroup">
+                <label for="requiresReturnSelect" class="form-label" id="movementModeLabel">نوع الحركة</label>
+                <select asp-for="RequiresReturn" class="form-select" id="requiresReturnSelect">
+                    <option value="true">خروج ودخول كامل</option>
+                    <option value="false">دخول فقط</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DriverName" class="form-label" id="holderNameLabel">اسم الموظف</label>
+                <input asp-for="DriverName" class="form-control" required />
+                <span asp-validation-for="DriverName" class="field-validation-error small"></span>
+            </div>
+            <div class="col-md-4 permit-field-stack permit-national-id-shell">
+                <label asp-for="NationalId" class="form-label">رقم الهوية</label>
+                <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                      pattern="[12][0-9]{9}" placeholder="1024722918" required />
+                <div class="form-text text-muted-ar">يظهر رقم الهوية أسفل العنوان مباشرة ويقبل 10 أرقام فقط.</div>
+                <span asp-validation-for="NationalId" class="field-validation-error small"></span>
+            </div>
+            <div class="col-md-4" id="workLocationGroup">
+                <label for="DepartmentNamePickerInput" class="form-label" id="workLocationLabel">موقع العمل</label>
+                <div class="department-picker" data-department-picker>
+                    <input asp-for="DepartmentName" type="hidden" data-department-picker-value />
+                    <div class="department-picker-control">
+                        <input type="text" id="DepartmentNamePickerInput" class="form-control department-picker-input"
+                               value="@Model.DepartmentName" placeholder="ابحث عن القسم أو اختره" autocomplete="off"
+                               required data-department-picker-input role="combobox" aria-autocomplete="list"
+                               aria-expanded="false" aria-haspopup="listbox" aria-controls="DepartmentNamePickerList" />
+                        <button type="button" class="department-picker-toggle" data-department-picker-toggle
+                                aria-label="فتح قائمة الأقسام"></button>
+                    </div>
+                    <div class="department-picker-panel" data-department-picker-panel hidden>
+                        <div class="department-picker-options" id="DepartmentNamePickerList" role="listbox">
+                            @foreach (var department in departmentOptions)
+                            {
+                                var isSelectedDepartment = string.Equals(Model.DepartmentName, department,
+                            StringComparison.OrdinalIgnoreCase);
+                                <button type="button"
+                                        class="department-picker-option@(isSelectedDepartment ? " is-selected" : string.Empty)"
+                                        data-department-picker-option data-value="@department" role="option"
+                                        aria-selected="@(isSelectedDepartment ? "true" : "false")">
+                                    @department
+                                </button>
+                            }
+                        </div>
+                        <div class="department-picker-empty small text-muted-ar" data-department-picker-empty hidden>لا
+                            توجد أقسام مطابقة.</div>
+                        </div>
+                    </div>
+                    <div class="form-text text-muted-ar">اكتب جزءًا من اسم القسم ثم اختره من القائمة.</div>
+                    <span asp-validation-for="DepartmentName" class="field-validation-error small"></span>
+                </div>
+                <div class="col-md-4 d-none" id="visitLocationGroup">
+                    <label asp-for="VisitLocation" class="form-label">مكان الزيارة</label>
+                    <input asp-for="VisitLocation" class="form-control" />
+                    <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
+                </div>
+                <div class="col-md-4 d-none" id="managerGroup">
+                    <label asp-for="ManagerName" class="form-label" id="managerNameLabel">مدير الموظف</label>
+                    <input asp-for="ManagerName" class="form-control" readonly required />
+                    <div class="form-text text-muted-ar">@approvalRouteHint</div>
+                    <span asp-validation-for="ManagerName" class="field-validation-error small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="EmployeePhone" class="form-label" id="phoneLabel">رقم الجوال</label>
+                    <input asp-for="EmployeePhone" class="form-control ltr-field" inputmode="numeric" maxlength="10"
+                              pattern="05[0-9]{8}" placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" required />
+                    <span asp-validation-for="EmployeePhone" class="field-validation-error small"></span>
+                </div>
+                <div class="col-md-4 date-field-shell" id="permitDateGroup" data-date-field data-date-display-mode="hijri">
+                    <div class="date-field-head">
+                        <label asp-for="PermitDate" class="form-label mb-0" id="permitDateLabel">تاريخ التصريح</label>
+                    </div>
+                    <div class="date-input-shell">
+                        <input asp-for="PermitDate" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local"
+                               class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA" readonly
+                               data-hijri-source />
+                        <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="PermitDate"
+                             data-empty-text="يوم/شهر/سنة - الوقت">
+                            @(Model.PermitDate.HasValue ? DateHelper.ToArabicHijri(Model.PermitDate.Value) : "سيظهر التاريخ هنا بعد الاختيار")
+                        </div>
+                        <label class="date-hijri-toggle" dir="rtl">
+                            <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                            <input type="checkbox" checked data-date-hijri-switch />
+                            <span class="date-hijri-toggle-track"></span>
+                        </label>
+                    </div>
+                    <div class="form-text text-muted-ar" id="permitDateHelp">تاريخ الإصدار ثابت بعد الإنشاء ولا يمكن تعديله
+                        من هنا.</div>
+                        <span asp-validation-for="PermitDate" class="field-validation-error small"></span>
+                    </div>
+                    <div class="col-md-4 date-field-shell" id="expiresAtGroup" data-date-field data-date-display-mode="hijri">
+                        <div class="date-field-head">
+                            <label asp-for="ExpiresAt" class="form-label mb-0" id="expiresAtLabel">تاريخ الانتهاء</label>
+                        </div>
+                        <div class="date-input-shell">
+                            <input asp-for="ExpiresAt" asp-format="{0:yyyy-MM-dd}" type="date" id="ExpiresAt"
+                                   class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA"
+                                   data-hijri-source data-date-min-today="true" />
+                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="ExpiresAt"
+                                 data-empty-text="يوم/شهر/سنة">
+                                @(Model.ExpiresAt.HasValue ? DateHelper.ToArabicHijri(Model.ExpiresAt.Value) : "سيظهر التاريخ هنا بعد الاختيار")
+                            </div>
+                            <label class="date-hijri-toggle" dir="rtl">
+                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                <input type="checkbox" checked data-date-hijri-switch />
+                                <span class="date-hijri-toggle-track"></span>
+                            </label>
+                        </div>
+                        <div class="form-text text-muted-ar" id="expiresAtHelp">عدّل هذا التاريخ لتجديد التصريح أو لضبط تاريخ
+                            الانتهاء، ويستخدمه الباركود للتحقق من الصلاحية.</div>
+                            <span asp-validation-for="ExpiresAt" class="field-validation-error small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="VehicleType" class="form-label">نوع المركبة</label>
+                            <input asp-for="VehicleType" class="form-control" required />
+                            <span asp-validation-for="VehicleType" class="field-validation-error small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="PlateOriginSelect" class="form-label">نوع اللوحة</label>
+                            <select asp-for="PlateOrigin" class="form-select" id="PlateOriginSelect">
+                                <option value="Saudi">لوحة سعودية (3 أحرف + 4 أرقام)</option>
+                                <option value="Foreign">لوحة غير سعودية (حرة)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="PlateNumberInput" class="form-label">رقم اللوحة</label>
+                            <input asp-for="PlateNumber" class="form-control" dir="rtl" maxlength="12"
+                                   placeholder="ل ح م 1236 أو ABC 1234" required id="PlateNumberInput" />
+                            <span asp-validation-for="PlateNumber" class="field-validation-error small"></span>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-text text-muted-ar plate-help-full" id="PlateHelp">اكتبها مثل: ل ح م 1236 أو ABC 1234،
+                                وسيتم حفظها تلقائيا بصيغة موحدة.</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
+                            <a asp-action="Index" class="btn btn-secondary">إلغاء</a>
+                        </div>
+                    </form>
+                </div>
+
+                @section Scripts {
+                    <partial name="_ValidationScriptsPartial" />
+                    <script nonce="@(Context.Items["CspScriptNonce"])">
+                        (function () {
+                            const departmentApprovalRoutes = @Html.Raw(approvalRoutesJson);
+                            const permitTypeSelect = document.getElementById('permitTypeSelect');
+                            const returnRequirementGroup = document.getElementById('returnRequirementGroup');
+                            const movementModeLabel = document.getElementById('movementModeLabel');
+                            const requiresReturnSelect = document.getElementById('requiresReturnSelect');
+                            const requiresReturnOptions = requiresReturnSelect ? requiresReturnSelect.querySelectorAll('option') : [];
+                            const permitDateGroup = document.getElementById('permitDateGroup');
+                            const permitDateInput = document.getElementById('PermitDate');
+                            const workLocationGroup = document.getElementById('workLocationGroup');
+                            const workLocationInput = document.getElementById('DepartmentName');
+                            const visitLocationGroup = document.getElementById('visitLocationGroup');
+                            const visitLocationInput = document.getElementById('VisitLocation');
+                            const expiresAtGroup = document.getElementById('expiresAtGroup');
+                            const expiresAtLabel = document.getElementById('expiresAtLabel');
+                            const expiresAtHelp = document.getElementById('expiresAtHelp');
+                            const expiresAtInput = document.getElementById('ExpiresAt');
+                            const holderNameLabel = document.getElementById('holderNameLabel');
+                            const managerNameLabel = document.getElementById('managerNameLabel');
+                            const phoneLabel = document.getElementById('phoneLabel');
+                            const managerGroup = document.getElementById('managerGroup');
+                            const managerNameInput = document.getElementById('ManagerName');
+                            const workLocationPickerInput = document.getElementById('DepartmentNamePickerInput');
+
+                            function resolveManagerForDepartment() {
+                                if (!managerNameInput || !workLocationInput) {
+                                    return;
+                                }
+
+                                const departmentName = (workLocationInput.value || '').trim();
+                                if (!departmentName) {
+                                    managerNameInput.value = '';
+                                    return;
+                                }
+
+                                managerNameInput.value = departmentApprovalRoutes[departmentName] || managerNameInput.value || '';
+                            }
+
+                            function togglePermitFields() {
+                                const isPermanent = permitTypeSelect.value === 'Permanent';
+                                const isVisitor = permitTypeSelect.value === 'Visitor';
+
+                                returnRequirementGroup.classList.toggle('d-none', isVisitor);
+                                if (permitDateGroup) {
+                                    permitDateGroup.classList.toggle('d-none', isVisitor);
+                                }
+                                if (movementModeLabel && requiresReturnOptions.length >= 2) {
+                                    movementModeLabel.textContent = 'نوع الحركة';
+                                    requiresReturnOptions[0].textContent = 'خروج ودخول كامل';
+                                    requiresReturnOptions[1].textContent = 'دخول فقط';
+                                }
+
+                                if (!isPermanent && !isVisitor && requiresReturnSelect) {
+                                    requiresReturnSelect.value = 'true';
+                                }
+
+                                if (holderNameLabel) {
+                                    holderNameLabel.textContent = isVisitor ? 'اسم الزائر' : 'اسم الموظف';
+                                }
+                                if (managerNameLabel) {
+                                    managerNameLabel.textContent = isVisitor ? 'اسم المسؤول عن الزيارة' : 'مدير الموظف';
+                                }
+                                if (phoneLabel) {
+                                    phoneLabel.textContent = 'رقم الجوال';
+                                }
+
+                                workLocationGroup.classList.toggle('d-none', isVisitor);
+                                visitLocationGroup.classList.toggle('d-none', !isVisitor);
+                                if (expiresAtGroup) {
+                                    expiresAtGroup.classList.remove('d-none');
+                                    if (expiresAtLabel && expiresAtHelp) {
+                                        expiresAtLabel.textContent = 'تاريخ الانتهاء';
+                                        expiresAtHelp.textContent = isVisitor
+                                            ? 'عدّل هذا التاريخ لتجديد التصريح أو لضبط تاريخ الانتهاء، ويستخدمه الباركود للتحقق من الصلاحية.'
+                                            : 'مطلوب للتصريح الموظف، ويستخدمه الباركود للتحقق من الانتهاء.';
+                                    }
+                                }
+                                if (permitDateInput) {
+                                    permitDateInput.disabled = isVisitor;
+                                    permitDateInput.required = isPermanent;
+                                }
+                                if (expiresAtInput) {
+                                    expiresAtInput.disabled = false;
+                                    expiresAtInput.required = !isVisitor;
+                                }
+                                if (managerGroup) {
+                                    managerGroup.classList.toggle('d-none', isVisitor);
+                                }
+                                if (workLocationInput) {
+                                    workLocationInput.disabled = isVisitor;
+                                }
+                                if (workLocationPickerInput) {
+                                    workLocationPickerInput.required = !isVisitor;
+                                    workLocationPickerInput.disabled = isVisitor;
+                                    workLocationPickerInput.setCustomValidity('');
+                                    workLocationPickerInput.classList.remove('is-invalid');
+                                }
+                                if (visitLocationInput) {
+                                    visitLocationInput.required = isVisitor;
+                                }
+                                if (managerNameInput) {
+                                    managerNameInput.required = !isVisitor;
+                                    managerNameInput.readOnly = !isVisitor;
+                                    if (!isVisitor) {
+                                        resolveManagerForDepartment();
+                                    }
+                                }
+                            }
+
+                            if (workLocationInput) {
+                                workLocationInput.addEventListener('change', resolveManagerForDepartment);
+                            }
+                            permitTypeSelect.addEventListener('change', togglePermitFields);
+                            togglePermitFields();
+                        })();
+                        <!-- Plate validation handled centrally in wwwroot/js/site.js -->
+                    </script>
+                }

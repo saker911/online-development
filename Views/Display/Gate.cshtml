@@ -1,0 +1,348 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Utilities
+@using System.Reflection
+@model VehiclePermitSystemWeb.Models.ViewModels.Display.DisplayGateViewModel
+
+@{
+    ViewData["Title"] = "شاشة عرض التصاريح";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "display-kiosk-body";
+    var gateAppVersion = Assembly.GetEntryAssembly()?
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+        .InformationalVersion ?? "1.0.0";
+
+    static string FormatOperator(PermitActivity activity)
+    {
+        if (!string.IsNullOrWhiteSpace(activity.GateOperatorName))
+        {
+            return string.IsNullOrWhiteSpace(activity.GateOperatorAccount)
+                ? activity.GateOperatorName
+                : $"{activity.GateOperatorName} ({activity.GateOperatorAccount})";
+        }
+
+        return string.IsNullOrWhiteSpace(activity.RecordedBy) ? "-" : activity.RecordedBy;
+    }
+
+    static string MapActivityTheme(PermitActivity activity)
+    {
+        return string.Equals(activity.ActionType, "Departure", StringComparison.OrdinalIgnoreCase)
+            ? "success"
+            : string.Equals(activity.ActionType, "Return", StringComparison.OrdinalIgnoreCase)
+                ? "info"
+                : string.Equals(activity.ActionType, "LateAttendance", StringComparison.OrdinalIgnoreCase)
+                    ? "warning"
+                    : string.Equals(activity.ActionType, "LateCheckout", StringComparison.OrdinalIgnoreCase)
+                        ? "warning"
+                : string.Equals(activity.ActionType, "OperatorNote", StringComparison.OrdinalIgnoreCase)
+                    ? "warning"
+                    : string.Equals(activity.ActionType, "DisplayOperatorSignIn", StringComparison.OrdinalIgnoreCase)
+                        ? "info"
+                        : string.Equals(activity.ActionType, "DisplayOperatorSignOut", StringComparison.OrdinalIgnoreCase)
+                            ? "danger"
+                            : string.Equals(activity.ActionType, "NoReturnWarning", StringComparison.OrdinalIgnoreCase)
+                                ? "warning"
+                                : "danger";
+    }
+
+    var initialRecentActivities = Model.RecentPermitActivities.Take(10).ToList();
+}
+
+
+<link rel="stylesheet" href="~/css/gate-display.css" asp-append-version="true" />
+
+<div class="gate-shell">
+    <div class="gate-board"
+         id="permitDisplayRoot"
+         data-heartbeat-endpoint="@Url.Action("Heartbeat", "Display")"
+         data-scan-endpoint="@Url.Content("~/api/scan/auto")"
+         data-gate-status-endpoint="@Url.Action("GateStatus", "Display")"
+         data-operator-status-endpoint="@Url.Action("GateOperatorStatus", "Display")"
+         data-switch-operator-endpoint="@Url.Action("SwitchOperator", "Display")"
+         data-signout-operator-endpoint="@Url.Action("SignOutOperator", "Display")"
+         data-change-pin-endpoint="@Url.Action("ChangeOperatorPin", "Display")"
+         data-save-note-endpoint="@Url.Action("SaveOperatorNote", "Display")">
+        @Html.AntiForgeryToken()
+
+        <div class="gate-topbar">
+            <div class="gate-topbar-meta">
+                <div class="gate-meta-pill"><strong>البوابة الرئيسية</strong></div>
+                <div class="gate-meta-pill">الجهاز: <strong id="kioskDeviceLabel">GATE-PC-01</strong></div>
+                <div class="gate-meta-pill">IP: <strong id="kioskIpLabel">--</strong></div>
+            </div>
+
+            <div class="gate-topbar-operator">
+                <div class="gate-current-operator">
+                    <div class="gate-avatar">👤</div>
+                    <div>
+                        <small>المشغل الحالي:</small>
+                        <strong id="activeOperatorName">لا يوجد مشغل نشط</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <small class="gate-meta-pill">بداية الجلسة:</small>
+                    <div class="gate-session-start" id="activeOperatorSessionStart">--:--:--</div>
+                </div>
+
+                <div class="gate-topbar-actions">
+                    <button type="button" class="gate-action-button danger" id="signOutOperatorButton" disabled>تسجيل خروج</button>
+                    <button type="button" class="gate-action-button" id="openOperatorModalButton">تبديل مشغل</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="gate-content">
+            <div class="gate-main">
+                <section class="gate-panel gate-scan-panel">
+                    <aside class="gate-tip-card">
+                        <strong>معلومة:</strong>
+                        <p>إذا كان هناك مشغل آخر، امسح باركود بطاقته وأدخل PIN لتبديل المشغل بسرعة من نفس الشاشة.</p>
+                    </aside>
+
+                    <div class="gate-scan-box">
+                        <div class="gate-scanner-icon">
+                            <div class="gate-scanner-glyph" aria-hidden="true">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M3 4a1 1 0 0 1 1-1h3v2H5v2H3V4zm13-1h3a1 1 0 0 1 1 1v3h-2V5h-2V3zM3 17h2v2h2v2H4a1 1 0 0 1-1-1v-3zm16 2v-2h2v3a1 1 0 0 1-1 1h-3v-2h2zM7 7h10v10H7V7zm2 2v6h6V9H9z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <div class="gate-panel-title gate-scan-title">جاهز للمسح</div>
+                            <div class="gate-panel-note">امسح تصريح المركبة أو بطاقة الموظف</div>
+                        </div>
+
+                        <input id="barcodeScanner"
+                               class="gate-scanner-input ltr-field"
+                               type="text"
+                               inputmode="none"
+                               autocomplete="off"
+                               autocapitalize="off"
+                               spellcheck="false"
+                               placeholder="أمسح الباركود هنا"
+                               aria-label="إدخال الباركود"
+                               autofocus />
+
+                        <div class="gate-scan-actions">
+                            <button type="button" class="gate-refocus-button" id="focusScannerButton">إعادة التركيز</button>
+                            <span class="gate-status-chip" id="scanHintChip">امسح باركود المشغل ثم أدخل الـ PIN</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="gate-panel gate-result-panel state-empty" id="permitResultCard" tabindex="0" aria-live="polite">
+                    <div class="gate-result-header">
+                        <div>
+                            <h2 class="gate-panel-title">آخر نتيجة مسح</h2>
+                            <div class="gate-panel-note">ستبقى ظاهرة حتى تأتي عملية جديدة.</div>
+                        </div>
+                        <span class="gate-status-chip" id="permitAccessChip">غير مقروء</span>
+                    </div>
+
+                    <div class="gate-result-empty" id="permitEmptyState">
+                        <div>
+                            <h2>مرر الباركود الآن</h2>
+                            <div>سنسمع صوتاً وتظهر بطاقة التصريح عند نجاح القراءة.</div>
+                        </div>
+                    </div>
+
+                    <div id="permitDetailsState" hidden>
+                        <div class="gate-result-grid">
+                            <div class="gate-result-icon">
+                                <svg viewBox="0 0 24 24" id="resultIconSvg">
+                                    <path d="M9.55 18 3.85 12.3l1.4-1.4 4.3 4.3 9.2-9.2 1.4 1.4z" />
+                                </svg>
+                            </div>
+
+                            <div>
+                                <div class="gate-result-header gate-result-header-flush">
+                                    <div>
+                                        <span class="gate-status-chip" id="permitStateChip">-</span>
+                                        <h3 class="gate-result-title" id="permitDriverName">-</h3>
+                                        <div class="gate-result-subtitle" id="permitMovementLabel">-</div>
+                                    </div>
+                                </div>
+
+                                <div class="gate-result-fields">
+                                    <div class="gate-result-field">
+                                        <span>رقم التصريح</span>
+                                        <strong class="ltr-field" id="permitNumber">-</strong>
+                                    </div>
+                                    <div class="gate-result-field">
+                                        <span>نوع العملية</span>
+                                        <strong id="permitType">-</strong>
+                                    </div>
+                                    <div class="gate-result-field">
+                                        <span>الجهة</span>
+                                        <strong id="permitDepartment">-</strong>
+                                    </div>
+                                    <div class="gate-result-field">
+                                        <span>وقت العملية</span>
+                                        <strong id="permitTimestamp">-</strong>
+                                    </div>
+                                    <div class="gate-result-field">
+                                        <span>تاريخ اليوم</span>
+                                        <strong id="permitApprovalStatus">-</strong>
+                                    </div>
+                                    <div class="gate-result-field">
+                                        <span>رقم المركبة</span>
+                                        <strong class="ltr-field" id="permitPlateNumber">-</strong>
+                                    </div>
+                                </div>
+
+                                <div class="gate-result-message">
+                                    <div><strong id="permitSubject">-</strong></div>
+                                    <div class="gate-panel-note" id="permitReason">-</div>
+                                    <div class="gate-panel-note national-id-field" id="permitNationalId">-</div>
+                                    <div class="gate-panel-note" id="permitPhone">-</div>
+                                    <div class="gate-panel-note" id="permitScanSource">قارئ الباركود</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="gate-panel gate-note-panel">
+                    <div class="gate-panel-header">
+                        <div>
+                            <h2 class="gate-panel-title">ملاحظة من البوابة (اختياري)</h2>
+                            <div class="gate-panel-note">سجّل ملاحظات سريعة على آخر تصريح ظاهر في الشاشة، وستظهر في سجل الحركة والتقارير باسم المشغل المناوب.</div>
+                        </div>
+                        <span class="gate-status-chip" id="noteTargetChip">لا يوجد تصريح محدد</span>
+                    </div>
+
+                    <div class="gate-note-layout">
+                        <div>
+                            <div class="gate-note-presets">
+                                <button type="button" class="gate-note-preset" data-note-preset="تلفظ على الموظف عند البوابة.">تلفظ على الموظف</button>
+                                <button type="button" class="gate-note-preset" data-note-preset="خرج بدون استئذان من البوابة.">خروج بدون استئذان</button>
+                                <button type="button" class="gate-note-preset" data-note-preset="رفض إبراز الهوية عند البوابة.">رفض إبراز الهوية</button>
+                                <button type="button" class="gate-note-preset" data-note-preset="مخالفة تعليمات البوابة أثناء الدخول أو الخروج.">مخالفة تعليمات</button>
+                            </div>
+
+                            <div class="gate-note-input-wrap">
+                                <textarea id="operatorNoteInput" class="gate-note-input" maxlength="200" placeholder="اكتب ملاحظة إضافية هنا..."></textarea>
+                            </div>
+
+                            <div class="gate-note-footer">
+                                <div class="gate-panel-note" id="operatorNoteHint">يجب تسجيل دخول مشغل قبل حفظ أي ملاحظة.</div>
+                                <button type="button" class="gate-note-save" id="saveOperatorNoteButton" disabled>حفظ الملاحظة</button>
+                            </div>
+                        </div>
+
+                        <aside class="gate-note-help">
+                            <strong>معلومة:</strong>
+                            ستُحفظ هذه الملاحظة باسم المشغل الحالي، وتُربط بهذه العملية في سجل التدقيق.
+                        </aside>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="gate-sidebar">
+                <section class="gate-panel gate-sidebar-panel">
+                    <div class="gate-panel-header">
+                        <div>
+                            <h2 class="gate-panel-title">آخر العمليات</h2>
+                            <div class="gate-panel-note">تحديث مباشر لآخر الحركات والملاحظات والتبديلات.</div>
+                        </div>
+
+                    </div>
+
+                    <div class="gate-activity-list" id="recentActivityList">
+                        @if (initialRecentActivities.Any())
+                        {
+                            foreach (var activity in initialRecentActivities)
+                            {
+                                var activityTheme = MapActivityTheme(activity);
+                                <article class="gate-activity-item @activityTheme">
+                                    <div class="gate-activity-head">
+                                        <span>@HijriDateFormatter.Format(activity.OccurredAt)</span>
+                                        <span class="gate-activity-badge @activityTheme">@activity.ActionLabel</span>
+                                    </div>
+                                    <div class="gate-activity-title">@(string.IsNullOrWhiteSpace(activity.DriverName) ? activity.PermitNumber : activity.DriverName)</div>
+                                    <div class="gate-activity-meta">@activity.Message</div>
+                                    <div class="gate-activity-meta">بواسطة: @FormatOperator(activity)</div>
+                                </article>
+                            }
+                        }
+                        else
+                        {
+                            <div class="gate-panel-note">لا توجد عمليات حديثة بعد.</div>
+                        }
+                    </div>
+
+                    <div class="gate-activity-footer">
+                        <span>إجمالي الظاهر الآن</span>
+                        <strong id="recentActivityTotal">@initialRecentActivities.Count عملية</strong>
+                    </div>
+                </section>
+            </aside>
+        </div>
+
+        <div class="gate-alert-strip">
+            <span class="gate-alert-text">
+                <strong class="gate-alert-highlight">تنبيه:</strong>
+                لا يوجد خروج تلقائي بسبب الخمول. يرجى تسجيل الخروج يدوياً عند انتهاء الوردية.
+            </span>
+            <span class="gate-alert-version">الإصدار @(gateAppVersion)</span>
+        </div>
+    </div>
+
+    <div class="gate-modal is-hidden" id="operatorModal" aria-hidden="true">
+        <div class="gate-dialog" role="dialog" aria-modal="true" aria-labelledby="operatorModalTitle">
+            <button type="button" class="gate-dialog-button secondary" id="closeOperatorModalButton">إغلاق</button>
+
+            <div class="gate-dialog-lock-icon">🔒</div>
+            <h3 id="operatorModalTitle">إدخال PIN</h3>
+            <div class="gate-dialog-current-operator" id="operatorModalCurrentOperator">الموظف: --</div>
+            <div class="gate-dialog-subtitle" id="operatorModalHint">أدخل PIN للمتابعة</div>
+
+            <div class="gate-dialog-fields" id="operatorLoginSection">
+                <input id="operatorBadgeInput" class="gate-scanner-input ltr-field" type="text" inputmode="none" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="باركود المشغل" readonly />
+                <input id="operatorPinInput" class="gate-scanner-input ltr-field" type="password" inputmode="none" maxlength="6" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="أدخل PIN للمتابعة" readonly />
+            </div>
+
+            <div class="gate-dialog-fields" id="operatorPinChangeSection" hidden>
+                <input id="operatorCurrentPinInput" class="gate-scanner-input ltr-field" type="password" inputmode="none" maxlength="6" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="PIN الحالي" readonly />
+                <input id="operatorNewPinInput" class="gate-scanner-input ltr-field" type="password" inputmode="none" maxlength="6" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="PIN الجديد" readonly />
+                <input id="operatorConfirmPinInput" class="gate-scanner-input ltr-field" type="password" inputmode="none" maxlength="6" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="تأكيد PIN الجديد" readonly />
+            </div>
+
+            <div class="gate-dialog-message" id="operatorModalMessage">ملاحظة: سيتم تسجيل خروج المشغل الحالي عند نجاح الدخول.</div>
+
+            <div class="gate-dialog-actions">
+                <button type="button" class="gate-dialog-button primary" id="submitOperatorLoginButton">تأكيد الدخول</button>
+                <button type="button" class="gate-dialog-button secondary" id="submitOperatorPinChangeButton" hidden>تأكيد تغيير PIN</button>
+                <button type="button" class="gate-dialog-button secondary" id="cancelOperatorModalButton">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script id="gateInitialRecentActivities" type="application/json" nonce="@(Context.Items["CspScriptNonce"])">
+@Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialRecentActivities.Select(activity => new
+{
+    occurredAtText = HijriDateFormatter.Format(activity.OccurredAt),
+    statusText = activity.ActionLabel,
+    actionLabel = activity.ActionLabel,
+    driverName = activity.DriverName,
+    permitNumber = activity.PermitNumber,
+    message = activity.Message,
+    operatorDisplay = FormatOperator(activity),
+    theme = MapActivityTheme(activity),
+})))
+</script>
+<script src="~/js/gate-display.js" asp-append-version="true"></script>

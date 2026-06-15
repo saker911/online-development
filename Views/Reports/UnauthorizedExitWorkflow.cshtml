@@ -1,0 +1,348 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@using VehiclePermitSystemWeb.Utilities
+@model ReportsDashboardViewModel
+
+@functions {
+    private static string FormatDate(DateTime? value) => HijriDateFormatter.FormatWithDay(value);
+
+    private static string GetWorkflowBadgeClass(string status) => status switch
+    {
+        "Pending" => "bg-warning-subtle text-warning-emphasis",
+        "UnderReview" => "bg-primary-subtle text-primary-emphasis",
+        "Stopped" => "bg-danger-subtle text-danger-emphasis",
+        "Closed" => "bg-success-subtle text-success-emphasis",
+        _ => "bg-secondary-subtle text-secondary-emphasis",
+    };
+}
+
+@{
+    ViewData["Title"] = "لوحة مخالفات الخروج";
+    var canReviewUnauthorizedExit = User.HasPermission(AppPermissions.ReviewUnauthorizedExit);
+    var canReactivatePermits = User.HasPermission(AppPermissions.StopPermit);
+    var returnUrl = Url.Action(
+        "UnauthorizedExitWorkflow",
+        "Reports",
+        new
+        {
+            workflowQuery = Model.UnauthorizedExitWorkflowQuery,
+            workflowStatusFilter = Model.UnauthorizedExitWorkflowStatusFilter,
+            page = Model.UnauthorizedExitWorkflowPage,
+            pageSize = Model.UnauthorizedExitWorkflowPageSize,
+        }
+    ) ?? "/Reports/UnauthorizedExitWorkflow";
+    var workflowPagination = new ReportPaginationViewModel
+    {
+        ActionName = "UnauthorizedExitWorkflow",
+        AriaLabel = "ترقيم صفحات لوحة مخالفات الخروج",
+        Fragment = "workflow-data-table",
+        Theme = "warning",
+        CurrentPage = Model.UnauthorizedExitWorkflowPage,
+        TotalPages = Model.UnauthorizedExitWorkflowTotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["pageSize"] = Model.UnauthorizedExitWorkflowPageSize,
+            ["workflowQuery"] = Model.UnauthorizedExitWorkflowQuery,
+            ["workflowStatusFilter"] = Model.UnauthorizedExitWorkflowStatusFilter,
+        },
+    };
+}
+
+<div class="reports-page-shell">
+    <section class="reports-hero card-permit">
+        <div>
+            <span class="reports-kicker">مسار مخالفات الخروج</span>
+            <h1 class="mb-2">لوحة متابعة مخالفات الخروج</h1>
+            <p class="text-muted-ar mb-0">مسار موحد للحالات المعلقة وتحت المراجعة والموقوفة والمغلقة حتى لا تضيع بين
+                السجل والتقارير.</p>
+                <div class="report-workflow-legend" role="note" aria-label="توضيح إجراءات المخالفة">
+                    <div class="report-workflow-legend-item">
+                        <strong>اعتماد المخالفة فقط</strong>
+                        <span>اعتماد المخالفة لا يعيد تشغيل التصريح.</span>
+                    </div>
+                    <div class="report-workflow-legend-divider" aria-hidden="true"></div>
+                    <div class="report-workflow-legend-item">
+                        <strong>إعادة تفعيل التصريح</strong>
+                        <span>إجراء مستقل يعيد تشغيل التصريح بعد الإيقاف.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="reports-hero-actions">
+                <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
+                <a asp-action="PermitActivity" class="report-mini-action"><span>سجل الحركة</span></a>
+                <a asp-action="StoppedPermits"
+                   class="report-mini-action report-mini-action-warning"><span>الموقوفة</span></a>
+            </div>
+        </section>
+
+        <div class="reports-stat-grid mt-4">
+            <div class="report-stat report-stat-warning"><span
+                class="report-stat-label">معلقة</span><strong>@Model.UnauthorizedExitWorkflowPendingCount</strong></div>
+                <div class="report-stat"><span class="report-stat-label">تحت
+                    المراجعة</span><strong>@Model.UnauthorizedExitWorkflowUnderReviewCount</strong></div>
+                    <div class="report-stat report-stat-dark"><span
+                        class="report-stat-label">موقوفة</span><strong>@Model.UnauthorizedExitWorkflowStoppedCount</strong>
+                    </div>
+                    <div class="report-stat report-stat-success"><span
+                        class="report-stat-label">مغلقة</span><strong>@Model.UnauthorizedExitWorkflowClosedCount</strong></div>
+                    </div>
+
+                    <section class="report-inner-panel mt-4">
+                        <div class="report-panel-header">
+                            <div>
+                                <h2>بحث وفرز المسار</h2>
+                                <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو رقم التسلسل أو المشغل، وفلتر بحسب مرحلة المسار
+                                    الحالية.</span>
+                                </div>
+                                <span class="report-section-badge">@Model.UnauthorizedExitWorkflowTotalCount حالة</span>
+                            </div>
+
+                            <form asp-action="UnauthorizedExitWorkflow" method="get" class="report-search-form">
+                                <input type="hidden" name="page" value="1" />
+                                <div class="report-search-box">
+                                    <label class="form-label mb-1">البحث</label>
+                                    <input name="workflowQuery" value="@Model.UnauthorizedExitWorkflowQuery" class="form-control"
+                                           placeholder="رقم التصريح أو الاسم أو رقم التسلسل أو المشغل" />
+                                </div>
+                                <div class="report-search-box">
+                                    <label class="form-label mb-1">الحالة</label>
+                                    <select name="workflowStatusFilter" class="form-select">
+                                        <option value="All" selected="@(Model.UnauthorizedExitWorkflowStatusFilter == "All")">كل الحالات
+                                        </option>
+                                        <option value="Pending" selected="@(Model.UnauthorizedExitWorkflowStatusFilter == "Pending")">حالات
+                                            معلقة</option>
+                                            <option value="UnderReview"
+                                                    selected="@(Model.UnauthorizedExitWorkflowStatusFilter == "UnderReview")">تحت المراجعة</option>
+                                            <option value="Stopped" selected="@(Model.UnauthorizedExitWorkflowStatusFilter == "Stopped")">موقوفة
+                                            </option>
+                                            <option value="Closed" selected="@(Model.UnauthorizedExitWorkflowStatusFilter == "Closed")">مغلقة
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="report-search-box">
+                                        <label class="form-label mb-1">عدد الصفوف</label>
+                                        <select name="pageSize" class="form-select">
+                                            <option value="10" selected="@(Model.UnauthorizedExitWorkflowPageSize == 10)">10</option>
+                                            <option value="20" selected="@(Model.UnauthorizedExitWorkflowPageSize == 20)">20</option>
+                                            <option value="50" selected="@(Model.UnauthorizedExitWorkflowPageSize == 50)">50</option>
+                                        </select>
+                                    </div>
+                                    <div class="report-inline-controls report-inline-controls-tight">
+                                        <button type="submit" class="report-mini-action report-mini-action-solid"><span>تطبيق</span></button>
+                                        <a asp-action="UnauthorizedExitWorkflow" class="report-mini-action"><span>مسح</span></a>
+                                    </div>
+                                </form>
+                            </section>
+
+                            <section class="report-inner-panel mt-4" id="workflow-data-table">
+                                <div class="report-panel-header">
+                                    <div>
+                                        <h2>مراحل المسار</h2>
+                                        <span class="text-muted-ar">كل تسلسل يظهر بآخر حالته الحالية، مع الوصول المباشر إلى الإجراء
+                                            المناسب.</span>
+                                        </div>
+                                        <span class="report-section-badge">@Model.UnauthorizedExitWorkflowStatusDisplay</span>
+                                    </div>
+
+                                    @if (Model.UnauthorizedExitWorkflowItems.Any())
+                                    {
+                                        <div class="table-responsive report-scroll-table">
+                                            <table class="table table-striped align-middle report-table mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>التصريح</th>
+                                                        <th>الموظف</th>
+                                                        <th>المرحلة</th>
+                                                        <th>آخر تحديث</th>
+                                                        <th>الجهة / المشغل</th>
+                                                        <th>الملخص</th>
+                                                        <th>الإجراءات</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var item in Model.UnauthorizedExitWorkflowItems)
+                                                    {
+                                                        <tr>
+                                                            <td>
+                                                                <div>@item.PermitNumber</div>
+                                                                <div class="small text-muted ltr-field">@item.SequenceId</div>
+                                                            </td>
+                                                            <td>
+                                                                <div>@item.DriverName</div>
+                                                                <div class="small text-muted">@item.DepartmentName</div>
+                                                            </td>
+                                                            <td>
+                                                                <div>
+                                                                    <span
+                                                                    class="badge rounded-pill @GetWorkflowBadgeClass(item.WorkflowStatus)">@item.WorkflowStatusDisplay</span>
+                                                                </div>
+                                                                <div class="small text-muted mt-1">@item.FinalClassificationDisplay ·
+                                                                    @item.ApprovalStatusDisplay</div>
+                                                                </td>
+                                                                <td class="date-text">
+                                                                    <div>@FormatDate(item.LastUpdatedAt)</div>
+                                                                    <div class="small text-muted">منذ @FormatDate(item.FirstAttemptAt)</div>
+                                                                </td>
+                                                                <td>
+                                                                    <div>@item.GateName</div>
+                                                                    <div class="small text-muted">@item.OperatorDisplay</div>
+                                                                </td>
+                                                                <td>
+                                                                    <div>@item.SummaryMessage</div>
+                                                                    <div class="small text-muted">@item.ActivityCount حركة · @item.WarningCount تنبيه</div>
+                                                                </td>
+                                                                <td>
+                                                                    <div class="report-inline-controls report-inline-controls-tight">
+                                                                        <a asp-action="PermitActivity" asp-route-activityQuery="@item.PermitNumber"
+                                                                               asp-route-selectedSequenceId="@item.SequenceId" class="report-mini-action"><span>عرض
+                                                                            التسلسل</span></a>
+                                                                            @if (item.CanResolveReview && canReviewUnauthorizedExit)
+                                                                            {
+                                                                                <div class="report-workflow-action-group report-workflow-action-group-review">
+                                                                                    <form asp-action="ResolveUnauthorizedExitReview" method="post"
+                                                                                          data-single-submit-form>
+                                                                                        @Html.AntiForgeryToken()
+                                                                                        <input type="hidden" name="sequenceId" value="@item.SequenceId" />
+                                                                                        <input type="hidden" name="activityQuery" value="@item.PermitNumber" />
+                                                                                        <input type="hidden" name="pageSize"
+                                                                                               value="@Model.UnauthorizedExitWorkflowPageSize" />
+                                                                                        <button type="submit" name="resolution" value="dismiss"
+                                                                                                class="report-mini-action" data-pending-text="انتظار...">
+                                                                                            <span>رفض المخالفة فقط</span>
+                                                                                        </button>
+                                                                                    </form>
+                                                                                    <div class="report-workflow-confirm-block">
+                                                                                        <div class="report-workflow-confirm-title">عند اعتماد المخالفة</div>
+                                                                                        <div class="report-workflow-confirm-question">هل تريد أيضًا إعادة تفعيل التصريح؟
+                                                                                        </div>
+                                                                                        <div
+                                                                                            class="report-inline-controls report-inline-controls-tight report-workflow-confirm-actions">
+                                                                                            <form asp-action="ResolveUnauthorizedExitReview" method="post"
+                                                                                                  data-single-submit-form>
+                                                                                                @Html.AntiForgeryToken()
+                                                                                                <input type="hidden" name="sequenceId" value="@item.SequenceId" />
+                                                                                                <input type="hidden" name="activityQuery" value="@item.PermitNumber" />
+                                                                                                <input type="hidden" name="permitNumber" value="@item.PermitNumber" />
+                                                                                                <input type="hidden" name="pageSize"
+                                                                                                       value="@Model.UnauthorizedExitWorkflowPageSize" />
+                                                                                                <input type="hidden" name="reactivatePermit" value="true" />
+                                                                                                <button type="submit" name="resolution" value="confirm"
+                                                                                                        class="report-mini-action report-mini-action-success"
+                                                                                                        data-pending-text="انتظار...">
+                                                                                                    <span>نعم</span>
+                                                                                                </button>
+                                                                                            </form>
+                                                                                            <form asp-action="ResolveUnauthorizedExitReview" method="post"
+                                                                                                  data-single-submit-form>
+                                                                                                @Html.AntiForgeryToken()
+                                                                                                <input type="hidden" name="sequenceId" value="@item.SequenceId" />
+                                                                                                <input type="hidden" name="activityQuery" value="@item.PermitNumber" />
+                                                                                                <input type="hidden" name="permitNumber" value="@item.PermitNumber" />
+                                                                                                <input type="hidden" name="pageSize"
+                                                                                                       value="@Model.UnauthorizedExitWorkflowPageSize" />
+                                                                                                <input type="hidden" name="reactivatePermit" value="false" />
+                                                                                                <button type="submit" name="resolution" value="confirm"
+                                                                                                        class="report-mini-action report-mini-action-warning"
+                                                                                                        data-pending-text="انتظار...">
+                                                                                                    <span>لا</span>
+                                                                                                </button>
+                                                                                            </form>
+                                                                                        </div>
+                                                                                        <div class="report-workflow-action-note">إذا اخترت لا فسيتم اعتماد المخالفة ويظل
+                                                                                            التصريح موقوفًا إلى أن تعيد تفعيله لاحقًا.</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                }
+                                                                                @if (item.IsStopped)
+                                                                                {
+                                                                                    <div class="report-workflow-action-group report-workflow-action-group-reactivate">
+                                                                                        <a asp-controller="Permits" asp-action="Details" asp-route-id="@item.PermitNumber"
+                                                                                           asp-route-returnUrl="@returnUrl" asp-route-focusActions="true"
+                                                                                           class="report-mini-action report-mini-action-solid"><span>اتخاذ إجراء</span></a>
+                                                                                        @if (canReactivatePermits)
+                                                                                        {
+                                                                                            <form asp-controller="Permits" asp-action="Reactivate" method="post"
+                                                                                                  data-single-submit-form>
+                                                                                                @Html.AntiForgeryToken()
+                                                                                                <input type="hidden" name="id" value="@item.PermitNumber" />
+                                                                                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                                                                <button type="submit" class="report-mini-action report-mini-action-success"
+                                                                                                        data-pending-text="انتظار..."><span>إعادة
+                                                                                                    تفعيل التصريح</span></button>
+                                                                                                </form>
+                                                                                            }
+                                                                                            <div class="report-workflow-action-note">إعادة التفعيل إجراء مستقل بعد مراجعة
+                                                                                                المخالفة.</div>
+                                                                                            </div>
+                                                                                        }
+                                                                                        @if (item.IsClosed)
+                                                                                        {
+                                                                                            <a asp-controller="Permits" asp-action="Details" asp-route-id="@item.PermitNumber"
+                                                                                               asp-route-returnUrl="@returnUrl"
+                                                                                               class="report-mini-action report-mini-action-success"><span>عرض التصريح</span></a>
+                                                                                        }
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        }
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+
+                                                            <partial name="_ReportPagination" model="workflowPagination" />
+                                                        }
+        else
+                                                        {
+                                                            <partial name="_ReportEmptyState" model='"لا توجد حالات مطابقة للفلتر الحالي في مسار مخالفات الخروج."' />
+                                                        }
+                                                    </section>
+                                                </div>
+
+                                                <script nonce="@(Context.Items["CspScriptNonce"])">
+                                                    (() => {
+                                                        const updatePendingLabel = (button, nextText) => {
+                                                            const label = button.querySelector('span');
+                                                            if (label) {
+                                                                label.textContent = nextText;
+                                                                return;
+                                                            }
+
+                                                            button.textContent = nextText;
+                                                        };
+
+                                                        document.querySelectorAll('form[data-single-submit-form]').forEach((form) => {
+                                                            let submitted = false;
+                                                            form.addEventListener('submit', (event) => {
+                                                                if (submitted) {
+                                                                    event.preventDefault();
+                                                                    return;
+                                                                }
+
+                                                                const submitter = event.submitter instanceof HTMLButtonElement
+                                                                    ? event.submitter
+                                                                    : form.querySelector('button[type="submit"]');
+                                                                if (!submitter) {
+                                                                    return;
+                                                                }
+
+                                                                submitted = true;
+                                                                form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                                                                    button.disabled = true;
+                                                                });
+
+                                                                updatePendingLabel(submitter, submitter.dataset.pendingText || 'انتظار...');
+                                                            });
+                                                        });
+                                                    })();
+                                                </script>

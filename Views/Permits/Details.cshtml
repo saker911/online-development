@@ -1,0 +1,323 @@
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.Entities.Permit
+
+@{
+    ViewData["Title"] = "تفاصيل التصريح";
+    var canRenderArtifacts = string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+    var canApprove = ViewData["CanApprovePendingPermit"] as bool? == true;
+    var canForwardApproval = ViewBag.CanForwardApproval as bool? ?? false;
+    var canLeaveRequest = User.HasPermission(AppPermissions.ApproveLeaveRequest)
+        && Model.IsPermanentPermit
+        && !Model.RequiresReturn
+        && string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(Model.CurrentState, "Inside", StringComparison.OrdinalIgnoreCase)
+        && !Model.ArchivedAt.HasValue;
+    var canClearDailySchedule = User.HasPermission(AppPermissions.ApproveLeaveRequest)
+        && Model.IsPermanentPermit
+        && Model.HasDailyLeaveSchedule
+        && !Model.PendingExitRequest
+        && string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(Model.CurrentState, "Inside", StringComparison.OrdinalIgnoreCase)
+        && !Model.ArchivedAt.HasValue;
+    var canStop = User.HasPermission(AppPermissions.StopPermit)
+        && string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+    var canReactivate = User.HasPermission(AppPermissions.StopPermit)
+        && (string.Equals(Model.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase)
+            || Model.ArchivedAt.HasValue);
+    var hasActiveExpectedReturn = Model.ExpectedReturnTime.HasValue
+        && string.Equals(Model.ApprovalStatus, "Out", StringComparison.OrdinalIgnoreCase);
+    var temporaryExitPermissionText = Model.TemporaryExitPermissionUntil.HasValue
+        && Model.TemporaryExitPermissionUntil.Value > AppClock.LocalNow
+            ? $"مفعل حتى {HijriDateFormatter.Format(Model.TemporaryExitPermissionUntil)}"
+            : "غير مفعل";
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var focusActions = ViewBag.FocusActions as bool? ?? false;
+    var isStopped = string.Equals(Model.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-permit app-card-surface app-dashboard-surface">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="h3 mb-0">تفاصيل التصريح @Model.PermitNumber</h1>
+                <span class="status-badge status-blue">@Model.ApprovalStatusDisplay</span>
+            </div>
+
+            <div class="row g-3">
+                @if (isStopped)
+                {
+                    <div class="col-12">
+                        <div class="app-inline-note app-inline-note-danger mb-0">
+                            هذا التصريح موقوف حاليًا. استخدم أزرار الإجراء في أسفل الصفحة لمراجعة السجل أو إعادة التفعيل.
+                        </div>
+                    </div>
+                }
+                @if (ViewData["PermitNotice"] is string permitNotice && !string.IsNullOrWhiteSpace(permitNotice))
+                {
+                    <div class="col-12">
+                        <div class="app-inline-note app-inline-note-warning mb-0">@permitNotice</div>
+                    </div>
+                }
+                <div class="col-md-6">
+                    <strong>نوع التصريح</strong>
+                    <div>@Model.PermitTypeDisplay</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>@(Model.IsVisitorPermit ? "اسم الزائر" : "اسم المصرح له")</strong>
+                    <div>@Model.DriverName</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>رقم الهوية</strong>
+                    <div class="national-id-field">@Model.NationalId</div>
+                </div>
+                <div class="col-md-6">
+                    <strong>@(Model.RequiresVisitLocation ? "مكان الزيارة" : "موقع العمل")</strong>
+                    <div>@Model.LocationDisplay</div>
+                </div>
+                @if (!Model.IsVisitorPermit)
+                {
+                    <div class="col-md-6">
+                        <strong>مدير الموظف</strong>
+                        <div>@Model.ManagerName</div>
+                    </div>
+                }
+                <div class="col-md-6">
+                    <strong>تاريخ التصريح</strong>
+                    <div class="date-text">@(Model.PermitDate.HasValue ? HijriDateFormatter.Format(Model.PermitDate) :
+                      "غير محدد")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>نوع الحركة</strong>
+                        <div>@Model.ReturnRequirementDisplay</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>تصريح الخروج المؤقت</strong>
+                        <div>@temporaryExitPermissionText</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>حالة الاستئذان</strong>
+                        <div>@Model.PendingExitRequestDisplay</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>الجدولة اليومية</strong>
+                        <div>@Model.DailyLeaveScheduleDisplay</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>تنبيهات التأخر</strong>
+                        <div>@Model.LateReturnWarningDisplay</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>مستوى تصعيد مخالفات الخروج</strong>
+                        <div>@Model.UnauthorizedExitWarningDisplay</div>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>حالة الخروج المعلّقة</strong>
+                        <div>@Model.PendingUnauthorizedExitDisplay</div>
+                    </div>
+                    @if (Model.LastAutomaticWorkEndExitAt.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <strong>إغلاق نهاية الدوام</strong>
+                            <div class="date-text">@HijriDateFormatter.Format(Model.LastAutomaticWorkEndExitAt)</div>
+                        </div>
+                    }
+                    @if ((Model.PendingExitRequest || hasActiveExpectedReturn) &&
+                                                                                                                                        !string.IsNullOrWhiteSpace(Model.LeaveReason))
+                    {
+                        <div class="col-md-12">
+                            <strong>سبب الخروج</strong>
+                            <div>@Model.LeaveReason</div>
+                        </div>
+                    }
+                    @if ((Model.PendingExitRequest || hasActiveExpectedReturn) && Model.LeaveWindowStartAt.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <strong>بداية الاستئذان</strong>
+                            <div class="date-text">@HijriDateFormatter.Format(Model.LeaveWindowStartAt)</div>
+                        </div>
+                    }
+                    @if ((Model.PendingExitRequest || hasActiveExpectedReturn) && Model.LeaveWindowEndAt.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <strong>نهاية الاستئذان</strong>
+                            <div class="date-text">@HijriDateFormatter.Format(Model.LeaveWindowEndAt)</div>
+                        </div>
+                    }
+                    @if (Model.HasDailyLeaveSchedule)
+                    {
+                        <div class="col-md-6">
+                            <strong>مدة الجدولة</strong>
+                            <div class="date-text">@HijriDateFormatter.Format(Model.DailyLeaveScheduleStartDate) /
+                                @HijriDateFormatter.Format(Model.DailyLeaveScheduleEndDate)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>أوقات الجدولة اليومية</strong>
+                                <div class="ltr-field">
+                                    @if (Model.DailyLeaveScheduleRequiresReturn)
+                                    {
+                                        @($"{TimeSpan.FromMinutes(Model.DailyLeaveScheduleExitMinutes ?? 0):hh\\:mm} /                        {TimeSpan.FromMinutes(Model.DailyLeaveScheduleReturnMinutes ?? 0):hh\\:mm}")
+                                    }
+                                    else
+                                    {
+                                        @($"{TimeSpan.FromMinutes(Model.DailyLeaveScheduleExitMinutes ?? 0):hh\\:mm} / لا توجد عودة")
+                                    }
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(Model.DailyLeaveScheduleReason))
+                            {
+                                <div class="col-md-12">
+                                    <strong>سبب الجدولة اليومية</strong>
+                                    <div>@Model.DailyLeaveScheduleReason</div>
+                                </div>
+                            }
+                        }
+                        <div class="col-md-6">
+                            <strong>رقم الجوال</strong>
+                            <div>@Model.EmployeePhone</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>نوع المركبة</strong>
+                            <div>@Model.VehicleType</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>رقم اللوحة</strong>
+                            <div>@Model.PlateNumberDisplay</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>تاريخ الانتهاء</strong>
+                            <div class="date-text">@(Model.IsVisitorPermit && !Model.ExpiresAt.HasValue ? "يحدد تلقائيا بعد دخول الزائر" : Model.ExpiresAt.HasValue ? HijriDateFormatter.Format(Model.ExpiresAt) : "غير محدد")
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>الخروج / العودة</strong>
+                            <div class="date-text">@(Model.OutTime.HasValue ? HijriDateFormatter.Format(Model.OutTime) : "لم يسجل") /
+                                @(hasActiveExpectedReturn
+                                    ? (Model.ReturnTime.HasValue
+                                        ? HijriDateFormatter.Format(Model.ReturnTime)
+                                        : $"متوقعة {HijriDateFormatter.Format(Model.ExpectedReturnTime)}")
+                                    : Model.RequiresReturn
+                                        ? (Model.ReturnTime.HasValue
+                                            ? HijriDateFormatter.Format(Model.ReturnTime)
+                                            : "لم يسجل")
+                                        : "لا يحتاج عودة")
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2 flex-wrap" id="permit-actions" tabindex="-1">
+                            @if (!string.IsNullOrWhiteSpace(returnUrl))
+                            {
+                                <a href="@returnUrl" class="btn btn-secondary">رجوع</a>
+                            }
+                            else
+                            {
+                                <a asp-action="Index" class="btn btn-secondary">رجوع</a>
+                            }
+                            <a asp-controller="Reports" asp-action="PermitActivity"
+                               asp-route-activityQuery="@Model.PermitNumber" class="btn btn-outline-secondary">سجل الحركة</a>
+                            @if (canRenderArtifacts)
+                            {
+                                <a asp-action="Print" asp-route-id="@Model.PermitNumber" class="btn btn-info" target="_blank">طباعة
+                                    PDF</a>
+                                                <a asp-action="PrintZebraLabel" asp-route-id="@Model.PermitNumber"
+                                                    class="btn btn-outline-info" target="_blank">طباعة ملصق Zebra</a>
+                                                <a asp-controller="ScanConsole" asp-action="Index" asp-route-id="@Model.PermitNumber"
+                                                    class="btn btn-outline-primary">عرض باركود التصريح</a>
+                                    <a asp-action="PrintLabel" asp-route-id="@Model.PermitNumber" asp-route-widthMm="80"
+                                       asp-route-heightMm="50" class="btn btn-outline-info" target="_blank">ملصق 80×50</a>
+                                    <a asp-action="PrintLabel" asp-route-id="@Model.PermitNumber" asp-route-widthMm="62"
+                                       asp-route-heightMm="35" class="btn btn-outline-info" target="_blank">ملصق 62×35</a>
+                                }
+                                @if ((User.IsSuperAdmin() || User.IsInRole("GeneralManager") || User.IsInRole("DepartmentManager"))
+                                                                                    &&
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                !Model.ArchivedAt.HasValue)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@Model.PermitNumber" class="btn btn-warning">تعديل</a>
+                                }
+                                @if (canLeaveRequest)
+                                {
+                                    <a asp-action="LeaveRequest" asp-route-id="@Model.PermitNumber"
+                                       class="btn btn-warning btn-lg fw-bold shadow-sm">استئذان</a>
+                                }
+                                @if (canClearDailySchedule)
+                                {
+                                    <form asp-action="ClearDailySchedule" asp-route-id="@Model.PermitNumber"
+                                          asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)" method="post"
+                                          class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-outline-warning">إلغاء الجدولة اليومية</button>
+                                    </form>
+                                }
+                                @if (canApprove)
+                                {
+                                    <a asp-action="Approve" asp-route-id="@Model.PermitNumber" class="btn btn-success">اعتماد
+                                        التصريح</a>
+                                        <form asp-action="Reject" asp-route-id="@Model.PermitNumber" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger">رفض التصريح</button>
+                                        </form>
+                                    }
+                                    @if (canForwardApproval)
+                                    {
+                                        <form asp-action="ForwardToGeneralManager" asp-route-id="@Model.PermitNumber" method="post"
+                                              class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-warning">رفع الطلب للمدير العام</button>
+                                        </form>
+                                    }
+                                    @if (canStop)
+                                    {
+                                        <form asp-action="Stop" asp-route-id="@Model.PermitNumber"
+                                              asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)" method="post"
+                                              class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger">إيقاف التصريح</button>
+                                        </form>
+                                    }
+                                    @if (canReactivate)
+                                    {
+                                        <form asp-action="Reactivate" asp-route-id="@Model.PermitNumber"
+                                              asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)" method="post"
+                                              class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-success">إعادة التفعيل</button>
+                                        </form>
+                                    }
+                                </div>
+                                @if (focusActions)
+                                {
+                                    <script nonce="@(Context.Items["CspScriptNonce"])">
+                                                        document.addEventListener('DOMContentLoaded', function () {
+                                                            const actions = document.getElementById('permit-actions');
+                                                            if (actions) {
+                                                                actions.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                                actions.focus({ preventScroll: true });
+                                                            }
+                                                        });
+                                    </script>
+                                }
+                                @if (!canRenderArtifacts)
+                                {
+                                    <div class="app-inline-note app-inline-note-warning mt-3 mb-0">
+                                        هذا التصريح غير متاح حاليًا للطباعة أو التحقق حتى يصبح فعالًا.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card-permit app-card-surface app-dashboard-surface text-center">
+                            <h2 class="h5 mb-3">QR البوابة</h2>
+                            @if (canRenderArtifacts)
+                            {
+                                <img src="@Url.Action("Barcode", "Permits", new { id = Model.PermitNumber })" alt="QR" class="qr-img mb-3" />
+                                <div class="text-muted-ar mb-2">استخدم هذا الرمز عند البوابة. يقرأ من الشاشة مباشرة ويمثل الرمز العام
+                                    @Model.PublicPermitCode.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-muted-ar">ستظهر رموز التحقق بعد اعتماد التصريح.</div>
+                            }
+                        </div>
+                    </div>
+                </div>

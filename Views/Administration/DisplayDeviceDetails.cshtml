@@ -1,0 +1,27 @@
+@model VehiclePermitSystemWeb.Models.Entities.DisplayDevice
+
+@{
+    ViewData["Title"] = "تفاصيل شاشة العرض";
+}
+
+<div class="card-permit">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 class="mb-0">تفاصيل شاشة العرض</h1>
+        <a asp-action="DisplaySettings" class="btn btn-outline-secondary">العودة إلى شاشات العرض</a>
+    </div>
+    <dl class="row">
+        <dt class="col-sm-3">اسم الشاشة</dt><dd class="col-sm-9">@Model.ScreenName</dd>
+        <dt class="col-sm-3">الموقع</dt><dd class="col-sm-9">@Model.ScreenLocation</dd>
+        <dt class="col-sm-3">الوصف</dt><dd class="col-sm-9">@Model.Description</dd>
+        <dt class="col-sm-3">الحالة</dt><dd class="col-sm-9">@Model.Status</dd>
+        <dt class="col-sm-3">RequestCode</dt><dd class="col-sm-9 ltr-field">@Model.RequestCode</dd>
+        <dt class="col-sm-3">IP الطلب</dt><dd class="col-sm-9 ltr-field">@Model.IpAddress</dd>
+        <dt class="col-sm-3">آخر IP</dt><dd class="col-sm-9 ltr-field">@Model.LastIpAddress</dd>
+        <dt class="col-sm-3">User-Agent</dt><dd class="col-sm-9">@Model.UserAgent</dd>
+        <dt class="col-sm-3">تاريخ الطلب</dt><dd class="col-sm-9">@HijriDateFormatter.Format(Model.CreatedAtUtc.ToLocalTime())</dd>
+        <dt class="col-sm-3">تاريخ الاعتماد</dt><dd class="col-sm-9">@(Model.ApprovedAtUtc.HasValue ? HijriDateFormatter.Format(Model.ApprovedAtUtc.Value.ToLocalTime()) : "-")</dd>
+        <dt class="col-sm-3">اعتمد بواسطة</dt><dd class="col-sm-9">@Model.ApprovedByUserId</dd>
+        <dt class="col-sm-3">آخر ظهور</dt><dd class="col-sm-9">@(Model.LastSeenUtc.HasValue ? HijriDateFormatter.Format(Model.LastSeenUtc.Value.ToLocalTime()) : "-")</dd>
+        <dt class="col-sm-3">ملاحظات</dt><dd class="col-sm-9">@Model.Notes</dd>
+    </dl>
+</div>

@@ -1,0 +1,29 @@
+@{
+    ViewData["Title"] = "مفتاح شاشة العرض";
+    var returnUrl = ViewBag.ReturnUrl as string ?? Url.Action("Gate", "Display") ?? "/Display/Gate";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-7">
+            <div class="card-permit p-4 p-md-5">
+                <h1 class="mb-3">مفتاح شاشة العرض</h1>
+                <p class="text-muted-ar mb-4">أدخل مفتاح شاشة العرض مرة واحدة فقط. بعد التحقق سيتم حفظه في هذا المتصفح
+                    ولن يُطلب منك مرة أخرى.</p>
+
+                    <form method="post" asp-action="KeyEntry" asp-controller="Display">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+                        <div class="mb-3">
+                            <label for="accessKey" class="form-label">مفتاح الوصول</label>
+                            <input id="accessKey" name="accessKey" class="form-control ltr-field" autocomplete="off"
+                                   autofocus />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2">دخول شاشة العرض</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>

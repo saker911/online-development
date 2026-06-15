@@ -1,0 +1,461 @@
+.leadership-shell {
+    display: grid;
+    gap: 18px;
+    max-width: 1600px;
+    margin-inline: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.leadership-hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 22px;
+    border: 1px solid var(--t-border-card, #dbe3ee);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 8% 20%, rgba(22, 126, 138, .12), transparent 28%),
+        linear-gradient(135deg, var(--t-surface, #fff), var(--t-surface-soft, #f7f9fc));
+    box-shadow: var(--t-shadow-sm);
+}
+
+.leadership-hero-copy {
+    flex: 1 1 520px;
+    min-width: 0;
+}
+
+.leadership-kicker,
+.leadership-card-label {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--t-primary, #167e8a);
+    font-size: .75rem;
+    font-weight: 900;
+}
+
+.leadership-title-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.leadership-title-icon {
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 14px;
+    color: #fff;
+    background: linear-gradient(145deg, var(--t-primary, #167e8a), var(--t-blue-deep, #2e5cb8));
+    box-shadow: 0 10px 24px rgba(22, 126, 138, .2);
+}
+
+.leadership-title-icon svg {
+    width: 25px;
+    height: 25px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.leadership-title-row h1 {
+    margin: 0;
+    color: var(--t-text, #10233b);
+    font-size: clamp(1.45rem, 2.2vw, 1.95rem);
+    font-weight: 900;
+    letter-spacing: -.025em;
+}
+
+.leadership-title-row p {
+    max-width: 82ch;
+    margin: 7px 0 0;
+    color: var(--t-text-muted, #607087);
+    font-size: .88rem;
+    line-height: 1.75;
+}
+
+.leadership-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.leadership-actions .btn {
+    border-radius: 9px;
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.leadership-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.leadership-metric {
+    --leadership-accent: var(--t-primary, #167e8a);
+    --leadership-soft: var(--t-primary-soft, rgba(22, 126, 138, .1));
+    min-height: 116px;
+    display: grid;
+    align-content: space-between;
+    gap: 5px;
+    padding: 15px 17px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--t-border-card, #dbe3ee);
+    border-inline-start: 4px solid var(--leadership-accent);
+    border-radius: 13px;
+    background: var(--t-surface, #fff);
+    box-shadow: var(--t-shadow-xs);
+}
+
+.leadership-metric::after {
+    content: "";
+    position: absolute;
+    width: 94px;
+    height: 94px;
+    inset-inline-end: -34px;
+    inset-block-end: -42px;
+    border-radius: 50%;
+    background: var(--leadership-soft);
+}
+
+.leadership-metric-success {
+    --leadership-accent: var(--t-green, #1d9150);
+    --leadership-soft: var(--t-green-soft, #f0f8f3);
+}
+
+.leadership-metric-warning {
+    --leadership-accent: var(--t-amber, #c6850e);
+    --leadership-soft: var(--t-amber-soft, #fdf8ee);
+}
+
+.leadership-metric-info {
+    --leadership-accent: var(--t-blue, #3b6fd4);
+    --leadership-soft: var(--t-blue-soft, #f0f4fa);
+}
+
+.leadership-metric span,
+.leadership-metric small {
+    color: var(--t-text-muted, #607087);
+    position: relative;
+    z-index: 1;
+}
+
+.leadership-metric span {
+    font-size: .78rem;
+    font-weight: 800;
+}
+
+.leadership-metric strong {
+    color: var(--t-text, #10233b);
+    font-size: 1.8rem;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+}
+
+.leadership-metric small {
+    font-size: .72rem;
+}
+
+.leadership-guidance {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding-block: 12px;
+    padding-inline-start: 4rem;
+    padding-inline-end: 14px;
+    border-radius: 12px;
+}
+
+.leadership-guidance strong {
+    flex: 0 0 auto;
+}
+
+.leadership-administration-card,
+.leadership-section-heading {
+    border: 1px solid var(--t-border-card, #dbe3ee);
+    border-radius: 14px;
+    background: var(--t-surface, #fff);
+    box-shadow: var(--t-shadow-xs);
+}
+
+.leadership-administration-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 17px 19px;
+    border-inline-start: 4px solid var(--t-primary, #167e8a);
+}
+
+.leadership-administration-card h2,
+.leadership-section-heading h5 {
+    margin: 0;
+    color: var(--t-text, #10233b);
+    font-weight: 900;
+}
+
+.leadership-administration-card h2 {
+    font-size: 1.15rem;
+}
+
+.leadership-administration-card p {
+    margin: 5px 0 0;
+    color: var(--t-text-muted, #607087);
+    font-size: .8rem;
+}
+
+.leadership-administration-manager {
+    min-width: 190px;
+    display: grid;
+    justify-items: end;
+    gap: 3px;
+}
+
+.leadership-administration-manager span,
+.leadership-administration-manager small {
+    color: var(--t-text-muted, #607087);
+    font-size: .73rem;
+}
+
+.leadership-administration-manager strong {
+    color: var(--t-text, #10233b);
+}
+
+.leadership-administration-manager small {
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.leadership-administration-manager small.is-active {
+    color: #166534;
+    background: #ecfdf5;
+}
+
+.leadership-administration-manager small.is-inactive {
+    color: #991b1b;
+    background: #fef2f2;
+}
+
+.leadership-section-heading {
+    padding: 14px 16px;
+}
+
+.leadership-table-wrap {
+    border: 1px solid var(--t-border-card, #dbe3ee);
+    border-radius: 14px;
+    background: var(--t-surface, #fff);
+    box-shadow: var(--t-shadow-xs);
+}
+
+.leadership-shell .department-management-table {
+    margin: 0;
+}
+
+.leadership-shell .department-management-table thead th {
+    padding: 11px 9px;
+    background: var(--t-table-head-bg, #f4f6f8);
+    color: var(--t-table-head-text, #2a3548);
+    font-size: .72rem;
+}
+
+.leadership-shell .department-management-table tbody td {
+    padding: 11px 9px;
+    background: var(--t-table-row-bg, #fff);
+    border-color: var(--t-table-border, #e5eaf2);
+    font-size: .76rem;
+}
+
+.leadership-shell .department-management-table tbody tr:hover td {
+    background: var(--t-table-row-hover, #f0f3f6);
+}
+
+.manager-handover-modal .modal-content {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.manager-handover-modal {
+    z-index: 3100;
+}
+
+body:has(.manager-handover-modal.show) > .modal-backdrop {
+    z-index: 3090;
+}
+
+.manager-handover-modal .modal-dialog {
+    width: min(760px, calc(100% - 24px));
+    max-width: 760px;
+    margin-inline: auto;
+}
+
+.manager-handover-modal .modal-content > form {
+    display: flex;
+    min-height: 0;
+    max-height: calc(100vh - 24px);
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.manager-handover-modal .modal-header,
+.manager-handover-modal .modal-footer {
+    flex: 0 0 auto;
+}
+
+.manager-handover-modal .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.manager-handover-modal .modal-footer {
+    position: relative;
+    z-index: 2;
+}
+
+.manager-handover-modal .manager-handover-step {
+    min-height: 92px;
+    padding: 12px 14px;
+}
+
+.manager-handover-modal .manager-handover-step .small {
+    line-height: 1.55;
+}
+
+.manager-handover-modal .handover-automation-note {
+    border: 1px solid color-mix(in srgb, var(--t-blue, #0d6efd) 38%, var(--t-border-subtle, #d0d7de));
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: color-mix(in srgb, var(--t-blue, #0d6efd) 8%, var(--t-surface, #fff));
+}
+
+.manager-handover-modal .handover-automation-note strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.manager-handover-modal .handover-automation-note p {
+    margin: 0;
+    color: var(--t-text-muted, #6c757d);
+    font-size: .86rem;
+    line-height: 1.65;
+}
+
+[data-theme="dark"] .leadership-hero {
+    background:
+        radial-gradient(circle at 8% 20%, rgba(34, 211, 238, .1), transparent 30%),
+        linear-gradient(135deg, rgba(15, 23, 38, .98), rgba(10, 18, 31, .98));
+}
+
+[data-theme="dark"] .leadership-hero,
+[data-theme="dark"] .leadership-metric,
+[data-theme="dark"] .leadership-administration-card,
+[data-theme="dark"] .leadership-section-heading,
+[data-theme="dark"] .leadership-table-wrap {
+    border-color: rgba(56, 78, 112, .58);
+}
+
+[data-theme="dark"] .leadership-metric,
+[data-theme="dark"] .leadership-administration-card,
+[data-theme="dark"] .leadership-section-heading,
+[data-theme="dark"] .leadership-table-wrap {
+    background: linear-gradient(180deg, rgba(15, 23, 38, .98), rgba(10, 18, 31, .98));
+}
+
+[data-theme="dark"] .leadership-administration-manager small.is-active {
+    color: #bbf7d0;
+    background: rgba(22, 101, 52, .2);
+}
+
+@media (max-width: 992px) {
+    .leadership-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .leadership-shell {
+        gap: 13px;
+    }
+
+    .leadership-hero {
+        align-items: stretch;
+        padding: 17px;
+    }
+
+    .leadership-title-row {
+        align-items: flex-start;
+    }
+
+    .leadership-title-icon {
+        width: 42px;
+        height: 42px;
+    }
+
+    .leadership-actions,
+    .leadership-actions .btn {
+        width: 100%;
+    }
+
+    .leadership-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .leadership-metric {
+        min-height: 108px;
+    }
+
+    .leadership-guidance,
+    .leadership-administration-card {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .leadership-administration-manager {
+        min-width: 0;
+        justify-items: start;
+    }
+
+    .manager-handover-modal .manager-handover-stepper {
+        grid-template-columns: repeat(3, minmax(104px, 1fr));
+        gap: 7px;
+        overflow-x: auto;
+        padding-bottom: 3px;
+    }
+
+    .manager-handover-modal .manager-handover-step {
+        min-height: 92px;
+        padding: 10px;
+        font-size: .78rem;
+    }
+
+    .manager-handover-modal .manager-handover-step .small {
+        display: none;
+    }
+
+    .manager-handover-modal .manager-handover-step-number {
+        width: 1.65rem;
+        height: 1.65rem;
+        margin-bottom: 6px;
+    }
+
+    .manager-handover-modal .modal-dialog {
+        width: calc(100% - 12px);
+    }
+
+    .manager-handover-modal .modal-content > form {
+        max-height: calc(100vh - 12px);
+    }
+}

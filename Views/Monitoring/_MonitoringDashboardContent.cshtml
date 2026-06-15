@@ -1,0 +1,313 @@
+@model MonitoringDashboardViewModel
+@using System.Globalization
+
+@{
+    var culture = new CultureInfo("ar-SA");
+    var totalOperations = Model.EntryCount + Model.ExitCount + Model.DeniedCount;
+    var successfulOperations = Model.EntryCount + Model.ExitCount;
+    var successRate = totalOperations == 0
+        ? 100
+        : (int)Math.Round(successfulOperations * 100d / totalOperations);
+    var maxOperatorCount = Math.Max(1, Model.TopOperators.Select(item => item.Count).DefaultIfEmpty(0).Max());
+    var maxRejectionCount = Math.Max(1, Model.TopRejectionReasons.Select(item => item.Count).DefaultIfEmpty(0).Max());
+
+    string FormatDate(DateTime value) =>
+        $"{value.ToString("dd MMM yyyy، hh:mm", culture)} {(value.Hour < 12 ? "ص" : "م")}";
+
+    string ActionBadgeClass(MonitoringActivityItem item)
+    {
+        if (!item.Success)
+        {
+            return "monitor-badge-denied";
+        }
+
+        return item.ActionType switch
+        {
+            "Entry" or "LateReturn" or "LateAttendance" or "Return" or "ReturnAfterUnauthorizedExit" or "WorkEndEntry"
+                => "monitor-badge-entry",
+            "ExitAuthorized" or "ExitUnauthorized" or "ExitFinal" or "WorkEndExit" or "LateCheckout"
+                => "monitor-badge-exit",
+            _ => "monitor-badge-neutral",
+        };
+    }
+
+    string ActionText(MonitoringActivityItem item)
+    {
+        if (!item.Success)
+        {
+            return "رفض";
+        }
+
+        return item.ActionType switch
+        {
+            "Entry" or "LateReturn" or "LateAttendance" or "Return" or "ReturnAfterUnauthorizedExit" or "WorkEndEntry"
+                => "دخول",
+            "ExitAuthorized" or "ExitUnauthorized" or "ExitFinal" or "WorkEndExit" or "LateCheckout"
+                => "خروج",
+            "PermitScanSuccess" or "VisitScanSuccess" => "تحديث",
+            _ => item.ActionLabel,
+        };
+    }
+}
+
+<section
+    class="monitoring-wrap"
+    id="monitoring-dashboard-root"
+    data-monitoring-dashboard="true"
+    data-monitoring-snapshot-url="@Url.Action("Snapshot", "Monitoring")"
+    data-monitoring-range="@Model.Range"
+>
+    <div class="monitoring-head">
+        <div class="monitoring-title">
+            <span class="monitoring-eyebrow">مركز العمليات المباشر</span>
+            <div class="monitoring-title-row">
+                <div class="monitoring-title-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 13.5h3l2-6 4 10 2-4h5" />
+                    </svg>
+                </div>
+                <div>
+                    <h1>لوحة المراقبة التشغيلية</h1>
+                    <p>@Model.RangeLabel · من @FormatDate(Model.PeriodStart) إلى @FormatDate(Model.PeriodEnd)</p>
+                </div>
+            </div>
+        </div>
+        <div class="monitoring-head-actions">
+            <div class="monitor-status-chip" data-monitoring-status data-state="live" aria-live="polite">
+                <span class="monitor-status-dot" aria-hidden="true"></span>
+                <span class="monitor-status-text">يتم التحديث تلقائيًا</span>
+            </div>
+            <nav class="monitoring-range" aria-label="فلتر الفترة">
+                <a class="@(string.Equals(Model.Range, "today", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" asp-action="Index" asp-route-range="today">اليوم</a>
+                <a class="@(string.Equals(Model.Range, "7d", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" asp-action="Index" asp-route-range="7d">آخر 7 أيام</a>
+                <a class="@(string.Equals(Model.Range, "30d", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" asp-action="Index" asp-route-range="30d">آخر 30 يوم</a>
+            </nav>
+        </div>
+    </div>
+
+    <div class="monitoring-metrics">
+        <div class="monitor-card monitor-card-entry">
+            <div class="monitor-card-head">
+                <span>عمليات الدخول</span>
+                <span class="monitor-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M14 8l-4 4 4 4M10 12h10M5 5h5M5 19h5M5 5v14" />
+                    </svg>
+                </span>
+            </div>
+            <strong>@Model.EntryCount</strong>
+            <small>حركة دخول مسجلة خلال @Model.RangeLabel</small>
+        </div>
+        <div class="monitor-card monitor-card-exit">
+            <div class="monitor-card-head">
+                <span>عمليات الخروج</span>
+                <span class="monitor-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M10 8l4 4-4 4M4 12h10M19 5h-5M19 19h-5M19 5v14" />
+                    </svg>
+                </span>
+            </div>
+            <strong>@Model.ExitCount</strong>
+            <small>حركة خروج مكتملة خلال @Model.RangeLabel</small>
+        </div>
+        <div class="monitor-card monitor-card-denied">
+            <div class="monitor-card-head">
+                <span>عمليات الرفض</span>
+                <span class="monitor-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3l9 16H3L12 3zM12 9v4M12 17h.01" />
+                    </svg>
+                </span>
+            </div>
+            <strong>@Model.DeniedCount</strong>
+            <small>محاولة تحتاج متابعة أو معالجة</small>
+        </div>
+        <div class="monitor-card monitor-card-total">
+            <div class="monitor-card-head">
+                <span>إجمالي الحركة</span>
+                <span class="monitor-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+                    </svg>
+                </span>
+            </div>
+            <strong>@totalOperations</strong>
+            <small>نسبة العمليات المكتملة @successRate%</small>
+        </div>
+    </div>
+
+    <div class="monitor-grid">
+        <section class="monitor-panel monitor-panel-activity">
+            <div class="monitor-panel-head">
+                <div>
+                    <span class="monitor-panel-kicker">سجل مباشر</span>
+                    <h2>آخر العمليات</h2>
+                </div>
+                <span class="monitor-record-count">@Model.RecentActivities.Count سجل</span>
+            </div>
+            @if (Model.RecentActivities.Count == 0)
+            {
+                <div class="monitor-empty">
+                    <span class="monitor-empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M4 6h16v12H4zM8 10h8M8 14h5" />
+                        </svg>
+                    </span>
+                    <strong>لا توجد عمليات ضمن الفترة المحددة</strong>
+                    <span>ستظهر حركات الدخول والخروج والرفض هنا فور تسجيلها.</span>
+                </div>
+            }
+            else
+            {
+                <div class="monitor-table-wrap">
+                    <table class="monitor-table">
+                        <thead>
+                            <tr>
+                                <th>الوقت</th>
+                                <th>الحالة</th>
+                                <th>المرجع</th>
+                                <th>المستخدم</th>
+                                <th>التفاصيل</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.RecentActivities)
+                            {
+                                <tr>
+                                    <td class="monitor-time-cell">
+                                        <strong>@item.OccurredAt.ToString("hh:mm", culture) @(item.OccurredAt.Hour < 12 ? "ص" : "م")</strong>
+                                        <span class="monitor-muted d-block">@item.OccurredAt.ToString("dd MMM yyyy", culture)</span>
+                                    </td>
+                                    <td><span class="monitor-badge @ActionBadgeClass(item)">@ActionText(item)</span></td>
+                                    <td>
+                                        <strong>@item.EntityId</strong>
+                                        <span class="monitor-muted d-block">@item.ActionLabel</span>
+                                    </td>
+                                    <td>
+                                        @(string.IsNullOrWhiteSpace(item.Actor) ? "system" : item.Actor)
+                                        <span class="monitor-muted d-block">@item.Source</span>
+                                    </td>
+                                    <td>
+                                        @(string.IsNullOrWhiteSpace(item.ReasonCode) ? item.Message : item.ReasonCode)
+                                        <span class="monitor-muted d-block">@item.Message</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <div class="monitor-side-grid">
+            <section class="monitor-panel">
+                <div class="monitor-panel-head">
+                    <div>
+                        <span class="monitor-panel-kicker">النشاط التشغيلي</span>
+                        <h2>أكثر المستخدمين تنفيذًا</h2>
+                    </div>
+                </div>
+                @if (Model.TopOperators.Count == 0)
+                {
+                    <div class="monitor-empty monitor-empty-compact">
+                        <strong>لا توجد بيانات كافية</strong>
+                        <span>تظهر قائمة المشغلين بعد تسجيل أول عملية.</span>
+                    </div>
+                }
+                else
+                {
+                    <ul class="monitor-list monitor-ranked-list">
+                        @foreach (var item in Model.TopOperators)
+                        {
+                            <li>
+                                <div class="monitor-ranked-content">
+                                    <strong>@item.Label</strong>
+                                    <span class="monitor-progress" aria-hidden="true">
+                                        <span style="width: @Math.Round(item.Count * 100d / maxOperatorCount)%"></span>
+                                    </span>
+                                </div>
+                                <span class="monitor-count">@item.Count</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="monitor-panel">
+                <div class="monitor-panel-head">
+                    <div>
+                        <span class="monitor-panel-kicker monitor-panel-kicker-danger">مؤشرات تحتاج متابعة</span>
+                        <h2>أكثر أسباب الرفض</h2>
+                    </div>
+                </div>
+                @if (Model.TopRejectionReasons.Count == 0)
+                {
+                    <div class="monitor-empty monitor-empty-compact monitor-empty-success">
+                        <strong>لا توجد حالات رفض</strong>
+                        <span>جميع العمليات المسجلة ضمن الفترة سليمة.</span>
+                    </div>
+                }
+                else
+                {
+                    <ul class="monitor-list monitor-ranked-list monitor-ranked-list-danger">
+                        @foreach (var item in Model.TopRejectionReasons)
+                        {
+                            <li>
+                                <div class="monitor-ranked-content">
+                                    <strong>@item.Label</strong>
+                                    <span class="monitor-progress" aria-hidden="true">
+                                        <span style="width: @Math.Round(item.Count * 100d / maxRejectionCount)%"></span>
+                                    </span>
+                                </div>
+                                <span class="monitor-count">@item.Count</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        </div>
+    </div>
+
+    <section class="monitor-panel">
+        <div class="monitor-panel-head">
+            <div>
+                <span class="monitor-panel-kicker">سلامة النظام</span>
+                <h2>أخطاء النظام الأخيرة</h2>
+            </div>
+            <span class="monitor-health-badge @(Model.RecentSystemErrors.Count == 0 ? "is-healthy" : "has-errors")">
+                <span aria-hidden="true"></span>
+                @(Model.RecentSystemErrors.Count == 0 ? "الخدمة مستقرة" : $"{Model.RecentSystemErrors.Count} أخطاء")
+            </span>
+        </div>
+        @if (Model.RecentSystemErrors.Count == 0)
+        {
+            <div class="monitor-empty monitor-empty-horizontal monitor-empty-success">
+                <span class="monitor-empty-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12l4 4L19 6" />
+                    </svg>
+                </span>
+                <div>
+                    <strong>لا توجد أخطاء مسجلة ضمن الفترة</strong>
+                    <span>الخدمة تعمل بصورة طبيعية ولم تسجل استثناءات تشغيلية.</span>
+                </div>
+            </div>
+        }
+        else
+        {
+            <ul class="monitor-list">
+                @foreach (var item in Model.RecentSystemErrors)
+                {
+                    <li>
+                        <div>
+                            <strong>@item.Label</strong>
+                            <span>@item.ActionType · @item.Source · @(item.OccurredAt.HasValue ? FormatDate(item.OccurredAt.Value) : "-")</span>
+                            <span class="monitor-muted d-block">@item.Message</span>
+                        </div>
+                        <span class="monitor-badge monitor-badge-denied">فشل</span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</section>

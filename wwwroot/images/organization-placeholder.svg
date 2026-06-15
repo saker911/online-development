@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">شعار الجهة</title>
+  <defs>
+    <linearGradient id="background" x1="18" y1="12" x2="110" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#background)"/>
+  <path d="M30 48 64 29l34 19v8H30v-8Zm7 16h10v28H37V64Zm22 0h10v28H59V64Zm22 0h10v28H81V64ZM28 99h72v10H28V99Z" fill="#fff"/>
+</svg>

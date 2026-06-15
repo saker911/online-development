@@ -1,0 +1,220 @@
+@using VehiclePermitSystemWeb.Models.DTOs
+@using VehiclePermitSystemWeb.Models.Entities
+@using VehiclePermitSystemWeb.Models.ViewModels.Account
+@using VehiclePermitSystemWeb.Models.ViewModels.Backup
+@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
+@using VehiclePermitSystemWeb.Models.ViewModels.Departments
+@using VehiclePermitSystemWeb.Models.ViewModels.Display
+@using VehiclePermitSystemWeb.Models.ViewModels.Permits
+@using VehiclePermitSystemWeb.Models.ViewModels.Reports
+@using VehiclePermitSystemWeb.Models.ViewModels.Scan
+@using VehiclePermitSystemWeb.Models.ViewModels.Users
+@using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Security
+@using VehiclePermitSystemWeb.Utilities
+@model ReportsDashboardViewModel
+
+@{
+    ViewData["Title"] = "التصاريح الموقوفة";
+    var canReactivatePermits = User.HasPermission(AppPermissions.StopPermit);
+    var returnUrl = Url.Action(
+        "StoppedPermits",
+        "Reports",
+        new
+        {
+            stoppedQuery = Model.ReportQuery,
+            page = Model.StoppedPermitPage,
+            pageSize = Model.StoppedPermitPageSize,
+        }
+    ) ?? Url.Action("StoppedPermits", "Reports") ?? "/Reports/StoppedPermits";
+    var stoppedPagination = new ReportPaginationViewModel
+    {
+        ActionName = "StoppedPermits",
+        AriaLabel = "ترقيم صفحات التصاريح الموقوفة",
+        Fragment = "report-data-table",
+        Theme = "primary",
+        CurrentPage = Model.StoppedPermitPage,
+        TotalPages = Model.StoppedPermitTotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["pageSize"] = Model.StoppedPermitPageSize,
+            ["stoppedQuery"] = Model.ReportQuery,
+        },
+    };
+    var stoppedHeader = new ReportPanelHeaderViewModel
+    {
+        Title = "قائمة التصاريح الموقوفة",
+        Subtitle = "السبب، مصدر الإيقاف، وموظف التسجيل يظهران بجانب كل تصريح.",
+    };
+}
+
+<div class="reports-page-shell">
+    <section class="reports-hero card-permit">
+        <div>
+            <span class="reports-kicker">تنبيه إداري</span>
+            <h1 class="mb-2">التصاريح الموقوفة</h1>
+            <p class="text-muted-ar mb-0">تعرض هذه الصفحة كل تصريح تم إيقافه مع سبب الإيقاف وتاريخ آخر حركة.
+            </p>
+        </div>
+        <div class="reports-hero-actions">
+            <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
+            <a asp-action="Permits" class="report-mini-action report-mini-action-solid"><span>مركز
+                التصاريح</span></a>
+                <a asp-action="UnauthorizedExitWorkflow" class="report-mini-action report-mini-action-warning"><span>مسار
+                    المخالفات</span></a>
+                    <a asp-action="PermitActivity" class="report-mini-action"><span>سجل الحركة</span></a>
+                </div>
+            </section>
+
+            <div class="reports-stat-grid mt-4">
+                <div class="report-stat report-stat-dark">
+                    <span class="report-stat-label">إجمالي الموقوف</span>
+                    <strong>@Model.StoppedPermitsCount</strong>
+                </div>
+                <div class="report-stat report-stat-warning">
+                    <span class="report-stat-label">صفحة العرض</span>
+                    <strong>@Model.StoppedPermitPage</strong>
+                </div>
+                <div class="report-stat report-stat-success">
+                    <span class="report-stat-label">عدد الصفوف</span>
+                    <strong>@Model.StoppedPermits.Count</strong>
+                </div>
+            </div>
+
+            <section class="report-inner-panel mt-4">
+                <div class="report-panel-header">
+                    <div>
+                        <h2>بحث التصاريح الموقوفة</h2>
+                        <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو الهوية أو سبب الإيقاف أو الجهة التي سجلت
+                            الحدث.
+                        </span>
+                    </div>
+                    <span class="report-section-badge">@Model.StoppedPermitsCount تصريح</span>
+                </div>
+
+                <form asp-action="StoppedPermits" method="get" class="report-search-form">
+                    <input type="hidden" name="page" value="1" />
+                    <input type="hidden" name="pageSize" value="@Model.StoppedPermitPageSize" />
+                    <div class="report-search-box">
+                        <label class="form-label mb-1">البحث</label>
+                        <input name="stoppedQuery" value="@Model.ReportQuery" class="form-control"
+                               placeholder="رقم التصريح أو الاسم أو الهوية أو السبب" />
+                    </div>
+                    <div class="report-inline-controls report-inline-controls-tight">
+                        <button type="submit" class="report-mini-action report-mini-action-solid"><span>تطبيق</span></button>
+                        <a asp-action="StoppedPermits" class="report-mini-action"><span>مسح</span></a>
+                    </div>
+                </form>
+            </section>
+
+            <section class="report-inner-panel mt-4" id="report-data-table">
+                <partial name="_ReportPanelHeader" model="stoppedHeader" />
+
+                @if (Model.StoppedPermits.Any())
+                {
+                    <div class="table-responsive report-scroll-table">
+                        <table class="table table-striped align-middle report-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>رقم التصريح</th>
+                                    <th>حامل التصريح</th>
+                                    <th>التوقف</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.StoppedPermits)
+                                {
+                                    <tr>
+                                        <td>@item.PermitNumber</td>
+                                        <td>
+                                            <div class="permit-primary-text">@item.DriverName</div>
+                                            <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                            <div class="permit-secondary-text">@item.DepartmentName</div>
+                                            <div class="permit-secondary-text">@item.PlateNumberDisplay</div>
+                                        </td>
+                                        <td>
+                                            <div class="permit-primary-text">@item.StopReason</div>
+                                            <div class="permit-secondary-text">@item.StopSource · @item.RecordedBy</div>
+                                            <div class="permit-secondary-text date-text">
+                                                @HijriDateFormatter.FormatWithDay(item.OccurredAt)</div>
+                                            </td>
+                                            <td>
+                                                <div class="permit-primary-text">@item.ApprovalStatusDisplay</div>
+                                            </td>
+                                            <td>
+                                                <div class="report-inline-controls report-inline-controls-tight">
+                                                    <a asp-controller="Permits" asp-action="Details" asp-route-id="@item.PermitNumber"
+                                                       asp-route-returnUrl="@returnUrl" asp-route-focusActions="true"
+                                                       class="report-mini-action report-mini-action-solid"><span>اتخاذ إجراء</span></a>
+                                                    <a asp-controller="Reports" asp-action="PermitActivity"
+                                                       asp-route-activityQuery="@item.PermitNumber"
+                                                       class="report-mini-action"><span>السجل</span></a>
+                                                    @if (canReactivatePermits)
+                                                    {
+                                                        <form asp-controller="Permits" asp-action="Reactivate" method="post" class="d-inline"
+                                                              data-single-submit-form>
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@item.PermitNumber" />
+                                                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                            <button type="submit" class="report-mini-action report-mini-action-success"
+                                                                    data-pending-text="انتظار...">
+                                                                <span>إعادة تفعيل</span>
+                                                            </button>
+                                                        </form>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <partial name="_ReportPagination" model="stoppedPagination" />
+                    }
+                else
+                    {
+                        <partial name="_ReportEmptyState" model='"لا توجد تصاريح موقوفة مطابقة للبحث الحالي."' />
+                    }
+                </section>
+            </div>
+
+            <script nonce="@(Context.Items["CspScriptNonce"])">
+                (() => {
+                    const updatePendingLabel = (button, nextText) => {
+                        const label = button.querySelector('span');
+                        if (label) {
+                            label.textContent = nextText;
+                            return;
+                        }
+
+                        button.textContent = nextText;
+                    };
+
+                    document.querySelectorAll('form[data-single-submit-form]').forEach((form) => {
+                        let submitted = false;
+                        form.addEventListener('submit', (event) => {
+                            if (submitted) {
+                                event.preventDefault();
+                                return;
+                            }
+
+                            const submitter = event.submitter instanceof HTMLButtonElement
+                                ? event.submitter
+                                : form.querySelector('button[type="submit"]');
+                            if (!submitter) {
+                                return;
+                            }
+
+                            submitted = true;
+                            form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                                button.disabled = true;
+                            });
+
+                            updatePendingLabel(submitter, submitter.dataset.pendingText || 'انتظار...');
+                        });
+                    });
+                })();
+            </script>

@@ -1,0 +1,408 @@
+@using VehiclePermitSystemWeb.Utilities
+@model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel
+
+@{
+    ViewData["Title"] = "استئذان";
+    var isInside = string.Equals(Model.CurrentStateDisplay, "داخل", StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="compact-form-shell">
+    <div class="card-permit leave-request-hero mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="mb-1">استئذان</h1>
+                <div class="text-muted-ar">طلب مرتبط بنفس التصريح الدائم مع حفظ الأثر التدقيقي الكامل.</div>
+            </div>
+            <a asp-action="Details" asp-route-id="@Model.PermitNumber" class="btn btn-outline-secondary">رجوع إلى
+                التفاصيل</a>
+            </div>
+        </div>
+
+        <div class="card-permit mb-4">
+            @if (!isInside)
+            {
+                <div class="app-inline-note app-inline-note-warning mb-3">
+                    هذا التصريح ظاهر كـ خارج الآن، لذلك لا يمكن اعتماد استئذان جديد حتى يعود إلى داخل.
+                </div>
+
+            }
+            <div class="leave-request-summary-grid">
+                <div class="leave-request-summary-item leave-request-summary-item-wide">
+                    <div class="leave-request-summary-label">الاسم</div>
+                    <div class="leave-request-summary-value">@Model.DriverName</div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">رقم التصريح</div>
+                    <div class="leave-request-summary-value">
+                        <span class="permit-number-pill d-inline-flex">@Model.PermitNumber</span>
+                    </div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">الإدارة</div>
+                    <div class="leave-request-summary-value">@Model.DepartmentName</div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">حالة التصريح</div>
+                    <div class="leave-request-summary-value">@Model.ApprovalStatusDisplay</div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">نوع التصريح</div>
+                    <div class="leave-request-summary-value">@Model.PermitTypeDisplay</div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">الحالة الحالية</div>
+                    <div class="leave-request-summary-value">@Model.CurrentStateDisplay</div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">رقم الهوية</div>
+                    <div class="leave-request-summary-value leave-request-summary-national-id">@Model.NationalId</div>
+                </div>
+                <div class="leave-request-summary-item">
+                    <div class="leave-request-summary-label">نوع المركبة</div>
+                    <div class="leave-request-summary-value">@Model.VehicleType</div>
+                </div>
+            </div>
+        </div>
+
+        <form asp-action="LeaveRequest" method="post"
+              class="card-permit app-card-surface app-form-surface compact-form-card permit-form needs-validation" novalidate>
+            @Html.AntiForgeryToken()
+            <input asp-for="PermitNumber" type="hidden" />
+
+            <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+            <div class="row g-3 leave-request-form-grid">
+                <div class="col-lg-3 col-md-4">
+                    <label asp-for="RequestMode" class="form-label">نوع الطلب</label>
+                    <select asp-for="RequestMode" class="form-select" id="requestModeSelect" required>
+                        <option value="@VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel.RequestModeOneTime">استئذان
+                            مرة واحدة</option>
+                            <option value="@VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel.RequestModeDailySchedule">
+                                جدولة يومية من تاريخ إلى تاريخ</option>
+                            </select>
+                            <span asp-validation-for="RequestMode" class="field-validation-error small"></span>
+                        </div>
+
+                        <div class="col-lg-3 col-md-4">
+                            <label asp-for="ExitMode" class="form-label">نوع الاستئذان</label>
+                            <select asp-for="ExitMode" class="form-select" id="exitModeSelect" required>
+                                <option value="@VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel.ExitModeWithReturn">خروج
+                                    وعودة</option>
+                                    <option value="@VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel.ExitModeWithoutReturn">خروج
+                                        بدون عودة</option>
+                                    </select>
+                                    <span asp-validation-for="ExitMode" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-12 leave-reason-col">
+                                    <label asp-for="LeaveReason" class="form-label">سبب الخروج</label>
+                                    <textarea asp-for="LeaveReason" class="form-control leave-reason-input" rows="2" maxlength="256"
+                                              placeholder="اكتب سبب الاستئذان بشكل مختصر وواضح"></textarea>
+                                    <span asp-validation-for="LeaveReason" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-6 single-request-field leave-window-start-col">
+                                    <div class="date-field-shell" data-date-field data-date-display-mode="hijri">
+                                        <div class="date-field-head">
+                                            <label asp-for="LeaveStartAt" class="form-label mb-0">بداية الاستئذان</label>
+                                        </div>
+                                        <div class="date-input-shell" data-date-shell>
+                                            <input asp-for="LeaveStartAt" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local"
+                                                   class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA"
+                                                   data-hijri-source data-date-min-today="true"
+                                                   data-sync-browser-now="@(ViewData["InitializeCurrentTime"] as bool? == true ? "true" : "")" />
+                                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="LeaveStartAt"
+                                                 data-empty-text="يوم/شهر/سنة - الوقت">
+                                                @(Model.LeaveStartAt.HasValue ? DateHelper.ToArabicHijri(Model.LeaveStartAt.Value) : "سيظهر التاريخ هنا بعد الاختيار")
+                                            </div>
+                                            <label class="date-hijri-toggle" dir="rtl">
+                                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                                <input type="checkbox" checked data-date-hijri-switch />
+                                                <span class="date-hijri-toggle-track"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted-ar leave-date-caption">يبدأ السماح بالخروج من هذا الوقت.</div>
+                                    <span asp-validation-for="LeaveStartAt" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-6 single-request-field leave-window-end-col">
+                                    <div class="date-field-shell" data-date-field data-date-display-mode="hijri">
+                                        <div class="date-field-head">
+                                            <label asp-for="LeaveEndAt" class="form-label mb-0">نهاية الاستئذان</label>
+                                        </div>
+                                        <div class="date-input-shell" data-date-shell>
+                                            <input asp-for="LeaveEndAt" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local"
+                                                   class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA"
+                                                   data-hijri-source data-date-min-today="true"
+                                                   data-sync-browser-now="@(ViewData["InitializeCurrentTime"] as bool? == true ? "true" : "")"
+                                                   data-sync-browser-now-offset="60" />
+                                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="LeaveEndAt"
+                                                 data-empty-text="يوم/شهر/سنة - الوقت">
+                                                @(Model.LeaveEndAt.HasValue ? DateHelper.ToArabicHijri(Model.LeaveEndAt.Value) : "سيظهر التاريخ هنا بعد الاختيار")
+                                            </div>
+                                            <label class="date-hijri-toggle" dir="rtl">
+                                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                                <input type="checkbox" checked data-date-hijri-switch />
+                                                <span class="date-hijri-toggle-track"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted-ar leave-date-caption">ينتهي السماح تلقائيًا عند هذا الوقت.</div>
+                                    <span asp-validation-for="LeaveEndAt" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-6 scheduled-request-field d-none">
+                                    <div class="date-field-shell" data-date-field data-date-display-mode="hijri">
+                                        <div class="date-field-head">
+                                            <label asp-for="ScheduleStartDate" class="form-label mb-0">من تاريخ</label>
+                                        </div>
+                                        <div class="date-input-shell" data-date-shell>
+                                            <input asp-for="ScheduleStartDate" asp-format="{0:yyyy-MM-dd}" type="date"
+                                                   class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA"
+                                                   data-hijri-source data-date-min-today="true" />
+                                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="ScheduleStartDate"
+                                                 data-empty-text="يوم/شهر/سنة">
+                                                @(Model.ScheduleStartDate.HasValue ? DateHelper.ToArabicHijri(Model.ScheduleStartDate.Value)
+                        : "سيظهر التاريخ هنا بعد الاختيار")
+                                            </div>
+                                            <label class="date-hijri-toggle" dir="rtl">
+                                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                                <input type="checkbox" checked data-date-hijri-switch />
+                                                <span class="date-hijri-toggle-track"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted-ar leave-date-caption">بداية فترة الجدولة.</div>
+                                    <span asp-validation-for="ScheduleStartDate" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-6 scheduled-request-field d-none">
+                                    <div class="date-field-shell" data-date-field data-date-display-mode="hijri">
+                                        <div class="date-field-head">
+                                            <label asp-for="ScheduleEndDate" class="form-label mb-0">إلى تاريخ</label>
+                                        </div>
+                                        <div class="date-input-shell" data-date-shell>
+                                            <input asp-for="ScheduleEndDate" asp-format="{0:yyyy-MM-dd}" type="date"
+                                                   class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA"
+                                                   data-hijri-source data-date-min-today="true" />
+                                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="ScheduleEndDate"
+                                                 data-empty-text="يوم/شهر/سنة">
+                                                @(Model.ScheduleEndDate.HasValue ? DateHelper.ToArabicHijri(Model.ScheduleEndDate.Value) :
+                   "سيظهر التاريخ هنا بعد الاختيار")
+                                            </div>
+                                            <label class="date-hijri-toggle" dir="rtl">
+                                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                                <input type="checkbox" checked data-date-hijri-switch />
+                                                <span class="date-hijri-toggle-track"></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-text text-muted-ar leave-date-caption">نهاية فترة الجدولة.</div>
+                                    <span asp-validation-for="ScheduleEndDate" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-6 scheduled-request-field d-none">
+                                    <label asp-for="DailyExitTime" class="form-label">وقت الخروج اليومي</label>
+                                    <input asp-for="DailyExitTime" type="time" class="form-control ltr-field" />
+                                    <span asp-validation-for="DailyExitTime" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="col-lg-6 col-md-6 scheduled-request-field d-none" id="dailyReturnTimeField">
+                                    <label asp-for="DailyReturnTime" class="form-label">وقت العودة اليومي</label>
+                                    <input asp-for="DailyReturnTime" type="time" class="form-control ltr-field" />
+                                    <span asp-validation-for="DailyReturnTime" class="field-validation-error small"></span>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 d-flex gap-2 flex-wrap">
+                                <button type="submit" class="btn btn-primary" @(isInside ? "" : "disabled" )>اعتماد</button>
+                                <a asp-action="Details" asp-route-id="@Model.PermitNumber" class="btn btn-secondary">رجوع</a>
+                            </div>
+                        </form>
+                    </div>
+
+                    @section Scripts {
+                        <partial name="_ValidationScriptsPartial" />
+                        <script nonce="@(Context.Items["CspScriptNonce"])">
+                            (function () {
+                                const requestModeSelect = document.getElementById('requestModeSelect');
+                                const exitModeSelect = document.getElementById('exitModeSelect');
+                                const leaveStartInput = document.getElementById('LeaveStartAt');
+                                const leaveEndInput = document.getElementById('LeaveEndAt');
+                                const scheduleStartInput = document.getElementById('ScheduleStartDate');
+                                const scheduleEndInput = document.getElementById('ScheduleEndDate');
+                                const dailyExitInput = document.getElementById('DailyExitTime');
+                                const dailyReturnInput = document.getElementById('DailyReturnTime');
+                                const singleRequestFields = document.querySelectorAll('.single-request-field');
+                                const scheduledRequestFields = document.querySelectorAll('.scheduled-request-field');
+                                const dailyReturnTimeField = document.getElementById('dailyReturnTimeField');
+                                const leaveEndField = document.querySelector('.leave-window-end-col');
+                                const dateShells = document.querySelectorAll('[data-date-shell]');
+
+                                function toLocalInputValue(date) {
+                                    const pad = (value) => String(value).padStart(2, '0');
+                                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                                }
+
+                                function syncOneTimeWindowLimits(forceCurrentStart) {
+                                    if (!leaveStartInput || !leaveEndInput) {
+                                        return;
+                                    }
+
+                                    const now = new Date();
+                                    const nowValue = toLocalInputValue(now);
+                                    leaveStartInput.min = nowValue;
+
+                                    const currentStart = leaveStartInput.value;
+                                    if (!currentStart || forceCurrentStart || currentStart < nowValue) {
+                                        leaveStartInput.value = nowValue;
+                                        leaveStartInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                        leaveStartInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+
+                                    const startDate = leaveStartInput.value ? new Date(leaveStartInput.value) : now;
+                                    if (!requiresReturnMode()) {
+                                        leaveEndInput.value = '';
+                                        leaveEndInput.min = '';
+                                        leaveEndInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                        leaveEndInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                        return;
+                                    }
+
+                                    const minimumEnd = new Date(startDate.getTime() + (60 * 1000));
+                                    const minimumEndValue = toLocalInputValue(minimumEnd);
+                                    leaveEndInput.min = minimumEndValue;
+
+                                    if (!leaveEndInput.value || leaveEndInput.value <= leaveStartInput.value) {
+                                        const preferredEnd = new Date(startDate.getTime() + (60 * 60 * 1000));
+                                        leaveEndInput.value = toLocalInputValue(preferredEnd);
+                                        leaveEndInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                        leaveEndInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                }
+
+                                function syncScheduleDateLimits() {
+                                    if (!scheduleStartInput || !scheduleEndInput) {
+                                        return;
+                                    }
+
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const pad = (value) => String(value).padStart(2, '0');
+                                    const todayValue = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+                                    scheduleStartInput.min = todayValue;
+                                    if (!scheduleStartInput.value || scheduleStartInput.value < todayValue) {
+                                        scheduleStartInput.value = todayValue;
+                                        scheduleStartInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                        scheduleStartInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+
+                                    scheduleEndInput.min = scheduleStartInput.value || todayValue;
+                                    if (!scheduleEndInput.value || scheduleEndInput.value < scheduleEndInput.min) {
+                                        scheduleEndInput.value = scheduleEndInput.min;
+                                        scheduleEndInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                        scheduleEndInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                }
+
+                                function isDailyScheduleMode() {
+                                    return requestModeSelect
+                                        && requestModeSelect.value === '@VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel.RequestModeDailySchedule';
+                                }
+
+                                function requiresReturnMode() {
+                                    return exitModeSelect
+                                        && exitModeSelect.value === '@VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel.ExitModeWithReturn';
+                                }
+
+                                function syncWindowRequirements() {
+                                    const requiresWindow = !isDailyScheduleMode();
+                                    if (leaveStartInput) {
+                                        leaveStartInput.required = requiresWindow;
+                                    }
+                                    if (leaveEndInput) {
+                                        leaveEndInput.required = requiresWindow && requiresReturnMode();
+                                    }
+
+                                    if (scheduleStartInput) {
+                                        scheduleStartInput.required = isDailyScheduleMode();
+                                    }
+                                    if (scheduleEndInput) {
+                                        scheduleEndInput.required = isDailyScheduleMode();
+                                    }
+                                    if (dailyExitInput) {
+                                        dailyExitInput.required = isDailyScheduleMode();
+                                    }
+                                    if (dailyReturnInput) {
+                                        dailyReturnInput.required = isDailyScheduleMode() && requiresReturnMode();
+                                    }
+
+                                    singleRequestFields.forEach(field => {
+                                        field.classList.toggle('d-none', isDailyScheduleMode());
+                                    });
+                                    scheduledRequestFields.forEach(field => {
+                                        field.classList.toggle('d-none', !isDailyScheduleMode());
+                                    });
+
+                                    if (dailyReturnTimeField) {
+                                        dailyReturnTimeField.classList.toggle('d-none', !isDailyScheduleMode() || !requiresReturnMode());
+                                    }
+
+                                    if (leaveEndField) {
+                                        leaveEndField.classList.toggle('d-none', isDailyScheduleMode() || !requiresReturnMode());
+                                    }
+
+                                    if (isDailyScheduleMode()) {
+                                        syncScheduleDateLimits();
+                                    } else {
+                                        syncOneTimeWindowLimits(false);
+                                    }
+                                }
+
+                                if (requestModeSelect) {
+                                    requestModeSelect.addEventListener('change', () => {
+                                        syncWindowRequirements();
+                                        if (!isDailyScheduleMode()) {
+                                            syncOneTimeWindowLimits(true);
+                                        }
+                                    });
+                                }
+                                if (exitModeSelect) {
+                                    exitModeSelect.addEventListener('change', syncWindowRequirements);
+                                }
+                                if (leaveStartInput) {
+                                    leaveStartInput.addEventListener('change', () => syncOneTimeWindowLimits(false));
+                                }
+                                if (scheduleStartInput) {
+                                    scheduleStartInput.addEventListener('change', syncScheduleDateLimits);
+                                }
+
+                                dateShells.forEach(shell => {
+                                    const input = shell.querySelector('input[type="date"], input[type="datetime-local"]');
+                                    if (!input) {
+                                        return;
+                                    }
+
+                                    shell.addEventListener('click', event => {
+                                        if (event.target.closest('.date-hijri-toggle')) {
+                                            return;
+                                        }
+
+                                        input.focus({ preventScroll: true });
+                                        if (typeof input.showPicker === 'function') {
+                                            input.showPicker();
+                                        } else {
+                                            input.click();
+                                        }
+                                    });
+                                });
+
+                                syncWindowRequirements();
+                                syncOneTimeWindowLimits(false);
+                                syncScheduleDateLimits();
+                            })();
+                        </script>
+
+                    }

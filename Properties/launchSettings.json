@@ -1,0 +1,16 @@
+{
+    "$schema": "https://json.schemastore.org/launchsettings.json",
+    "profiles": {
+        "VehiclePermitSystemWeb": {
+            "commandName": "Project",
+            "dotnetRunMessages": true,
+            "launchBrowser": true,
+            "applicationUrl": "http://127.0.0.1:5001",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://127.0.0.1:5001",
+                "VehiclePermitSystemWeb__StorageRoot": ".online-storage"
+            }
+        }
+    }
+}

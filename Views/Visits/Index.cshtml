@@ -1,0 +1,579 @@
+@using System.Globalization
+@using VehiclePermitSystemWeb.Security
+@model VehiclePermitSystemWeb.Models.ViewModels.Visits.VisitIndexViewModel
+
+@{
+    ViewData["Title"] = Model.SuspendedOnly ? "الزيارات الموقوفة" : "إدارة الزيارات";
+
+    var totalVisits = Model.Visits.Count;
+    var insideVisits = Model.Visits.Count(v =>
+        string.Equals(v.Status, "Inside", StringComparison.OrdinalIgnoreCase)
+    );
+    var pendingVisits = Model.Visits.Count(v =>
+        string.Equals(v.ApprovalStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+    );
+    var suspendedVisits = Model.Visits.Count(v =>
+        string.Equals(v.Status, "Suspended", StringComparison.OrdinalIgnoreCase)
+    );
+    var completedVisits = Model.Visits.Count(v =>
+        string.Equals(v.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+    );
+
+    var canCreateVisit = User.HasPermission(AppPermissions.CreateVisit);
+    var canEditVisit = User.HasPermission(AppPermissions.EditVisit);
+    var canApproveDetainedVisit = User.HasPermission(AppPermissions.ApproveDetainedVisit);
+    var pendingApprovalCount = Model.PendingApprovalCount;
+    var hasResults = Model.Visits.Any();
+    var hasSearch = !string.IsNullOrWhiteSpace(Model.SearchTerm);
+
+    var visitPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
+    {
+        ActionName = Model.SuspendedOnly ? "Suspended" : "Index",
+        AriaLabel = "ترقيم صفحات الزيارات",
+        Theme = "primary",
+        CurrentPage = Model.CurrentPage,
+        TotalPages = Model.TotalPages,
+        RouteValues = new Microsoft.AspNetCore.Routing.RouteValueDictionary
+        {
+            ["searchTerm"] = Model.SearchTerm,
+            ["statusFilter"] = Model.StatusFilter,
+            ["pageSize"] = Model.PageSize,
+        },
+    };
+}
+
+@functions {
+    private static string FormatVisitDate(DateTime? value) =>
+        VehiclePermitSystemWeb.Utilities.Dates.HijriDateFormatter.Format(value, includeTime: false);
+
+    private static string FormatVisitTime(DateTime? value) =>
+        value.HasValue
+            ? $"{value.Value.ToString("hh:mm", CultureInfo.InvariantCulture)} {(value.Value.Hour < 12 ? "ص" : "م")}"
+            : "--:--";
+
+    private static string GetVisitStateClass(string approvalStatus, string status)
+    {
+        if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase))
+        {
+            return "visit-state-badge is-completed";
+        }
+
+        if (string.Equals(status, "Suspended", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(approvalStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+        {
+            return "visit-state-badge is-danger";
+        }
+
+        if (string.Equals(approvalStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            return "visit-state-badge is-approved";
+        }
+
+        if (string.Equals(approvalStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+        {
+            return "visit-state-badge is-pending";
+        }
+
+        return "visit-state-badge is-neutral";
+    }
+
+    private static string GetVisitStateText(string approvalStatus, string status)
+    {
+        if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase))
+        {
+            return "منتهي";
+        }
+
+        if (string.Equals(status, "Suspended", StringComparison.OrdinalIgnoreCase))
+        {
+            return "موقوف";
+        }
+
+        if (string.Equals(approvalStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            return "معتمد";
+        }
+
+        if (string.Equals(approvalStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+        {
+            return "مرفوض";
+        }
+
+        return "قيد المراجعة";
+    }
+
+    private static string GetVisitStateNote(string status)
+    {
+        return string.Equals(status, "Inside", StringComparison.OrdinalIgnoreCase)
+            ? "داخل المنشأة"
+            : string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase)
+                ? "أغلق السجل"
+                : string.Equals(status, "Suspended", StringComparison.OrdinalIgnoreCase)
+                    ? "متوقف مؤقتًا"
+                    : "بانتظار الوصول";
+    }
+}
+
+<div class="records-page-shell records-page-shell-visits">
+    <section class="records-page-hero card-permit app-card-surface">
+        <div class="records-page-hero-copy">
+            <span class="records-page-kicker">@(Model.SuspendedOnly ? "الزيارات الموقوفة" : "إدارة الزيارات")</span>
+            <h1>@(Model.SuspendedOnly ? "متابعة الزيارات الموقوفة" : "الزيارات وحالة الوصول")</h1>
+            <p class="text-muted-ar mb-0">
+                شاشة مرنة لمتابعة الزيارات اليومية، الوصول والمغادرة، والحالات التي تحتاج تدخلاً أو اعتمادًا مع أقل قدر
+                من التشتيت.
+            </p>
+
+            <div class="records-page-chip-list">
+                <span class="records-page-chip">الحالة الحالية: @(Model.SuspendedOnly ? "موقوفة" :
+                                                                                Model.StatusFilter)</span>
+                    <span class="records-page-chip">داخل المنشأة: @insideVisits</span>
+                    <span class="records-page-chip">منتهية: @completedVisits</span>
+                    @if (hasSearch)
+                    {
+                        <span class="records-page-chip records-page-chip-accent">البحث: @Model.SearchTerm</span>
+                    }
+                    else
+                    {
+                        <span class="records-page-chip">العرض الحالي: السجلات المتاحة ضمن صلاحياتك</span>
+                    }
+                </div>
+            </div>
+
+            <div class="records-page-stats">
+                <div class="permit-stat-card permit-stat-card-pending">
+                    <span class="permit-stat-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                            d="M12 6a1 1 0 0 1 1 1v4.38l2.24 1.3a1 1 0 1 1-1 1.74l-2.74-1.58A1 1 0 0 1 11 12V7a1 1 0 0 1 1-1Zm0-4a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z"
+                            fill="currentColor" />
+                        </svg>
+                    </span>
+                    <div class="permit-stat-copy">
+                        <span>بانتظار الوصول</span>
+                        <strong>@pendingVisits</strong>
+                    </div>
+                </div>
+                <div class="permit-stat-card permit-stat-card-approved">
+                    <span class="permit-stat-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path d="M9.55 17.3 4.7 12.45l1.4-1.4 3.45 3.45 8.35-8.35 1.4 1.4-9.75 9.75Z"
+                                  fill="currentColor" />
+                        </svg>
+                    </span>
+                    <div class="permit-stat-copy">
+                        <span>داخل المنشأة</span>
+                        <strong>@insideVisits</strong>
+                    </div>
+                </div>
+                <div class="permit-stat-card permit-stat-card-total">
+                    <span class="permit-stat-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                            d="M7 4A2 2 0 0 0 5 6v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.83A2 2 0 0 0 18.41 8L15 4.59A2 2 0 0 0 13.59 4H7Zm0 2h6v3a1 1 0 0 0 1 1h3v8H7V6Z"
+                            fill="currentColor" />
+                        </svg>
+                    </span>
+                    <div class="permit-stat-copy">
+                        <span>إجمالي المعروض</span>
+                        <strong>@totalVisits</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="records-page-toolbar-card card-permit app-card-surface">
+            <div class="records-page-toolbar-main">
+                <form method="get" asp-action="@(Model.SuspendedOnly ? "Suspended" : "Index")"
+                      class="permit-dashboard-search">
+                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                    @if (Model.SuspendedOnly)
+                    {
+                        <input type="hidden" name="statusFilter" value="Suspended" />
+                    }
+                    else
+                    {
+                        <input type="hidden" name="statusFilter" value="@Model.StatusFilter" />
+                    }
+                    <div class="permit-dashboard-search-field">
+                        <input name="searchTerm" value="@Model.SearchTerm" class="form-control permit-search-input"
+                               placeholder="ابحث برقم الزيارة أو اسم الزائر..." />
+                        <button type="submit" class="permit-dashboard-search-icon" aria-label="بحث">
+                            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                                <path
+                                d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13Zm0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm8.91 11.5 1.59 1.59-1.41 1.41-1.59-1.59-1.59-1.59 1.41-1.41 1.59 1.59Z"
+                                fill="currentColor" />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="permit-action-hub permit-page-filter-hub">
+                    <button type="button" class="permit-action-trigger permit-page-filter-trigger" aria-expanded="false">
+                        <svg viewBox="0 0 24 24" class="permit-button-icon" focusable="false" aria-hidden="true">
+                            <path d="M4 6h16v2H4V6Zm3 5h10v2H7v-2Zm3 5h4v2h-4v-2Z" fill="currentColor" />
+                        </svg>
+                        <span>تصفية</span>
+                    </button>
+                    <div class="permit-action-popover" hidden>
+                        <div class="permit-action-section">
+                            <div class="permit-action-section-title">فلاتر البحث</div>
+                            <div class="permit-action-grid">
+                                <a asp-action="Index" asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-pageSize="@Model.PageSize" asp-route-statusFilter="All"
+                                   class="permit-action-tile permit-action-tile-secondary">كل الزيارات</a>
+                                <a asp-action="Index" asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-pageSize="@Model.PageSize" asp-route-statusFilter="Active"
+                                   class="permit-action-tile permit-action-tile-secondary">بانتظار الوصول</a>
+                                <a asp-action="Index" asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-pageSize="@Model.PageSize" asp-route-statusFilter="Inside"
+                                   class="permit-action-tile permit-action-tile-secondary">داخل المنشأة</a>
+                                <a asp-action="Index" asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-pageSize="@Model.PageSize" asp-route-statusFilter="Completed"
+                                   class="permit-action-tile permit-action-tile-secondary">منتهية</a>
+                            </div>
+                        </div>
+                        <div class="permit-action-section permit-action-section-spaced">
+                            <div class="permit-action-section-title">السجلات</div>
+                            <div class="permit-action-grid">
+                                <a asp-action="Suspended" asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-pageSize="@Model.PageSize"
+                                   class="permit-action-tile permit-action-tile-secondary">الموقوفة</a>
+                                <a asp-action="@(Model.SuspendedOnly ? "Suspended" : "Index")"
+                                   class="permit-action-tile permit-action-tile-secondary">إعادة ضبط البحث</a>
+                            </div>
+                        </div>
+                        <div class="permit-action-section permit-action-section-spaced">
+                            <div class="permit-action-section-title">التقارير</div>
+                            <div class="permit-action-grid permit-action-grid-single">
+                                <a asp-controller="Reports" asp-action="Index"
+                                   class="permit-action-tile permit-action-tile-secondary">التقارير</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (canCreateVisit)
+                {
+                    <a asp-action="Create" class="btn btn-primary permit-dashboard-primary-action">
+                        <svg viewBox="0 0 24 24" class="permit-button-icon" focusable="false" aria-hidden="true">
+                            <path d="M11 5h2v14h-2V5Zm-6 6h14v2H5v-2Z" fill="currentColor" />
+                        </svg>
+                        <span>إنشاء زيارة جديدة</span>
+                    </a>
+                }
+            </div>
+
+            <div class="records-page-toolbar-actions">
+                @if (Model.SuspendedOnly)
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">كل الزيارات</a>
+                }
+                else
+                {
+                    <a asp-action="Suspended" class="btn btn-outline-secondary btn-sm">الزيارات الموقوفة <span
+                        class="badge rounded-pill bg-secondary ms-1">@suspendedVisits</span></a>
+                    }
+                    @if (canApproveDetainedVisit)
+                    {
+                        <span class="records-page-hint-chip">بانتظار اعتماد: @pendingApprovalCount</span>
+                    }
+                    <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-secondary btn-sm">التقارير</a>
+                    <a asp-action="@(Model.SuspendedOnly ? "Suspended" : "Index")"
+                       class="btn btn-outline-secondary btn-sm">إعادة ضبط</a>
+                </div>
+            </section>
+
+            <section class="records-page-table-card card-permit app-card-surface permit-reference-shell visit-table-shell">
+                <div class="records-page-table-head">
+                    <div>
+                        <h2>@(Model.SuspendedOnly ? "الزيارات الموقوفة" : "قائمة الزيارات")</h2>
+                        <p class="text-muted-ar mb-0">
+                            @if (hasSearch)
+                            {
+                                <span>نتائج البحث الحالية عن: <strong>@Model.SearchTerm</strong></span>
+                            }
+                            else if (Model.SuspendedOnly)
+                            {
+                                <span>عرض مباشر للسجلات الموقوفة لتسهيل الاستئناف أو المراجعة.</span>
+                            }
+                            else
+                            {
+                                <span>عرض موحد للزيارات الجارية والمنتهية والمعلقة ضمن نطاق العرض الحالي.</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="records-page-table-meta">
+                        <span class="records-page-meta-chip">الصفحة @Model.CurrentPage من @Math.Max(Model.TotalPages, 1)</span>
+                        <span class="records-page-meta-chip">عدد السجلات: @totalVisits</span>
+                    </div>
+                </div>
+
+                @if (!hasResults)
+                {
+                    <div class="records-page-empty-state">
+                        <div class="records-page-empty-illustration" aria-hidden="true">🧾</div>
+                        <h3>لا توجد زيارات مطابقة</h3>
+                        <p class="text-muted-ar mb-0">
+                            @if (hasSearch)
+                            {
+                                <span>غيّر نص البحث أو عدّل حالة العرض الحالية لعرض نتائج أخرى.</span>
+                            }
+                            else if (Model.SuspendedOnly)
+                            {
+                                <span>لا توجد زيارات موقوفة ضمن العرض الحالي.</span>
+                            }
+                            else
+                            {
+                                <span>لا توجد زيارات متاحة حاليًا ضمن النطاق المرئي لهذه الجلسة.</span>
+                            }
+                        </p>
+                        <div class="records-page-empty-actions">
+                            <a asp-action="@(Model.SuspendedOnly ? "Suspended" : "Index")"
+                               class="btn btn-outline-secondary btn-sm">إعادة ضبط</a>
+                            @if (canCreateVisit)
+                            {
+                                <a asp-action="Create" class="btn btn-primary btn-sm">إنشاء زيارة جديدة</a>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="app-table-shell permit-table-shell">
+                        <div class="table-responsive">
+                            <table
+                                class="table align-middle permit-list-table permit-management-table visit-management-table app-data-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>رقم الزيارة</th>
+                                        <th>الزائر</th>
+                                        <th>توقيت الزيارة</th>
+                                        <th>الغرض من الزيارة</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model.Visits)
+                                    {
+                                        <tr>
+                                            <td data-label="رقم الزيارة">
+                                                <a asp-action="Details" asp-route-id="@item.VisitId"
+                                                   class="permit-number-pill permit-id-accent text-decoration-none">@item.VisitId</a>
+                                            </td>
+                                            <td data-label="الزائر">
+                                                <div class="permit-holder-cell">
+                                                    <span class="permit-holder-avatar" aria-hidden="true">
+                                                        <svg viewBox="0 0 24 24" class="permit-holder-avatar-icon" focusable="false"
+                                                             aria-hidden="true">
+                                                            <path
+                                                            d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.87 0-7 2.02-7 4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5C19 16.02 15.87 14 12 14Z"
+                                                            fill="currentColor" />
+                                                        </svg>
+                                                    </span>
+                                                    <div class="permit-holder-copy">
+                                                        <div class="permit-primary-text">@item.VisitorName</div>
+                                                        <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td data-label="توقيت الزيارة">
+                                                <div class="visit-time-stack">
+                                                    <div class="visit-date-line date-text">@FormatVisitDate(item.VisitDate)</div>
+                                                    <div class="visit-time-badges">
+                                                        <span class="visit-time-badge visit-time-badge-entry">دخول
+                                                            @FormatVisitTime(item.EntryTime)</span>
+                                                            <span class="visit-time-badge visit-time-badge-exit">خروج
+                                                                @FormatVisitTime(item.ExitTime)</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="الغرض من الزيارة">
+                                                        <div class="permit-movement-copy">
+                                                            <div class="permit-primary-text visit-purpose-text" title="@item.Purpose">
+                                                                @item.Purpose</div>
+                                                                @if (!string.IsNullOrWhiteSpace(item.VisitLocation))
+                                                                {
+                                                                    <div class="permit-secondary-text">@item.VisitLocation</div>
+                                                                }
+                                                                @if (!string.IsNullOrWhiteSpace(item.SubjectDisplay))
+                                                                {
+                                                                    <div class="permit-secondary-text">@item.SubjectDisplay</div>
+                                                                }
+                                                                @if (item.CompanionCount > 0)
+                                                                {
+                                                                    <div class="visit-companion-chip" title="@item.CompanionSummary">
+                                                                        <svg viewBox="0 0 24 24" class="visit-companion-icon" focusable="false"
+                                                                             aria-hidden="true">
+                                                                            <path
+                                                                            d="M9 11a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm6 1a2.5 2.5 0 1 0-2.5-2.5A2.5 2.5 0 0 0 15 12Zm0 1.5c-1.54 0-2.88.57-3.68 1.44A6.65 6.65 0 0 0 9 14.5c-3 0-5.5 1.57-5.5 3.5A1.5 1.5 0 0 0 5 19.5h11.5a1.5 1.5 0 0 0 1.5-1.5c0-1.71-1.97-3.15-4.5-3.46Z"
+                                                                            fill="currentColor" />
+                                                                        </svg>
+                                                                        <span>@item.CompanionCount</span>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </td>
+                                                        <td data-label="الحالة">
+                                                            <div class="permit-status-stack">
+                                                                <span
+                                                                    class="@GetVisitStateClass(item.ApprovalStatus, item.Status)">@GetVisitStateText(item.ApprovalStatus,
+                                                                                                                                                                                                                                                    item.Status)</span>
+                                                                    <div class="visit-state-note">@GetVisitStateNote(item.Status)</div>
+                                                                </div>
+                                                            </td>
+                                                            <td data-label="الإجراءات">
+                                                                <div class="record-row-actions">
+                                                                    <a asp-action="Details" asp-route-id="@item.VisitId"
+                                                                       class="record-icon-action record-icon-action-primary"
+                                                                       data-bs-toggle="tooltip" data-bs-title="تفاصيل" title="تفاصيل"
+                                                                       aria-label="تفاصيل الزيارة @item.VisitId">
+                                                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                            <path d="M5 4h14v16H5V4Zm3 5h8M8 13h8M8 17h5" fill="none"
+                                                                                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                                                                        </svg>
+                                                                    </a>
+                                                                    @if (canEditVisit)
+                                                                    {
+                                                                        <a asp-action="Edit" asp-route-id="@item.VisitId"
+                                                                           class="record-icon-action record-icon-action-warning"
+                                                                           data-bs-toggle="tooltip" data-bs-title="تعديل" title="تعديل"
+                                                                           aria-label="تعديل الزيارة @item.VisitId">
+                                                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                <path d="M4 20h4l10.3-10.3a1.4 1.4 0 0 0 0-2L16.3 5.7a1.4 1.4 0 0 0-2 0L4 16v4zM13.5 6.5l4 4"
+                                                                                      fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                      stroke-linecap="round" stroke-linejoin="round" />
+                                                                            </svg>
+                                                                        </a>
+                                                                    }
+                                                                    @if (string.Equals(item.ApprovalStatus, "Approved",
+                                                                                                                                                                                                                                                                                StringComparison.OrdinalIgnoreCase))
+                                                                    {
+                                                                        <a asp-action="Print" asp-route-id="@item.VisitId"
+                                                                           class="record-icon-action record-icon-action-success"
+                                                                           data-bs-toggle="tooltip" data-bs-title="طباعة" title="طباعة"
+                                                                           aria-label="طباعة الزيارة @item.VisitId" target="_blank">
+                                                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                <path d="M7 8V4h10v4M6 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1M7 14h10v6H7v-6Z"
+                                                                                      fill="none" stroke="currentColor" stroke-width="1.8"
+                                                                                      stroke-linecap="round" stroke-linejoin="round" />
+                                                                            </svg>
+                                                                        </a>
+                                                                    }
+                                                                    @if (canEditVisit && item.Status == "Active")
+                                                                    {
+                                                                        <form asp-action="Suspend" asp-route-id="@item.VisitId" method="post"
+                                                                              class="record-icon-form"
+                                                                              data-confirm-message="هل تريد توقيف هذه الزيارة؟">
+                                                                            @Html.AntiForgeryToken()
+                                                                            <button type="submit" class="record-icon-action record-icon-action-danger"
+                                                                                    data-bs-toggle="tooltip" data-bs-title="توقيف" title="توقيف"
+                                                                                    aria-label="توقيف الزيارة @item.VisitId">
+                                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                    <path d="M12 3v8M7 5.8a8 8 0 1 0 10 0" fill="none"
+                                                                                          stroke="currentColor" stroke-width="1.8"
+                                                                                          stroke-linecap="round" stroke-linejoin="round" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </form>
+                                                                    }
+                                                                    else if (canEditVisit && item.Status == "Suspended")
+                                                                    {
+                                                                        <form asp-action="Resume" asp-route-id="@item.VisitId" method="post"
+                                                                              class="record-icon-form">
+                                                                            @Html.AntiForgeryToken()
+                                                                            <button type="submit" class="record-icon-action record-icon-action-success"
+                                                                                    data-bs-toggle="tooltip" data-bs-title="استئناف" title="استئناف"
+                                                                                    aria-label="استئناف الزيارة @item.VisitId">
+                                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                    <path d="m5 12 4 4L19 6" fill="none" stroke="currentColor"
+                                                                                          stroke-width="1.9" stroke-linecap="round"
+                                                                                          stroke-linejoin="round" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </form>
+                                                                    }
+                                                                    <div class="permit-action-hub">
+                                                                        <button type="button" class="permit-action-trigger"
+                                                                                aria-expanded="false" title="المزيد"
+                                                                                aria-label="إجراءات إضافية للزيارة @item.VisitId">
+                                                                        <svg viewBox="0 0 24 24" class="permit-button-icon" focusable="false"
+                                                                             aria-hidden="true">
+                                                                            <path
+                                                                            d="M12 7a1.75 1.75 0 1 1 0-3.5A1.75 1.75 0 0 1 12 7Zm0 6.75a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Zm0 6.75a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5Z"
+                                                                            fill="currentColor" />
+                                                                        </svg>
+                                                                        <span>إجراءات</span>
+                                                                    </button>
+                                                                    <div class="permit-action-popover" hidden>
+                                                                        <div class="permit-action-grid">
+                                                                            @{
+                                                                                var canApproveDetained = canApproveDetainedVisit && Model.ApprovableVisitIds.Contains(item.VisitId);
+                                                                            }
+                                                                            @if (canApproveDetained || canEditVisit)
+                                                                            {
+                                                                                <div class="permit-action-icon-row">
+                                                                                    @if (canApproveDetained)
+                                                                                    {
+                                                                                        <form asp-action="ApproveDetained" asp-route-id="@item.VisitId"
+                                                                                              method="post" class="permit-action-form">
+                                                                                            @Html.AntiForgeryToken()
+                                                                                            <button type="submit"
+                                                                                                    class="permit-action-tile permit-action-tile-success action-icon-btn"
+                                                                                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                                    data-bs-title="اعتماد" title="اعتماد"
+                                                                                                    aria-label="اعتماد الزيارة @item.VisitId">
+                                                                                                <span class="action-icon-glyph" aria-hidden="true">✓</span>
+                                                                                                <span class="visually-hidden">اعتماد</span>
+                                                                                            </button>
+                                                                                        </form>
+                                                                                        <form asp-action="RejectDetained" asp-route-id="@item.VisitId" method="post"
+                                                                                              class="permit-action-form">
+                                                                                            @Html.AntiForgeryToken()
+                                                                                            <button type="submit"
+                                                                                                    class="permit-action-tile permit-action-tile-outline-danger action-icon-btn"
+                                                                                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                                    data-bs-title="رفض" title="رفض"
+                                                                                                    aria-label="رفض الزيارة @item.VisitId">
+                                                                                                <span class="action-icon-glyph" aria-hidden="true">✕</span>
+                                                                                                <span class="visually-hidden">رفض</span>
+                                                                                            </button>
+                                                                                        </form>
+                                                                                    }
+
+                                                                                    @if (canEditVisit)
+                                                                                    {
+                                                                                        <a asp-action="Delete" asp-route-id="@item.VisitId"
+                                                                                           class="permit-action-tile permit-action-tile-danger action-icon-btn"
+                                                                                           data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                           data-bs-title="حذف" title="حذف"
+                                                                                           aria-label="حذف الزيارة @item.VisitId">
+                                                                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                                                <path d="M9 4h6m-8 4h10m-9 0 .7 12h6.6L16 8M10 11v6M14 11v6" fill="none"
+                                                                                                      stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                                                            </svg>
+                                                                                            <span class="visually-hidden">حذف</span>
+                                                                                        </a>
+                                                                                    }
+                                                                                </div>
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    @if (Model.TotalPages > 1)
+                                    {
+                                        <partial name="_ReportPagination" model="visitPagination" />
+                                    }
+                                }
+                            </section>
+                        </div>

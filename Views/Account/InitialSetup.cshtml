@@ -1,0 +1,967 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Account.InitialSetupViewModel
+
+@{
+    ViewData["Title"] = "تهيئة أول تشغيل";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "login-page-body";
+    var initialStep = Math.Clamp(Model?.CurrentStep ?? 1, 1, 3);
+}
+
+<style nonce="@(Context.Items["CspStyleNonce"])">
+    .setup-shell {
+        min-height: 100vh;
+        padding: clamp(20px, 4vw, 42px) 16px 34px;
+        background:
+            radial-gradient(circle at top right, rgba(15, 127, 152, 0.12), transparent 28%),
+            linear-gradient(180deg, #f8fbfd 0%, #eef4f7 52%, #edf3f6 100%);
+    }
+
+    .setup-container {
+        width: min(1120px, 100%);
+        margin-inline: auto;
+        display: grid;
+        gap: 18px;
+    }
+
+    .setup-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .setup-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .setup-brand-logo {
+        width: 56px;
+        height: 56px;
+        object-fit: contain;
+        border-radius: 18px;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(207, 226, 236, 0.92);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .setup-brand-copy {
+        display: grid;
+        gap: 2px;
+    }
+
+    .setup-brand-copy strong {
+        color: #0f172a;
+        font-size: 1rem;
+        font-weight: 800;
+    }
+
+    .setup-brand-copy span {
+        color: #64748b;
+        font-size: 0.82rem;
+    }
+
+    .setup-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: #64748b;
+        font-size: 0.86rem;
+    }
+
+    .setup-breadcrumb a {
+        color: #0f7f98;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .setup-breadcrumb-separator {
+        color: #94a3b8;
+    }
+
+    .setup-page-head {
+        display: grid;
+        gap: 8px;
+    }
+
+    .setup-page-kicker {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 0.34rem 0.78rem;
+        border-radius: 999px;
+        background: rgba(15, 127, 152, 0.1);
+        color: #0f7f98;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .setup-page-title {
+        margin: 0;
+        color: #0f172a;
+        font-size: clamp(1.8rem, 3vw, 2.4rem);
+        font-weight: 900;
+        line-height: 1.12;
+    }
+
+    .setup-page-subtitle {
+        margin: 0;
+        max-width: 70ch;
+        color: #5b6b80;
+        font-size: 0.95rem;
+        line-height: 1.8;
+    }
+
+    .setup-wizard-card {
+        width: 100%;
+        max-width: none;
+        max-height: none;
+        overflow: visible;
+        padding: 22px;
+        border-radius: 28px;
+        border: 1px solid rgba(221, 232, 241, 0.92);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 26px 60px rgba(15, 23, 42, 0.08);
+    }
+
+    .setup-stepper {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0 0 18px;
+    }
+
+    .setup-step-chip {
+        border: 1px solid #dbe7f1;
+        border-radius: 16px;
+        padding: 12px 14px;
+        background: #f8fbfd;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        min-height: 72px;
+        transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .setup-step-chip.is-active {
+        border-color: rgba(15, 127, 152, 0.34);
+        background: #f1fbfd;
+        box-shadow: 0 14px 30px rgba(15, 127, 152, 0.08);
+    }
+
+    .setup-step-chip.is-complete {
+        border-color: rgba(34, 197, 94, 0.28);
+        background: #f0fbf4;
+    }
+
+    .setup-step-number {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.82rem;
+        font-weight: 800;
+        background: #ffffff;
+        border: 1px solid #dbe7f1;
+        color: #0f5f78;
+        flex-shrink: 0;
+    }
+
+    .setup-step-chip.is-active .setup-step-number,
+    .setup-step-chip.is-complete .setup-step-number {
+        background: linear-gradient(135deg, #1db6b9, #0f7f98);
+        border-color: transparent;
+        color: #ffffff;
+    }
+
+    .setup-step-label {
+        display: block;
+        font-size: 0.72rem;
+        color: #7b8ba1;
+    }
+
+    .setup-step-title {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #10233b;
+    }
+
+    .setup-validation-summary {
+        border: 1px solid #f5c2c7;
+        background: #fff6f7;
+        color: #b42318;
+        padding: 0.95rem 1rem;
+        border-radius: 16px;
+        margin-bottom: 18px;
+    }
+
+    .setup-stage {
+        display: none;
+        animation: setup-fade-in 0.22s ease;
+    }
+
+    .setup-stage.is-active {
+        display: block;
+    }
+
+    .setup-stage-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .setup-stage-grid .setup-field-span {
+        grid-column: 1 / -1;
+    }
+
+    .setup-section-title {
+        margin-bottom: 0.35rem;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .setup-section-subtitle {
+        margin-bottom: 1rem;
+        color: #5f7086;
+        font-size: 0.88rem;
+        line-height: 1.75;
+    }
+
+    .setup-confirm-shell {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .setup-confirm-card {
+        border: 1px solid #dce8f2;
+        border-radius: 18px;
+        background: #fbfdff;
+        padding: 16px;
+    }
+
+    .setup-confirm-card strong {
+        display: block;
+        margin-bottom: 0.7rem;
+        font-size: 0.95rem;
+        color: #10233b;
+    }
+
+    .setup-confirm-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .setup-confirm-item span {
+        display: block;
+        font-size: 0.76rem;
+        color: #73859c;
+        margin-bottom: 0.2rem;
+    }
+
+    .setup-confirm-item b {
+        font-size: 0.9rem;
+        color: #0f172a;
+        word-break: break-word;
+    }
+
+    .setup-confirm-note {
+        margin-top: 14px;
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: #f0fbfd;
+        border: 1px solid #cfe9ef;
+        color: #0f5f78;
+        font-size: 0.8rem;
+        line-height: 1.7;
+    }
+
+    .setup-card-shell {
+        border: 1px solid #e4edf4;
+        border-radius: 24px;
+        background: #ffffff;
+        padding: 20px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .setup-autosave-note {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+        padding: 13px 16px;
+        border-radius: 18px;
+        background: #f7f9fb;
+        border: 1px solid #e5edf3;
+        color: #52657b;
+        font-size: 0.84rem;
+        line-height: 1.55;
+    }
+
+    .setup-autosave-note strong {
+        color: #10233b;
+        font-size: 0.88rem;
+    }
+
+    .setup-autosave-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1px solid #dce8f2;
+        color: #0f7f98;
+        flex: 0 0 auto;
+    }
+
+    .setup-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-top: 1.15rem;
+        flex-wrap: wrap;
+    }
+
+    .setup-actions-end {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-inline-start: auto;
+    }
+
+    .setup-actions .btn {
+        min-height: 46px;
+        border-radius: 14px;
+        padding-inline: 20px;
+        font-weight: 800;
+    }
+
+    .setup-actions .btn-primary {
+        background: linear-gradient(135deg, #1db6b9, #0f7f98);
+        border-color: #0f7f98;
+        box-shadow: 0 14px 30px rgba(15, 127, 152, 0.18);
+    }
+
+    .setup-actions .btn-success {
+        background: linear-gradient(135deg, #22c55e, #17934b);
+        border-color: #17934b;
+        box-shadow: 0 14px 30px rgba(34, 197, 94, 0.18);
+    }
+
+    .setup-actions .btn-outline-light {
+        color: #35506c;
+        border-color: #d6e3ef;
+        background: #ffffff;
+    }
+
+    .setup-support-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        width: fit-content;
+        color: #0f7f98;
+        text-decoration: none;
+        font-weight: 800;
+        font-size: 0.92rem;
+    }
+
+    .setup-support-link:hover {
+        color: #0b6175;
+    }
+
+    .setup-form-input .form-control,
+    .setup-form-input .form-select,
+    .setup-form-input textarea.form-control {
+        min-height: 50px;
+        border-radius: 14px;
+        border-color: #d8e5f0;
+        background: #ffffff;
+        box-shadow: none;
+    }
+
+    .setup-form-input textarea.form-control {
+        min-height: 112px;
+    }
+
+    .setup-form-input .form-label {
+        margin-bottom: 0.4rem;
+        color: #23364c;
+        font-weight: 800;
+        font-size: 0.85rem;
+    }
+
+    .setup-form-input .field-validation-error {
+        margin-top: 4px;
+    }
+
+    [data-theme="dark"] .setup-shell {
+        background:
+            radial-gradient(circle at top right, rgba(34, 211, 238, 0.08), transparent 28%),
+            linear-gradient(180deg, #050914 0%, #091321 54%, #050914 100%);
+        color: #e6eef8;
+    }
+
+    [data-theme="dark"] .setup-brand-logo,
+    [data-theme="dark"] .setup-wizard-card,
+    [data-theme="dark"] .setup-card-shell,
+    [data-theme="dark"] .setup-confirm-card,
+    [data-theme="dark"] .setup-autosave-note {
+        background: linear-gradient(180deg, rgba(15, 23, 38, 0.98), rgba(10, 18, 31, 0.98));
+        border-color: rgba(56, 78, 112, 0.58);
+        box-shadow: none;
+    }
+
+    [data-theme="dark"] .setup-brand-copy strong,
+    [data-theme="dark"] .setup-page-title,
+    [data-theme="dark"] .setup-section-title,
+    [data-theme="dark"] .setup-step-title,
+    [data-theme="dark"] .setup-confirm-card strong,
+    [data-theme="dark"] .setup-confirm-item b,
+    [data-theme="dark"] .setup-autosave-note strong {
+        color: #eef6ff;
+    }
+
+    [data-theme="dark"] .setup-brand-copy span,
+    [data-theme="dark"] .setup-breadcrumb,
+    [data-theme="dark"] .setup-breadcrumb-separator,
+    [data-theme="dark"] .setup-page-subtitle,
+    [data-theme="dark"] .setup-section-subtitle,
+    [data-theme="dark"] .setup-step-label,
+    [data-theme="dark"] .setup-confirm-item span,
+    [data-theme="dark"] .setup-autosave-note {
+        color: #9fb0c5;
+    }
+
+    [data-theme="dark"] .setup-breadcrumb a,
+    [data-theme="dark"] .setup-support-link {
+        color: #67e8f9;
+    }
+
+    [data-theme="dark"] .setup-support-link:hover {
+        color: #b9f3ff;
+    }
+
+    [data-theme="dark"] .setup-page-kicker,
+    [data-theme="dark"] .setup-confirm-note {
+        background: rgba(34, 211, 238, 0.12);
+        border-color: rgba(34, 211, 238, 0.24);
+        color: #b9f3ff;
+    }
+
+    [data-theme="dark"] .setup-step-chip {
+        background: rgba(15, 23, 42, 0.78);
+        border-color: rgba(71, 85, 105, 0.5);
+    }
+
+    [data-theme="dark"] .setup-step-chip.is-active {
+        background: rgba(34, 211, 238, 0.12);
+        border-color: rgba(34, 211, 238, 0.42);
+        box-shadow: none;
+    }
+
+    [data-theme="dark"] .setup-step-chip.is-complete {
+        background: rgba(22, 101, 52, 0.2);
+        border-color: rgba(74, 222, 128, 0.28);
+    }
+
+    [data-theme="dark"] .setup-step-number,
+    [data-theme="dark"] .setup-autosave-icon {
+        background: rgba(15, 23, 42, 0.88);
+        border-color: rgba(71, 85, 105, 0.58);
+        color: #b9f3ff;
+    }
+
+    [data-theme="dark"] .setup-form-input .form-control,
+    [data-theme="dark"] .setup-form-input .form-select,
+    [data-theme="dark"] .setup-form-input textarea.form-control {
+        background: rgba(15, 23, 42, 0.9);
+        border-color: rgba(71, 85, 105, 0.58);
+        color: #eef6ff;
+    }
+
+    [data-theme="dark"] .setup-form-input .form-control:focus,
+    [data-theme="dark"] .setup-form-input .form-select:focus,
+    [data-theme="dark"] .setup-form-input textarea.form-control:focus {
+        background: rgba(15, 23, 42, 0.98);
+        border-color: rgba(34, 211, 238, 0.44);
+        box-shadow: 0 0 0 0.18rem rgba(34, 211, 238, 0.14);
+        color: #ffffff;
+    }
+
+    [data-theme="dark"] .setup-form-input .form-label {
+        color: #dbeafe;
+    }
+
+    [data-theme="dark"] .setup-actions .btn-outline-light {
+        background: rgba(15, 23, 42, 0.9);
+        border-color: rgba(71, 85, 105, 0.56);
+        color: #dbeafe;
+    }
+
+    [data-theme="dark"] .setup-actions .btn-outline-light:hover,
+    [data-theme="dark"] .setup-actions .btn-outline-light:focus-visible {
+        background: rgba(30, 41, 59, 0.98);
+        border-color: rgba(96, 165, 250, 0.36);
+        color: #f8fafc;
+    }
+
+    [data-theme="dark"] .setup-validation-summary {
+        background: rgba(127, 29, 29, 0.22);
+        border-color: rgba(248, 113, 113, 0.32);
+        color: #fecaca;
+    }
+
+    @@keyframes setup-fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .setup-shell {
+            padding-top: 18px;
+        }
+
+        .setup-topbar {
+            align-items: flex-start;
+        }
+
+        .setup-wizard-card {
+            padding: 16px;
+        }
+
+        .setup-stepper,
+        .setup-stage-grid,
+        .setup-confirm-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .setup-card-shell {
+            padding: 16px;
+        }
+
+        .setup-autosave-note {
+            align-items: flex-start;
+        }
+
+        .setup-actions,
+        .setup-actions-end {
+            width: 100%;
+        }
+
+        .setup-actions button,
+        .setup-actions .btn,
+        .setup-actions-end button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="setup-shell">
+    <div class="setup-container">
+        <div class="setup-topbar">
+            <div class="setup-brand">
+                <img src="~/images/organization-placeholder.svg" alt="هوية الجهة" class="setup-brand-logo" />
+                <div class="setup-brand-copy">
+                    <strong>نظام التصاريح</strong>
+                    <span>تسجيل الجهة وتهيئة التشغيل الأول</span>
+                </div>
+            </div>
+            <nav class="setup-breadcrumb" aria-label="breadcrumb">
+                <a asp-controller="Account" asp-action="Login">الرئيسية</a>
+                <span class="setup-breadcrumb-separator">/</span>
+                <span>تسجيل جهة جديدة</span>
+            </nav>
+        </div>
+
+        <div class="setup-page-head">
+            <span class="setup-page-kicker">تسجيل الجهة</span>
+            <h1 class="setup-page-title">تهيئة الجهة لأول تشغيل</h1>
+            <p class="setup-page-subtitle">أدخل بيانات الجهة والحساب السيادي الأساسي في نفس تدفق التسجيل. بعد اكتمال هذه الخطوات سيتم اعتماد الإعدادات ولن تظهر هذه الصفحة مرة أخرى.</p>
+        </div>
+
+        <section class="setup-wizard-card" data-initial-step="@initialStep">
+            <div class="setup-stepper" id="setupStepper">
+                <div class="setup-step-chip" data-step-indicator="1">
+                    <span class="setup-step-number">1</span>
+                    <div>
+                        <span class="setup-step-label">الخطوة الأولى</span>
+                        <span class="setup-step-title">الحساب الرئيسي</span>
+                    </div>
+                </div>
+                <div class="setup-step-chip" data-step-indicator="2">
+                    <span class="setup-step-number">2</span>
+                    <div>
+                        <span class="setup-step-label">الخطوة الثانية</span>
+                        <span class="setup-step-title">بيانات الجهة</span>
+                    </div>
+                </div>
+                <div class="setup-step-chip" data-step-indicator="3">
+                    <span class="setup-step-number">3</span>
+                    <div>
+                        <span class="setup-step-label">الخطوة الثالثة</span>
+                        <span class="setup-step-title">التأكيد والإنشاء</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-card-shell">
+            <form method="post" asp-controller="Account" asp-action="InitialSetup" enctype="multipart/form-data" class="login-form-grid"
+                  id="initialSetupForm" novalidate>
+                @Html.AntiForgeryToken()
+                <input asp-for="CurrentStep" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="setup-validation-summary"></div>
+
+                <section class="setup-stage" data-step="1">
+                    <div class="setup-section-title">إنشاء الحساب الرئيسي</div>
+                    <div class="setup-section-subtitle">أدخل بيانات أول حساب سيادي داخل النظام. سيتم منحه صلاحية مالك النظام
+                        دون فرض اسم مستخدم افتراضي مسبق.</div>
+
+                        <div class="setup-stage-grid">
+                            <div class="login-field setup-form-input">
+                                <label asp-for="Username" class="form-label"></label>
+                                <input asp-for="Username" class="form-control" inputmode="numeric" autocomplete="username"
+                                        required pattern="[12][0-9]{9}" maxlength="10" placeholder="1024722918" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" />
+                                <span asp-validation-for="Username" class="field-validation-error small"></span>
+                            </div>
+
+                            <div class="login-field setup-form-input">
+                                <label asp-for="JobTitle" class="form-label"></label>
+                                <input asp-for="JobTitle" class="form-control" autocomplete="organization-title" required />
+                                <span asp-validation-for="JobTitle" class="field-validation-error small"></span>
+                            </div>
+
+                            <div class="login-field setup-form-input setup-field-span">
+                                <label asp-for="FullName" class="form-label"></label>
+                                <input asp-for="FullName" class="form-control" autocomplete="name" required />
+                                <span asp-validation-for="FullName" class="field-validation-error small"></span>
+                            </div>
+
+                            <div class="login-field setup-form-input">
+                                <label asp-for="PhoneNumber" class="form-label"></label>
+                                <input asp-for="PhoneNumber" class="form-control" inputmode="numeric" autocomplete="tel"
+                                        required pattern="05[0-9]{8}" maxlength="10" placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" />
+                                <span asp-validation-for="PhoneNumber" class="field-validation-error small"></span>
+                            </div>
+
+                            <div class="login-field setup-form-input">
+                                <label asp-for="Password" class="form-label"></label>
+                                <input asp-for="Password" type="password" class="form-control" autocomplete="new-password"
+                                       required />
+                                <span asp-validation-for="Password" class="field-validation-error small"></span>
+                            </div>
+
+                            <div class="login-field setup-form-input setup-field-span">
+                                <label asp-for="ConfirmPassword" class="form-label"></label>
+                                <input asp-for="ConfirmPassword" type="password" class="form-control"
+                                       autocomplete="new-password" required />
+                                <span asp-validation-for="ConfirmPassword" class="field-validation-error small"></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="setup-stage" data-step="2">
+                        <div class="setup-section-title">بيانات الإدارة</div>
+                        <div class="setup-section-subtitle">هذه البيانات ستستخدم مباشرة في تقارير النظام، التعاريف الأساسية،
+                            والشاشات العامة منذ التشغيل الأول.</div>
+
+                            <div class="setup-stage-grid">
+                                <div class="login-field setup-form-input setup-field-span">
+                                    <label asp-for="OrganizationName" class="form-label"></label>
+                                    <input asp-for="OrganizationName" class="form-control" autocomplete="organization" required />
+                                    <span asp-validation-for="OrganizationName" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="login-field setup-form-input setup-field-span">
+                                    <label for="logoFile" class="form-label">شعار الجهة (اختياري)</label>
+                                    <input id="logoFile" name="logoFile" type="file" class="form-control"
+                                           accept=".png,.jpg,.jpeg,.webp" />
+                                    <div class="form-text">يظهر الشعار في تسجيل الدخول والقوائم والتقارير. الحد الأقصى 2 ميجابايت.</div>
+                                </div>
+
+                                <div class="login-field setup-form-input">
+                                    <label asp-for="AdministrationPhone" class="form-label"></label>
+                                    <input asp-for="AdministrationPhone" class="form-control" inputmode="numeric" autocomplete="tel"
+                                         required pattern="01[0-9]{8}" maxlength="10" placeholder="0112345678" title="رقم الهاتف الثابت يجب أن يكون 10 أرقام ويبدأ بـ 01" />
+                                    <span asp-validation-for="AdministrationPhone" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="login-field setup-form-input">
+                                    <label asp-for="AdministrationEmail" class="form-label"></label>
+                                    <input asp-for="AdministrationEmail" type="email" class="form-control" autocomplete="email"
+                                           required />
+                                    <span asp-validation-for="AdministrationEmail" class="field-validation-error small"></span>
+                                </div>
+
+                                <div class="login-field setup-form-input setup-field-span">
+                                    <label asp-for="AdministrationAddress" class="form-label"></label>
+                                    <textarea asp-for="AdministrationAddress" class="form-control" rows="3"
+                                              autocomplete="street-address" required></textarea>
+                                    <span asp-validation-for="AdministrationAddress" class="field-validation-error small"></span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="setup-stage" data-step="3">
+                            <div class="setup-section-title">تأكيد وإنشاء</div>
+                            <div class="setup-section-subtitle">راجع البيانات قبل تنفيذ الإنشاء النهائي. عند الحفظ سيتم إنشاء مالك
+                                النظام وحفظ بيانات الإدارة ووضع علامة اكتمال التهيئة الأولى.</div>
+
+                                <div class="setup-confirm-shell">
+                                    <article class="setup-confirm-card">
+                                        <strong>الحساب الرئيسي</strong>
+                                        <div class="setup-confirm-list">
+                                            <div class="setup-confirm-item"><span>رقم الهوية</span><b data-summary="Username"></b></div>
+                                            <div class="setup-confirm-item"><span>الاسم الكامل</span><b data-summary="FullName"></b>
+                                            </div>
+                                            <div class="setup-confirm-item"><span>الجوال</span><b data-summary="PhoneNumber"></b></div>
+                                            <div class="setup-confirm-item"><span>المسمى الوظيفي</span><b data-summary="JobTitle"></b>
+                                            </div>
+                                            <div class="setup-confirm-item"><span>كلمة المرور</span><b>********</b></div>
+                                        </div>
+                                    </article>
+
+                                    <article class="setup-confirm-card">
+                                        <strong>بيانات الإدارة</strong>
+                                        <div class="setup-confirm-list">
+                                            <div class="setup-confirm-item"><span>اسم الجهة</span><b
+                                                data-summary="OrganizationName"></b></div>
+                                                <div class="setup-confirm-item"><span>الهاتف</span><b
+                                                    data-summary="AdministrationPhone"></b></div>
+                                                    <div class="setup-confirm-item"><span>البريد الإلكتروني</span><b
+                                                        data-summary="AdministrationEmail"></b></div>
+                                                        <div class="setup-confirm-item"><span>العنوان</span><b
+                                                            data-summary="AdministrationAddress"></b></div>
+                                                        </div>
+                                                    </article>
+                                                </div>
+
+                                                <div class="setup-confirm-note">بعد الضغط على <strong>إنشاء النظام</strong> سيتم حفظ البيانات داخل قاعدة
+                                                    النظام وتجاوز شاشة التهيئة في أي تشغيل لاحق.</div>
+                                                </section>
+
+                                                <div class="setup-actions">
+                                                    <button type="button" class="btn btn-outline-light" id="setupPrevButton">السابق</button>
+                                                    <div class="setup-actions-end">
+                                                        <button type="button" class="btn btn-primary" id="setupNextButton">التالي</button>
+                                                        <button type="submit" class="btn btn-success" id="setupSubmitButton">إنشاء النظام</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                            <div class="setup-autosave-note">
+                                                <span class="setup-autosave-icon">⌁</span>
+                                                <div>
+                                                    <strong>يتم حفظ البيانات تلقائيًا مع نهاية كل خطوة</strong>
+                                                    <div>يمكنك التنقل بين الخطوات ومتابعة التسجيل بدون فقدان البيانات المدخلة داخل هذه الجلسة.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <a asp-controller="Account" asp-action="Login" class="setup-support-link">للدعم والمساعدة، يرجى الضغط هنا</a>
+                                        </section>
+                                    </div>
+
+                                    <script nonce="@(Context.Items["CspScriptNonce"])">
+                                        (() => {
+                                            const shell = document.querySelector('[data-initial-step]');
+                                            const form = document.getElementById('initialSetupForm');
+                                            if (!shell || !form) {
+                                                return;
+                                            }
+
+                                            const stepInput = form.querySelector('[name="CurrentStep"]');
+                                            const stages = Array.from(form.querySelectorAll('[data-step]'));
+                                            const indicators = Array.from(document.querySelectorAll('[data-step-indicator]'));
+                                            const prevButton = document.getElementById('setupPrevButton');
+                                            const nextButton = document.getElementById('setupNextButton');
+                                            const submitButton = document.getElementById('setupSubmitButton');
+                                            const summaryTargets = Array.from(form.querySelectorAll('[data-summary]'));
+                                            const maxStep = stages.length;
+                                            const stepFieldNames = {
+                                                1: ['Username', 'JobTitle', 'FullName', 'PhoneNumber', 'Password', 'ConfirmPassword'],
+                                                2: ['OrganizationName', 'AdministrationPhone', 'AdministrationEmail', 'AdministrationAddress']
+                                            };
+
+                                            const readStep = () => {
+                                                const parsed = Number.parseInt(stepInput?.value || shell.dataset.initialStep || '1', 10);
+                                                return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), maxStep) : 1;
+                                            };
+
+                                            const updateSummary = () => {
+                                                summaryTargets.forEach((target) => {
+                                                    const field = form.querySelector(`[name="${target.dataset.summary}"]`);
+                                                    target.textContent = field?.value?.trim() || '-';
+                                                });
+                                            };
+
+                                            const showStep = (step) => {
+                                                const normalized = Math.min(Math.max(step, 1), maxStep);
+                                                if (stepInput) {
+                                                    stepInput.value = String(normalized);
+                                                }
+
+                                                stages.forEach((stage) => {
+                                                    stage.classList.toggle('is-active', Number(stage.dataset.step) === normalized);
+                                                });
+
+                                                indicators.forEach((indicator) => {
+                                                    const value = Number(indicator.dataset.stepIndicator);
+                                                    indicator.classList.toggle('is-active', value === normalized);
+                                                    indicator.classList.toggle('is-complete', value < normalized);
+                                                });
+
+                                                prevButton.hidden = normalized === 1;
+                                                nextButton.hidden = normalized === maxStep;
+                                                submitButton.hidden = normalized !== maxStep;
+                                                updateSummary();
+                                            };
+
+                                            const setFieldMessage = (field, message) => {
+                                                if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement)) {
+                                                    return;
+                                                }
+
+                                                field.setCustomValidity(message || '');
+                                            };
+
+                                            const validateNamedField = (name, report = true) => {
+                                                const field = form.querySelector(`[name="${name}"]`);
+                                                if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement || field instanceof HTMLSelectElement)) {
+                                                    return true;
+                                                }
+
+                                                const rawValue = 'value' in field ? field.value : '';
+                                                const trimmedValue = rawValue.trim();
+                                                let message = '';
+
+                                                if (field.hasAttribute('required') && trimmedValue.length === 0) {
+                                                    if (name === 'Username') {
+                                                        message = 'رقم الهوية مطلوب.';
+                                                    } else if (name === 'JobTitle') {
+                                                        message = 'المسمى الوظيفي مطلوب.';
+                                                    } else if (name === 'FullName') {
+                                                        message = 'الاسم الكامل مطلوب.';
+                                                    } else if (name === 'PhoneNumber') {
+                                                        message = 'رقم الجوال مطلوب.';
+                                                    } else if (name === 'Password') {
+                                                        message = 'كلمة المرور مطلوبة.';
+                                                    } else if (name === 'ConfirmPassword') {
+                                                        message = 'تأكيد كلمة المرور مطلوب.';
+                                                    } else if (name === 'OrganizationName') {
+                                                        message = 'اسم الجهة مطلوب.';
+                                                    } else if (name === 'AdministrationPhone') {
+                                                        message = 'هاتف الجهة مطلوب.';
+                                                    } else if (name === 'AdministrationEmail') {
+                                                        message = 'البريد الإلكتروني مطلوب.';
+                                                    } else if (name === 'AdministrationAddress') {
+                                                        message = 'العنوان مطلوب.';
+                                                    }
+                                                }
+
+                                                if (!message && name === 'Username' && !/^[12]\d{9}$/.test(trimmedValue)) {
+                                                    message = 'رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.';
+                                                }
+
+                                                if (!message && name === 'PhoneNumber' && !/^05\d{8}$/.test(trimmedValue)) {
+                                                    message = 'رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05.';
+                                                }
+
+                                                if (!message && name === 'AdministrationPhone' && !/^01\d{8}$/.test(trimmedValue)) {
+                                                    message = 'رقم الهاتف الثابت يجب أن يكون 10 أرقام ويبدأ بـ 01.';
+                                                }
+
+                                                if (!message && name === 'Password') {
+                                                    const isValidPassword = trimmedValue.length >= 8
+                                                        && /[A-Za-z]/.test(trimmedValue)
+                                                        && /\d/.test(trimmedValue);
+                                                    if (!isValidPassword) {
+                                                        message = 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف ورقم على الأقل.';
+                                                    }
+                                                }
+
+                                                if (!message && name === 'ConfirmPassword') {
+                                                    const passwordField = form.querySelector('[name="Password"]');
+                                                    const passwordValue = passwordField instanceof HTMLInputElement ? passwordField.value : '';
+                                                    if (trimmedValue !== passwordValue) {
+                                                        message = 'تأكيد كلمة المرور غير مطابق.';
+                                                    }
+                                                }
+
+                                                if (!message && name === 'AdministrationEmail' && field instanceof HTMLInputElement && field.type === 'email' && !field.checkValidity()) {
+                                                    message = 'صيغة البريد الإلكتروني غير صحيحة.';
+                                                }
+
+                                                setFieldMessage(field, message);
+                                                if (!report) {
+                                                    return field.checkValidity();
+                                                }
+
+                                                return typeof field.reportValidity !== 'function' ? !message : field.reportValidity();
+                                            };
+
+                                            const validateStep = (step) => {
+                                                const fieldNames = stepFieldNames[step] || [];
+                                                for (const fieldName of fieldNames) {
+                                                    if (!validateNamedField(fieldName)) {
+                                                        const invalidField = form.querySelector(`[name="${fieldName}"]`);
+                                                        if (invalidField && typeof invalidField.focus === 'function') {
+                                                            invalidField.focus();
+                                                        }
+                                                        return false;
+                                                    }
+                                                }
+
+                                                return true;
+                                            };
+
+                                            prevButton.addEventListener('click', () => showStep(readStep() - 1));
+                                            nextButton.addEventListener('click', () => {
+                                                if (!validateStep(readStep())) {
+                                                    return;
+                                                }
+
+                                                showStep(readStep() + 1);
+                                            });
+
+                                            form.addEventListener('input', (event) => {
+                                                const target = event.target;
+                                                if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+                                                    setFieldMessage(target, '');
+                                                    if (target.name === 'Password') {
+                                                        const confirmPasswordField = form.querySelector('[name="ConfirmPassword"]');
+                                                        if (confirmPasswordField instanceof HTMLInputElement && confirmPasswordField.value.trim().length > 0) {
+                                                            validateNamedField('ConfirmPassword', false);
+                                                        } else {
+                                                            setFieldMessage(confirmPasswordField, '');
+                                                        }
+                                                    } else if (target.name === 'ConfirmPassword') {
+                                                        validateNamedField('ConfirmPassword', false);
+                                                    }
+                                                }
+
+                                                updateSummary();
+                                            });
+                                            form.addEventListener('submit', (event) => {
+                                                if (!validateStep(1) || !validateStep(2)) {
+                                                    event.preventDefault();
+                                                }
+                                            });
+                                            showStep(readStep());
+                                        })();
+                                    </script>

@@ -1,0 +1,15 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPanelHeaderViewModel
+
+<div class="report-panel-header">
+    <div>
+        <h2>@Model.Title</h2>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <span class="text-muted-ar">@Model.Subtitle</span>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Badge))
+    {
+        <span class="report-section-badge">@Model.Badge</span>
+    }
+</div>

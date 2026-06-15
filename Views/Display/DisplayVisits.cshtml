@@ -1,0 +1,370 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Display.DisplayVisitsViewModel
+
+@{
+    ViewData["Title"] = "شاشة الزوار";
+    ViewData["HideShell"] = true;
+}
+
+<div class="display-kiosk-shell visits-kiosk-shell" id="visitsKiosk"
+     data-status-endpoint="@Url.Action("VisitsStatus", "Display")"
+     data-arrived-url="@Url.Action("DetainedVisitorArrived", "Display")"
+     data-exited-url="@Url.Action("DetainedVisitorExited", "Display")">
+    @Html.AntiForgeryToken()
+
+    <div class="display-kiosk-topbar">
+        <div>
+            <div class="display-kiosk-kicker">نظام كشك الزوار</div>
+            <h1 class="display-kiosk-title">شاشة دخول وخروج الزوار</h1>
+</div>
+
+<script nonce="@(Context.Items["CspScriptNonce"])">
+    const sendDisplayVisitsHeartbeat = function () {
+        fetch('@Url.Action("Heartbeat", "Display")', { method: 'POST', credentials: 'same-origin' });
+    };
+    sendDisplayVisitsHeartbeat();
+    setInterval(sendDisplayVisitsHeartbeat, 30000);
+</script>
+        <div class="display-kiosk-badges">
+            <span class="badge bg-secondary" id="awaitingArrivalBadge">بانتظار الدخول:
+                @Model.VisitorsAwaitingArrival.Count</span>
+                <span class="badge bg-primary" id="insideVisitsBadge">داخل الإدارة: @Model.VisitorsInside.Count</span>
+                <span class="badge bg-dark" id="completedVisitsBadge">مكتمل: @Model.VisitorsCompleted.Count</span>
+                <span class="display-kiosk-live" id="visitsLiveStatus">تحديث مباشر</span>
+            </div>
+        </div>
+
+        <div class="display-kiosk-grid display-kiosk-grid-visits">
+            <div class="display-kiosk-panel">
+                <div class="display-kiosk-panel-header">
+                    <h2 class="h5 mb-0">الزوار بانتظار الدخول</h2>
+                </div>
+                <div class="display-kiosk-list" id="awaitingArrivalList">
+                    @if (Model.VisitorsAwaitingArrival.Any())
+                    {
+                        foreach (var item in Model.VisitorsAwaitingArrival)
+                        {
+                            <div class="display-kiosk-item">
+                                <div class="fw-bold">@item.VisitorName</div>
+                                <div class="small text-muted">@item.VisitId - @item.VisitLocation</div>
+                                <div class="small">الشخص المُزار: @item.SubjectDisplay</div>
+                                <div class="small">المرافقون: @item.CompanionCount</div>
+                                <div class="small">الهوية: <span class="national-id-field">@item.NationalId</span></div>
+                                <div class="small">الجوال: @item.PhoneNumber</div>
+                                <div class="small date-text">موعد الزيارة: @HijriDateFormatter.Format(item.VisitDate)</div>
+                                <form asp-action="DetainedVisitorArrived" method="post" class="mt-3">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="visitId" value="@item.VisitId" />
+                                    <button type="submit" class="btn btn-success btn-sm w-100">تم تسجيل الدخول</button>
+                                </form>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="display-kiosk-empty">لا توجد زيارات بانتظار الدخول حاليًا.</div>
+                    }
+                </div>
+            </div>
+
+            <div class="display-kiosk-panel">
+                <div class="display-kiosk-panel-header">
+                    <h2 class="h5 mb-0">الزوار داخل الإدارة</h2>
+                </div>
+                <div class="display-kiosk-list" id="insideVisitsList">
+                    @if (Model.VisitorsInside.Any())
+                    {
+                        foreach (var item in Model.VisitorsInside)
+                        {
+                            <div class="display-kiosk-item display-kiosk-item-success">
+                                <div class="fw-bold">@item.VisitorName</div>
+                                <div class="small text-muted">@item.VisitId - @item.VisitLocation</div>
+                                <div class="small">الشخص المُزار: @item.SubjectDisplay</div>
+                                <div class="small">المرافقون: @item.CompanionCount</div>
+                                <div class="small">الهوية: <span class="national-id-field">@item.NationalId</span></div>
+                                <div class="small">الجوال: @item.PhoneNumber</div>
+                                <div class="small text-muted date-text">داخل منذ @HijriDateFormatter.Format(item.EntryTime)</div>
+                                <form asp-action="DetainedVisitorExited" method="post" class="mt-3">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="visitId" value="@item.VisitId" />
+                                    <button type="submit" class="btn btn-outline-success btn-sm w-100">تم تسجيل الخروج</button>
+                                </form>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="display-kiosk-empty">لا يوجد زوار داخل الإدارة حاليًا.</div>
+                    }
+                </div>
+            </div>
+
+            <div class="display-kiosk-panel">
+                <div class="display-kiosk-panel-header">
+                    <h2 class="h5 mb-0">الزوار المكتملون</h2>
+                </div>
+                <div class="display-kiosk-list" id="completedVisitsList">
+                    @if (Model.VisitorsCompleted.Any())
+                    {
+                        foreach (var item in Model.VisitorsCompleted)
+                        {
+                            <div class="display-kiosk-item display-kiosk-item-dark">
+                                <div class="fw-bold">@item.VisitorName</div>
+                                <div class="small text-muted">@item.VisitId - @item.VisitLocation</div>
+                                <div class="small">الشخص المُزار: @item.SubjectDisplay</div>
+                                <div class="small">المرافقون: @item.CompanionCount</div>
+                                <div class="small">الهوية: <span class="national-id-field">@item.NationalId</span></div>
+                                <div class="small">الجوال: @item.PhoneNumber</div>
+                                <div class="small text-muted date-text">تم إغلاق الزيارة في
+                                    @HijriDateFormatter.Format(item.ExitTime)</div>
+                                </div>
+                            }
+                        }
+                else
+                        {
+                            <div class="display-kiosk-empty">لا توجد زيارات مكتملة حتى الآن.</div>
+                        }
+                    </div>
+                </div>
+
+                <div class="display-kiosk-panel display-kiosk-summary-panel">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h2 class="h5 mb-0">ملخص الشاشة</h2>
+                        <span class="badge bg-dark" id="visitsLastRefresh">إدارة وصول وخروج الزوار</span>
+                    </div>
+                    <div class="text-muted-ar mt-2">
+                        تظهر الزيارة أولاً في قائمة الدخول، ثم تنتقل إلى داخل الإدارة بعد التفعيل، وبعد الخروج تُحفظ في السجل
+                        المكتمل بدل أن تختفي.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script nonce="@(Context.Items["CspScriptNonce"])">
+            (() => {
+                const root = document.getElementById('visitsKiosk');
+                if (!root) {
+                    return;
+                }
+
+                const statusEndpoint = root.dataset.statusEndpoint;
+                const arrivedUrl = root.dataset.arrivedUrl;
+                const exitedUrl = root.dataset.exitedUrl;
+                let antiForgeryToken = root.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                const awaitingArrivalBadge = document.getElementById('awaitingArrivalBadge');
+                const insideVisitsBadge = document.getElementById('insideVisitsBadge');
+                const completedVisitsBadge = document.getElementById('completedVisitsBadge');
+                const liveStatus = document.getElementById('visitsLiveStatus');
+                const lastRefresh = document.getElementById('visitsLastRefresh');
+                const awaitingArrivalList = document.getElementById('awaitingArrivalList');
+                const insideVisitsList = document.getElementById('insideVisitsList');
+                const completedVisitsList = document.getElementById('completedVisitsList');
+                const deviceId = (() => {
+                    const storageKey = 'vehicle-permit-gate-device-id';
+                    const existing = window.localStorage.getItem(storageKey);
+                    if (existing) {
+                        return existing;
+                    }
+
+                    const generated = `display-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                    window.localStorage.setItem(storageKey, generated);
+                    return generated;
+                })();
+
+                const escapeHtml = (value) => {
+                    return String(value ?? '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                };
+
+                let statusHadFailure = false;
+
+                const setAntiforgeryToken = (token) => {
+                    if (!token) {
+                        return;
+                    }
+
+                    antiForgeryToken = token;
+                    root.querySelectorAll('input[name="__RequestVerificationToken"]').forEach((input) => {
+                        input.value = token;
+                    });
+                };
+
+                const refreshAntiforgeryToken = async () => {
+                    try {
+                        const response = await fetch(window.location.href, {
+                            headers: { 'Accept': 'text/html' },
+                            cache: 'no-store',
+                        });
+
+                        if (!response.ok) {
+                            return false;
+                        }
+
+                        const html = await response.text();
+                        const documentSnapshot = new DOMParser().parseFromString(html, 'text/html');
+                        const freshToken = documentSnapshot.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                        if (!freshToken) {
+                            return false;
+                        }
+
+                        setAntiforgeryToken(freshToken);
+                        return true;
+                    } catch {
+                        return false;
+                    }
+                };
+
+                const buildPostForm = (action, visitId, buttonClass, buttonText) => {
+                    const actionUrl = new URL(action, window.location.origin);
+
+                    return `
+                                                <form action="${actionUrl.toString()}" method="post" class="mt-3">
+                                                    <input type="hidden" name="__RequestVerificationToken" value="${escapeHtml(antiForgeryToken)}" />
+                                                    <input type="hidden" name="visitId" value="${escapeHtml(visitId)}" />
+                                                    <input type="hidden" name="deviceId" value="${escapeHtml(deviceId)}" />
+                                                    <button type="submit" class="btn ${buttonClass} btn-sm w-100">${buttonText}</button>
+                                                </form>`;
+                };
+
+                root.addEventListener('submit', async (event) => {
+                    const form = event.target;
+                    if (!(form instanceof HTMLFormElement)) {
+                        return;
+                    }
+
+                    if (!form.querySelector('input[name="deviceId"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'deviceId';
+                        input.value = deviceId;
+                        form.appendChild(input);
+                    }
+
+                    if (!statusHadFailure || form.dataset.recoveredAfterReconnect === 'true') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    const refreshed = await refreshAntiforgeryToken();
+                    if (refreshed) {
+                        statusHadFailure = false;
+                        form.dataset.recoveredAfterReconnect = 'true';
+                        form.submit();
+                        return;
+                    }
+
+                    liveStatus.textContent = 'تعذر تحديث اتصال الشاشة';
+                    liveStatus.classList.add('is-error');
+                });
+
+                const buildStatusUrl = () => {
+                    const url = new URL(statusEndpoint, window.location.origin);
+
+                    return url.toString();
+                };
+
+                const renderAwaitingArrival = (items) => {
+                    if (!items.length) {
+                        awaitingArrivalList.innerHTML = '<div class="display-kiosk-empty">لا توجد زيارات بانتظار الوصول حاليًا.</div>';
+                        return;
+                    }
+
+                    awaitingArrivalList.innerHTML = items.map((item) => `
+                                                <div class="display-kiosk-item">
+                                                    <div class="fw-bold">${escapeHtml(item.visitorName)}</div>
+                                                    <div class="small text-muted">${escapeHtml(item.visitId)} - ${escapeHtml(item.visitLocation)}</div>
+                                                    <div class="small">الشخص المُزار: ${escapeHtml(item.visitedPersonName)}</div>
+                                                    <div class="small">المرافقون: ${escapeHtml(item.companionCount)}</div>
+                                                    <div class="small">الهوية: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
+                                                    <div class="small">الجوال: ${escapeHtml(item.phoneNumber)}</div>
+                                                    <div class="small date-text">موعد الزيارة: ${escapeHtml(item.visitDateText)}</div>
+                                                    ${buildPostForm(arrivedUrl, item.visitId, 'btn-success', 'تم الوصول')}
+                                                </div>`).join('');
+                };
+
+                const renderInsideVisits = (items) => {
+                    if (!items.length) {
+                        insideVisitsList.innerHTML = '<div class="display-kiosk-empty">لا يوجد زوار داخل الزيارة حاليًا.</div>';
+                        return;
+                    }
+
+                    insideVisitsList.innerHTML = items.map((item) => `
+                                                <div class="display-kiosk-item display-kiosk-item-success">
+                                                    <div class="fw-bold">${escapeHtml(item.visitorName)}</div>
+                                                    <div class="small text-muted">${escapeHtml(item.visitId)} - ${escapeHtml(item.visitLocation)}</div>
+                                                    <div class="small">الشخص المُزار: ${escapeHtml(item.visitedPersonName)}</div>
+                                                    <div class="small">المرافقون: ${escapeHtml(item.companionCount)}</div>
+                                                    <div class="small">الهوية: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
+                                                    <div class="small">الجوال: ${escapeHtml(item.phoneNumber)}</div>
+                                                    <div class="small text-muted date-text">داخل منذ ${escapeHtml(item.entryTimeText)}</div>
+                                                    ${buildPostForm(exitedUrl, item.visitId, 'btn-outline-success', 'تسجيل خروج الزائر')}
+                                                </div>`).join('');
+                };
+
+                const renderCompletedVisits = (items) => {
+                    if (!items.length) {
+                        completedVisitsList.innerHTML = '<div class="display-kiosk-empty">لا توجد زيارات مكتملة حتى الآن.</div>';
+                        return;
+                    }
+
+                    completedVisitsList.innerHTML = items.map((item) => `
+                                                <div class="display-kiosk-item display-kiosk-item-dark">
+                                                    <div class="fw-bold">${escapeHtml(item.visitorName)}</div>
+                                                    <div class="small text-muted">${escapeHtml(item.visitId)} - ${escapeHtml(item.visitLocation)}</div>
+                                                    <div class="small">الشخص المُزار: ${escapeHtml(item.visitedPersonName)}</div>
+                                                    <div class="small">المرافقون: ${escapeHtml(item.companionCount)}</div>
+                                                    <div class="small">الهوية: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
+                                                    <div class="small">الجوال: ${escapeHtml(item.phoneNumber)}</div>
+                                                    <div class="small text-muted date-text">خرج في ${escapeHtml(item.exitTimeText)}</div>
+                                                </div>`).join('');
+                };
+
+                const updateRefreshStamp = () => {
+                    lastRefresh.textContent = `آخر تحديث: ${new Date().toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}`;
+                };
+
+                const loadStatus = async () => {
+                    try {
+                        liveStatus.textContent = 'جاري التحديث';
+                        liveStatus.classList.remove('is-error');
+
+                        const response = await fetch(buildStatusUrl(), {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            cache: 'no-store'
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        awaitingArrivalBadge.textContent = `بانتظار الدخول: ${data.awaitingArrivalCount ?? 0}`;
+                        insideVisitsBadge.textContent = `داخل الإدارة: ${data.insideCount ?? 0}`;
+                        completedVisitsBadge.textContent = `مكتمل: ${(data.visitorsCompleted ?? []).length}`;
+
+                        renderAwaitingArrival(data.visitorsAwaitingArrival ?? []);
+                        renderInsideVisits(data.visitorsInside ?? []);
+                        renderCompletedVisits(data.visitorsCompleted ?? []);
+
+                        liveStatus.textContent = 'تحديث مباشر';
+                        updateRefreshStamp();
+                        if (statusHadFailure) {
+                            statusHadFailure = false;
+                            await refreshAntiforgeryToken();
+                        }
+                    } catch {
+                        statusHadFailure = true;
+                        liveStatus.textContent = 'تعذر التحديث';
+                        liveStatus.classList.add('is-error');
+                    }
+                };
+
+                window.setInterval(loadStatus, 8000);
+                window.setTimeout(loadStatus, 1500);
+            })();
+        </script>
