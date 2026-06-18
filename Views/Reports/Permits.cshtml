@@ -12,6 +12,7 @@
 @using VehiclePermitSystemWeb.Models.ViewModels.Visits
 @using VehiclePermitSystemWeb.Security
 @model ReportsDashboardViewModel
+@inject IConfiguration Configuration
 
 @functions {
     private static string FormatReportDate(DateTime? value) =>
@@ -41,6 +42,8 @@
 @{
     ViewData["Title"] = "تقارير التصاريح";
     var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+    var identityDisplayLabel = OnlineEditionSettings.IdentityDisplayLabel(Configuration);
+    var identitySearchLabel = OnlineEditionSettings.IdentitySearchLabel(Configuration);
     var approvablePermitNumbers = Model.ApprovablePermitNumbers;
     var hasApprovablePendingPermits = Model.PendingApprovalPermits.Any(item =>
         approvablePermitNumbers.Contains(item.PermitNumber)
@@ -116,7 +119,7 @@
                                     <div class="report-panel-header">
                                         <div>
                                             <h2>فلترة وبحث</h2>
-                                            <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو الهوية أو اللوحة، وحدد نوع التصريح قبل
+                                            <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو @identitySearchLabel أو اللوحة، وحدد نوع التصريح قبل
                                                 الطباعة.</span>
                                             </div>
                                             <span class="report-section-badge">@Model.PermitTypeFilterDisplay</span>
@@ -139,7 +142,7 @@
                                             <div class="report-search-box">
                                                 <label class="form-label mb-1">البحث</label>
                                                 <input name="reportQuery" value="@Model.ReportQuery" class="form-control"
-                                                       placeholder="رقم التصريح أو الاسم أو الهوية أو اللوحة" />
+                                                       placeholder="رقم التصريح أو الاسم أو @identitySearchLabel أو اللوحة" />
                                             </div>
                                             <div class="report-search-box">
                                                 <label class="form-label mb-1">عدد الصفوف</label>
@@ -220,7 +223,7 @@
                                                     </div>
                                                     <div class="report-info-item"><span>@(Model.SelectedPermit.IsVisitorPermit ? "اسم الزائر" :
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 "الاسم")</span><strong>@Model.SelectedPermit.DriverName</strong></div>
-                                                        <div class="report-info-item"><span>الهوية</span><strong
+                                                        <div class="report-info-item"><span>@identityDisplayLabel</span><strong
                                                             class="national-id-field">@Model.SelectedPermit.NationalId</strong></div>
                                                             <div class="report-info-item"><span>@(Model.SelectedPermit.IsVisitorPermit ? "مكان الزيارة" :
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      "القسم")</span><strong>@Model.SelectedPermit.LocationDisplay</strong></div>

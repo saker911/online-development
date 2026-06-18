@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Services.Reports
 {
@@ -22,22 +23,26 @@ namespace VehiclePermitSystemWeb.Services.Reports
         private readonly IUserAdminService _userAdminService;
         private readonly IWebHostEnvironment _environment;
         private readonly ISystemClock _systemClock;
+        private readonly IConfiguration _configuration;
 
         public ReportsDocumentService(
             IUserAdminService userAdminService,
             IWebHostEnvironment environment,
-            ISystemClock systemClock
+            ISystemClock systemClock,
+            IConfiguration configuration
         )
         {
             _userAdminService = userAdminService;
             _environment = environment;
             _systemClock = systemClock;
+            _configuration = configuration;
         }
 
         public ReportDocumentResult BuildVisitsReport(VisitFilterResult filter)
         {
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
+            var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
                 $"VisitsReport_{filter.FileSuffix}",
@@ -95,7 +100,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                     AddHeaderCell(header, "رقم الزيارة");
                                                     AddHeaderCell(header, "الزائر الرئيسي");
                                                     AddHeaderCell(header, "المرافقون");
-                                                    AddHeaderCell(header, "رقم الهوية");
+                                                    AddHeaderCell(header, identityLabel);
                                                     AddHeaderCell(header, "الغرض");
                                                     AddHeaderCell(header, "الشخص المُزار");
                                                     AddHeaderCell(header, "الاعتماد");
@@ -279,6 +284,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
         {
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
+            var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
                 "PendingPermitsReport",
@@ -330,7 +336,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                 {
                                                     AddHeaderCell(header, "رقم التصريح");
                                                     AddHeaderCell(header, "اسم المصرح له");
-                                                    AddHeaderCell(header, "رقم الهوية");
+                                                    AddHeaderCell(header, identityLabel);
                                                     AddHeaderCell(header, "الموقع");
                                                     AddHeaderCell(header, "رقم الجوال");
                                                     AddHeaderCell(header, "رقم اللوحة");
@@ -376,6 +382,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
             var permitNotice = BuildPermitUsageNotice(administration);
+            var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
                 $"PermitDetailedReport_{permit.PermitNumber}",
@@ -421,7 +428,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                             details
                                                 .Item()
                                                 .Text($"اسم المصرح له: {permit.DriverName}");
-                                            details.Item().Text($"رقم الهوية: {permit.NationalId}");
+                                            details.Item().Text($"{identityLabel}: {permit.NationalId}");
                                             details
                                                 .Item()
                                                 .Text(
@@ -529,6 +536,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
         {
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
+            var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
                 $"PermitsReport_{permitReport.PermitTypeFilter}",
@@ -582,7 +590,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                 {
                                                     AddHeaderCell(header, "رقم التصريح");
                                                     AddHeaderCell(header, "اسم المصرح له");
-                                                    AddHeaderCell(header, "رقم الهوية");
+                                                    AddHeaderCell(header, identityLabel);
                                                     AddHeaderCell(header, "الموقع");
                                                     AddHeaderCell(header, "رقم الجوال");
                                                     AddHeaderCell(header, "الحالة");

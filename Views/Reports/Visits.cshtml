@@ -12,6 +12,7 @@
 @using VehiclePermitSystemWeb.Models.ViewModels.Visits
 @using VehiclePermitSystemWeb.Security
 @model ReportsDashboardViewModel
+@inject IConfiguration Configuration
 
 @functions {
     private static string FormatReportDate(DateTime? value) =>
@@ -29,6 +30,7 @@
 @{
     ViewData["Title"] = "تقارير الزيارات";
     var canViewPermits = User.HasPermission(AppPermissions.ViewPermits);
+    var identitySearchLabel = OnlineEditionSettings.IdentitySearchLabel(Configuration);
     var today = DateTime.Today;
     var daysSinceSaturday = ((int)today.DayOfWeek - (int)DayOfWeek.Saturday + 7) % 7;
     var weekStart = today.AddDays(-daysSinceSaturday);
@@ -169,7 +171,7 @@
                                                     <div>
                                                         <h2>فلاتر تقرير الزيارات</h2>
                                                         <span class="text-muted-ar">اختر نوع الفترة ثم اليوم المحدد أو من/إلى عند الحاجة، ويمكنك أيضًا تحديد
-                                                            حالة الزيارة أو البحث باسم أو هوية أو رقم زيارة.</span>
+                                                            حالة الزيارة أو البحث باسم أو @identitySearchLabel أو رقم زيارة.</span>
                                                         </div>
                                                     </div>
 
@@ -224,7 +226,7 @@
                                                                 <div class="report-search-box">
                                                                     <label class="form-label mb-1">البحث</label>
                                                                     <input type="text" name="visitQuery" value="@Model.VisitQuery" class="form-control"
-                                                                           placeholder="رقم الزيارة أو اسم الزائر أو الهوية أو الغرض أو المضيف" />
+                                                                           placeholder="رقم الزيارة أو اسم الزائر أو @identitySearchLabel أو الغرض أو المضيف" />
                                                                 </div>
 
                                                                 <div class="report-search-box">

@@ -22,6 +22,16 @@ public static class OnlineEditionSettings
         return PrivacyMinimized(configuration) && !CollectNationalId(configuration);
     }
 
+    public static string IdentityDisplayLabel(IConfiguration configuration)
+    {
+        return HideSensitiveIdentityFields(configuration) ? "المعرف الداخلي" : "رقم الهوية";
+    }
+
+    public static string IdentitySearchLabel(IConfiguration configuration)
+    {
+        return HideSensitiveIdentityFields(configuration) ? "المعرف الداخلي" : "الهوية";
+    }
+
     public static string BuildSyntheticNationalId(params string?[] seedParts)
     {
         var seed = string.Join("|", seedParts.Select(part => part?.Trim() ?? string.Empty));

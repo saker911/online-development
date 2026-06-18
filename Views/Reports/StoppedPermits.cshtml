@@ -13,9 +13,11 @@
 @using VehiclePermitSystemWeb.Security
 @using VehiclePermitSystemWeb.Utilities
 @model ReportsDashboardViewModel
+@inject IConfiguration Configuration
 
 @{
     ViewData["Title"] = "التصاريح الموقوفة";
+    var identitySearchLabel = OnlineEditionSettings.IdentitySearchLabel(Configuration);
     var canReactivatePermits = User.HasPermission(AppPermissions.StopPermit);
     var returnUrl = Url.Action(
         "StoppedPermits",
@@ -85,7 +87,7 @@
                 <div class="report-panel-header">
                     <div>
                         <h2>بحث التصاريح الموقوفة</h2>
-                        <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو الهوية أو سبب الإيقاف أو الجهة التي سجلت
+                        <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو @identitySearchLabel أو سبب الإيقاف أو الجهة التي سجلت
                             الحدث.
                         </span>
                     </div>
@@ -98,7 +100,7 @@
                     <div class="report-search-box">
                         <label class="form-label mb-1">البحث</label>
                         <input name="stoppedQuery" value="@Model.ReportQuery" class="form-control"
-                               placeholder="رقم التصريح أو الاسم أو الهوية أو السبب" />
+                               placeholder="رقم التصريح أو الاسم أو @identitySearchLabel أو السبب" />
                     </div>
                     <div class="report-inline-controls report-inline-controls-tight">
                         <button type="submit" class="report-mini-action report-mini-action-solid"><span>تطبيق</span></button>
