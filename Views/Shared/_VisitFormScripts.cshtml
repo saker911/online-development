@@ -10,8 +10,6 @@
         const companionTemplate = document.querySelector("template[data-companion-template]");
         const emptyCompanionsMessage = document.querySelector("[data-empty-companions-message]");
 
-        const detainedKeywords = ["موقوف", "توقيف", "مسجون", "سجين", "نزيل"];
-
         const syncVisitDateLimits = () => {
             if (!visitDateInput) {
                 return;
@@ -37,21 +35,6 @@
             }
         };
 
-        const inferVisitedPersonType = () => {
-            if (!purposeInput || !visitedPersonTypeInput) {
-                return;
-            }
-
-            const purpose = (purposeInput.value || "").toLowerCase();
-            const isDetained = detainedKeywords.some((keyword) => purpose.includes(keyword));
-
-            if ((visitedPersonTypeInput.value || "") === "Host" && isDetained) {
-                visitedPersonTypeInput.value = purpose.includes("نزيل") || purpose.includes("سجين") || purpose.includes("مسجون")
-                    ? "Prisoner"
-                    : "Detained";
-            }
-        };
-
         const syncVisitedPersonLabel = () => {
             if (!visitedPersonLabel || !visitedPersonTypeInput) {
                 return;
@@ -60,8 +43,6 @@
             const labelMap = {
                 Host: "اسم الشخص المُزار",
                 Employee: "اسم الموظف المُزار",
-                Detained: "اسم الموقوف",
-                Prisoner: "اسم النزيل / السجين",
                 Other: "اسم الجهة أو الشخص المُزار"
             };
 
@@ -111,18 +92,15 @@
             reindexCompanionRows();
         };
 
-        inferVisitedPersonType();
         syncVisitedPersonLabel();
         syncVisitDateLimits();
         reindexCompanionRows();
 
         if (purposeInput) {
             purposeInput.addEventListener("input", () => {
-                inferVisitedPersonType();
                 syncVisitedPersonLabel();
             });
             purposeInput.addEventListener("change", () => {
-                inferVisitedPersonType();
                 syncVisitedPersonLabel();
             });
         }

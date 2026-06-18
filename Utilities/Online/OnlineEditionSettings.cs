@@ -22,6 +22,11 @@ public static class OnlineEditionSettings
         return PrivacyMinimized(configuration) && !CollectNationalId(configuration);
     }
 
+    public static bool SimplifiedVisits(IConfiguration configuration)
+    {
+        return configuration.GetValue($"{SectionPrefix}:SimplifiedVisits", false);
+    }
+
     public static string IdentityDisplayLabel(IConfiguration configuration)
     {
         return HideSensitiveIdentityFields(configuration) ? "المعرف الداخلي" : "رقم الهوية";

@@ -13,6 +13,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
 using VehiclePermitSystemWeb.Security;
+using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Services.Visits
 {
@@ -22,6 +23,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
         private readonly ISystemClock _systemClock;
         private readonly IAccessControlService _accessControl;
         private readonly IDelegationService _delegationService;
+        private readonly IConfiguration _configuration;
 
         private sealed record WorkHoursSettings(TimeOnly StartTime, TimeOnly EndTime);
 
@@ -29,13 +31,15 @@ namespace VehiclePermitSystemWeb.Services.Visits
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
             ISystemClock systemClock,
             IAccessControlService accessControl,
-            IDelegationService delegationService
+            IDelegationService delegationService,
+            IConfiguration configuration
         )
         {
             _dbContextFactory = dbContextFactory;
             _systemClock = systemClock;
             _accessControl = accessControl;
             _delegationService = delegationService;
+            _configuration = configuration;
         }
 
         public IEnumerable<Visit> GetAllVisits()
@@ -673,7 +677,8 @@ namespace VehiclePermitSystemWeb.Services.Visits
                 : visit.VisitedPersonName.Trim();
             visit.VisitedPersonType = NormalizeVisitedPersonType(
                 visit.VisitedPersonType,
-                visit.Purpose
+                visit.Purpose,
+                OnlineEditionSettings.SimplifiedVisits(_configuration)
             );
             visit.HostName = visit.VisitedPersonName;
             visit.Status = string.IsNullOrWhiteSpace(visit.Status) ? "Active" : visit.Status.Trim();
@@ -681,8 +686,39 @@ namespace VehiclePermitSystemWeb.Services.Visits
             visit.Companions = SanitizeCompanions(visit.Companions);
         }
 
-        private static string NormalizeVisitedPersonType(string? type, string? purpose)
+        private static string NormalizeVisitedPersonType(
+            string? type,
+            string? purpose,
+            bool simplifiedVisits
+        )
         {
+            if (simplifiedVisits)
+            {
+                if (
+                    string.Equals(
+                        type,
+                        Visit.VisitedPersonTypeEmployee,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    return Visit.VisitedPersonTypeEmployee;
+                }
+
+                if (
+                    string.Equals(
+                        type,
+                        Visit.VisitedPersonTypeOther,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    return Visit.VisitedPersonTypeOther;
+                }
+
+                return Visit.VisitedPersonTypeHost;
+            }
+
             if (
                 string.Equals(
                     type,

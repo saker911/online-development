@@ -58,8 +58,6 @@
         <select asp-for="VisitedPersonType" class="form-select" data-visited-person-type>
             <option value="Host">مضيف</option>
             <option value="Employee">موظف</option>
-            <option value="Detained">موقوف</option>
-            <option value="Prisoner">نزيل / سجين</option>
             <option value="Other">جهة أخرى</option>
         </select>
         <span asp-validation-for="VisitedPersonType" class="field-validation-error small"></span>
@@ -67,8 +65,7 @@
     <div class="col-md-6">
         <label asp-for="VisitedPersonName" class="form-label" data-visited-person-label>اسم الشخص المُزار</label>
         <input asp-for="VisitedPersonName" class="form-control" required />
-        <div class="form-text text-muted-ar">هذا الحقل هو الشخص المقصود بالزيارة، سواء كان مضيفًا أو موقوفًا أو نزيلًا.
-        </div>
+        <div class="form-text text-muted-ar">هذا الحقل هو الشخص أو الجهة المقصودة بالزيارة.</div>
         <span asp-validation-for="VisitedPersonName" class="field-validation-error small"></span>
     </div>
     <div class="col-md-4 date-field-shell" data-date-field data-date-display-mode="hijri">

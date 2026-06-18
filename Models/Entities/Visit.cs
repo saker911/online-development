@@ -78,16 +78,6 @@ namespace VehiclePermitSystemWeb.Models.Entities
                 VisitedPersonType,
                 VisitedPersonTypePrisoner,
                 StringComparison.OrdinalIgnoreCase
-            )
-            || (
-                !string.IsNullOrWhiteSpace(Purpose)
-                && (
-                    Purpose.Contains("موقوف", StringComparison.OrdinalIgnoreCase)
-                    || Purpose.Contains("توقيف", StringComparison.OrdinalIgnoreCase)
-                    || Purpose.Contains("مسجون", StringComparison.OrdinalIgnoreCase)
-                    || Purpose.Contains("سجين", StringComparison.OrdinalIgnoreCase)
-                    || Purpose.Contains("نزيل", StringComparison.OrdinalIgnoreCase)
-                )
             );
 
         [NotMapped]
