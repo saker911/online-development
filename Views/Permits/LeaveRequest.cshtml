@@ -1,8 +1,10 @@
 @using VehiclePermitSystemWeb.Utilities
 @model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitExitRequestViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "استئذان";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
     var isInside = string.Equals(Model.CurrentStateDisplay, "داخل", StringComparison.OrdinalIgnoreCase);
 }
 
@@ -53,10 +55,13 @@
                     <div class="leave-request-summary-label">الحالة الحالية</div>
                     <div class="leave-request-summary-value">@Model.CurrentStateDisplay</div>
                 </div>
-                <div class="leave-request-summary-item">
-                    <div class="leave-request-summary-label">رقم الهوية</div>
-                    <div class="leave-request-summary-value leave-request-summary-national-id">@Model.NationalId</div>
-                </div>
+                @if (!hideSensitiveIdentityFields)
+                {
+                    <div class="leave-request-summary-item">
+                        <div class="leave-request-summary-label">رقم الهوية</div>
+                        <div class="leave-request-summary-value leave-request-summary-national-id">@Model.NationalId</div>
+                    </div>
+                }
                 <div class="leave-request-summary-item">
                     <div class="leave-request-summary-label">نوع المركبة</div>
                     <div class="leave-request-summary-value">@Model.VehicleType</div>

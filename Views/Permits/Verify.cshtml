@@ -1,7 +1,9 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitVerificationViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "التحقق من التصريح";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
 }
 
 <div class="card-permit card-permit-compact mx-auto">
@@ -33,10 +35,13 @@
                 <strong>@(Model.Permit.IsVisitorPermit ? "اسم الزائر" : "اسم المصرح له")</strong>
                 <div>@Model.Permit.DriverName</div>
             </div>
-            <div class="col-md-6">
-                <strong>رقم الهوية</strong>
-                <div class="national-id-field">@Model.Permit.NationalId</div>
-            </div>
+            @if (!hideSensitiveIdentityFields)
+            {
+                <div class="col-md-6">
+                    <strong>رقم الهوية</strong>
+                    <div class="national-id-field">@Model.Permit.NationalId</div>
+                </div>
+            }
             <div class="col-md-6">
                 <strong>@(Model.Permit.IsVisitorPermit ? "مكان الزيارة" : "موقع العمل")</strong>
                 <div>@Model.Permit.LocationDisplay</div>

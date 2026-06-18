@@ -34,6 +34,7 @@ using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Utilities.Online;
 using ZXing;
 using ZXing.Common;
 
@@ -53,13 +54,15 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IAccessControlService _accessControl;
         private readonly IWebHostEnvironment _environment;
         private readonly ISystemClock _systemClock;
+        private readonly IConfiguration _configuration;
 
         public PermitsController(
             IPermitService permitService,
             IUserAdminService userAdminService,
             IAccessControlService accessControl,
             IWebHostEnvironment environment,
-            ISystemClock systemClock
+            ISystemClock systemClock,
+            IConfiguration configuration
         )
         {
             _permitService = permitService;
@@ -67,6 +70,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _accessControl = accessControl;
             _environment = environment;
             _systemClock = systemClock;
+            _configuration = configuration;
         }
 
         [HttpGet]
@@ -575,6 +579,20 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private void NormalizePermitInput(Permit permit, bool isCreate)
         {
+            permit.DriverName = (permit.DriverName ?? string.Empty).Trim();
+            permit.NationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                ? (
+                    string.IsNullOrWhiteSpace(permit.NationalId)
+                        ? OnlineEditionSettings.BuildSyntheticNationalId(
+                            permit.DriverName,
+                            permit.EmployeePhone,
+                            permit.PlateNumber,
+                            permit.VisitLocation,
+                            permit.DepartmentName
+                        )
+                        : new string(permit.NationalId.Where(char.IsDigit).ToArray())
+                )
+                : new string((permit.NationalId ?? string.Empty).Where(char.IsDigit).ToArray());
             permit.DepartmentName = (permit.DepartmentName ?? string.Empty).Trim();
             permit.VisitLocation = (permit.VisitLocation ?? string.Empty).Trim();
             permit.ManagerName = (permit.ManagerName ?? string.Empty).Trim();

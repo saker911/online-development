@@ -1,7 +1,9 @@
 @model VehiclePermitSystemWeb.Models.Entities.Permit
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "إنشاء تصريح جديد";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
     var currentPermit = Model ?? new VehiclePermitSystemWeb.Models.Entities.Permit();
     var departmentOptions = (IEnumerable<string>)(ViewBag.DepartmentOptions ?? Array.Empty<string>());
     var approvalRoutesJson = ViewBag.DepartmentApprovalRoutesJson as string ?? "{}";
@@ -30,7 +32,10 @@
                         <tr>
                             <th>رقم التصريح</th>
                             <th>الاسم</th>
-                            <th>رقم الهوية</th>
+                            @if (!hideSensitiveIdentityFields)
+                            {
+                                <th>رقم الهوية</th>
+                            }
                             <th>رقم اللوحة</th>
                             <th>سبب التطابق</th>
                             <th>الحالة</th>
@@ -43,7 +48,10 @@
                             <tr>
                                 <td>@conflict.PermitNumber</td>
                                 <td>@conflict.DriverName</td>
-                                <td class="national-id-field">@conflict.NationalId</td>
+                                @if (!hideSensitiveIdentityFields)
+                                {
+                                    <td class="national-id-field">@conflict.NationalId</td>
+                                }
                                 <td>@conflict.PlateNumber</td>
                                 <td>@conflict.ReasonsDisplay</td>
                                 <td>@conflict.ApprovalStatusDisplay / @conflict.PermitTypeDisplay</td>
@@ -84,12 +92,25 @@
                 <input asp-for="DriverName" class="form-control" required />
                 <span asp-validation-for="DriverName" class="field-validation-error small"></span>
             </div>
-            <div class="col-md-4">
-                <label asp-for="NationalId" class="form-label">رقم الهوية</label>
-                <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
-                      pattern="[12][0-9]{9}" placeholder="1023456789" required />
-                <span asp-validation-for="NationalId" class="field-validation-error small"></span>
-            </div>
+            @if (hideSensitiveIdentityFields)
+            {
+                <input asp-for="NationalId" type="hidden" />
+                <div class="col-md-4">
+                    <div class="app-inline-note h-100 mb-0">
+                        <strong>خصوصية المستفيد</strong>
+                        <div class="text-muted-ar small mt-1">لا يتم إدخال رقم الهوية في نسخة الأون لاين. يستخدم النظام معرفًا داخليًا فقط.</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="col-md-4">
+                    <label asp-for="NationalId" class="form-label">رقم الهوية</label>
+                    <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                          pattern="[12][0-9]{9}" placeholder="1023456789" required />
+                    <span asp-validation-for="NationalId" class="field-validation-error small"></span>
+                </div>
+            }
             <div class="col-md-4" id="workLocationGroup">
                 <label for="DepartmentNamePickerInput" class="form-label" id="workLocationLabel">موقع العمل</label>
                 <div class="department-picker" data-department-picker>

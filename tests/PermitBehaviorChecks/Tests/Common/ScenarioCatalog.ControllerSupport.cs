@@ -147,7 +147,8 @@ internal static partial class ScenarioCatalog
             userAdminService,
             accessControlService,
             new TestWebHostEnvironment(),
-            systemClock
+            systemClock,
+            new ConfigurationBuilder().Build()
         )
         {
             ControllerContext = new ControllerContext(controllerContext.ActionContext),

@@ -1,9 +1,11 @@
 @using System.Globalization
 @using VehiclePermitSystemWeb.Security
 @model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitIndexViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "إدارة التصاريح";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
 
     var totalPermits = Model.Permits.Count;
     var approvedPermits = Model.Permits.Count(p =>
@@ -362,7 +364,10 @@
                                                         </span>
                                                         <div class="permit-holder-copy">
                                                             <div class="permit-primary-text">@item.DriverName</div>
+                                                        @if (!hideSensitiveIdentityFields)
+                                                        {
                                                             <div class="permit-secondary-text national-id-field">@item.NationalId</div>
+                                                        }
                                                         </div>
                                                     </div>
                                                 </td>

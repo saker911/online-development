@@ -1,8 +1,10 @@
 @using VehiclePermitSystemWeb.Security
 @model VehiclePermitSystemWeb.Models.Entities.Visit
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = $"تفاصيل الزيارة {Model.VisitId}";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
     var canEdit = User.HasPermission(AppPermissions.EditVisit);
     var canApproveVisit = ViewData["CanApproveVisit"] as bool? == true;
     var canPrint = string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
@@ -43,10 +45,13 @@
                 <strong>مكان الزيارة</strong>
                 <div>@Model.VisitLocation</div>
             </div>
-            <div class="col-md-6">
-                <strong>رقم الهوية</strong>
-                <div class="national-id-field">@Model.NationalId</div>
-            </div>
+            @if (!hideSensitiveIdentityFields)
+            {
+                <div class="col-md-6">
+                    <strong>رقم الهوية</strong>
+                    <div class="national-id-field">@Model.NationalId</div>
+                </div>
+            }
             <div class="col-md-6">
                 <strong>رقم الجوال</strong>
                 <div class="national-id-field">@Model.PhoneNumber</div>
@@ -98,7 +103,10 @@
                         <thead>
                             <tr>
                                 <th>الاسم</th>
-                                <th>الهوية</th>
+                                @if (!hideSensitiveIdentityFields)
+                                {
+                                    <th>الهوية</th>
+                                }
                                 <th>الجوال</th>
                                 <th>العلاقة</th>
                                 <th>الدخول</th>
@@ -110,7 +118,10 @@
                             {
                                 <tr>
                                     <td>@companion.FullName</td>
-                                    <td class="national-id-field">@companion.NationalId</td>
+                                    @if (!hideSensitiveIdentityFields)
+                                    {
+                                        <td class="national-id-field">@companion.NationalId</td>
+                                    }
                                     <td class="ltr-field">@companion.PhoneNumber</td>
                                     <td>@companion.Relationship</td>
                                     <td class="date-text">@(companion.EntryTime.HasValue ?

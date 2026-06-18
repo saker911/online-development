@@ -29,6 +29,7 @@ using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -39,13 +40,15 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly ISystemClock _systemClock;
         private readonly IAccessControlService _accessControl;
         private readonly IWebHostEnvironment _environment;
+        private readonly IConfiguration _configuration;
 
         public VisitsController(
             IVisitService visitService,
             IUserAdminService userAdminService,
             ISystemClock systemClock,
             IAccessControlService accessControl,
-            IWebHostEnvironment environment
+            IWebHostEnvironment environment,
+            IConfiguration configuration
         )
         {
             _visitService = visitService;
@@ -53,6 +56,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _systemClock = systemClock;
             _accessControl = accessControl;
             _environment = environment;
+            _configuration = configuration;
         }
 
         [Authorize(Policy = AppPolicies.ViewVisits)]
@@ -115,6 +119,7 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult Create(Visit visit)
         {
             NormalizeVisitInput(visit);
+            ModelState.Clear();
             TryValidateModel(visit);
             ValidateVisitSchedule(visit);
             if (ModelState.IsValid)
@@ -159,6 +164,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             NormalizeVisitInput(visit);
+            ModelState.Clear();
             TryValidateModel(visit);
             ValidateVisitSchedule(visit, existingVisit.VisitDate);
             if (ModelState.IsValid)
@@ -654,16 +660,21 @@ namespace VehiclePermitSystemWeb.Controllers
             return int.TryParse(visitId.TrimStart('V'), out var value) ? value : 0;
         }
 
-        private static void NormalizeVisitInput(Visit visit)
+        private void NormalizeVisitInput(Visit visit)
         {
             visit.VisitorName = (visit.VisitorName ?? string.Empty).Trim();
             visit.VisitLocation = (visit.VisitLocation ?? string.Empty).Trim();
-            visit.NationalId = new string(
-                (visit.NationalId ?? string.Empty).Where(char.IsDigit).ToArray()
-            );
             visit.PhoneNumber = new string(
                 (visit.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray()
             );
+            visit.NationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                ? OnlineEditionSettings.BuildSyntheticNationalId(
+                    visit.VisitorName,
+                    visit.PhoneNumber,
+                    visit.VisitLocation,
+                    visit.VisitDate.ToString("O")
+                )
+                : new string((visit.NationalId ?? string.Empty).Where(char.IsDigit).ToArray());
             visit.Purpose = (visit.Purpose ?? string.Empty).Trim();
             visit.VisitedPersonName = (visit.VisitedPersonName ?? string.Empty).Trim();
             visit.HostName = visit.VisitedPersonName;
@@ -672,12 +683,14 @@ namespace VehiclePermitSystemWeb.Controllers
             foreach (var companion in visit.Companions)
             {
                 companion.FullName = (companion.FullName ?? string.Empty).Trim();
-                companion.NationalId = new string(
-                    (companion.NationalId ?? string.Empty).Where(char.IsDigit).ToArray()
-                );
                 companion.PhoneNumber = new string(
                     (companion.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray()
                 );
+                companion.NationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                    ? string.Empty
+                    : new string(
+                        (companion.NationalId ?? string.Empty).Where(char.IsDigit).ToArray()
+                    );
                 companion.Relationship = (companion.Relationship ?? string.Empty).Trim();
             }
         }

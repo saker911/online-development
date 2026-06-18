@@ -1,8 +1,10 @@
 @using VehiclePermitSystemWeb.Security
 @model VehiclePermitSystemWeb.Models.Entities.Permit
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "تفاصيل التصريح";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
     var canRenderArtifacts = string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
     var canApprove = ViewData["CanApprovePendingPermit"] as bool? == true;
     var canForwardApproval = ViewBag.CanForwardApproval as bool? ?? false;
@@ -66,10 +68,13 @@
                     <strong>@(Model.IsVisitorPermit ? "اسم الزائر" : "اسم المصرح له")</strong>
                     <div>@Model.DriverName</div>
                 </div>
-                <div class="col-md-6">
-                    <strong>رقم الهوية</strong>
-                    <div class="national-id-field">@Model.NationalId</div>
-                </div>
+                @if (!hideSensitiveIdentityFields)
+                {
+                    <div class="col-md-6">
+                        <strong>رقم الهوية</strong>
+                        <div class="national-id-field">@Model.NationalId</div>
+                    </div>
+                }
                 <div class="col-md-6">
                     <strong>@(Model.RequiresVisitLocation ? "مكان الزيارة" : "موقع العمل")</strong>
                     <div>@Model.LocationDisplay</div>

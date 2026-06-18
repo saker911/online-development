@@ -1,6 +1,8 @@
 @model VehiclePermitSystemWeb.Models.Entities.Visit
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
     var companions = (Model.Companions ?? new List<VehiclePermitSystemWeb.Models.Entities.VisitCompanion>())
         .Where(c => c != null && !c.IsEmpty)
         .OrderBy(c => c.SortOrder)
@@ -19,13 +21,26 @@
         <input asp-for="VisitLocation" class="form-control" required />
         <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
     </div>
-    <div class="col-md-4">
-        <label asp-for="NationalId" class="form-label">رقم هوية الزائر الرئيسي</label>
-        <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
-             pattern="[12][0-9]{9}" placeholder="1023456789" required />
-         <div class="form-text text-muted-ar">رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.</div>
-        <span asp-validation-for="NationalId" class="field-validation-error small"></span>
-    </div>
+    @if (hideSensitiveIdentityFields)
+    {
+        <input asp-for="NationalId" type="hidden" />
+        <div class="col-md-4">
+            <div class="app-inline-note h-100 mb-0">
+                <strong>خصوصية الزائر</strong>
+                <div class="text-muted-ar small mt-1">نسخة الأون لاين لا تجمع رقم الهوية. ينشئ النظام معرفًا داخليًا للحفظ فقط.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="col-md-4">
+            <label asp-for="NationalId" class="form-label">رقم هوية الزائر الرئيسي</label>
+            <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                 pattern="[12][0-9]{9}" placeholder="1023456789" required />
+             <div class="form-text text-muted-ar">رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.</div>
+            <span asp-validation-for="NationalId" class="field-validation-error small"></span>
+        </div>
+    }
     <div class="col-md-4">
         <label asp-for="PhoneNumber" class="form-label">جوال الزائر الرئيسي</label>
         <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" maxlength="10"
@@ -105,11 +120,14 @@
                                         <input class="form-control" value="@companions[i].FullName"
                                                data-companion-field="FullName" />
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">رقم الهوية</label>
-                                        <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
-                                                 pattern="[12][0-9]{9}" placeholder="1023456789" value="@companions[i].NationalId" data-companion-field="NationalId" />
-                                    </div>
+                                    @if (!hideSensitiveIdentityFields)
+                                    {
+                                        <div class="col-md-3">
+                                            <label class="form-label">رقم الهوية</label>
+                                            <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                                                     pattern="[12][0-9]{9}" placeholder="1023456789" value="@companions[i].NationalId" data-companion-field="NationalId" />
+                                        </div>
+                                    }
                                     <div class="col-md-3">
                                         <label class="form-label">رقم الجوال</label>
                                         <input class="form-control ltr-field" inputmode="numeric" maxlength="10"
@@ -142,11 +160,14 @@
                                     <label class="form-label">الاسم</label>
                                     <input class="form-control" data-companion-field="FullName" />
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">رقم الهوية</label>
-                                    <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
-                                         pattern="[12][0-9]{9}" placeholder="1023456789" data-companion-field="NationalId" />
-                                </div>
+                                @if (!hideSensitiveIdentityFields)
+                                {
+                                    <div class="col-md-3">
+                                        <label class="form-label">رقم الهوية</label>
+                                        <input class="form-control national-id-field" inputmode="numeric" maxlength="10"
+                                             pattern="[12][0-9]{9}" placeholder="1023456789" data-companion-field="NationalId" />
+                                    </div>
+                                }
                                 <div class="col-md-3">
                                     <label class="form-label">رقم الجوال</label>
                                     <input class="form-control ltr-field" inputmode="numeric" maxlength="10"
