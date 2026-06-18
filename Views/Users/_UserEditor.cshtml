@@ -16,10 +16,10 @@
     var canEditAdministrativeFields = isNew || !isEditingCurrentUser;
     var canManageOwnGateSettings = isEditingCurrentUser && Model.CanScanOperations;
     var showGateSettingsSection = canEditAdministrativeFields || canManageOwnGateSettings;
-    var usernameLabel = Model.IsSuperAdmin ? "رقم هوية مالك النظام" : "اسم المستخدم";
+    var usernameLabel = Model.IsSuperAdmin ? "معرف مالك النظام" : "اسم المستخدم";
     var selfEditSummaryText = canManageOwnGateSettings
-        ? "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الهوية أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور وPIN البوابة عند توفر الصلاحية."
-        : "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الهوية أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور من هذه الشاشة.";
+        ? "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الحساب أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور وPIN البوابة عند توفر الصلاحية."
+        : "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الحساب أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور من هذه الشاشة.";
     var resetTemporaryPasswordUrl = Url.Action("ResetTemporaryPassword", "Users", new { id = Model.Username }) ?? string.Empty;
     var resetTemporaryOperatorPinUrl = Url.Action("ResetTemporaryOperatorPin", "Users", new { id = Model.Username }) ?? string.Empty;
     var applyRoleDefaultsUrl = Url.Action("ApplyRoleDefaults", "Users") ?? string.Empty;
@@ -42,7 +42,7 @@
         .ToList();
     var wizardSteps = new[]
     {
-        new { Number = 1, Title = "الهوية", Description = "الاسم، الهوية، وبيانات التواصل" },
+        new { Number = 1, Title = "الحساب", Description = "الاسم، المعرف، وبيانات التواصل" },
         new { Number = 2, Title = "الإدارة", Description = "الدور، القسم، والربط الإداري" },
         new { Number = 3, Title = "الاعتماد", Description = "كلمة المرور وإعدادات البوابة" },
         new { Number = 4, Title = "الصلاحيات", Description = "الصلاحيات والمراجعة النهائية" },
@@ -86,7 +86,7 @@
                 @if (isNew)
                 {
                     <h1>بيانات الحساب الجديد</h1>
-                    <p>أكمل بيانات الهوية والربط الإداري ثم راجع الصلاحيات قبل اعتماد إنشاء المستخدم.</p>
+                    <p>أكمل بيانات الحساب والربط الإداري ثم راجع الصلاحيات قبل اعتماد إنشاء المستخدم.</p>
                 }
                 else if (isEditingCurrentUser)
                 {
@@ -111,7 +111,7 @@
         @if (Model.IsSuperAdmin)
         {
             <div class="ue-inline-note ue-inline-note-info">
-                هذا الحساب هو مالك النظام بصلاحيات سيادية. يمكن تعديل رقم الهوية والاسم وكلمة المرور مع بقاء الصلاحيات محفوظة، بينما تبقى الحالة نشطة دائمًا ولا يظهر له قسم أو ربط إداري.
+                هذا الحساب هو مالك النظام بصلاحيات سيادية. يمكن تعديل المعرف والاسم وكلمة المرور مع بقاء الصلاحيات محفوظة، بينما تبقى الحالة نشطة دائمًا ولا يظهر له قسم أو ربط إداري.
             </div>
         }
     </div>
@@ -156,7 +156,7 @@
                     <strong data-users-summary-full-name>غير مُدخل</strong>
                 </div>
                 <div class="ue-summary-item">
-                    <span>رقم الهوية</span>
+                    <span>المعرف الداخلي</span>
                     <strong class="ltr-field" data-users-summary-username>غير مُدخل</strong>
                 </div>
                 <div class="ue-summary-item">
@@ -204,9 +204,9 @@
                         <span asp-validation-for="FullName" class="field-validation-error small"></span>
                     </div>
                     <div class="ue-field ue-field-required">
-                        <label asp-for="Username" class="form-label">رقم الهوية</label>
+                        <label asp-for="Username" class="form-label">المعرف الداخلي</label>
                         <input asp-for="Username" class="form-control ltr-field" inputmode="numeric" autocomplete="username" minlength="10"
-                               maxlength="10" pattern="[12][0-9]{9}" placeholder="1023456789" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" required />
+                               maxlength="10" pattern="[12][0-9]{9}" placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" required />
                         <span asp-validation-for="Username" class="field-validation-error small"></span>
                     </div>
                     <div class="ue-field">
@@ -297,8 +297,8 @@
                         <div class="ue-field ue-field-required">
                             <label asp-for="Username" class="form-label">@usernameLabel</label>
                             <input asp-for="Username" class="form-control ltr-field" inputmode="numeric" autocomplete="username" minlength="10"
-                                maxlength="10" pattern="[12][0-9]{9}" placeholder="1023456789" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" required />
-                            <div class="form-text">يمكن تغييره لهذا الحساب فقط، بشرط أن يكون رقم هوية أو إقامة من 10 أرقام ويبدأ بـ 1 أو 2 وفريدًا.</div>
+                                maxlength="10" pattern="[12][0-9]{9}" placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" required />
+                            <div class="form-text">يمكن تغييره لهذا الحساب فقط، بشرط أن يكون معرفًا داخليًا من 10 أرقام ويبدأ بـ 1 أو 2 وفريدًا.</div>
                             <span asp-validation-for="Username" class="field-validation-error small"></span>
                         </div>
                     }
@@ -335,12 +335,12 @@
 
             <div class="ue-identity-lookup-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
                 <p class="ue-inline-hint" data-users-lookup-result>
-                    استخدم فحص الهوية السريع قبل المتابعة. إذا كان الرقم مسجلًا مسبقًا فسيتم نقلك إلى شاشة التعديل أو إعادة التفعيل.
+                    استخدم فحص المعرف السريع قبل المتابعة. إذا كان الرقم مسجلًا مسبقًا فسيتم نقلك إلى شاشة التعديل أو إعادة التفعيل.
                 </p>
                 @if (isNew)
                 {
                     <div class="ue-identity-lookup-actions">
-                        <button type="button" class="btn btn-outline-primary btn-sm" id="users-identity-lookup-btn">فحص الهوية</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="users-identity-lookup-btn">فحص المعرف</button>
                         <button type="button" class="btn btn-outline-warning btn-sm" id="users-reactivate-btn" hidden>إعادة التفعيل</button>
                         <span class="small text-muted" id="users-identity-lookup-hint">يساعدك على اكتشاف المستخدم الموجود قبل إنشاء حساب جديد.</span>
                     </div>
@@ -1352,14 +1352,14 @@
                                                                                                                             var usernameInput = form.querySelector("#Username");
                                                                                                                             var username = usernameInput ? usernameInput.value.trim() : "";
                                                                                                                             if (!/^[12]\d{9}$/.test(username)) {
-                                                                                                                                setLookupResult("invalid", "رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.");
+                                                                                                                                setLookupResult("invalid", "المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2.");
                                                                                                                                 if (usernameInput) {
                                                                                                                                     usernameInput.focus();
                                                                                                                                 }
                                                                                                                                 return;
                                                                                                                             }
 
-                                                                                                                            setLookupResult("loading", "جاري فحص الهوية...");
+                                                                                                                            setLookupResult("loading", "جاري فحص المعرف...");
                                                                                                                             var lookupUrl = "@Url.Action("WizardIdentityLookup", "Users")" + "?username=" + encodeURIComponent(username);
                                                                                                                             var response = await fetch(lookupUrl, {
                                                                                                                                 headers: { "Accept": "application/json" },

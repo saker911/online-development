@@ -92,7 +92,7 @@
     <section class="badge-sheet">
         <h1>بطاقة مشغل البوابة</h1>
         <div class="badge-meta">@Model.DisplayName</div>
-        <div class="badge-meta">رقم الهوية: <span class="national-id-field">@Model.Username</span></div>
+        <div class="badge-meta">المعرف الداخلي: <span class="national-id-field">@Model.Username</span></div>
            <img src="@Url.Action("OperatorBadge", "Users", new { id = Model.Username })" alt="باركود المشغل"
                class="badge-barcode-image" />
         <div class="badge-code">@Model.OperatorBadgeCode</div>

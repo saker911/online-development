@@ -292,7 +292,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div>${escapeHtml(permit.locationDisplay)}</div>
                 </div>
                 <div class="col-md-6">
-                    <strong>رقم الهوية</strong>
+                    <strong>المعرف الداخلي</strong>
                     <div class="national-id-field">${escapeHtml(permit.nationalId)}</div>
                 </div>
                 <div class="col-md-6">

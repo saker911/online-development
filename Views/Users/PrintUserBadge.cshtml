@@ -96,7 +96,7 @@
         {
             <div class="badge-meta">@Model.JobTitle</div>
         }
-        <div class="badge-meta">رقم الهوية: <span class="national-id-field">@Model.Username</span></div>
+        <div class="badge-meta">المعرف الداخلي: <span class="national-id-field">@Model.Username</span></div>
         @if (!string.IsNullOrWhiteSpace(Model.Department))
         {
             <div class="badge-meta">القسم: @Model.Department</div>
@@ -104,7 +104,7 @@
         <img src="@Url.Action("UserBadge", "Users", new { id = Model.Username })" alt="باركود الموظف"
              class="badge-barcode-image" />
         <div class="badge-code">@Model.Username</div>
-        <div class="badge-hint">يمكن استخدام هذه البطاقة كمرجع سريع لبيانات الموظف وباركود الهوية.</div>
+        <div class="badge-hint">يمكن استخدام هذه البطاقة كمرجع سريع لبيانات الموظف وباركود الحساب.</div>
     </section>
     <script nonce="@(Context.Items["CspScriptNonce"])">
         window.print();

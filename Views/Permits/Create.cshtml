@@ -24,7 +24,7 @@
                                                                                                             conflicts.Any())
     {
         <div class="app-inline-note app-inline-note-warning mb-4">
-            <div class="fw-bold mb-1">تم العثور على تصريح مسجل مسبقًا بنفس الاسم أو رقم الهوية أو رقم اللوحة.</div>
+            <div class="fw-bold mb-1">تم العثور على تصريح مسجل مسبقًا بنفس الاسم أو المعرف الداخلي أو رقم اللوحة.</div>
             <div class="mb-3">يمكنك فتح التصريح الموجود للتعديل بدل إنشاء تصريح جديد.</div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle app-data-table permit-conflict-table mb-0">
@@ -34,7 +34,7 @@
                             <th>الاسم</th>
                             @if (!hideSensitiveIdentityFields)
                             {
-                                <th>رقم الهوية</th>
+                                <th>المعرف الداخلي</th>
                             }
                             <th>رقم اللوحة</th>
                             <th>سبب التطابق</th>
@@ -98,14 +98,14 @@
                 <div class="col-md-4">
                     <div class="app-inline-note h-100 mb-0">
                         <strong>خصوصية المستفيد</strong>
-                        <div class="text-muted-ar small mt-1">لا يتم إدخال رقم الهوية في نسخة الأون لاين. يستخدم النظام معرفًا داخليًا فقط.</div>
+                        <div class="text-muted-ar small mt-1">لا يتم إدخال بيانات تعريف حساسة في نسخة الأون لاين. يستخدم النظام معرفًا داخليًا فقط.</div>
                     </div>
                 </div>
             }
             else
             {
                 <div class="col-md-4">
-                    <label asp-for="NationalId" class="form-label">رقم الهوية</label>
+                    <label asp-for="NationalId" class="form-label">المعرف الداخلي</label>
                     <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
                           pattern="[12][0-9]{9}" placeholder="1023456789" required />
                     <span asp-validation-for="NationalId" class="field-validation-error small"></span>

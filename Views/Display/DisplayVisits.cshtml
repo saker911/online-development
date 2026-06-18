@@ -48,7 +48,7 @@
                                 <div class="small text-muted">@item.VisitId - @item.VisitLocation</div>
                                 <div class="small">الشخص المُزار: @item.SubjectDisplay</div>
                                 <div class="small">المرافقون: @item.CompanionCount</div>
-                                <div class="small">الهوية: <span class="national-id-field">@item.NationalId</span></div>
+                                <div class="small">المعرف الداخلي: <span class="national-id-field">@item.NationalId</span></div>
                                 <div class="small">الجوال: @item.PhoneNumber</div>
                                 <div class="small date-text">موعد الزيارة: @HijriDateFormatter.Format(item.VisitDate)</div>
                                 <form asp-action="DetainedVisitorArrived" method="post" class="mt-3">
@@ -80,7 +80,7 @@
                                 <div class="small text-muted">@item.VisitId - @item.VisitLocation</div>
                                 <div class="small">الشخص المُزار: @item.SubjectDisplay</div>
                                 <div class="small">المرافقون: @item.CompanionCount</div>
-                                <div class="small">الهوية: <span class="national-id-field">@item.NationalId</span></div>
+                                <div class="small">المعرف الداخلي: <span class="national-id-field">@item.NationalId</span></div>
                                 <div class="small">الجوال: @item.PhoneNumber</div>
                                 <div class="small text-muted date-text">داخل منذ @HijriDateFormatter.Format(item.EntryTime)</div>
                                 <form asp-action="DetainedVisitorExited" method="post" class="mt-3">
@@ -112,7 +112,7 @@
                                 <div class="small text-muted">@item.VisitId - @item.VisitLocation</div>
                                 <div class="small">الشخص المُزار: @item.SubjectDisplay</div>
                                 <div class="small">المرافقون: @item.CompanionCount</div>
-                                <div class="small">الهوية: <span class="national-id-field">@item.NationalId</span></div>
+                                <div class="small">المعرف الداخلي: <span class="national-id-field">@item.NationalId</span></div>
                                 <div class="small">الجوال: @item.PhoneNumber</div>
                                 <div class="small text-muted date-text">تم إغلاق الزيارة في
                                     @HijriDateFormatter.Format(item.ExitTime)</div>
@@ -278,7 +278,7 @@
                                                     <div class="small text-muted">${escapeHtml(item.visitId)} - ${escapeHtml(item.visitLocation)}</div>
                                                     <div class="small">الشخص المُزار: ${escapeHtml(item.visitedPersonName)}</div>
                                                     <div class="small">المرافقون: ${escapeHtml(item.companionCount)}</div>
-                                                    <div class="small">الهوية: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
+                                                    <div class="small">المعرف الداخلي: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
                                                     <div class="small">الجوال: ${escapeHtml(item.phoneNumber)}</div>
                                                     <div class="small date-text">موعد الزيارة: ${escapeHtml(item.visitDateText)}</div>
                                                     ${buildPostForm(arrivedUrl, item.visitId, 'btn-success', 'تم الوصول')}
@@ -297,7 +297,7 @@
                                                     <div class="small text-muted">${escapeHtml(item.visitId)} - ${escapeHtml(item.visitLocation)}</div>
                                                     <div class="small">الشخص المُزار: ${escapeHtml(item.visitedPersonName)}</div>
                                                     <div class="small">المرافقون: ${escapeHtml(item.companionCount)}</div>
-                                                    <div class="small">الهوية: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
+                                                    <div class="small">المعرف الداخلي: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
                                                     <div class="small">الجوال: ${escapeHtml(item.phoneNumber)}</div>
                                                     <div class="small text-muted date-text">داخل منذ ${escapeHtml(item.entryTimeText)}</div>
                                                     ${buildPostForm(exitedUrl, item.visitId, 'btn-outline-success', 'تسجيل خروج الزائر')}
@@ -316,7 +316,7 @@
                                                     <div class="small text-muted">${escapeHtml(item.visitId)} - ${escapeHtml(item.visitLocation)}</div>
                                                     <div class="small">الشخص المُزار: ${escapeHtml(item.visitedPersonName)}</div>
                                                     <div class="small">المرافقون: ${escapeHtml(item.companionCount)}</div>
-                                                    <div class="small">الهوية: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
+                                                    <div class="small">المعرف الداخلي: <span class="national-id-field">${escapeHtml(item.nationalId)}</span></div>
                                                     <div class="small">الجوال: ${escapeHtml(item.phoneNumber)}</div>
                                                     <div class="small text-muted date-text">خرج في ${escapeHtml(item.exitTimeText)}</div>
                                                 </div>`).join('');

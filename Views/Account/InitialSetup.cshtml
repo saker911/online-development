@@ -786,7 +786,7 @@
                             <div class="login-field setup-form-input">
                                 <label asp-for="Username" class="form-label"></label>
                                 <input asp-for="Username" class="form-control" inputmode="numeric" autocomplete="username"
-                                        required pattern="[12][0-9]{9}" maxlength="10" placeholder="1023456789" title="رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم" />
+                                        required pattern="[12][0-9]{9}" maxlength="10" placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" />
                                 <span asp-validation-for="Username" class="field-validation-error small"></span>
                             </div>
 
@@ -906,7 +906,7 @@
                                     <article class="setup-confirm-card">
                                         <strong>الحساب الرئيسي</strong>
                                         <div class="setup-confirm-list">
-                                            <div class="setup-confirm-item"><span>رقم الهوية</span><b data-summary="Username"></b></div>
+                                            <div class="setup-confirm-item"><span>المعرف الداخلي</span><b data-summary="Username"></b></div>
                                             <div class="setup-confirm-item"><span>الاسم الكامل</span><b data-summary="FullName"></b>
                                             </div>
                                             <div class="setup-confirm-item"><span>الجوال</span><b data-summary="PhoneNumber"></b></div>
@@ -1052,7 +1052,7 @@
 
                                                 if (field.hasAttribute('required') && trimmedValue.length === 0) {
                                                     if (name === 'Username') {
-                                                        message = 'رقم الهوية مطلوب.';
+                                                        message = 'المعرف الداخلي مطلوب.';
                                                     } else if (name === 'JobTitle') {
                                                         message = 'المسمى الوظيفي مطلوب.';
                                                     } else if (name === 'FullName') {
@@ -1075,7 +1075,7 @@
                                                 }
 
                                                 if (!message && name === 'Username' && !/^[12]\d{9}$/.test(trimmedValue)) {
-                                                    message = 'رقم الهوية أو الإقامة يجب أن يكون 10 أرقام ويبدأ بـ 1 للسعودي أو 2 للمقيم.';
+                                                    message = 'المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2.';
                                                 }
 
                                                 if (!message && name === 'PhoneNumber' && !/^05\d{8}$/.test(trimmedValue)) {
