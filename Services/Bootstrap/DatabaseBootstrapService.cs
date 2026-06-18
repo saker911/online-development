@@ -71,6 +71,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             }
 
             EnsureSqliteSchemaUpgrades(db);
+            EnsureDefaultTenant(db);
 
             var existingUsers = db.UserAccounts.ToList();
 
@@ -466,6 +467,89 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteAuditLogsTable(db);
             EnsureSqliteDelegationsTables(db);
             EnsureSqliteDisplayDeviceTables(db);
+            EnsureSqliteTenancySchema(db);
+        }
+
+        private static void EnsureDefaultTenant(ApplicationDbContext db)
+        {
+            var defaultTenant = db.Tenants.FirstOrDefault(tenant =>
+                tenant.TenantId == TenantDefaults.DefaultTenantId
+            );
+            if (defaultTenant != null)
+            {
+                if (string.IsNullOrWhiteSpace(defaultTenant.Name))
+                {
+                    defaultTenant.Name = TenantDefaults.DefaultTenantName;
+                }
+
+                if (string.IsNullOrWhiteSpace(defaultTenant.Slug))
+                {
+                    defaultTenant.Slug = TenantDefaults.DefaultTenantId;
+                }
+
+                defaultTenant.IsActive = true;
+                return;
+            }
+
+            db.Tenants.Add(
+                new Tenant
+                {
+                    TenantId = TenantDefaults.DefaultTenantId,
+                    Name = TenantDefaults.DefaultTenantName,
+                    Slug = TenantDefaults.DefaultTenantId,
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                }
+            );
+        }
+
+        private static void EnsureSqliteTenancySchema(ApplicationDbContext db)
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS Tenants (
+                    TenantId TEXT NOT NULL PRIMARY KEY,
+                    Name TEXT NOT NULL DEFAULT '',
+                    Slug TEXT NOT NULL DEFAULT '',
+                    IsActive INTEGER NOT NULL DEFAULT 1,
+                    CreatedAtUtc TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_Tenants_Slug ON Tenants (Slug);"
+            );
+
+            foreach (var tableName in new[]
+            {
+                "AdministrationSettings",
+                "Permits",
+                "Visits",
+                "VisitCompanions",
+                "PermitActivities",
+                "AuditLogs",
+                "Departments",
+                "UserAccounts",
+                "UserActivities",
+                "SessionRecords",
+                "Delegations",
+                "DelegationPermissions",
+                "DisplayDevices",
+                "DisplaySecuritySettings",
+            })
+            {
+                EnsureSqliteColumn(
+                    db,
+                    tableName,
+                    "TenantId",
+                    $"TEXT NOT NULL DEFAULT '{TenantDefaults.DefaultTenantId}'"
+                );
+                db.Database.ExecuteSqlRaw(
+                    "CREATE INDEX IF NOT EXISTS IX_"
+                        + tableName
+                        + "_TenantId ON "
+                        + tableName
+                        + " (TenantId);"
+                );
+            }
         }
 
         private static void EnsureSqliteDisplayDeviceTables(ApplicationDbContext db)

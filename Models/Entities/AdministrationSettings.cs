@@ -1,8 +1,9 @@
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class AdministrationSettings
+    public class AdministrationSettings : ITenantScopedEntity
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public bool IsInitialSetupCompleted { get; set; }
         public string OrganizationName { get; set; } = string.Empty;
         public string DepartmentName { get; set; } = string.Empty;

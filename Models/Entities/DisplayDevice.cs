@@ -1,8 +1,9 @@
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class DisplayDevice
+    public class DisplayDevice : ITenantScopedEntity
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string ScreenName { get; set; } = string.Empty;
         public string ScreenLocation { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

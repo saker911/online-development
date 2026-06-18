@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.Extensions.DependencyInjection;
 using VehiclePermitSystemWeb.Models.DTOs;
 using VehiclePermitSystemWeb.Models.Entities;
 using VehiclePermitSystemWeb.Models.ViewModels.Account;
@@ -11,15 +13,33 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Services.Tenants;
 
 namespace VehiclePermitSystemWeb.Data
 {
     public class ApplicationDbContext : DbContext
     {
+        private readonly string _tenantId;
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options) { }
+            : this(options, new DefaultTenantContext()) { }
+
+        [ActivatorUtilitiesConstructor]
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            ITenantContext tenantContext
+        )
+            : base(options)
+        {
+            _tenantId = string.IsNullOrWhiteSpace(tenantContext.TenantId)
+                ? TenantDefaults.DefaultTenantId
+                : tenantContext.TenantId.Trim();
+        }
+
+        public string CurrentTenantId => _tenantId;
 
         public DbSet<Permit> Permits => Set<Permit>();
+        public DbSet<Tenant> Tenants => Set<Tenant>();
         public DbSet<Visit> Visits => Set<Visit>();
         public DbSet<VisitCompanion> VisitCompanions => Set<VisitCompanion>();
         public DbSet<PermitActivity> PermitActivities => Set<PermitActivity>();
@@ -41,6 +61,7 @@ namespace VehiclePermitSystemWeb.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<Permit>().HasKey(x => x.PermitNumber);
+            modelBuilder.Entity<Tenant>().HasKey(x => x.TenantId);
             modelBuilder.Entity<Permit>().HasIndex(x => x.PermitNumber).IsUnique();
             modelBuilder.Entity<Permit>().HasIndex(x => x.ArchivedAt);
             modelBuilder.Entity<Visit>().HasKey(x => x.VisitId);
@@ -55,6 +76,25 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<AdministrationSettings>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplayDevice>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplaySecuritySettings>().HasKey(x => x.Id);
+
+            modelBuilder.Entity<Tenant>().Property(x => x.TenantId).HasMaxLength(64);
+            modelBuilder.Entity<Tenant>().Property(x => x.Name).HasMaxLength(256);
+            modelBuilder.Entity<Tenant>().Property(x => x.Slug).HasMaxLength(256);
+            modelBuilder.Entity<Tenant>().HasIndex(x => x.Slug).IsUnique();
+            ConfigureTenantScopedEntity<Permit>(modelBuilder);
+            ConfigureTenantScopedEntity<Visit>(modelBuilder);
+            ConfigureTenantScopedEntity<VisitCompanion>(modelBuilder);
+            ConfigureTenantScopedEntity<PermitActivity>(modelBuilder);
+            ConfigureTenantScopedEntity<AuditLog>(modelBuilder);
+            ConfigureTenantScopedEntity<Department>(modelBuilder);
+            ConfigureTenantScopedEntity<UserAccount>(modelBuilder);
+            ConfigureTenantScopedEntity<UserActivity>(modelBuilder);
+            ConfigureTenantScopedEntity<SessionRecord>(modelBuilder);
+            ConfigureTenantScopedEntity<Delegation>(modelBuilder);
+            ConfigureTenantScopedEntity<DelegationPermission>(modelBuilder);
+            ConfigureTenantScopedEntity<AdministrationSettings>(modelBuilder);
+            ConfigureTenantScopedEntity<DisplayDevice>(modelBuilder);
+            ConfigureTenantScopedEntity<DisplaySecuritySettings>(modelBuilder);
 
             modelBuilder.Entity<Permit>().Property(x => x.PermitNumber).HasMaxLength(32);
             modelBuilder.Entity<Permit>().Property(x => x.PermitType).HasMaxLength(24);
@@ -248,6 +288,61 @@ namespace VehiclePermitSystemWeb.Data
                 .Entity<DisplaySecuritySettings>()
                 .Property(x => x.SetupKeyHash)
                 .HasMaxLength(128);
+        }
+
+        private void ConfigureTenantScopedEntity<TEntity>(ModelBuilder modelBuilder)
+            where TEntity : class, ITenantScopedEntity
+        {
+            modelBuilder
+                .Entity<TEntity>()
+                .Property(x => x.TenantId)
+                .HasMaxLength(64)
+                .HasDefaultValue(TenantDefaults.DefaultTenantId);
+            modelBuilder.Entity<TEntity>().HasIndex(x => x.TenantId);
+            modelBuilder.Entity<TEntity>().HasQueryFilter(entity => entity.TenantId == CurrentTenantId);
+        }
+
+        public override int SaveChanges()
+        {
+            ApplyTenantId();
+            return base.SaveChanges();
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            ApplyTenantId();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            ApplyTenantId();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        public override Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default
+        )
+        {
+            ApplyTenantId();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        private void ApplyTenantId()
+        {
+            foreach (var entry in ChangeTracker.Entries<ITenantScopedEntity>())
+            {
+                if (entry.State != EntityState.Added)
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.Entity.TenantId))
+                {
+                    entry.Entity.TenantId = CurrentTenantId;
+                }
+            }
         }
     }
 }

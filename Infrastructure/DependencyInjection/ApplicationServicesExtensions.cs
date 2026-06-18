@@ -12,6 +12,7 @@ using VehiclePermitSystemWeb.Services.Monitoring;
 using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
+using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 
@@ -46,6 +47,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddSingleton<IPermitService, PermitService>();
             services.AddSingleton<IVisitService, VisitService>();
             services.AddSingleton<IUserAdminService, UserAdminService>();
+            services.AddSingleton<ITenantContext, HttpTenantContext>();
             services.AddSingleton<UserSessionService>();
             services.AddScoped<IToastNotificationService, ToastNotificationService>();
             services.AddTransient<IClaimsTransformation, DelegationClaimsTransformation>();

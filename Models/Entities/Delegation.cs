@@ -16,9 +16,10 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public const string Cancelled = nameof(Cancelled);
     }
 
-    public class Delegation
+    public class Delegation : ITenantScopedEntity
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
 
         [Required(ErrorMessage = "رقم التفويض مطلوب.")]
         public string DelegationNumber { get; set; } = string.Empty;

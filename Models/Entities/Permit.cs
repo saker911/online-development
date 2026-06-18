@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class Permit : IValidatableObject
+    public class Permit : IValidatableObject, ITenantScopedEntity
     {
         public const string PermitTypeTemporary = "Temporary";
         public const string PermitTypePermanent = "Permanent";
@@ -12,6 +12,7 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public const string AccessModeFullAccess = "FullAccess";
         public const string AccessModeEntryOnly = "EntryOnly";
 
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string PermitNumber { get; set; } = string.Empty;
         public string PermitType { get; set; } = PermitTypeTemporary;
         public bool RequiresReturn { get; set; } = true;

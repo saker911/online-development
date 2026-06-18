@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class Visit
+    public class Visit : ITenantScopedEntity
     {
         public const string VisitedPersonTypeHost = "Host";
         public const string VisitedPersonTypeDetained = "Detained";
@@ -11,6 +11,7 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public const string VisitedPersonTypeEmployee = "Employee";
         public const string VisitedPersonTypeOther = "Other";
 
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string VisitId { get; set; } = string.Empty;
 
         [Display(Name = "اسم الزائر")]

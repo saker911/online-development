@@ -6,6 +6,7 @@
     --bg: var(--t-page-bg, #f3f6fb);
     --card-bg: var(--t-surface, #ffffff);
     --muted: var(--t-text-muted, #6b7280);
+    --primary: var(--t-primary, #167e8a);
 }
 
 [data-theme="light"] {
@@ -14,6 +15,7 @@
     --t-surface: #f9fafb;
     --t-surface-soft: #f4f6f8;
     --t-surface-alt: #eff1f4;
+    --t-surface-2: #eef2f6;
     --t-surface-gradient: #f9fafb;
     --t-surface-hover: #f0f3f6;
     --t-surface-inset: #f2f4f7;
@@ -131,6 +133,7 @@
     --t-surface: #0f1726;
     --t-surface-soft: #152033;
     --t-surface-alt: #121b2c;
+    --t-surface-2: #172238;
     --t-surface-gradient: #0f1726;
     --t-surface-hover: #1a2740;
     --t-surface-inset: #121d30;

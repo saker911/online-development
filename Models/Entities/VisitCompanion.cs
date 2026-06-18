@@ -2,10 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class VisitCompanion
+    public class VisitCompanion : ITenantScopedEntity
     {
         public int Id { get; set; }
 
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string VisitId { get; set; } = string.Empty;
 
         [Display(Name = "اسم المرافق")]

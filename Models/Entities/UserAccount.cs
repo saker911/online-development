@@ -2,8 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class UserAccount
+    public class UserAccount : ITenantScopedEntity
     {
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string Username { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public string PasswordSalt { get; set; } = string.Empty;

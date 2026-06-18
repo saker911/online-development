@@ -250,9 +250,12 @@
     var pageBodyClass = ViewData["BodyClass"] as string;
     var currentController = ViewContext.RouteData.Values["Controller"]?.ToString() ?? string.Empty;
     var currentAction = ViewContext.RouteData.Values["Action"]?.ToString() ?? string.Empty;
+    var hideShellBodyClass = hideShell && string.IsNullOrWhiteSpace(pageBodyClass)
+        ? "display-kiosk-body"
+        : string.Empty;
     var bodyClass = string.Join(
         " ",
-        new[] { hideShell ? "display-kiosk-body" : string.Empty, pageBodyClass ?? string.Empty }
+        new[] { hideShellBodyClass, pageBodyClass ?? string.Empty }
             .Where(value => !string.IsNullOrWhiteSpace(value))
     );
 

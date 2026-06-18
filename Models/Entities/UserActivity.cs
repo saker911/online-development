@@ -1,8 +1,9 @@
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class UserActivity
+    public class UserActivity : ITenantScopedEntity
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string Username { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public string ActionType { get; set; } = string.Empty;

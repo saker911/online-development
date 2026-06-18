@@ -532,6 +532,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 new Claim("DisplayName", displayName),
                 new Claim("RoleDisplayName", AppRoles.GetDisplayName(user)),
                 new Claim("sessionId", sessionId),
+                new Claim(AppClaimTypes.TenantId, user?.TenantId ?? TenantDefaults.DefaultTenantId),
             };
 
             if (user?.IsSuperAdmin == true)

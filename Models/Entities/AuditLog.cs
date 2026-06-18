@@ -2,9 +2,10 @@ using System;
 
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class AuditLog
+    public class AuditLog : ITenantScopedEntity
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
 
         // The user who performed the action (if applicable)
         public string Username { get; set; } = string.Empty;

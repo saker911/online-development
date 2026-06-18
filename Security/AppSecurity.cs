@@ -18,6 +18,7 @@ namespace VehiclePermitSystemWeb.Security
     public static class AppClaimTypes
     {
         public const string SuperAdmin = "super_admin";
+        public const string TenantId = "tenant_id";
     }
 
     public static class DisplayAccessDefaults

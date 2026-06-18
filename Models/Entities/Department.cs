@@ -2,9 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VehiclePermitSystemWeb.Models.Entities
 {
-    public class Department
+    public class Department : ITenantScopedEntity
     {
         public int Id { get; set; }
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
 
         [Required(ErrorMessage = "اسم القسم مطلوب.")]
         [StringLength(128, ErrorMessage = "اسم القسم يجب ألا يتجاوز 128 حرفًا.")]
