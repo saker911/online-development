@@ -26,6 +26,9 @@ namespace VehiclePermitSystemWeb.Services.Users
 {
     public sealed class UserAdminService : IUserAdminService
     {
+        private static readonly TimeSpan AdministrationSettingsCacheLifetime =
+            TimeSpan.FromMinutes(1);
+        private const string AdministrationSettingsCachePrefix = "administration-settings:";
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
         private readonly IConfiguration _configuration;
         private readonly IMemoryCache _memoryCache;
@@ -65,6 +68,16 @@ namespace VehiclePermitSystemWeb.Services.Users
         public AdministrationSettings GetAdministrationSettings()
         {
             using var db = _dbContextFactory.CreateDbContext();
+            var cacheKey = BuildAdministrationSettingsCacheKey(db.CurrentTenantId);
+            if (
+                _memoryCache.TryGetValue(cacheKey, out AdministrationSettings? cachedSettings)
+                && cachedSettings != null
+            )
+            {
+                return AdministrationSettingsService.CloneAdministrationSettings(cachedSettings)
+                    ?? AdministrationSettingsService.BuildDefaultAdministrationSettings();
+            }
+
             var tenantExists = db.Tenants.AsNoTracking().Any(tenant =>
                 tenant.TenantId == db.CurrentTenantId && tenant.IsActive
             );
@@ -89,7 +102,16 @@ namespace VehiclePermitSystemWeb.Services.Users
                 ?? AdministrationSettingsService.BuildDefaultAdministrationSettings();
             AdministrationSettingsService.NormalizeAdministrationSettings(settings);
             AdministrationSettingsService.ApplyAdministrationGeneralManagerLink(db, settings);
-            return settings;
+            var cacheSnapshot =
+                AdministrationSettingsService.CloneAdministrationSettings(settings)
+                ?? AdministrationSettingsService.BuildDefaultAdministrationSettings();
+            _memoryCache.Set(
+                cacheKey,
+                cacheSnapshot,
+                AdministrationSettingsCacheLifetime
+            );
+            return AdministrationSettingsService.CloneAdministrationSettings(cacheSnapshot)
+                ?? AdministrationSettingsService.BuildDefaultAdministrationSettings();
         }
 
         public void UpdateAdministrationSettings(AdministrationSettings settings)
@@ -132,6 +154,7 @@ namespace VehiclePermitSystemWeb.Services.Users
             }
 
             db.SaveChanges();
+            _memoryCache.Remove(BuildAdministrationSettingsCacheKey(db.CurrentTenantId));
         }
 
         public bool ValidateDisplayAccessKey(string? accessKey)
@@ -320,7 +343,16 @@ namespace VehiclePermitSystemWeb.Services.Users
             AdministrationSettingsService.EnsureDepartmentExists(db, settings.DepartmentName);
 
             db.SaveChanges();
+            _memoryCache.Remove(BuildAdministrationSettingsCacheKey(db.CurrentTenantId));
             return true;
+        }
+
+        private static string BuildAdministrationSettingsCacheKey(string? tenantId)
+        {
+            return AdministrationSettingsCachePrefix
+                + (string.IsNullOrWhiteSpace(tenantId)
+                    ? TenantDefaults.DefaultTenantId
+                    : tenantId.Trim().ToLowerInvariant());
         }
 
         public bool CreateUser(UserAccount user, string password)

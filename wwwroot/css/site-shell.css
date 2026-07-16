@@ -342,12 +342,19 @@ body {
     border: 1px solid var(--t-border-subtle, rgba(217, 231, 247, 0.6));
     flex: 0 0 auto;
     overflow: hidden;
+    position: relative;
+    transition: width 0.2s ease;
 }
 
 .app-brand-mark img {
     width: 30px;
     height: 30px;
     object-fit: contain;
+}
+
+.app-brand-mark.is-wide-brand-logo {
+    width: 112px;
+    border-radius: 10px;
 }
 
 .app-brand-copy {
@@ -444,12 +451,35 @@ body {
     justify-content: center;
     flex: 0 0 auto;
     overflow: hidden;
+    position: relative;
+    transition: width 0.2s ease;
 }
 
 .app-sidebar-logo-wrap img {
     width: 24px;
     height: 24px;
     object-fit: contain;
+}
+
+.app-sidebar-logo-wrap.is-wide-brand-logo {
+    width: 78px;
+}
+
+[data-brand-logo-frame] img.is-brand-logo-fitted {
+    position: absolute;
+    max-width: none;
+    max-height: none;
+    object-fit: fill;
+}
+
+@media (max-width: 767.98px) {
+    .app-brand-mark.is-wide-brand-logo {
+        width: 86px;
+    }
+
+    .app-brand-mark.is-wide-brand-logo + .app-brand-copy {
+        display: none;
+    }
 }
 
 .app-sidebar-card-copy {

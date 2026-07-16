@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using VehiclePermitSystemWeb.Models.Entities;
+using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Administration;
 using VehiclePermitSystemWeb.Services.Audit;
@@ -48,15 +50,20 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var permits = _permitService.GetVisiblePermits(User.Identity?.Name).ToList();
             var visits = _visitService.GetAllVisits().ToList();
-            var activities = _permitService.GetRecentPermitActivities(200).ToList();
-            var workflowDashboard =
-                _reportsDashboardService.BuildUnauthorizedExitWorkflowDashboardModel(
-                    null,
-                    "All",
-                    1,
-                    200,
-                    User.Identity?.Name
-                );
+            var activities = new List<PermitActivity>();
+            ReportsDashboardViewModel? workflowDashboard = null;
+            if (permits.Count > 0)
+            {
+                activities = _permitService.GetRecentPermitActivities(200).ToList();
+                workflowDashboard =
+                    _reportsDashboardService.BuildUnauthorizedExitWorkflowDashboardModel(
+                        null,
+                        "All",
+                        1,
+                        200,
+                        User.Identity?.Name
+                    );
+            }
             var today = DateTime.Today;
             var administration = _userAdminService.GetAdministrationSettings();
             var officialWorkDays = AdministrationWorkSchedule.ParseOfficialWorkDays(
@@ -107,11 +114,14 @@ namespace VehiclePermitSystemWeb.Controllers
             ViewBag.StoppedPermits = permits.Count(p =>
                 string.Equals(p.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase)
             );
-            ViewBag.WorkflowPendingCount = workflowDashboard.UnauthorizedExitWorkflowPendingCount;
+            ViewBag.WorkflowPendingCount =
+                workflowDashboard?.UnauthorizedExitWorkflowPendingCount ?? 0;
             ViewBag.WorkflowUnderReviewCount =
-                workflowDashboard.UnauthorizedExitWorkflowUnderReviewCount;
-            ViewBag.WorkflowStoppedCount = workflowDashboard.UnauthorizedExitWorkflowStoppedCount;
-            ViewBag.WorkflowClosedCount = workflowDashboard.UnauthorizedExitWorkflowClosedCount;
+                workflowDashboard?.UnauthorizedExitWorkflowUnderReviewCount ?? 0;
+            ViewBag.WorkflowStoppedCount =
+                workflowDashboard?.UnauthorizedExitWorkflowStoppedCount ?? 0;
+            ViewBag.WorkflowClosedCount =
+                workflowDashboard?.UnauthorizedExitWorkflowClosedCount ?? 0;
             ViewBag.WorkDayStatus = todayIsOfficialWorkDay ? "يوم دوام" : "خارج الدوام الرسمي";
             ViewBag.WorkDayStatusHint = withinWorkHours
                 ? "النظام الآن داخل ساعات الدوام ويطبق سياسات المنع والتصعيد حسب الإعدادات الحالية."

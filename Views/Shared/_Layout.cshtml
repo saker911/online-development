@@ -402,7 +402,7 @@
         <div class="app-shell">
             <header class="app-topbar">
                 <a class="app-brand" asp-controller="Home" asp-action="Index">
-                    <span class="app-brand-mark">
+                    <span class="app-brand-mark" data-brand-logo-frame>
                         <img src="~/@organizationLogoPath" alt="شعار @organizationName" />
                     </span>
                     <span class="app-brand-copy">
@@ -612,7 +612,7 @@
                             <div class="app-workspace">
                                 <aside class="app-sidebar" id="appSidebar" data-sidebar>
                                     <div class="app-sidebar-card">
-                                        <div class="app-sidebar-logo-wrap">
+                                        <div class="app-sidebar-logo-wrap" data-brand-logo-frame>
                                             <img src="~/@organizationLogoPath" alt="شعار @organizationName" />
                                         </div>
                                         <div class="app-sidebar-card-copy">
@@ -783,6 +783,7 @@
                             <script src="~/js/app-date-fields.js" asp-append-version="true"></script>
                             <script src="~/js/app-combobox.js" asp-append-version="true"></script>
                             <script src="~/js/app-report-pagination.js" asp-append-version="true"></script>
+                            <script src="~/js/brand-logo.js" asp-append-version="true"></script>
                             <script src="~/js/site.js" asp-append-version="true"></script>
                             <script src="~/js/sidebar-toggle.js" asp-append-version="true"></script>
                             <script src="~/js/dropdown-handling.js" asp-append-version="true"></script>
