@@ -1018,6 +1018,15 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View(nameof(Backup), BuildBackupDashboardViewModel());
             }
 
+            if (backupFile.Length > BackupService.MaxRestoreArchiveBytes)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "حجم ملف النسخة الاحتياطية يتجاوز الحد المسموح (100 ميجابايت)."
+                );
+                return View(nameof(Backup), BuildBackupDashboardViewModel());
+            }
+
             var extension = Path.GetExtension(backupFile.FileName);
             if (!string.Equals(extension, ".zip", StringComparison.OrdinalIgnoreCase))
             {
@@ -1113,11 +1122,12 @@ namespace VehiclePermitSystemWeb.Controllers
 
                 if (signatureFile is { Length: > 0 })
                 {
-                    effectiveSettings.SignatureImagePath = await AdministrationImageStorage.SaveAsync(
-                        signatureFile,
-                        "signature",
-                        _systemClock.UtcNow
+                    var processedSignature = await AdministrationImageStorage.ProcessAsync(
+                        signatureFile
                     );
+                    effectiveSettings.SignatureImageData = processedSignature.Data;
+                    effectiveSettings.SignatureImageContentType = processedSignature.ContentType;
+                    effectiveSettings.SignatureImagePath = null;
                 }
 
                 _userAdminService.UpdateAdministrationSettings(effectiveSettings);
@@ -1141,6 +1151,42 @@ namespace VehiclePermitSystemWeb.Controllers
 
             this.ToastSuccess("تم تحديث بيانات الإدارة بنجاح");
             return RedirectToAction(nameof(Edit));
+        }
+
+        [HttpGet]
+        [Authorize(Policy = AppPolicies.ManageAdministration)]
+        public IActionResult SignaturePreview()
+        {
+            var settings = _userAdminService.GetAdministrationSettings();
+            Response.Headers.CacheControl = "no-store, private";
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            if (settings.SignatureImageData is { Length: > 0 })
+            {
+                var contentType = string.IsNullOrWhiteSpace(settings.SignatureImageContentType)
+                    ? "image/png"
+                    : settings.SignatureImageContentType;
+                return File(settings.SignatureImageData, contentType);
+            }
+
+            var path = settings.SignatureImagePath;
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return NotFound();
+            }
+
+            var physicalPath = AppStoragePaths.ResolveUploadPhysicalPath(path);
+            if (!System.IO.File.Exists(physicalPath))
+            {
+                return NotFound();
+            }
+
+            var fallbackContentType = Path.GetExtension(physicalPath).ToLowerInvariant() switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => "image/png",
+            };
+            return PhysicalFile(physicalPath, fallbackContentType);
         }
 
         [HttpPost]
@@ -1289,6 +1335,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 SignatureText = postedSettings.SignatureText,
                 LogoPath = currentSettings.LogoPath,
                 SignatureImagePath = currentSettings.SignatureImagePath,
+                SignatureImageData = currentSettings.SignatureImageData,
+                SignatureImageContentType = currentSettings.SignatureImageContentType,
                 DisplayBaseUrl = currentSettings.DisplayBaseUrl,
                 DisplayAccessKey = currentSettings.DisplayAccessKey,
                 AllowedClientIpRanges = currentSettings.AllowedClientIpRanges,

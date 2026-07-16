@@ -265,6 +265,9 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantSignupResult(false, "يجب الموافقة على سياسة الاشتراك والدفع.");
             }
 
+            var now = DateTime.UtcNow;
+            PurgeExpiredPendingSignups(db, now);
+
             if (db.Tenants.Any(tenant => tenant.TenantId == tenantId || tenant.Slug == tenantId))
             {
                 return new TenantSignupResult(false, "الرابط المختصر مستخدم مسبقًا.");
@@ -275,16 +278,16 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantSignupResult(false, "اسم المستخدم مستخدم مسبقًا.");
             }
 
-            var now = DateTime.UtcNow;
             db.Tenants.Add(
                 new Tenant
                 {
                     TenantId = tenantId,
                     Name = companyName,
                     Slug = tenantId,
-                    IsActive = true,
+                    IsActive = false,
                     CreatedAtUtc = now,
                     SubscriptionStatus = TenantSubscriptionStatuses.PendingPayment,
+                    SignupExpiresAtUtc = now.AddHours(24),
                     PlanName = plan.Name,
                     MaxUsers = null,
                     MaxPermitsPerMonth = null,
@@ -317,7 +320,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 JobTitle = "مالك الحساب",
                 PhoneNumber = ownerPhone,
                 Email = ownerEmail,
-                IsActive = true,
+                IsActive = false,
                 Role = AppRoles.GeneralManager,
                 ManagerUsername = string.Empty,
             };
@@ -513,10 +516,28 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantOperationResult(false, "تعذر العثور على الجهة.");
             }
 
+            var activatePendingSignupOwner =
+                tenant.SignupExpiresAtUtc.HasValue
+                && string.Equals(
+                    tenant.SubscriptionStatus,
+                    TenantSubscriptionStatuses.PendingPayment,
+                    StringComparison.Ordinal
+                );
             tenant.IsActive = true;
             tenant.SubscriptionStatus = TenantSubscriptionStatuses.Active;
             tenant.TrialEndsAtUtc = null;
             tenant.SubscriptionEndsAtUtc = DateTime.UtcNow.AddMonths(1);
+            tenant.SignupExpiresAtUtc = null;
+            if (activatePendingSignupOwner)
+            {
+                var pendingOwner = db
+                    .UserAccounts.IgnoreQueryFilters()
+                    .FirstOrDefault(user => user.TenantId == tenant.TenantId);
+                if (pendingOwner != null)
+                {
+                    pendingOwner.IsActive = true;
+                }
+            }
             db.SaveChanges();
             return new TenantOperationResult(true, "تم تفعيل الاشتراك بعد تأكيد الدفع.");
         }
@@ -538,6 +559,37 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         private static int GetCount(IReadOnlyDictionary<string, int> counts, string tenantId)
         {
             return counts.TryGetValue(tenantId, out var count) ? count : 0;
+        }
+
+        private static void PurgeExpiredPendingSignups(ApplicationDbContext db, DateTime now)
+        {
+            var expiredTenantIds = db
+                .Tenants.IgnoreQueryFilters()
+                .Where(tenant =>
+                    tenant.SubscriptionStatus == TenantSubscriptionStatuses.PendingPayment
+                    && tenant.SignupExpiresAtUtc.HasValue
+                    && tenant.SignupExpiresAtUtc.Value <= now
+                )
+                .Select(tenant => tenant.TenantId)
+                .ToList();
+            if (expiredTenantIds.Count == 0)
+            {
+                return;
+            }
+
+            db.ExternalUserLogins.RemoveRange(
+                db.ExternalUserLogins.IgnoreQueryFilters().Where(item => expiredTenantIds.Contains(item.TenantId))
+            );
+            db.UserAccounts.RemoveRange(
+                db.UserAccounts.IgnoreQueryFilters().Where(item => expiredTenantIds.Contains(item.TenantId))
+            );
+            db.AdministrationSettings.RemoveRange(
+                db.AdministrationSettings.IgnoreQueryFilters().Where(item => expiredTenantIds.Contains(item.TenantId))
+            );
+            db.Tenants.RemoveRange(
+                db.Tenants.IgnoreQueryFilters().Where(item => expiredTenantIds.Contains(item.TenantId))
+            );
+            db.SaveChanges();
         }
 
         private static bool IsBlockedBySubscription(Tenant tenant)

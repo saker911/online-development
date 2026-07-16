@@ -81,6 +81,7 @@ namespace VehiclePermitSystemWeb.Models.Entities
 
         public DateTime? TrialEndsAtUtc { get; set; }
         public DateTime? SubscriptionEndsAtUtc { get; set; }
+        public DateTime? SignupExpiresAtUtc { get; set; }
         public int? MaxUsers { get; set; }
         public int? MaxPermitsPerMonth { get; set; }
         public int? MaxVisitsPerMonth { get; set; }

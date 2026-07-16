@@ -61,6 +61,8 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 SignatureText = settings.SignatureText,
                 LogoPath = settings.LogoPath,
                 SignatureImagePath = settings.SignatureImagePath,
+                SignatureImageData = settings.SignatureImageData,
+                SignatureImageContentType = settings.SignatureImageContentType,
                 DisplayBaseUrl = settings.DisplayBaseUrl,
                 DisplayAccessKey = settings.DisplayAccessKey,
                 AllowedClientIpRanges = settings.AllowedClientIpRanges,

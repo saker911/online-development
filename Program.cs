@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
@@ -81,10 +82,43 @@ builder.Services.AddAntiforgery(options =>
     options.SuppressXFrameOptionsHeader = true;
 });
 builder.Services.AddMemoryCache();
-builder
+var dataProtectionBuilder = builder
     .Services.AddDataProtection()
     .SetApplicationName("VehiclePermitSystemWeb")
     .PersistKeysToDbContext<ApplicationDbContext>();
+var dataProtectionCertificateBase64 = builder.Configuration[
+    "Security:DataProtectionCertificateBase64"
+];
+var dataProtectionCertificatePath = builder.Configuration[
+    "Security:DataProtectionCertificatePath"
+];
+var dataProtectionCertificatePassword = builder.Configuration[
+    "Security:DataProtectionCertificatePassword"
+];
+if (!string.IsNullOrWhiteSpace(dataProtectionCertificateBase64))
+{
+    dataProtectionBuilder.ProtectKeysWithCertificate(
+        new X509Certificate2(
+            Convert.FromBase64String(dataProtectionCertificateBase64),
+            dataProtectionCertificatePassword,
+            X509KeyStorageFlags.EphemeralKeySet
+        )
+    );
+}
+else if (!string.IsNullOrWhiteSpace(dataProtectionCertificatePath))
+{
+    dataProtectionBuilder.ProtectKeysWithCertificate(
+        new X509Certificate2(
+            Path.GetFullPath(dataProtectionCertificatePath),
+            dataProtectionCertificatePassword,
+            X509KeyStorageFlags.EphemeralKeySet
+        )
+    );
+}
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+});
 builder.Services.AddHttpContextAccessor();
 var loginPermitLimit = builder.Configuration.GetValue("Security:LoginPermitLimit", 5);
 var loginWindowSeconds = builder.Configuration.GetValue("Security:LoginWindowSeconds", 60);
@@ -102,6 +136,23 @@ builder.Services.AddRateLimiter(options =>
                 {
                     PermitLimit = loginPermitLimit,
                     Window = TimeSpan.FromSeconds(loginWindowSeconds),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+    options.AddPolicy<string>(
+        "signup",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: remoteIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
                     AutoReplenishment = true,
                 }
@@ -421,6 +472,22 @@ app.Use(
         await next();
     }
 );
+
+app.Use(async (context, next) =>
+{
+    if (
+        (context.Request.Path.Value ?? string.Empty).StartsWith(
+            "/uploads/administration/signature-",
+            StringComparison.OrdinalIgnoreCase
+        )
+    )
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 
 app.UseStaticFiles();
 app.UseStaticFiles(

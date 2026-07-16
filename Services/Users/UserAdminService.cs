@@ -140,6 +140,8 @@ namespace VehiclePermitSystemWeb.Services.Users
                 existing.SignatureText = settings.SignatureText;
                 existing.LogoPath = settings.LogoPath;
                 existing.SignatureImagePath = settings.SignatureImagePath;
+                existing.SignatureImageData = settings.SignatureImageData;
+                existing.SignatureImageContentType = settings.SignatureImageContentType;
                 existing.DisplayBaseUrl = settings.DisplayBaseUrl;
                 existing.DisplayAccessKey = settings.DisplayAccessKey;
                 existing.AllowedClientIpRanges = settings.AllowedClientIpRanges;
@@ -173,6 +175,12 @@ namespace VehiclePermitSystemWeb.Services.Users
         {
             using var db = _dbContextFactory.CreateDbContext();
             return UserReadMapper.GetAllUsers(db, ignoreTenantFilters);
+        }
+
+        public void InvalidateAdministrationSettingsCache()
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            _memoryCache.Remove(BuildAdministrationSettingsCacheKey(db.CurrentTenantId));
         }
 
         public IEnumerable<Tenant> GetTenants(bool includeInactive = false)

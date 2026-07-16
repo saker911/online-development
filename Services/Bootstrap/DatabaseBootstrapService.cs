@@ -262,6 +262,13 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "TEXT NOT NULL DEFAULT ''"
             );
             EnsureSqliteColumn(db, "AdministrationSettings", "LastWorkEndClosureAt", "TEXT NULL");
+            EnsureSqliteColumn(db, "AdministrationSettings", "SignatureImageData", "BLOB NULL");
+            EnsureSqliteColumn(
+                db,
+                "AdministrationSettings",
+                "SignatureImageContentType",
+                "TEXT NOT NULL DEFAULT ''"
+            );
             EnsureSqliteColumn(db, "Permits", "PermitDate", "TEXT NULL");
             EnsureSqliteColumn(db, "Permits", "ArchivedAt", "TEXT NULL");
             EnsureSqliteColumn(
@@ -547,6 +554,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Tenants", "PlanName", "TEXT NOT NULL DEFAULT 'أساسية'");
             EnsureSqliteColumn(db, "Tenants", "TrialEndsAtUtc", "TEXT NULL");
             EnsureSqliteColumn(db, "Tenants", "SubscriptionEndsAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Tenants", "SignupExpiresAtUtc", "TEXT NULL");
             EnsureSqliteColumn(db, "Tenants", "MaxUsers", "INTEGER NULL");
             EnsureSqliteColumn(db, "Tenants", "MaxPermitsPerMonth", "INTEGER NULL");
             EnsureSqliteColumn(db, "Tenants", "MaxVisitsPerMonth", "INTEGER NULL");
@@ -1125,6 +1133,41 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_DelegationPermissions_DelegationId_PermissionKey""
                       ON ""DelegationPermissions"" (""DelegationId"", ""PermissionKey"");";
                 delegationPermissionIndexCommand.ExecuteNonQuery();
+
+                using var externalLoginCommand = connection.CreateCommand();
+                externalLoginCommand.CommandText =
+                    @"CREATE TABLE IF NOT EXISTS ""ExternalUserLogins"" (
+                        ""Id"" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        ""TenantId"" TEXT NOT NULL,
+                        ""Username"" TEXT NOT NULL,
+                        ""Provider"" TEXT NOT NULL,
+                        ""Issuer"" TEXT NOT NULL,
+                        ""Subject"" TEXT NOT NULL,
+                        ""EmailAtLinkTime"" TEXT NOT NULL,
+                        ""LinkedAtUtc"" TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ExternalUserLogins_Provider_Issuer_Subject""
+                        ON ""ExternalUserLogins"" (""Provider"", ""Issuer"", ""Subject"");
+                    CREATE UNIQUE INDEX IF NOT EXISTS ""IX_ExternalUserLogins_TenantId_Username_Provider""
+                        ON ""ExternalUserLogins"" (""TenantId"", ""Username"", ""Provider"");";
+                externalLoginCommand.ExecuteNonQuery();
+
+                using var loginAttemptCommand = connection.CreateCommand();
+                loginAttemptCommand.CommandText =
+                    @"CREATE TABLE IF NOT EXISTS ""LoginAttemptRecords"" (
+                        ""KeyHash"" TEXT NOT NULL PRIMARY KEY,
+                        ""FailureCount"" INTEGER NOT NULL,
+                        ""WindowStartedAtUtc"" TEXT NOT NULL,
+                        ""BlockedUntilUtc"" TEXT NULL,
+                        ""UpdatedAtUtc"" TEXT NOT NULL
+                    );
+                    CREATE TABLE IF NOT EXISTS ""SignupAttemptRecords"" (
+                        ""KeyHash"" TEXT NOT NULL PRIMARY KEY,
+                        ""SuccessCount"" INTEGER NOT NULL,
+                        ""WindowStartedAtUtc"" TEXT NOT NULL,
+                        ""UpdatedAtUtc"" TEXT NOT NULL
+                    );";
+                loginAttemptCommand.ExecuteNonQuery();
 
                 EnsureSqliteColumn(
                     db,

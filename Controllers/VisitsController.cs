@@ -276,7 +276,8 @@ namespace VehiclePermitSystemWeb.Controllers
             if (
                 administration == null
                 || (
-                    string.IsNullOrWhiteSpace(administration.SignatureImagePath)
+                    administration.SignatureImageData is not { Length: > 0 }
+                    && string.IsNullOrWhiteSpace(administration.SignatureImagePath)
                     && string.IsNullOrWhiteSpace(administration.SignatureText)
                 )
             )
@@ -333,7 +334,9 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveImageBytes(administration.LogoPath);
-            var signatureBytes = ResolveImageBytes(administration.SignatureImagePath);
+            var signatureBytes = administration.SignatureImageData is { Length: > 0 }
+                ? administration.SignatureImageData
+                : ResolveImageBytes(administration.SignatureImagePath);
             var approvalAuthorityDisplay = string.IsNullOrWhiteSpace(administration.DepartmentName)
                 ? string.IsNullOrWhiteSpace(administration.OrganizationName)
                     ? "غير محدد"

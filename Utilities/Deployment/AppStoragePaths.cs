@@ -133,9 +133,24 @@ namespace VehiclePermitSystemWeb.Utilities.Deployment
             }
 
             var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            return segments.Length == 0
-                ? GetUploadsRoot()
-                : Path.Combine(new[] { GetUploadsRoot() }.Concat(segments).ToArray());
+            var uploadsRoot = Path.GetFullPath(GetUploadsRoot());
+            var candidatePath = segments.Length == 0
+                ? uploadsRoot
+                : Path.GetFullPath(
+                    Path.Combine(new[] { uploadsRoot }.Concat(segments).ToArray())
+                );
+            var uploadsRootPrefix = uploadsRoot.EndsWith(Path.DirectorySeparatorChar)
+                ? uploadsRoot
+                : uploadsRoot + Path.DirectorySeparatorChar;
+            if (
+                !string.Equals(candidatePath, uploadsRoot, StringComparison.OrdinalIgnoreCase)
+                && !candidatePath.StartsWith(uploadsRootPrefix, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                throw new InvalidOperationException("The upload path is outside the storage root.");
+            }
+
+            return candidatePath;
         }
 
         public static void MigrateLegacyStorage(

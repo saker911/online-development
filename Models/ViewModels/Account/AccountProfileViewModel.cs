@@ -20,5 +20,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Account
             new(StringComparer.OrdinalIgnoreCase);
         public bool CanScanOperations { get; set; }
         public string OperatorBadgeCode { get; set; } = string.Empty;
+        public HashSet<string> LinkedExternalProviders { get; set; } =
+            new(StringComparer.Ordinal);
     }
 }

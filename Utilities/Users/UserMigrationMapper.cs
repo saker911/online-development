@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 using VehiclePermitSystemWeb.Data;
 using VehiclePermitSystemWeb.Models.DTOs;
 using VehiclePermitSystemWeb.Models.Entities;
@@ -37,6 +38,15 @@ namespace VehiclePermitSystemWeb.Utilities.Users
             string newDisplayName
         )
         {
+            foreach (
+                var externalLogin in db.ExternalUserLogins.IgnoreQueryFilters().Where(login =>
+                    login.Username == oldUsername
+                )
+            )
+            {
+                externalLogin.Username = newUsername;
+            }
+
             foreach (
                 var account in db.UserAccounts.Where(account =>
                     account.ManagerUsername == oldUsername

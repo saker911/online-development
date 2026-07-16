@@ -18,6 +18,8 @@ services:
         sync: false
       - key: Security__CookieSecurePolicy
         value: Always
+      - key: AllowedHosts
+        value: vehicle-permit-online-test.onrender.com;localhost;127.0.0.1
       - key: ForwardedHeaders__TrustPlatformProxy
         value: "true"
       - key: OnlineEdition__PrivacyMinimized

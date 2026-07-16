@@ -18,6 +18,7 @@ namespace VehiclePermitSystemWeb.Services.Users
     {
         AdministrationSettings GetAdministrationSettings();
         void UpdateAdministrationSettings(AdministrationSettings settings);
+        void InvalidateAdministrationSettingsCache();
         bool ValidateDisplayAccessKey(string? accessKey);
         IEnumerable<UserAccount> GetAllUsers(bool ignoreTenantFilters = false);
         IEnumerable<Tenant> GetTenants(bool includeInactive = false);

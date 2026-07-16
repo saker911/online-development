@@ -57,6 +57,9 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<DisplaySecuritySettings> DisplaySecuritySettings =>
             Set<DisplaySecuritySettings>();
         public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+        public DbSet<ExternalUserLogin> ExternalUserLogins => Set<ExternalUserLogin>();
+        public DbSet<LoginAttemptRecord> LoginAttemptRecords => Set<LoginAttemptRecord>();
+        public DbSet<SignupAttemptRecord> SignupAttemptRecords => Set<SignupAttemptRecord>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -78,6 +81,9 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<AdministrationSettings>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplayDevice>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplaySecuritySettings>().HasKey(x => x.Id);
+            modelBuilder.Entity<ExternalUserLogin>().HasKey(x => x.Id);
+            modelBuilder.Entity<LoginAttemptRecord>().HasKey(x => x.KeyHash);
+            modelBuilder.Entity<SignupAttemptRecord>().HasKey(x => x.KeyHash);
 
             modelBuilder.Entity<Tenant>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<Tenant>().Property(x => x.Name).HasMaxLength(256);
@@ -99,6 +105,7 @@ namespace VehiclePermitSystemWeb.Data
             ConfigureTenantScopedEntity<AdministrationSettings>(modelBuilder);
             ConfigureTenantScopedEntity<DisplayDevice>(modelBuilder);
             ConfigureTenantScopedEntity<DisplaySecuritySettings>(modelBuilder);
+            ConfigureTenantScopedEntity<ExternalUserLogin>(modelBuilder);
 
             modelBuilder.Entity<Permit>().Property(x => x.PermitNumber).HasMaxLength(32);
             modelBuilder.Entity<Permit>().Property(x => x.PermitType).HasMaxLength(24);
@@ -213,6 +220,22 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<UserAccount>().Property(x => x.PhoneNumber).HasMaxLength(32);
             modelBuilder.Entity<UserAccount>().Property(x => x.Email).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.ManagerUsername).HasMaxLength(64);
+            modelBuilder.Entity<ExternalUserLogin>().Property(x => x.TenantId).HasMaxLength(64);
+            modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Username).HasMaxLength(64);
+            modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Provider).HasMaxLength(32);
+            modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Issuer).HasMaxLength(256);
+            modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Subject).HasMaxLength(256);
+            modelBuilder.Entity<ExternalUserLogin>().Property(x => x.EmailAtLinkTime).HasMaxLength(256);
+            modelBuilder
+                .Entity<ExternalUserLogin>()
+                .HasIndex(x => new { x.Provider, x.Issuer, x.Subject })
+                .IsUnique();
+            modelBuilder
+                .Entity<ExternalUserLogin>()
+                .HasIndex(x => new { x.TenantId, x.Username, x.Provider })
+                .IsUnique();
+            modelBuilder.Entity<LoginAttemptRecord>().Property(x => x.KeyHash).HasMaxLength(64);
+            modelBuilder.Entity<SignupAttemptRecord>().Property(x => x.KeyHash).HasMaxLength(64);
             modelBuilder.Entity<UserAccount>().Property(x => x.IsSuperAdmin).HasDefaultValue(false);
             modelBuilder
                 .Entity<UserAccount>()

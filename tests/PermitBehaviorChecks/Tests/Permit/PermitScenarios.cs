@@ -79,8 +79,8 @@ internal static partial class ScenarioCatalog
             buildQrContent!.Invoke(controller, new object[] { permitWithoutToken }) as string;
         Require(
             !string.IsNullOrWhiteSpace(qrContent)
-                && qrContent!.Contains("/Permits/Verify", StringComparison.OrdinalIgnoreCase),
-            "QR content should resolve to token verification links"
+                && qrContent!.Contains("Pass", StringComparison.OrdinalIgnoreCase),
+            "QR content should resolve to the privacy-minimized digital pass"
         );
         Require(
             !qrContent!.Contains("VerifyByNumber", StringComparison.OrdinalIgnoreCase),
@@ -139,6 +139,15 @@ internal static partial class ScenarioCatalog
             digitalPassModel.IsAuthorized
                 && !string.IsNullOrWhiteSpace(digitalPassModel.QrImageUrl),
             "active digital passes should include a gate QR image"
+        );
+        Require(
+            !string.Equals(digitalPassModel.HolderName, permit!.DriverName, StringComparison.Ordinal)
+                && !string.Equals(
+                    digitalPassModel.PlateNumberDisplay,
+                    permit.PlateNumberDisplay,
+                    StringComparison.Ordinal
+                ),
+            "public digital passes should mask the holder name and plate"
         );
         var deniedPassModel = PermitUiModelBuilder.BuildPermitDigitalPassModel(
             permit,
@@ -261,7 +270,7 @@ internal static partial class ScenarioCatalog
             contentType.GetProperty("PlateNumberDisplay")?.GetValue(labelContent) as string;
         Require(
             !string.IsNullOrWhiteSpace(barcodeValue)
-                && barcodeValue.Contains("/Permits/Verify", StringComparison.OrdinalIgnoreCase)
+                && barcodeValue.Contains("Pass", StringComparison.OrdinalIgnoreCase)
                 && barcodeValue.Contains("token=", StringComparison.OrdinalIgnoreCase),
             "Zebra label barcode should use the tenant-aware secure verification link"
         );

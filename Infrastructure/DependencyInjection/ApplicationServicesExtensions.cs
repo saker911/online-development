@@ -48,6 +48,8 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddSingleton<IVisitService, VisitService>();
             services.AddSingleton<IUserAdminService, UserAdminService>();
             services.AddSingleton<LoginAttemptGuard>();
+            services.AddSingleton<SignupAttemptGuard>();
+            services.AddSingleton<IExternalLoginService, ExternalLoginService>();
             services.AddSingleton<ITenantContext, HttpTenantContext>();
             services.AddSingleton<ITenantManagementService, TenantManagementService>();
             services.AddSingleton<UserSessionService>();

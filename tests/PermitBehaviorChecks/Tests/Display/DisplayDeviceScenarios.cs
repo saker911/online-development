@@ -179,7 +179,12 @@ internal static partial class ScenarioCatalog
 
         var oldLink = model.RegistrationUrl;
         var oldRequest = BuildDisplayHttpContext();
-        var displayService = new DisplayDeviceService(dbFactory, clock, new PermitAuditService());
+        var displayService = new DisplayDeviceService(
+            dbFactory,
+            clock,
+            new PermitAuditService(),
+            userAdminService
+        );
         var pendingBeforeRotation = displayService.RegisterRequest(
             new DisplayDeviceRegistrationViewModel
             {

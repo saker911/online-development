@@ -95,6 +95,9 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         [Range(typeof(bool), "true", "true", ErrorMessage = "يجب الموافقة على سياسة الاشتراك والدفع.")]
         public bool AcceptPolicy { get; set; }
 
+        // Bot trap rendered outside the visible form flow.
+        public string Website { get; set; } = string.Empty;
+
         public IReadOnlyList<TenantPlanViewModel> Plans { get; set; } = [];
     }
 

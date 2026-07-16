@@ -59,6 +59,8 @@ async function createManagedDepartment(page, departmentName, managerUsername) {
 }
 
 test("anonymous users are redirected to login for protected pages", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  await signOut(page);
   await page.context().clearCookies();
   for (const path of ["/Users", "/Administration/Edit", "/Permits", "/Visits", "/Reports"]) {
     await page.goto(path);

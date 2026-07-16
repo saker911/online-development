@@ -278,7 +278,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 if (
                     administration == null
                     || (
-                        string.IsNullOrWhiteSpace(administration.SignatureImagePath)
+                        administration.SignatureImageData is not { Length: > 0 }
+                        && string.IsNullOrWhiteSpace(administration.SignatureImagePath)
                         && string.IsNullOrWhiteSpace(administration.SignatureText)
                     )
                 )
@@ -779,7 +780,8 @@ namespace VehiclePermitSystemWeb.Controllers
             if (
                 administration == null
                 || (
-                    string.IsNullOrWhiteSpace(administration.SignatureImagePath)
+                    administration.SignatureImageData is not { Length: > 0 }
+                    && string.IsNullOrWhiteSpace(administration.SignatureImagePath)
                     && string.IsNullOrWhiteSpace(administration.SignatureText)
                 )
             )
@@ -827,7 +829,8 @@ namespace VehiclePermitSystemWeb.Controllers
             if (
                 administration == null
                 || (
-                    string.IsNullOrWhiteSpace(administration.SignatureImagePath)
+                    administration.SignatureImageData is not { Length: > 0 }
+                    && string.IsNullOrWhiteSpace(administration.SignatureImagePath)
                     && string.IsNullOrWhiteSpace(administration.SignatureText)
                 )
             )
@@ -979,6 +982,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet("/Permits/Verify")]
         public IActionResult Verify(string token, string? tenant = null)
         {
+            ApplyPrivatePassResponseHeaders();
             if (!TryResolvePublicTenant(tenant))
             {
                 return NotFound();
@@ -1139,7 +1143,9 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
-            var signatureBytes = ResolveLogoBytes(administration.SignatureImagePath);
+            var signatureBytes = administration.SignatureImageData is { Length: > 0 }
+                ? administration.SignatureImageData
+                : ResolveLogoBytes(administration.SignatureImagePath);
             var approvalAuthorityDisplay = string.IsNullOrWhiteSpace(administration.DepartmentName)
                 ? string.IsNullOrWhiteSpace(administration.OrganizationName)
                     ? "غير محدد"
@@ -1851,7 +1857,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             if (PermitQrTokenGenerator.IsCurrentVersion(permit.QrToken))
             {
-                var verificationUrl = BuildPermitVerificationUrl(permit, permit.QrToken);
+                var verificationUrl = BuildPermitDigitalPassUrl(permit, permit.QrToken);
                 if (!string.IsNullOrWhiteSpace(verificationUrl))
                 {
                     return verificationUrl;
@@ -1866,7 +1872,7 @@ namespace VehiclePermitSystemWeb.Controllers
             );
             if (!string.IsNullOrWhiteSpace(persistedToken))
             {
-                var verificationUrl = BuildPermitVerificationUrl(permit, persistedToken);
+                var verificationUrl = BuildPermitDigitalPassUrl(permit, persistedToken);
                 if (!string.IsNullOrWhiteSpace(verificationUrl))
                 {
                     return verificationUrl;

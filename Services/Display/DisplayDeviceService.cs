@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using VehiclePermitSystemWeb.Data;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Administration;
+using VehiclePermitSystemWeb.Services.Users;
 
 namespace VehiclePermitSystemWeb.Services.Display
 {
@@ -16,16 +17,19 @@ namespace VehiclePermitSystemWeb.Services.Display
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
         private readonly ISystemClock _systemClock;
         private readonly IPermitAuditService _auditService;
+        private readonly IUserAdminService? _userAdminService;
 
         public DisplayDeviceService(
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
             ISystemClock systemClock,
-            IPermitAuditService auditService
+            IPermitAuditService auditService,
+            IUserAdminService? userAdminService = null
         )
         {
             _dbContextFactory = dbContextFactory;
             _systemClock = systemClock;
             _auditService = auditService;
+            _userAdminService = userAdminService;
         }
 
         public DisplaySecuritySettings GetSecuritySettings()
@@ -50,6 +54,7 @@ namespace VehiclePermitSystemWeb.Services.Display
                     : DisplayAccessKeyHasher.Hash(setupKey.Trim());
             AdministrationSettingsService.NormalizeAdministrationSettings(settings);
             db.SaveChanges();
+            _userAdminService?.InvalidateAdministrationSettingsCache();
         }
 
         public void InvalidateDeviceTrust(string actor)

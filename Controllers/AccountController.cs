@@ -39,6 +39,7 @@ namespace VehiclePermitSystemWeb.Controllers
     {
         private readonly IUserAdminService _userAdminService;
         private readonly LoginAttemptGuard _loginAttemptGuard;
+        private readonly IExternalLoginService? _externalLoginService;
 
         private IToastNotificationService ToastNotifications =>
             HttpContext.RequestServices.GetRequiredService<IToastNotificationService>();
@@ -50,11 +51,13 @@ namespace VehiclePermitSystemWeb.Controllers
 
         public AccountController(
             IUserAdminService userAdminService,
-            LoginAttemptGuard? loginAttemptGuard = null
+            LoginAttemptGuard? loginAttemptGuard = null,
+            IExternalLoginService? externalLoginService = null
         )
         {
             _userAdminService = userAdminService;
             _loginAttemptGuard = loginAttemptGuard ?? new LoginAttemptGuard();
+            _externalLoginService = externalLoginService;
         }
 
         [HttpGet]
@@ -186,6 +189,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpGet]
         [AllowAnonymous]
+        [EnableRateLimiting("login")]
         public async Task<IActionResult> ExternalLogin(
             string provider,
             string? tenant = null,
@@ -207,7 +211,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var callbackUrl = Url.Action(
                 nameof(ExternalLoginCallback),
-                new { tenant, returnUrl }
+                new { provider = normalizedProvider, tenant, returnUrl }
             );
             return Challenge(
                 new AuthenticationProperties { RedirectUri = callbackUrl },
@@ -218,6 +222,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> ExternalLoginCallback(
+            string provider,
             string? tenant = null,
             string? returnUrl = null
         )
@@ -234,16 +239,12 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var principal = externalResult.Principal;
-            var email = (
-                principal.FindFirstValue(ClaimTypes.Email)
-                ?? principal.FindFirstValue("preferred_username")
-                ?? string.Empty
-            ).Trim();
+            var identity = _externalLoginService?.ReadIdentity(principal, provider);
             await HttpContext.SignOutAsync(ExternalAuthenticationDefaults.CookieScheme);
 
-            if (string.IsNullOrWhiteSpace(email))
+            if (identity == null)
             {
-                ToastNotifications.Error("لم يرسل مزود الهوية بريدًا إلكترونيًا يمكن ربطه بالحساب.");
+                ToastNotifications.Error("تعذر قراءة المعرّف الأمني الثابت من مزود الهوية.");
                 return RedirectToAction(nameof(Login), new { tenant, returnUrl });
             }
 
@@ -259,27 +260,35 @@ namespace VehiclePermitSystemWeb.Controllers
                     .Select(item => item.TenantId)
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var matches = _userAdminService
-                .GetAllUsers(ignoreTenantFilters: true)
-                .Where(user =>
-                    user.IsActive
-                    && !string.IsNullOrWhiteSpace(user.Email)
-                    && string.Equals(user.Email.Trim(), email, StringComparison.OrdinalIgnoreCase)
-                    && (matchingTenantIds == null || matchingTenantIds.Contains(user.TenantId))
-                )
-                .ToList();
-
-            if (matches.Count != 1)
+            var mappedLogin = _externalLoginService?.FindLogin(
+                identity,
+                matchingTenantIds?.Count == 1 ? matchingTenantIds.Single() : null
+            );
+            if (mappedLogin == null)
             {
                 ToastNotifications.Error(
-                    matches.Count > 1
-                        ? "البريد مرتبط بأكثر من جهة. افتح رابط الجهة الخاص ثم أعد المحاولة."
-                        : "لا يوجد حساب نشط مرتبط بهذا البريد في الجهة المحددة."
+                    "هذا الحساب الخارجي غير مرتبط بعد. سجل الدخول بكلمة المرور ثم اربطه من صفحة بياناتي."
                 );
                 return RedirectToAction(nameof(Login), new { tenant, returnUrl });
             }
 
-            var user = matches[0];
+            if (matchingTenantIds != null && !matchingTenantIds.Contains(mappedLogin.TenantId))
+            {
+                return NotFound();
+            }
+
+            var user = _userAdminService
+                .GetAllUsers(ignoreTenantFilters: true)
+                .SingleOrDefault(item =>
+                    item.IsActive
+                    && item.TenantId == mappedLogin.TenantId
+                    && item.Username == mappedLogin.Username
+                );
+            if (user == null)
+            {
+                ToastNotifications.Error("الحساب المرتبط غير نشط أو لم يعد موجودًا.");
+                return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+            }
             var userTenant = tenants.FirstOrDefault(item =>
                 string.Equals(item.TenantId, user.TenantId, StringComparison.OrdinalIgnoreCase)
             );
@@ -507,9 +516,121 @@ namespace VehiclePermitSystemWeb.Controllers
                 ),
                 CanScanOperations = user.CanScanOperations,
                 OperatorBadgeCode = user.OperatorBadgeCode,
+                LinkedExternalProviders = _externalLoginService
+                    ?.GetLinkedProviders(user.TenantId, user.Username)
+                    .ToHashSet(StringComparer.Ordinal)
+                    ?? new HashSet<string>(StringComparer.Ordinal),
             };
 
             return View(model);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> LinkExternalLogin(string provider)
+        {
+            var normalizedProvider = ExternalAuthenticationDefaults.NormalizeProvider(provider);
+            var schemeProvider = HttpContext.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
+            if (
+                normalizedProvider == null
+                || await schemeProvider.GetSchemeAsync(normalizedProvider) == null
+            )
+            {
+                ToastNotifications.Warning("مزود الهوية المطلوب غير مفعّل حاليًا.");
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var callbackUrl = Url.Action(
+                nameof(LinkExternalLoginCallback),
+                new { provider = normalizedProvider }
+            );
+            var user = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (user == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+
+            var properties = new AuthenticationProperties { RedirectUri = callbackUrl };
+            properties.Items["link-tenant"] = user.TenantId;
+            properties.Items["link-username"] = user.Username;
+            return Challenge(
+                properties,
+                normalizedProvider
+            );
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> LinkExternalLoginCallback(string provider)
+        {
+            var externalResult = await HttpContext.AuthenticateAsync(
+                ExternalAuthenticationDefaults.CookieScheme
+            );
+            if (!externalResult.Succeeded || externalResult.Principal == null)
+            {
+                ToastNotifications.Error("تعذر إكمال ربط الحساب الخارجي.");
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var identity = _externalLoginService?.ReadIdentity(externalResult.Principal, provider);
+            var linkItems = externalResult.Properties?.Items;
+            var tenantId = linkItems != null
+                && linkItems.TryGetValue("link-tenant", out var storedTenantId)
+                    ? storedTenantId ?? string.Empty
+                    : string.Empty;
+            var username = linkItems != null
+                && linkItems.TryGetValue("link-username", out var storedUsername)
+                    ? storedUsername ?? string.Empty
+                    : string.Empty;
+            await HttpContext.SignOutAsync(ExternalAuthenticationDefaults.CookieScheme);
+            var user = _userAdminService
+                .GetAllUsers(ignoreTenantFilters: true)
+                .SingleOrDefault(item =>
+                    item.IsActive
+                    && item.TenantId == tenantId
+                    && item.Username == username
+                );
+            if (identity == null || user == null || _externalLoginService == null)
+            {
+                ToastNotifications.Error("تعذر التحقق من هوية الحساب الخارجي.");
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var result = _externalLoginService.Link(identity, tenantId, username);
+            if (result.Succeeded)
+            {
+                ToastNotifications.Success(result.Message);
+            }
+            else
+            {
+                ToastNotifications.Error(result.Message);
+            }
+
+            return RedirectToAction(nameof(Profile));
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UnlinkExternalLogin(string provider)
+        {
+            var user = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (user == null || _externalLoginService == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+
+            var result = _externalLoginService.Unlink(provider, user.TenantId, user.Username);
+            if (result.Succeeded)
+            {
+                ToastNotifications.Success(result.Message);
+            }
+            else
+            {
+                ToastNotifications.Error(result.Message);
+            }
+
+            return RedirectToAction(nameof(Profile));
         }
 
         [Authorize]

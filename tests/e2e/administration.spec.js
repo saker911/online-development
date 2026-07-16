@@ -94,6 +94,6 @@ test("selected organization name and logo appear across the application shell", 
   await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
   await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",
-    /\/images\/organization-placeholder\.svg/i
+    /\/images\/tasreehgate-logo\.png/i
   );
 });

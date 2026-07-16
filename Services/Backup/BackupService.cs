@@ -19,6 +19,10 @@ namespace VehiclePermitSystemWeb.Services.Backup
 {
     public class BackupService
     {
+        public const long MaxRestoreArchiveBytes = 100L * 1024 * 1024;
+        private const int MaxArchiveEntries = 512;
+        private const long MaxExtractedBytes = 512L * 1024 * 1024;
+        private const int MaxCompressionRatio = 100;
         private readonly IConfiguration _configuration;
         private readonly ILogger<BackupService> _logger;
         private readonly IHostEnvironment _environment;
@@ -186,6 +190,11 @@ namespace VehiclePermitSystemWeb.Services.Backup
             if (backupFile.Length == 0)
             {
                 throw new InvalidOperationException("Backup file is empty.");
+            }
+
+            if (backupFile.Length > MaxRestoreArchiveBytes)
+            {
+                throw new InvalidOperationException("Backup archive exceeds the allowed size limit.");
             }
 
             var restoreSafetyBackup = await CreateBackupAsync("restore-pre", cancellationToken);
@@ -401,6 +410,30 @@ namespace VehiclePermitSystemWeb.Services.Backup
                 throw new InvalidOperationException("The backup archive is empty.");
             }
 
+            if (archive.Entries.Count > MaxArchiveEntries)
+            {
+                throw new InvalidOperationException("Backup archive exceeds the allowed entry limit.");
+            }
+
+            long declaredExtractedBytes = 0;
+            foreach (var entry in archive.Entries)
+            {
+                declaredExtractedBytes = checked(declaredExtractedBytes + entry.Length);
+                if (declaredExtractedBytes > MaxExtractedBytes)
+                {
+                    throw new InvalidOperationException("Backup archive exceeds extraction limits.");
+                }
+
+                if (
+                    entry.Length > 0
+                    && entry.Length / Math.Max(1, entry.CompressedLength) > MaxCompressionRatio
+                )
+                {
+                    throw new InvalidOperationException("Backup archive compression ratio is unsafe.");
+                }
+            }
+
+            long actualExtractedBytes = 0;
             foreach (var entry in archive.Entries)
             {
                 var destinationPath = Path.GetFullPath(Path.Combine(extractRoot, entry.FullName));
@@ -428,7 +461,25 @@ namespace VehiclePermitSystemWeb.Services.Backup
                     Directory.CreateDirectory(destinationDirectory);
                 }
 
-                entry.ExtractToFile(destinationPath, overwrite: true);
+                using var source = entry.Open();
+                using var destination = new FileStream(
+                    destinationPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None
+                );
+                var buffer = new byte[81920];
+                int bytesRead;
+                while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    actualExtractedBytes = checked(actualExtractedBytes + bytesRead);
+                    if (actualExtractedBytes > MaxExtractedBytes)
+                    {
+                        throw new InvalidOperationException("Backup archive exceeds extraction limits.");
+                    }
+
+                    destination.Write(buffer, 0, bytesRead);
+                }
             }
         }
 

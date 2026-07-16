@@ -32,6 +32,10 @@
 
         <form asp-action="Register" method="post" class="subscription-form">
             @Html.AntiForgeryToken()
+            <div class="visually-hidden" aria-hidden="true">
+                <label for="Website">الموقع الإلكتروني</label>
+                <input id="Website" name="Website" type="text" tabindex="-1" autocomplete="off" value="" />
+            </div>
             <div asp-validation-summary="ModelOnly" class="field-validation-error"></div>
 
             <div class="subscription-form-section">

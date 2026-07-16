@@ -47,7 +47,9 @@ namespace VehiclePermitSystemWeb.Utilities.Permits
                 .Split('/', StringSplitOptions.RemoveEmptyEntries);
             var permitSegmentIndex = Array.FindIndex(
                 pathSegments,
-                segment => string.Equals(segment, "permit", StringComparison.OrdinalIgnoreCase)
+                segment =>
+                    string.Equals(segment, "permit", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(segment, "pass", StringComparison.OrdinalIgnoreCase)
             );
             if (permitSegmentIndex < 0 || permitSegmentIndex >= pathSegments.Length - 1)
             {

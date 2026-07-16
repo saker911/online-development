@@ -3,7 +3,8 @@
 @{
     ViewData["Title"] = "بيانات الإدارة";
     var hasLogo = !string.IsNullOrWhiteSpace(Model.LogoPath);
-    var hasSignatureImage = !string.IsNullOrWhiteSpace(Model.SignatureImagePath);
+    var hasSignatureImage = Model.SignatureImageData is { Length: > 0 }
+        || !string.IsNullOrWhiteSpace(Model.SignatureImagePath);
     var hasSignatureText = !string.IsNullOrWhiteSpace(Model.SignatureText);
     var hasWorkdays = !string.IsNullOrWhiteSpace(Model.OfficialWorkDaysCsv);
     var hasAutoLinkedGeneralManager = !string.IsNullOrWhiteSpace(Model.GeneralManagerUsername);
@@ -184,7 +185,7 @@
                         <div class="administration-media-preview administration-media-preview-signature @(hasSignatureImage ? string.Empty : "is-empty")">
                             @if (hasSignatureImage)
                             {
-                                <img src="~/@Model.SignatureImagePath" alt="توقيع المدير" />
+                                <img src="@Url.Action("SignaturePreview", "Administration")" alt="توقيع المدير" />
                             }
                             else
                             {

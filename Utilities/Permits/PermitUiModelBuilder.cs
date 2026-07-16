@@ -151,7 +151,7 @@ namespace VehiclePermitSystemWeb.Utilities.Permits
                 OrganizationName = administration?.OrganizationName?.Trim() ?? string.Empty,
                 PermitNumber = permit?.PublicPermitCode ?? string.Empty,
                 PermitTypeDisplay = permit?.PermitTypeDisplay ?? string.Empty,
-                PlateNumberDisplay = permit?.PlateNumberDisplay ?? string.Empty,
+                PlateNumberDisplay = MaskPlateNumber(permit?.PlateNumberDisplay),
                 ExpiresAt = permit?.ExpiresAt,
             };
 
@@ -194,11 +194,11 @@ namespace VehiclePermitSystemWeb.Utilities.Permits
                 Message = message,
                 OrganizationName = administration?.OrganizationName?.Trim() ?? string.Empty,
                 DepartmentName = administration?.DepartmentName?.Trim() ?? string.Empty,
-                HolderName = permit?.DriverName ?? string.Empty,
+                HolderName = MaskHolderName(permit?.DriverName),
                 PermitNumber = permit?.PublicPermitCode ?? string.Empty,
                 PermitTypeDisplay = permit?.PermitTypeDisplay ?? string.Empty,
                 LocationDisplay = permit?.LocationDisplay ?? string.Empty,
-                PlateNumberDisplay = permit?.PlateNumberDisplay ?? string.Empty,
+                PlateNumberDisplay = MaskPlateNumber(permit?.PlateNumberDisplay),
                 QrImageUrl = isAuthorized ? qrImageUrl : string.Empty,
                 ExpiresAt = permit?.ExpiresAt,
             };
@@ -220,6 +220,29 @@ namespace VehiclePermitSystemWeb.Utilities.Permits
             }
 
             return model;
+        }
+
+        private static string MaskHolderName(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return string.Empty;
+            }
+
+            var firstName = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).First();
+            return normalized.Length == firstName.Length ? firstName : $"{firstName} ***";
+        }
+
+        private static string MaskPlateNumber(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (normalized.Length <= 2)
+            {
+                return normalized;
+            }
+
+            return $"*** {normalized[^2..]}";
         }
     }
 }

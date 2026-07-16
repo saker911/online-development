@@ -203,6 +203,44 @@ Model.ManagerDisplayName;
                                 </div>
                             </div>
                         </article>
+
+                        <article class="account-profile-display-card card-permit app-card-surface app-form-surface compact-form-card">
+                            <div class="account-profile-display-head">
+                                <div>
+                                    <span class="account-profile-kicker account-profile-kicker-cool">دخول آمن</span>
+                                    <h2>الحسابات المرتبطة</h2>
+                                </div>
+                            </div>
+
+                            @foreach (var provider in new[]
+                            {
+                                ExternalAuthenticationDefaults.GoogleScheme,
+                                ExternalAuthenticationDefaults.MicrosoftScheme,
+                            })
+                            {
+                                var isLinked = Model.LinkedExternalProviders.Contains(provider);
+                                var providerLabel = provider == ExternalAuthenticationDefaults.GoogleScheme
+                                    ? "Google"
+                                    : "Microsoft";
+                                <div class="account-profile-credential-box">
+                                    <strong>@providerLabel</strong>
+                                    <p>@(isLinked ? "مرتبط بهذا الحساب ويمكن استخدامه للدخول." : "غير مرتبط. يبدأ الربط بعد التحقق من حسابك الحالي.")</p>
+                                    @if (isLinked)
+                                    {
+                                        <form asp-controller="Account" asp-action="UnlinkExternalLogin" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="provider" value="@provider" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">إلغاء الربط</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <a asp-controller="Account" asp-action="LinkExternalLogin" asp-route-provider="@provider"
+                                           class="btn btn-outline-primary btn-sm">ربط @providerLabel</a>
+                                    }
+                                </div>
+                            }
+                        </article>
                     </section>
 
                     <section class="account-profile-permissions-panel card-permit app-card-surface app-form-surface compact-form-card">

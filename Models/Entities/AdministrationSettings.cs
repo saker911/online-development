@@ -17,6 +17,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public string SignatureText { get; set; } = string.Empty;
         public string? LogoPath { get; set; }
         public string? SignatureImagePath { get; set; }
+        public byte[]? SignatureImageData { get; set; }
+        public string SignatureImageContentType { get; set; } = string.Empty;
         public string DisplayBaseUrl { get; set; } = string.Empty;
         public string DisplayAccessKey { get; set; } = string.Empty;
         public string AllowedClientIpRanges { get; set; } = string.Empty;
