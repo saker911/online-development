@@ -78,6 +78,7 @@ namespace VehiclePermitSystemWeb.Utilities.Users
                 BadgeCode = session.BadgeCode,
                 DeviceId = session.DeviceId,
                 SignedInAtUtc = session.SignedInAtUtc,
+                ExpiresAtUtc = session.ExpiresAtUtc,
                 MustChangePin = session.MustChangePin,
             };
         }

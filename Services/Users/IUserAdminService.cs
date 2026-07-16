@@ -19,7 +19,8 @@ namespace VehiclePermitSystemWeb.Services.Users
         AdministrationSettings GetAdministrationSettings();
         void UpdateAdministrationSettings(AdministrationSettings settings);
         bool ValidateDisplayAccessKey(string? accessKey);
-        IEnumerable<UserAccount> GetAllUsers();
+        IEnumerable<UserAccount> GetAllUsers(bool ignoreTenantFilters = false);
+        IEnumerable<Tenant> GetTenants(bool includeInactive = false);
         IEnumerable<UserActivity> GetRecentUserActivities(int take = 20);
         IEnumerable<UserActivity> GetUserActivities(
             string? query = null,
@@ -29,22 +30,32 @@ namespace VehiclePermitSystemWeb.Services.Users
         );
         bool IsInitialSetupRequired();
         bool HasAnyUsers();
-        UserAccount? GetUserAccount(string username);
+        UserAccount? GetUserAccount(string username, bool ignoreTenantFilters = false);
         bool CompleteInitialSetup(InitialSetupViewModel model);
         bool CreateUser(UserAccount user, string password);
         bool UpdateUser(
             UserAccount user,
             string? newPassword = null,
-            string? originalUsername = null
+            string? originalUsername = null,
+            bool ignoreTenantFilters = false
         );
-        string? SetUserActiveStatus(string username, bool isActive);
+        string? SetUserActiveStatus(
+            string username,
+            bool isActive,
+            bool ignoreTenantFilters = false
+        );
         bool ChangePassword(string username, string currentPassword, string newPassword);
-        string EnsureOperatorBadgeCode(string username, string? preferredBadgeCode = null);
+        string EnsureOperatorBadgeCode(
+            string username,
+            string? preferredBadgeCode = null,
+            bool ignoreTenantFilters = false
+        );
         string? ConfigureOperatorCredentials(
             string username,
             string badgeCode,
             string? temporaryPin,
-            bool requirePinChange
+            bool requirePinChange,
+            bool ignoreTenantFilters = false
         );
         DisplayOperatorSessionInfo? GetDisplayOperatorSession(string deviceId);
         DisplayOperatorSwitchResult SwitchDisplayOperator(

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="منصة التصاريح">
+  <rect width="512" height="512" rx="96" fill="#0f172a"/>
+  <path fill="#fff" d="M112 210 256 120l144 90v34H112v-34Zm28 66h48v106h-48V276Zm92 0h48v106h-48V276Zm92 0h48v106h-48V276ZM96 406h320v42H96v-42Z"/>
+  <circle cx="256" cy="198" r="22" fill="#34d399"/>
+</svg>

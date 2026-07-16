@@ -358,6 +358,48 @@ body.display-kiosk-body .display-kiosk-main {
     font-size: clamp(0.66rem, 0.78vw, 0.78rem);
 }
 
+.gate-camera-button {
+    background: rgba(20, 184, 166, 0.16);
+    border-color: rgba(45, 212, 191, 0.36);
+}
+
+.gate-camera-panel {
+    width: 100%;
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid rgba(92, 118, 173, 0.24);
+    border-radius: 12px;
+    background: rgba(5, 11, 23, 0.64);
+}
+
+.gate-camera-preview {
+    width: 100%;
+    max-height: min(30vh, 280px);
+    aspect-ratio: 16 / 10;
+    border-radius: 10px;
+    background: #020617;
+    object-fit: cover;
+}
+
+.gate-camera-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gate-camera-status {
+    color: var(--gate-muted);
+    font-weight: 700;
+    font-size: clamp(0.66rem, 0.8vw, 0.8rem);
+}
+
+.gate-camera-status.is-error {
+    color: #fecaca;
+}
+
 .gate-result-panel {
     padding: clamp(5px, 0.65vw, 8px);
     display: grid;
@@ -994,8 +1036,13 @@ body.display-kiosk-body .app-system-meta {
 
     .gate-topbar-actions > button,
     .gate-scan-actions > button,
+    .gate-camera-footer > button,
     .gate-note-save {
         width: 100%;
+    }
+
+    .gate-camera-footer {
+        align-items: stretch;
     }
 
     .gate-activity-list {

@@ -94,7 +94,7 @@ test("GateSecurity can open scan console and invalid scan shows denial", async (
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);
   await page.goto("/ScanConsole");
-  await expect(page.getByRole("heading", { name: "مسح باركود" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "ماسح البوابة" })).toBeVisible();
 
   await page.getByLabel("القيمة المقروءة").fill("NOT-A-REAL-CODE");
   await page.getByLabel("القيمة المقروءة").press("Enter");

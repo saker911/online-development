@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: vehicle-permit-online-test
+    runtime: docker
+    plan: free
+    branch: online-development
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: App__Urls
+        value: http://0.0.0.0:10000
+      - key: Data__Provider
+        value: PostgreSql
+      - key: ConnectionStrings__PostgreSqlConnection
+        sync: false
+      - key: Security__CookieSecurePolicy
+        value: Always
+      - key: ForwardedHeaders__TrustPlatformProxy
+        value: "true"
+      - key: OnlineEdition__PrivacyMinimized
+        value: "true"
+      - key: OnlineEdition__CollectNationalId
+        value: "false"
+      - key: OnlineEdition__SimplifiedVisits
+        value: "true"
+      - key: VehiclePermitSystemWeb__StorageRoot
+        value: /tmp/vehicle-permit-storage

@@ -23,7 +23,20 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 .Replace('\\', '/')
                 .TrimStart('~', '/');
 
-            return string.IsNullOrWhiteSpace(logoPath) ? DefaultLogoPath : logoPath;
+            if (string.IsNullOrWhiteSpace(logoPath))
+            {
+                return DefaultLogoPath;
+            }
+
+            if (
+                logoPath.StartsWith("uploads/administration/", StringComparison.OrdinalIgnoreCase)
+                && !File.Exists(AppStoragePaths.ResolveUploadPhysicalPath(logoPath))
+            )
+            {
+                return DefaultLogoPath;
+            }
+
+            return logoPath;
         }
     }
 

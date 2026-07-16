@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using VehiclePermitSystemWeb.Security;
 
 namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
@@ -168,10 +170,11 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
 
         public static IServiceCollection AddVehiclePermitCookieAuthentication(
             this IServiceCollection services,
-            CookieSecurePolicy cookieSecurePolicy
+            CookieSecurePolicy cookieSecurePolicy,
+            IConfiguration configuration
         )
         {
-            services
+            var authentication = services
                 .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
                 {
@@ -182,7 +185,56 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
                     options.Cookie.HttpOnly = true;
                     options.Cookie.SameSite = SameSiteMode.Strict;
                     options.Cookie.SecurePolicy = cookieSecurePolicy;
+                })
+                .AddCookie(ExternalAuthenticationDefaults.CookieScheme, options =>
+                {
+                    options.Cookie.Name = "VehiclePermit.External";
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SecurePolicy = cookieSecurePolicy;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
                 });
+
+            var googleClientId = configuration["Authentication:Google:ClientId"]?.Trim();
+            var googleClientSecret = configuration["Authentication:Google:ClientSecret"]?.Trim();
+            if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+            {
+                authentication.AddGoogle(ExternalAuthenticationDefaults.GoogleScheme, options =>
+                {
+                    options.SignInScheme = ExternalAuthenticationDefaults.CookieScheme;
+                    options.ClientId = googleClientId;
+                    options.ClientSecret = googleClientSecret;
+                    options.CallbackPath = "/signin-google";
+                    options.SaveTokens = false;
+                    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                    options.CorrelationCookie.SecurePolicy = cookieSecurePolicy;
+                });
+            }
+
+            var microsoftClientId = configuration["Authentication:Microsoft:ClientId"]?.Trim();
+            var microsoftClientSecret = configuration["Authentication:Microsoft:ClientSecret"]?.Trim();
+            if (!string.IsNullOrWhiteSpace(microsoftClientId) && !string.IsNullOrWhiteSpace(microsoftClientSecret))
+            {
+                authentication.AddOpenIdConnect(
+                    ExternalAuthenticationDefaults.MicrosoftScheme,
+                    options =>
+                    {
+                        options.SignInScheme = ExternalAuthenticationDefaults.CookieScheme;
+                        options.Authority = "https://login.microsoftonline.com/common/v2.0";
+                        options.ClientId = microsoftClientId;
+                        options.ClientSecret = microsoftClientSecret;
+                        options.CallbackPath = "/signin-microsoft";
+                        options.ResponseType = OpenIdConnectResponseType.Code;
+                        options.SaveTokens = false;
+                        options.GetClaimsFromUserInfoEndpoint = true;
+                        options.Scope.Add("email");
+                        options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                        options.CorrelationCookie.SecurePolicy = cookieSecurePolicy;
+                        options.NonceCookie.SameSite = SameSiteMode.Lax;
+                        options.NonceCookie.SecurePolicy = cookieSecurePolicy;
+                    }
+                );
+            }
 
             return services;
         }

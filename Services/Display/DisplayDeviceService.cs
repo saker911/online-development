@@ -37,7 +37,7 @@ namespace VehiclePermitSystemWeb.Services.Display
         public void UpdateSetupKey(string setupKey)
         {
             using var db = _dbContextFactory.CreateDbContext();
-            var settings = db.AdministrationSettings.FirstOrDefault(item => item.Id == 1);
+            var settings = AdministrationSettingsService.GetAdministrationSettingsRecord(db, 1);
             if (settings == null)
             {
                 settings = AdministrationSettingsService.BuildDefaultAdministrationSettings();
@@ -46,8 +46,8 @@ namespace VehiclePermitSystemWeb.Services.Display
 
             settings.DisplayAccessKey =
                 string.IsNullOrWhiteSpace(setupKey) || IsForbiddenSetupKey(setupKey)
-                    ? DisplayAccessDefaults.CreateAccessKey()
-                    : setupKey.Trim();
+                    ? DisplayAccessKeyHasher.Hash(DisplayAccessDefaults.CreateAccessKey())
+                    : DisplayAccessKeyHasher.Hash(setupKey.Trim());
             AdministrationSettingsService.NormalizeAdministrationSettings(settings);
             db.SaveChanges();
         }
@@ -152,12 +152,7 @@ namespace VehiclePermitSystemWeb.Services.Display
                 AdministrationSettingsService.GetAdministrationSettingsRecord(db, 1)
                 ?? AdministrationSettingsService.BuildDefaultAdministrationSettings();
             AdministrationSettingsService.NormalizeAdministrationSettings(administrationSettings);
-            if (
-                !FixedTimeEquals(
-                    HashSecret(administrationSettings.DisplayAccessKey),
-                    HashSecret(setupKey)
-                )
-            )
+            if (!DisplayAccessKeyHasher.Verify(administrationSettings.DisplayAccessKey, setupKey))
             {
                 return null;
             }
@@ -490,9 +485,9 @@ namespace VehiclePermitSystemWeb.Services.Display
                 {
                     settings.HeartbeatSeconds = 30;
                 }
-                if (settings.DeviceCookieDays <= 0)
+                if (settings.DeviceCookieDays <= 0 || settings.DeviceCookieDays > 30)
                 {
-                    settings.DeviceCookieDays = 365;
+                    settings.DeviceCookieDays = 30;
                 }
                 if (string.IsNullOrWhiteSpace(settings.SetupKeyHash))
                 {
@@ -508,7 +503,7 @@ namespace VehiclePermitSystemWeb.Services.Display
                 SetupKeyHash = HashSecret(SecureTokenGenerator.GenerateSecureToken()),
                 RequireAdminApproval = true,
                 HeartbeatSeconds = 30,
-                DeviceCookieDays = 365,
+                DeviceCookieDays = 30,
             };
             db.DisplaySecuritySettings.Add(settings);
             db.SaveChanges();
@@ -591,6 +586,7 @@ namespace VehiclePermitSystemWeb.Services.Display
 
         private static void SetCookie(HttpContext context, string name, string value, int days)
         {
+            var environment = context.RequestServices?.GetService<IHostEnvironment>();
             context.Response.Cookies.Append(
                 name,
                 value,
@@ -598,7 +594,9 @@ namespace VehiclePermitSystemWeb.Services.Display
                 {
                     HttpOnly = true,
                     SameSite = SameSiteMode.Strict,
-                    Secure = context.Request.IsHttps,
+                    Secure =
+                        context.Request.IsHttps
+                        || environment?.IsDevelopment() == false,
                     Expires = DateTimeOffset.UtcNow.AddDays(days),
                     IsEssential = true,
                 }

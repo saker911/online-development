@@ -129,7 +129,9 @@ namespace VehiclePermitSystemWeb.Services.Users
             using var db = _dbContextFactory.CreateDbContext();
             var settings = db
                 .AdministrationSettings.AsNoTracking()
-                .FirstOrDefault(item => item.Id == 1);
+                .OrderByDescending(item => item.Id == 1)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
             var allowedRanges = ClientIpRangeMatcher.ParseAllowedClientIpRanges(
                 settings?.AllowedClientIpRanges
             );

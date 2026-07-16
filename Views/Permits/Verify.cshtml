@@ -1,88 +1,69 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitVerificationViewModel
-@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "التحقق من التصريح";
-    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
+    var stateClass = Model.IsAuthorized ? "is-authorized" : Model.IsExpired ? "is-expired" : "is-denied";
+    var expiryText = Model.ExpiresAt.HasValue
+        ? HijriDateFormatter.Format(Model.ExpiresAt)
+        : "حسب مدة الزيارة";
 }
 
-<div class="card-permit card-permit-compact mx-auto">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h1 class="mb-0">@Model.Title</h1>
-        <span class="badge @Model.BadgeClass fs-6">@Model.StatusText</span>
-    </div>
+<section class="permit-verification-shell" aria-labelledby="permit-verification-title">
+    <article class="permit-verification-card @stateClass">
+        <header class="permit-verification-brand">
+            <span class="permit-verification-mark" aria-hidden="true">@((Model.OrganizationName.FirstOrDefault() == default) ? "ت" : Model.OrganizationName.First())</span>
+            <div>
+                <span>منصة التصاريح</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.OrganizationName) ? "التحقق الرقمي" : Model.OrganizationName)</strong>
+            </div>
+        </header>
 
-    <div
-        class="app-inline-note @(Model.IsAuthorized ? "app-inline-note-success" : Model.IsExpired ? "app-inline-note-warning" : "app-inline-note-danger") mb-4">
-        @Model.Message
-    </div>
-
-    @if (ViewData["PermitNotice"] is string permitNotice && !string.IsNullOrWhiteSpace(permitNotice))
-    {
-        <div class="app-inline-note app-inline-note-warning mb-4">
-            @permitNotice
+        <div class="permit-verification-state" aria-hidden="true">
+            <span>@(Model.IsAuthorized ? "✓" : Model.IsExpired ? "!" : "×")</span>
         </div>
-    }
 
-    @if (Model.Permit != null)
-    {
-        <div class="row g-3">
-            <div class="col-md-6">
-                <strong>رقم التصريح</strong>
-                <div>@Model.Permit.PermitNumber</div>
-            </div>
-            <div class="col-md-6">
-                <strong>@(Model.Permit.IsVisitorPermit ? "اسم الزائر" : "اسم المصرح له")</strong>
-                <div>@Model.Permit.DriverName</div>
-            </div>
-            @if (!hideSensitiveIdentityFields)
-            {
-                <div class="col-md-6">
-                    <strong>المعرف الداخلي</strong>
-                    <div class="national-id-field">@Model.Permit.NationalId</div>
+        <div class="permit-verification-heading">
+            <span class="permit-verification-badge">@Model.StatusText</span>
+            <h1 id="permit-verification-title">@Model.Title</h1>
+            <p>@Model.Message</p>
+        </div>
+
+        @if (Model.IsValid)
+        {
+            <dl class="permit-verification-details">
+                <div>
+                    <dt>رمز التصريح</dt>
+                    <dd dir="ltr">@Model.PermitNumber</dd>
                 </div>
-            }
-            <div class="col-md-6">
-                <strong>@(Model.Permit.IsVisitorPermit ? "مكان الزيارة" : "موقع العمل")</strong>
-                <div>@Model.Permit.LocationDisplay</div>
-            </div>
-            @if (!Model.Permit.IsVisitorPermit)
-            {
-                <div class="col-md-6">
-                    <strong>مدير الموظف</strong>
-                    <div>@Model.Permit.ManagerName</div>
+                <div>
+                    <dt>نوع التصريح</dt>
+                    <dd>@Model.PermitTypeDisplay</dd>
                 </div>
-            }
-            <div class="col-md-6">
-                <strong>تاريخ التصريح</strong>
-                <div class="date-text">@(Model.Permit.PermitDate.HasValue ?
-                                                                HijriDateFormatter.Format(Model.Permit.PermitDate) : "غير محدد")</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>رقم الجوال</strong>
-                    <div>@Model.Permit.EmployeePhone</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>نوع المركبة</strong>
-                    <div>@Model.Permit.VehicleType</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>رقم اللوحة</strong>
-                    <div>@Model.Permit.PlateNumberDisplay</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>الحالة الحالية</strong>
-                    <div>@Model.Permit.ApprovalStatusDisplay</div>
-                </div>
-                <div class="col-12">
-                    <strong>تاريخ الانتهاء</strong>
-                    <div class="date-text">@(Model.Permit.IsVisitorPermit && !Model.Permit.ExpiresAt.HasValue ? "يحدد تلقائيا بعد دخول الزائر" : Model.Permit.ExpiresAt.HasValue ? HijriDateFormatter.Format(Model.Permit.ExpiresAt) :
-                                                              "غير محدد")</div>
+                @if (!string.IsNullOrWhiteSpace(Model.PlateNumberDisplay))
+                {
+                    <div>
+                        <dt>رقم اللوحة</dt>
+                        <dd>@Model.PlateNumberDisplay</dd>
                     </div>
+                }
+                <div>
+                    <dt>الصلاحية</dt>
+                    <dd class="date-text">@expiryText</dd>
                 </div>
-            }
-    else
+            </dl>
+
+            @if (ViewData["PermitNotice"] is string permitNotice && !string.IsNullOrWhiteSpace(permitNotice))
             {
-                <div class="text-muted-ar">لا توجد بيانات صالحة مرتبطة بهذا الرمز.</div>
+                <div class="permit-verification-notice">@permitNotice</div>
             }
-        </div>
+        }
+        else
+        {
+            <div class="permit-verification-empty">لا توجد بيانات تصريح صالحة مرتبطة بهذا الرمز.</div>
+        }
+
+        <footer class="permit-verification-footer">
+            تُعرض بيانات التحقق الأساسية فقط حفاظًا على خصوصية حامل التصريح.
+        </footer>
+    </article>
+</section>

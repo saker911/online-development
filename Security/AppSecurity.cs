@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Identity;
 using VehiclePermitSystemWeb.Models.DTOs;
 using VehiclePermitSystemWeb.Models.Entities;
 using VehiclePermitSystemWeb.Models.ViewModels.Account;
@@ -41,6 +43,51 @@ namespace VehiclePermitSystemWeb.Security
                 || normalized.Contains("change_this", StringComparison.OrdinalIgnoreCase)
                 || normalized.Contains("secure", StringComparison.OrdinalIgnoreCase)
                 || normalized.Contains("2026", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    public static class DisplayAccessKeyHasher
+    {
+        private const string Prefix = "display-key:v1:";
+        private static readonly PasswordHasher<string> Hasher = new();
+
+        public static bool IsHashed(string? value) =>
+            (value ?? string.Empty).StartsWith(Prefix, StringComparison.Ordinal);
+
+        public static string Hash(string accessKey)
+        {
+            var normalized = (accessKey ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized) || IsHashed(normalized))
+            {
+                return normalized;
+            }
+
+            return Prefix + Hasher.HashPassword(string.Empty, normalized);
+        }
+
+        public static bool Verify(string? storedValue, string? candidate)
+        {
+            var stored = (storedValue ?? string.Empty).Trim();
+            var normalizedCandidate = (candidate ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(stored) || string.IsNullOrWhiteSpace(normalizedCandidate))
+            {
+                return false;
+            }
+
+            if (!IsHashed(stored))
+            {
+                return CryptographicOperations.FixedTimeEquals(
+                    System.Text.Encoding.UTF8.GetBytes(stored),
+                    System.Text.Encoding.UTF8.GetBytes(normalizedCandidate)
+                );
+            }
+
+            var result = Hasher.VerifyHashedPassword(
+                string.Empty,
+                stored[Prefix.Length..],
+                normalizedCandidate
+            );
+            return result != PasswordVerificationResult.Failed;
         }
     }
 

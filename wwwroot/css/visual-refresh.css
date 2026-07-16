@@ -1046,3 +1046,844 @@ body {
     background-image: none !important;
     border-color: #f2f2f2 !important;
 }
+
+/* Subscription pages are public marketing surfaces and must not inherit the dark login image. */
+body.login-page-body:has(.subscription-page-shell),
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) {
+    color: #111827 !important;
+    background:
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, .82), transparent 26%),
+        radial-gradient(circle at 84% 20%, rgba(17, 24, 39, .08), transparent 30%),
+        linear-gradient(180deg, #f7f5f0 0%, #fbfaf7 48%, #ffffff 100%) !important;
+    background-attachment: scroll !important;
+}
+
+html:has(body.login-page-body .subscription-page-shell),
+[data-theme="dark"]:has(body.login-page-body .subscription-page-shell) {
+    background: #fbfaf7 !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .login-page-overlay,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .login-page-overlay {
+    display: none !important;
+    background: transparent !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-page-shell,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-page-shell {
+    min-height: 100dvh;
+    color: #111827 !important;
+    background:
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, .82), transparent 26%),
+        radial-gradient(circle at 84% 20%, rgba(17, 24, 39, .08), transparent 30%),
+        linear-gradient(180deg, #f7f5f0 0%, #fbfaf7 48%, #ffffff 100%) !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-shell,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-shell {
+    padding-top: clamp(18px, 3vw, 32px);
+    padding-bottom: clamp(40px, 5vw, 72px);
+}
+
+body.login-page-body:has(.subscription-page-shell) :is(
+    .subscription-heading,
+    .subscription-social-signup,
+    .subscription-value-grid,
+    .subscription-plan-card,
+    .subscription-form,
+    .subscription-checkout-summary,
+    .subscription-payment-box,
+    .subscription-trust-strip,
+    .subscription-notice
+),
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) :is(
+    .subscription-heading,
+    .subscription-social-signup,
+    .subscription-value-grid,
+    .subscription-plan-card,
+    .subscription-form,
+    .subscription-checkout-summary,
+    .subscription-payment-box,
+    .subscription-trust-strip,
+    .subscription-notice
+) {
+    color: #111827 !important;
+    background: rgba(255, 255, 255, .94) !important;
+    background-image: none !important;
+    border-color: rgba(17, 24, 39, .10) !important;
+    box-shadow: 0 22px 64px rgba(25, 22, 16, .08) !important;
+    opacity: 1 !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-value-grid article,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-value-grid article {
+    background: #fff !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-plan-card.is-featured,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-plan-card.is-featured {
+    border-color: rgba(17, 24, 39, .18) !important;
+    box-shadow: 0 30px 84px rgba(17, 24, 39, .12) !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) :is(
+    .subscription-heading .login-page-title,
+    .subscription-social-signup strong,
+    .subscription-value-grid strong,
+    .subscription-plan-card h2,
+    .subscription-plan-card > strong,
+    .subscription-checkout-summary strong,
+    .subscription-form-section h2,
+    .subscription-payment-box h2,
+    .subscription-notice
+),
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) :is(
+    .subscription-heading .login-page-title,
+    .subscription-social-signup strong,
+    .subscription-value-grid strong,
+    .subscription-plan-card h2,
+    .subscription-plan-card > strong,
+    .subscription-checkout-summary strong,
+    .subscription-form-section h2,
+    .subscription-payment-box h2,
+    .subscription-notice
+) {
+    color: #111827 !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) :is(
+    .subscription-heading .login-page-subtitle,
+    .subscription-social-signup span,
+    .subscription-social-signup small,
+    .subscription-value-grid span,
+    .subscription-plan-card p,
+    .subscription-plan-limits,
+    .subscription-plan-card ul,
+    .subscription-plan-choice small,
+    .subscription-policy-check,
+    .subscription-checkout-summary span,
+    .subscription-trust-strip span
+),
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) :is(
+    .subscription-heading .login-page-subtitle,
+    .subscription-social-signup span,
+    .subscription-social-signup small,
+    .subscription-value-grid span,
+    .subscription-plan-card p,
+    .subscription-plan-limits,
+    .subscription-plan-card ul,
+    .subscription-plan-choice small,
+    .subscription-policy-check,
+    .subscription-checkout-summary span,
+    .subscription-trust-strip span
+) {
+    color: #5f665f !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-social-button,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-social-button {
+    color: #111827 !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    border-color: rgba(17, 24, 39, .14) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7) !important;
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-social-button span,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-social-button span {
+    color: #ffffff !important;
+    background: #111827 !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-page-shell .btn-primary,
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-page-shell .btn-primary {
+    color: #ffffff !important;
+    background: #111827 !important;
+    background-image: none !important;
+    border-color: #111827 !important;
+}
+
+body.login-page-body:has(.subscription-page-shell) .subscription-page-shell :is(.btn-outline-primary, .btn-outline-secondary),
+[data-theme="dark"] body.login-page-body:has(.subscription-page-shell) .subscription-page-shell :is(.btn-outline-primary, .btn-outline-secondary) {
+    color: #111827 !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    border-color: rgba(17, 24, 39, .18) !important;
+}
+
+/* Permit digital pass and public verification */
+.permit-digital-pass {
+    position: sticky;
+    top: 84px;
+    overflow: hidden;
+    min-height: 520px;
+    padding: 20px;
+    color: #ffffff;
+    background: linear-gradient(145deg, #111827 0%, #15395b 58%, #0b2239 100%);
+    border: 1px solid rgba(148, 163, 184, .3);
+    border-radius: 8px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, .2);
+}
+
+.permit-digital-pass.is-pending {
+    background: linear-gradient(145deg, #242424 0%, #383838 100%);
+}
+
+.permit-digital-pass__header,
+.permit-digital-pass__meta,
+.permit-verification-brand,
+.permit-verification-details {
+    display: flex;
+}
+
+.permit-digital-pass__header {
+    position: relative;
+    z-index: 1;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.permit-digital-pass__header div {
+    display: grid;
+    gap: 2px;
+}
+
+.permit-digital-pass__header span:first-child {
+    font-weight: 800;
+}
+
+.permit-digital-pass__header small,
+.permit-digital-pass__title small {
+    color: rgba(255, 255, 255, .7);
+}
+
+.permit-digital-pass__status {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    color: #d1fae5;
+    background: rgba(16, 185, 129, .16);
+    border: 1px solid rgba(52, 211, 153, .45);
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.permit-digital-pass.is-pending .permit-digital-pass__status {
+    color: #fef3c7;
+    background: rgba(245, 158, 11, .14);
+    border-color: rgba(251, 191, 36, .4);
+}
+
+.permit-digital-pass__title {
+    position: relative;
+    z-index: 1;
+    margin: 28px 0 18px;
+}
+
+.permit-digital-pass__title > span {
+    color: #93c5fd;
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.permit-digital-pass__title h2 {
+    margin: 5px 0 2px;
+    color: #ffffff;
+    font-size: 1.45rem;
+    line-height: 1.35;
+}
+
+.permit-digital-pass__qr {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: min(100%, 250px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, .82);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .24);
+}
+
+.permit-digital-pass__qr:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 4px;
+}
+
+.permit-digital-pass__qr img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.permit-digital-pass__scan-label {
+    position: relative;
+    z-index: 1;
+    margin-top: 10px;
+    color: rgba(255, 255, 255, .72);
+    text-align: center;
+    font-size: .82rem;
+}
+
+.permit-digital-pass__placeholder {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-height: 220px;
+    place-items: center;
+    padding: 24px;
+    color: rgba(255, 255, 255, .76);
+    border: 1px dashed rgba(255, 255, 255, .3);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.permit-digital-pass__meta {
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 20px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, .16);
+}
+
+.permit-digital-pass__meta > div {
+    min-width: 50%;
+    padding: 6px 0;
+}
+
+.permit-digital-pass__meta dt {
+    color: rgba(255, 255, 255, .62);
+    font-size: .76rem;
+    font-weight: 500;
+}
+
+.permit-digital-pass__meta dd {
+    margin: 3px 0 0;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.permit-digital-pass__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.permit-digital-pass__actions .btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.permit-digital-pass__share-status {
+    min-height: 22px;
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.permit-holder-shell {
+    min-height: calc(100dvh - 48px);
+    display: grid;
+    place-items: center;
+    padding: 20px 12px;
+    background: #eef2f7;
+}
+
+.permit-holder-pass {
+    width: min(100%, 460px);
+    border: 1px solid #d8dee8;
+    border-top: 5px solid #16a269;
+    border-radius: 8px;
+    background: #fff;
+    color: #111827;
+    padding: 22px;
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.14);
+}
+
+.permit-holder-pass.is-expired {
+    border-top-color: #d97706;
+}
+
+.permit-holder-pass.is-denied {
+    border-top-color: #dc2626;
+}
+
+.permit-holder-pass__brand {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.permit-holder-pass__mark {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: #111827;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.permit-holder-pass__brand div {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.permit-holder-pass__brand strong,
+.permit-holder-pass__brand span {
+    overflow-wrap: anywhere;
+}
+
+.permit-holder-pass__brand div > span {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.permit-holder-pass__status {
+    border-radius: 999px;
+    padding: 5px 9px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.is-expired .permit-holder-pass__status {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.is-denied .permit-holder-pass__status {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.permit-holder-pass__heading {
+    padding: 20px 0 14px;
+    text-align: center;
+}
+
+.permit-holder-pass__heading > span,
+.permit-holder-pass__identity > span {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.permit-holder-pass__heading h1 {
+    margin: 6px 0;
+    font-size: clamp(1.45rem, 5vw, 1.85rem);
+    letter-spacing: 0;
+}
+
+.permit-holder-pass__heading p {
+    margin: 0;
+    color: #526075;
+}
+
+.permit-holder-pass__identity {
+    display: grid;
+    gap: 3px;
+    padding: 14px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    text-align: center;
+}
+
+.permit-holder-pass__identity strong {
+    font-size: 1.2rem;
+}
+
+.permit-holder-pass__identity small {
+    color: #526075;
+}
+
+.permit-holder-pass__qr {
+    width: min(78vw, 300px);
+    aspect-ratio: 1;
+    margin: 18px auto 8px;
+    padding: 10px;
+    border: 1px solid #d8dee8;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.permit-holder-pass__qr img {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.permit-holder-pass__scan-label {
+    color: #166534;
+    font-size: 0.86rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.permit-holder-pass__details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    margin: 18px 0 0;
+    padding: 1px;
+    border-radius: 8px;
+    background: #dfe5ed;
+    overflow: hidden;
+}
+
+.permit-holder-pass__details > div {
+    min-width: 0;
+    padding: 11px;
+    background: #f8fafc;
+}
+
+.permit-holder-pass__details dt {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.permit-holder-pass__details dd {
+    margin: 3px 0 0;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.permit-holder-pass__share {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 16px;
+    background: #111827;
+    color: #fff;
+    font-weight: 800;
+}
+
+.permit-holder-pass__share:hover,
+.permit-holder-pass__share:focus-visible {
+    background: #253247;
+    color: #fff;
+}
+
+.permit-holder-pass__share-status {
+    min-height: 22px;
+    color: #526075;
+    font-size: 0.82rem;
+    text-align: center;
+}
+
+.permit-holder-pass__notice,
+.permit-holder-pass__blocked {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid #d8dee8;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #526075;
+    font-size: 0.82rem;
+    line-height: 1.7;
+}
+
+.permit-holder-pass__blocked {
+    border-color: #fecaca;
+    background: #fff7f7;
+    color: #991b1b;
+    text-align: center;
+    font-weight: 800;
+}
+
+[data-theme="dark"] .permit-holder-shell {
+    background: #070b12;
+}
+
+[data-theme="dark"] .permit-holder-pass {
+    border-color: #2a3442;
+    background: #111821;
+    color: #f8fafc;
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.36);
+}
+
+[data-theme="dark"] .permit-holder-pass__brand {
+    border-bottom-color: #2a3442;
+}
+
+[data-theme="dark"] .permit-holder-pass__mark,
+[data-theme="dark"] .permit-holder-pass__share {
+    background: #f8fafc;
+    color: #111827;
+}
+
+[data-theme="dark"] .permit-holder-pass__identity,
+[data-theme="dark"] .permit-holder-pass__details,
+[data-theme="dark"] .permit-holder-pass__notice {
+    background: #17212d;
+    border-color: #2a3442;
+}
+
+[data-theme="dark"] .permit-holder-pass__details > div {
+    background: #17212d;
+}
+
+[data-theme="dark"] .permit-holder-pass__heading p,
+[data-theme="dark"] .permit-holder-pass__identity small,
+[data-theme="dark"] .permit-holder-pass__brand div > span,
+[data-theme="dark"] .permit-holder-pass__share-status,
+[data-theme="dark"] .permit-holder-pass__notice {
+    color: #b9c5d4;
+}
+
+@media (max-width: 520px) {
+    .permit-holder-shell {
+        min-height: 100dvh;
+        padding: 0;
+    }
+
+    .permit-holder-pass {
+        min-height: 100dvh;
+        border-width: 5px 0 0;
+        border-radius: 0;
+        padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+        box-shadow: none;
+    }
+
+    .permit-digital-pass__actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+.permit-verification-shell {
+    display: grid;
+    min-height: calc(100vh - 190px);
+    place-items: center;
+    padding: 28px 0;
+}
+
+.permit-verification-card {
+    width: min(100%, 620px);
+    overflow: hidden;
+    padding: 26px;
+    color: var(--t-text, #111827);
+    background: var(--t-surface, #ffffff);
+    border: 1px solid var(--t-border, #dbe1e8);
+    border-top: 5px solid #64748b;
+    border-radius: 8px;
+    box-shadow: 0 22px 55px rgba(15, 23, 42, .12);
+}
+
+.permit-verification-card.is-authorized {
+    border-top-color: #059669;
+}
+
+.permit-verification-card.is-expired {
+    border-top-color: #d97706;
+}
+
+.permit-verification-card.is-denied {
+    border-top-color: #dc2626;
+}
+
+.permit-verification-brand {
+    align-items: center;
+    gap: 11px;
+}
+
+.permit-verification-mark {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    color: #ffffff;
+    background: #111827;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.permit-verification-brand div {
+    display: grid;
+    gap: 1px;
+}
+
+.permit-verification-brand span:not(.permit-verification-mark) {
+    color: var(--t-text-muted, #64748b);
+    font-size: .76rem;
+}
+
+.permit-verification-brand strong {
+    font-size: 1rem;
+}
+
+.permit-verification-state {
+    display: grid;
+    width: 76px;
+    height: 76px;
+    margin: 28px auto 16px;
+    place-items: center;
+    color: #047857;
+    background: #d1fae5;
+    border-radius: 50%;
+    font-size: 2.25rem;
+    font-weight: 800;
+}
+
+.is-expired .permit-verification-state {
+    color: #b45309;
+    background: #fef3c7;
+}
+
+.is-denied .permit-verification-state {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.permit-verification-heading {
+    text-align: center;
+}
+
+.permit-verification-badge {
+    display: inline-flex;
+    padding: 5px 10px;
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.is-expired .permit-verification-badge {
+    color: #92400e;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.is-denied .permit-verification-badge {
+    color: #991b1b;
+    background: #fff1f2;
+    border-color: #fecdd3;
+}
+
+.permit-verification-heading h1 {
+    margin: 12px 0 6px;
+    font-size: 1.8rem;
+    line-height: 1.3;
+}
+
+.permit-verification-heading p {
+    margin: 0;
+    color: var(--t-text-secondary, #475569);
+}
+
+.permit-verification-details {
+    flex-wrap: wrap;
+    margin: 26px 0 0;
+    padding: 16px 0;
+    border-block: 1px solid var(--t-border, #e2e8f0);
+}
+
+.permit-verification-details > div {
+    width: 50%;
+    padding: 8px 10px;
+}
+
+.permit-verification-details dt {
+    color: var(--t-text-muted, #64748b);
+    font-size: .78rem;
+    font-weight: 500;
+}
+
+.permit-verification-details dd {
+    margin: 3px 0 0;
+    color: var(--t-text, #111827);
+    font-weight: 800;
+}
+
+.permit-verification-notice,
+.permit-verification-empty {
+    margin-top: 18px;
+    padding: 12px 14px;
+    color: var(--t-text-secondary, #475569);
+    background: var(--t-surface-soft, #f8fafc);
+    border: 1px solid var(--t-border, #e2e8f0);
+    border-radius: 8px;
+    font-size: .84rem;
+    line-height: 1.7;
+}
+
+.permit-verification-footer {
+    margin-top: 20px;
+    color: var(--t-text-muted, #64748b);
+    text-align: center;
+    font-size: .76rem;
+}
+
+@media (max-width: 991.98px) {
+    .permit-pass-column {
+        order: -1;
+    }
+
+    .permit-details-column {
+        order: 1;
+    }
+
+    .permit-digital-pass {
+        position: static;
+        min-height: 0;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .permit-digital-pass,
+    .permit-verification-card {
+        padding: 18px;
+    }
+
+    .permit-digital-pass__qr {
+        width: min(100%, 270px);
+    }
+
+    .permit-digital-pass__meta > div {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .permit-verification-shell {
+        min-height: calc(100vh - 150px);
+        padding: 12px 0;
+    }
+
+    .permit-verification-details > div {
+        width: 100%;
+        padding-inline: 0;
+    }
+
+    .permit-verification-heading h1 {
+        font-size: 1.55rem;
+    }
+}
+
+[data-theme="dark"] .permit-verification-mark {
+    color: #111827;
+    background: #f5f5f5;
+}
+
+[data-theme="dark"] .permit-verification-card {
+    box-shadow: 0 22px 55px rgba(0, 0, 0, .32);
+}

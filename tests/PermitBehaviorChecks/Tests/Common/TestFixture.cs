@@ -30,6 +30,7 @@ using VehiclePermitSystemWeb.Services.Monitoring;
 using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
+using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 
@@ -53,6 +54,7 @@ internal sealed class TestFixture : IAsyncDisposable
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
         services.AddSingleton<ISystemClock>(Clock);
+        services.AddSingleton<ITenantContext, DefaultTenantContext>();
         services.AddDbContextFactory<ApplicationDbContext>(options =>
             options.UseSqlite(_connection)
         );
@@ -90,6 +92,16 @@ internal sealed class TestFixture : IAsyncDisposable
 
         using var db = DbFactory.CreateDbContext();
         db.Database.EnsureCreated();
+        db.Tenants.Add(
+            new Tenant
+            {
+                TenantId = TenantDefaults.DefaultTenantId,
+                Name = TenantDefaults.DefaultTenantName,
+                Slug = TenantDefaults.DefaultTenantId,
+                IsActive = true,
+                SubscriptionStatus = TenantSubscriptionStatuses.Active,
+            }
+        );
         db.UserAccounts.Add(
             new UserAccount
             {

@@ -1,0 +1,130 @@
+@model TenantSignupViewModel
+
+@{
+    ViewData["Title"] = "تسجيل جهة جديدة";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "subscription-page-body";
+    ViewData["PublicHeaderActionLabel"] = "تغيير الباقة";
+    ViewData["PublicHeaderActionController"] = "Subscription";
+    ViewData["PublicHeaderActionName"] = "Plans";
+}
+
+<main class="subscription-page-shell">
+    @await Html.PartialAsync("~/Views/Shared/_SubscriptionTopbar.cshtml")
+    <section class="subscription-shell subscription-register-shell">
+        @if (TempData["SubscriptionNotice"] is string subscriptionNotice)
+        {
+            <div class="subscription-notice">@subscriptionNotice</div>
+        }
+
+        <div class="subscription-heading">
+            <div>
+                <div class="login-page-kicker">اشتراك جديد</div>
+                <h1 class="login-page-title">أنشئ حسابك وابدأ التجربة باحتراف</h1>
+                <p class="login-page-subtitle">املأ البيانات الأساسية الآن، وسيحصل حسابك على رابط مستقل داخل منصة التصاريح بعد التفعيل.</p>
+            </div>
+        </div>
+
+        @await Html.PartialAsync(
+            "_SocialSignupActions",
+            new ExternalAuthActionsViewModel { Mode = "Register", PlanCode = Model.PlanCode }
+        )
+
+        <form asp-action="Register" method="post" class="subscription-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="field-validation-error"></div>
+
+            <div class="subscription-form-section">
+                <h2>الباقة</h2>
+                <div class="subscription-plan-choice-grid">
+                    @foreach (var plan in Model.Plans)
+                    {
+                        var inputId = $"plan-{plan.Code}";
+                        <label class="subscription-plan-choice @(Model.PlanCode == plan.Code ? "is-selected" : "")" for="@inputId">
+                            <input id="@inputId" type="radio" asp-for="PlanCode" value="@plan.Code" />
+                            <span>@plan.Name</span>
+                            <strong>@plan.PriceText</strong>
+                            <small>@plan.DurationText، النظام كامل واستخدام مفتوح</small>
+                        </label>
+                    }
+                </div>
+                <span asp-validation-for="PlanCode" class="field-validation-error"></span>
+            </div>
+
+            <div class="subscription-form-section">
+                <h2>بيانات الجهة أو الموقع</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="CompanyName" class="form-label"></label>
+                        <input asp-for="CompanyName" class="form-control" />
+                        <span asp-validation-for="CompanyName" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="TenantId" class="form-label"></label>
+                        <input asp-for="TenantId" class="form-control" dir="ltr" placeholder="company-name" />
+                        <div class="form-text">سيكون رابط الدخول بهذا الشكل: /o/company-name</div>
+                        <span asp-validation-for="TenantId" class="field-validation-error"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subscription-form-section">
+                <h2>مسؤول الحساب</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="OwnerFullName" class="form-label"></label>
+                        <input asp-for="OwnerFullName" class="form-control" />
+                        <span asp-validation-for="OwnerFullName" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="OwnerUsername" class="form-label"></label>
+                        <input asp-for="OwnerUsername" class="form-control" inputmode="numeric" maxlength="10" />
+                        <span asp-validation-for="OwnerUsername" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="OwnerPhoneNumber" class="form-label"></label>
+                        <input asp-for="OwnerPhoneNumber" class="form-control" inputmode="tel" />
+                        <span asp-validation-for="OwnerPhoneNumber" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="OwnerEmail" class="form-label"></label>
+                        <input asp-for="OwnerEmail" class="form-control" dir="ltr" />
+                        <span asp-validation-for="OwnerEmail" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" class="form-control" />
+                        <span asp-validation-for="Password" class="field-validation-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ConfirmPassword" class="form-label"></label>
+                        <input asp-for="ConfirmPassword" class="form-control" />
+                        <span asp-validation-for="ConfirmPassword" class="field-validation-error"></span>
+                    </div>
+                </div>
+            </div>
+
+            <label class="subscription-policy-check">
+                <input asp-for="AcceptPolicy" />
+                <span>أوافق على أن الحساب لن يتم تفعيله إلا بعد تأكيد الدفع، وأن الاشتراك قابل للإيقاف عند انتهاء المدة أو فشل السداد.</span>
+            </label>
+            <span asp-validation-for="AcceptPolicy" class="field-validation-error"></span>
+
+            <button type="submit" class="btn btn-primary login-submit-button">إنشاء الحساب والمتابعة للدفع</button>
+        </form>
+    </section>
+</main>
+
+@{
+    var cspScriptNonce = Context.Items["CspScriptNonce"] as string;
+}
+<script nonce="@cspScriptNonce">
+    (() => {
+        const numericInputs = document.querySelectorAll('#OwnerUsername');
+        numericInputs.forEach((input) => {
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/\D/g, '').slice(0, 10);
+            });
+        });
+    })();
+</script>

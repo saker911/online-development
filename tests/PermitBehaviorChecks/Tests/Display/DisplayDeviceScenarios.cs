@@ -165,16 +165,16 @@ internal static partial class ScenarioCatalog
             "unified display settings page should return a display settings model"
         );
         Require(
-            string.Equals(model!.DisplayAccessKey, oldKey, StringComparison.Ordinal),
-            "display settings page should read DisplayAccessKey from AdministrationSettings"
+            string.IsNullOrWhiteSpace(model!.DisplayAccessKey),
+            "display settings page should not expose the stored setup key"
         );
         Require(
-            model.RegistrationUrl.Contains(Uri.EscapeDataString(oldKey), StringComparison.Ordinal)
+            !model.RegistrationUrl.Contains(Uri.EscapeDataString(oldKey), StringComparison.Ordinal)
                 && model.GateDisplayUrl.StartsWith(
                     "http://127.0.0.1:5001",
                     StringComparison.Ordinal
                 ),
-            "display settings page should build display links from DisplayBaseUrl and the current setup key"
+            "display settings page should build links without exposing the stored setup key"
         );
 
         var oldLink = model.RegistrationUrl;
@@ -205,12 +205,11 @@ internal static partial class ScenarioCatalog
         displayService.UpdateSetupKey(newKey);
         displayService.InvalidateDeviceTrust("tester");
         Require(
-            string.Equals(
+            DisplayAccessKeyHasher.Verify(
                 userAdminService.GetAdministrationSettings().DisplayAccessKey,
-                newKey,
-                StringComparison.Ordinal
+                newKey
             ),
-            "setup key updates should persist to AdministrationSettings.DisplayAccessKey"
+            "setup key updates should persist a verifiable hash"
         );
         Require(
             displayService.RegisterRequest(
@@ -247,12 +246,12 @@ internal static partial class ScenarioCatalog
         var newModel = newView?.Model as DisplaySettingsViewModel;
         Require(
             newModel != null
-                && !string.Equals(newModel.RegistrationUrl, oldLink, StringComparison.Ordinal)
-                && newModel.RegistrationUrl.Contains(
+                && string.Equals(newModel.RegistrationUrl, oldLink, StringComparison.Ordinal)
+                && !newModel.RegistrationUrl.Contains(
                     Uri.EscapeDataString(newKey),
                     StringComparison.Ordinal
                 ),
-            "display registration link should change immediately when DisplayAccessKey changes"
+            "display registration link should never expose a persisted setup key"
         );
 
         return Task.CompletedTask;

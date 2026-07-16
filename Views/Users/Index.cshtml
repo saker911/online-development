@@ -10,6 +10,7 @@
     var currentUsername = User.Identity?.Name ?? string.Empty;
     var recentActivityCount = Model.RecentActivities.Count;
     var canOpenLeadershipCenter = User.HasPermission(AppPermissions.ManageDepartments);
+    var canViewTenantScope = User.IsSuperAdmin();
     var canViewAuditLogs = User.IsSuperAdmin() || User.IsInRole(AppRoles.GeneralManager) ||
 User.IsInRole(AppRoles.DepartmentManager) ||
 User.IsInRole(AppRoles.SystemAdmin);
@@ -156,7 +157,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                     </div>
                     <div class="users-inline-actions users-inline-actions-grow">
                         <input type="search" class="form-control form-control-sm" id="users-table-search"
-                               placeholder="ابحث بالاسم أو المعرف الداخلي أو القسم" />
+                               placeholder="ابحث بالاسم أو المعرف الداخلي أو القسم أو الجهة" />
                         <select class="form-select form-select-sm" id="users-role-filter">
                             <option value="">كل الأدوار</option>
                             @foreach (var role in Model.Users
@@ -228,6 +229,12 @@ User.IsInRole(AppRoles.SystemAdmin);
                                     )
                                         ? resolvedManagedDepartmentId
                                         : 0;
+                                    var tenantDisplayName = Model.TenantNamesById.TryGetValue(
+                                        user.TenantId,
+                                        out var resolvedTenantName
+                                    )
+                                        ? resolvedTenantName
+                                        : user.TenantId;
                                     var isDepartmentManagerWithoutManagedDepartment = string.Equals(
                                         user.Role,
                                         AppRoles.DepartmentManager,
@@ -236,7 +243,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                                     var accessPreviewPermissions = grantedPermissions.Take(2).ToList();
                                     var accessRemainingCount = Math.Max(0, grantedPermissions.Count - accessPreviewPermissions.Count);
                                     var rowSearch = string.Join(' ', new[] { user.Username, userPrimaryName, userSecondaryName,
-                    user.Department, user.JobTitle, roleDisplay }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                    user.Department, user.JobTitle, roleDisplay, tenantDisplayName }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
                                     <tr data-user-row="true" data-role="@roleDisplay"
                                         data-status="@(user.IsActive ? "active" : "inactive")"
@@ -263,6 +270,10 @@ User.IsInRole(AppRoles.SystemAdmin);
                                             <div class="users-org-cell">
                                                 <strong>@(string.IsNullOrWhiteSpace(user.Department) ? "بدون قسم" :
                                                                                                                                                                                                                                                                                                                                                                                                                 user.Department)</strong>
+                                                    @if (canViewTenantScope)
+                                                    {
+                                                        <small>الجهة: @tenantDisplayName</small>
+                                                    }
                                                     @if (!string.IsNullOrWhiteSpace(managedDepartmentName))
                                                     {
                                                         <small>يدير: @managedDepartmentName</small>

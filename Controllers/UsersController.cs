@@ -78,7 +78,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 );
             }
 
-            var existingUser = _userAdminService.GetUserAccount(normalizedUsername);
+            var existingUser = GetManagedUserAccount(normalizedUsername);
             if (existingUser == null)
             {
                 return Json(
@@ -135,7 +135,7 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult WizardReactivate(string username)
         {
             var normalizedUsername = (username ?? string.Empty).Trim();
-            var user = _userAdminService.GetUserAccount(normalizedUsername);
+            var user = GetManagedUserAccount(normalizedUsername);
             if (user == null)
             {
                 return Json(
@@ -154,7 +154,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 );
             }
 
-            var tempPassword = _userAdminService.SetUserActiveStatus(normalizedUsername, true);
+            var tempPassword = _userAdminService.SetUserActiveStatus(
+                normalizedUsername,
+                true,
+                User.IsSuperAdmin()
+            );
             if (string.IsNullOrWhiteSpace(tempPassword))
             {
                 return Json(
@@ -193,6 +197,15 @@ namespace VehiclePermitSystemWeb.Controllers
             PopulateCredentialNoticeViewData();
 
             var users = GetVisibleUsers().ToList();
+            var tenantNamesById = User.IsSuperAdmin()
+                ? _userAdminService
+                    .GetTenants(includeInactive: true)
+                    .ToDictionary(
+                        tenant => tenant.TenantId,
+                        tenant => tenant.Name,
+                        StringComparer.OrdinalIgnoreCase
+                    )
+                : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var managedDepartments = _userAdminService
                 .GetDepartments()
                 .Where(department => !string.IsNullOrWhiteSpace(department.ManagerUsername))
@@ -243,6 +256,7 @@ namespace VehiclePermitSystemWeb.Controllers
                     .ToDictionary(g => g.Key, g => g.Count()),
                 ManagedDepartmentNamesByUsername = managedDepartmentNamesByUsername,
                 ManagedDepartmentIdsByUsername = managedDepartmentIdsByUsername,
+                TenantNamesById = tenantNamesById,
             };
 
             return View(model);
@@ -476,6 +490,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 Role = AppRoles.Receptionist,
                 ApplyRoleDefaults = false,
                 MustChangeOperatorPin = true,
+                TenantId = GetCurrentTenantId(),
             };
 
             var normalizedPresetRole = (presetRole ?? string.Empty).Trim();
@@ -549,6 +564,7 @@ namespace VehiclePermitSystemWeb.Controllers
             ViewData["CreateFlowKey"] = creationFlow ?? string.Empty;
 
             LoadRoleDefaults(model);
+            PopulateTenantOptions(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             return View("Create", model);
@@ -562,8 +578,11 @@ namespace VehiclePermitSystemWeb.Controllers
         )
         {
             NormalizeUserModel(model);
+            ApplyTenantScope(model);
             ModelState.Clear();
             TryValidateModel(model);
+            PopulateTenantOptions(model);
+            ValidateTenantSelection(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             ApplyUsernameValidation(model);
@@ -815,13 +834,14 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View("Create", model);
             }
 
-            var createdGeneralManager = _userAdminService.GetUserAccount(model.Username);
+            var createdGeneralManager = GetManagedUserAccount(model.Username);
             if (createdGeneralManager != null)
             {
                 _userAdminService.UpdateUser(
                     createdGeneralManager,
                     temporaryPassword,
-                    createdGeneralManager.Username
+                    createdGeneralManager.Username,
+                    User.IsSuperAdmin()
                 );
             }
 
@@ -852,7 +872,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return RedirectToAction("Profile", "Account");
             }
 
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null)
             {
                 return NotFound();
@@ -866,8 +886,12 @@ namespace VehiclePermitSystemWeb.Controllers
             var model = MapToViewModel(user);
             if (user.CanScanOperations && string.IsNullOrWhiteSpace(model.OperatorBadgeCode))
             {
-                model.OperatorBadgeCode = _userAdminService.EnsureOperatorBadgeCode(user.Username);
+                model.OperatorBadgeCode = _userAdminService.EnsureOperatorBadgeCode(
+                    user.Username,
+                    ignoreTenantFilters: User.IsSuperAdmin()
+                );
             }
+            PopulateTenantOptions(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             return View(model);
@@ -877,16 +901,19 @@ namespace VehiclePermitSystemWeb.Controllers
         public async Task<IActionResult> Edit(UserEditViewModel model)
         {
             NormalizeUserModel(model);
+            ApplyTenantScope(model);
             var originalUsername = string.IsNullOrWhiteSpace(model.OriginalUsername)
                 ? model.Username
                 : model.OriginalUsername;
-            var existingUser = _userAdminService.GetUserAccount(originalUsername);
+            var existingUser = GetManagedUserAccount(originalUsername);
             if (existingUser != null && !CanManageUser(existingUser))
             {
                 return RedirectProtectedSuperAdminAccess();
             }
             ModelState.Clear();
             TryValidateModel(model);
+            PopulateTenantOptions(model);
+            ValidateTenantSelection(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             ApplyUsernameValidation(model);
@@ -949,7 +976,8 @@ namespace VehiclePermitSystemWeb.Controllers
             var updateResult = _userAdminService.UpdateUser(
                 MapToUser(model),
                 model.NewPassword,
-                originalUsername
+                originalUsername,
+                User.IsSuperAdmin()
             );
             if (!updateResult)
             {
@@ -1002,7 +1030,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [SupportedOSPlatform("windows")]
         public IActionResult OperatorBadge(string id)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null || string.IsNullOrWhiteSpace(user.OperatorBadgeCode))
             {
                 return NotFound();
@@ -1019,7 +1047,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         public IActionResult PrintOperatorBadge(string id)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null || string.IsNullOrWhiteSpace(user.OperatorBadgeCode))
             {
                 return NotFound();
@@ -1036,7 +1064,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [SupportedOSPlatform("windows")]
         public IActionResult UserBadge(string id)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null)
             {
                 return NotFound();
@@ -1053,7 +1081,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         public IActionResult PrintUserBadge(string id)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null)
             {
                 return NotFound();
@@ -1071,7 +1099,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult ResetTemporaryPassword(string id)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null)
             {
                 QueueToastError("تعذر العثور على المستخدم المطلوب.");
@@ -1092,7 +1120,12 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var temporaryPassword = UserAccountService.GenerateTemporaryPassword();
-            var updated = _userAdminService.UpdateUser(user, temporaryPassword);
+            var updated = _userAdminService.UpdateUser(
+                user,
+                temporaryPassword,
+                user.Username,
+                User.IsSuperAdmin()
+            );
             if (!updated)
             {
                 QueueToastError("تعذر إعادة تعيين كلمة المرور المؤقتة لهذا المستخدم.");
@@ -1125,7 +1158,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult ResetTemporaryOperatorPin(string id)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user == null)
             {
                 QueueToastError("تعذر العثور على المستخدم المطلوب.");
@@ -1145,14 +1178,16 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var badgeCode = _userAdminService.EnsureOperatorBadgeCode(
                 user.Username,
-                user.OperatorBadgeCode
+                user.OperatorBadgeCode,
+                User.IsSuperAdmin()
             );
             var generatedTemporaryPin = UserAccountService.GenerateTemporaryOperatorPin();
             var temporaryPin = _userAdminService.ConfigureOperatorCredentials(
                 user.Username,
                 badgeCode,
                 generatedTemporaryPin,
-                true
+                true,
+                User.IsSuperAdmin()
             );
 
             if (string.IsNullOrWhiteSpace(temporaryPin))
@@ -1199,7 +1234,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var targetUser = _userAdminService.GetUserAccount(id);
+            var targetUser = GetManagedUserAccount(id);
             if (targetUser?.IsSuperAdmin == true)
             {
                 QueueToastError("لا يمكن إيقاف حساب مالك النظام.");
@@ -1218,7 +1253,7 @@ namespace VehiclePermitSystemWeb.Controllers
             if (managedDepartment != null)
             {
                 var managedDepartmentName = managedDepartment.Name;
-                var managedUserName = _userAdminService.GetUserAccount(id)?.DisplayName ?? id;
+                var managedUserName = GetManagedUserAccount(id)?.DisplayName ?? id;
                 QueueToastWarning(
                     $"لا يمكن إيقاف {managedUserName} لأنه المدير الحالي لقسم {managedDepartmentName}. عيّن بديلًا أولًا ثم أعد محاولة الإيقاف."
                 );
@@ -1240,10 +1275,11 @@ namespace VehiclePermitSystemWeb.Controllers
         )
         {
             NormalizeUserModel(model);
+            ApplyTenantScope(model);
             var originalUsername = string.IsNullOrWhiteSpace(model.OriginalUsername)
                 ? model.Username
                 : model.OriginalUsername;
-            var existingUser = _userAdminService.GetUserAccount(originalUsername);
+            var existingUser = GetManagedUserAccount(originalUsername);
             var isCreateFlow =
                 string.IsNullOrWhiteSpace(model.OriginalUsername) && existingUser == null;
             if (existingUser != null && !CanManageUser(existingUser))
@@ -1252,6 +1288,8 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             ValidateManagedUserSubmission(model);
+            PopulateTenantOptions(model);
+            ValidateTenantSelection(model);
 
             if (!ModelState.IsValid)
             {
@@ -1288,6 +1326,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 LoadRoleDefaults(model);
             }
 
+            PopulateTenantOptions(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             if (isCreateFlow)
@@ -1437,6 +1476,9 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 Username = user.Username,
                 OriginalUsername = user.Username,
+                TenantId = string.IsNullOrWhiteSpace(user.TenantId)
+                    ? TenantDefaults.DefaultTenantId
+                    : user.TenantId,
                 FullName = string.IsNullOrWhiteSpace(user.FullName)
                     ? user.DisplayName
                     : user.FullName,
@@ -1490,6 +1532,9 @@ namespace VehiclePermitSystemWeb.Controllers
             var user = new UserAccount
             {
                 Username = (model.Username ?? string.Empty).Trim(),
+                TenantId = string.IsNullOrWhiteSpace(model.TenantId)
+                    ? TenantDefaults.DefaultTenantId
+                    : model.TenantId.Trim(),
                 DisplayName = fullName,
                 FullName = fullName,
                 Department =
@@ -1553,6 +1598,7 @@ namespace VehiclePermitSystemWeb.Controllers
             model.Email = (model.Email ?? string.Empty).Trim();
             model.EmployeeNumber = (model.EmployeeNumber ?? string.Empty).Trim();
             model.Department = (model.Department ?? string.Empty).Trim();
+            model.TenantId = (model.TenantId ?? string.Empty).Trim();
             model.JobTitle = (model.JobTitle ?? string.Empty).Trim();
             model.PhoneNumber = (model.PhoneNumber ?? string.Empty).Trim();
             model.ManagerUsername = (model.ManagerUsername ?? string.Empty).Trim();
@@ -1622,7 +1668,7 @@ namespace VehiclePermitSystemWeb.Controllers
             ).Trim();
             var currentGeneralManager = string.IsNullOrWhiteSpace(currentGeneralManagerUsername)
                 ? null
-                : _userAdminService.GetUserAccount(currentGeneralManagerUsername);
+                : GetManagedUserAccount(currentGeneralManagerUsername);
 
             ViewData["GeneralManagerAdministrationName"] = string.IsNullOrWhiteSpace(
                 administrationSettings.DepartmentName
@@ -1707,13 +1753,15 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var badgeCode = _userAdminService.EnsureOperatorBadgeCode(
                 model.Username,
-                model.OperatorBadgeCode
+                model.OperatorBadgeCode,
+                User.IsSuperAdmin()
             );
             var temporaryPin = _userAdminService.ConfigureOperatorCredentials(
                 model.Username,
                 badgeCode,
                 model.TemporaryOperatorPin,
-                model.MustChangeOperatorPin
+                model.MustChangeOperatorPin,
+                User.IsSuperAdmin()
             );
 
             return (badgeCode, temporaryPin);
@@ -1804,7 +1852,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private IActionResult SetUserActiveState(string id, bool isActive)
         {
-            var user = _userAdminService.GetUserAccount(id);
+            var user = GetManagedUserAccount(id);
             if (user != null && !CanManageUser(user))
             {
                 return RedirectProtectedSuperAdminAccess();
@@ -1816,7 +1864,10 @@ namespace VehiclePermitSystemWeb.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var result = user != null ? _userAdminService.SetUserActiveStatus(id, isActive) : null;
+            var result =
+                user != null
+                    ? _userAdminService.SetUserActiveStatus(id, isActive, User.IsSuperAdmin())
+                    : null;
             if (result != null)
             {
                 _userAdminService.RecordUserActivity(
@@ -1916,8 +1967,71 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private IEnumerable<UserAccount> GetVisibleUsers()
         {
-            var users = _userAdminService.GetAllUsers();
+            var users = _userAdminService.GetAllUsers(User.IsSuperAdmin());
             return User.IsSuperAdmin() ? users : users.Where(user => !user.IsSuperAdmin);
+        }
+
+        private UserAccount? GetManagedUserAccount(string username)
+        {
+            return _userAdminService.GetUserAccount(username, User.IsSuperAdmin());
+        }
+
+        private string GetCurrentTenantId()
+        {
+            var tenantId = User.FindFirst(AppClaimTypes.TenantId)?.Value;
+            return string.IsNullOrWhiteSpace(tenantId)
+                ? TenantDefaults.DefaultTenantId
+                : tenantId.Trim();
+        }
+
+        private void ApplyTenantScope(UserEditViewModel model)
+        {
+            model.CanChooseTenant = User.IsSuperAdmin();
+            model.TenantId = string.IsNullOrWhiteSpace(model.TenantId)
+                ? GetCurrentTenantId()
+                : model.TenantId.Trim();
+
+            if (!User.IsSuperAdmin())
+            {
+                model.TenantId = GetCurrentTenantId();
+            }
+        }
+
+        private void PopulateTenantOptions(UserEditViewModel model)
+        {
+            ApplyTenantScope(model);
+            model.TenantOptions = _userAdminService
+                .GetTenants(includeInactive: User.IsSuperAdmin())
+                .Select(tenant => new UserTenantOptionViewModel
+                {
+                    TenantId = tenant.TenantId,
+                    Name = tenant.Name,
+                    IsActive = tenant.IsActive,
+                })
+                .ToList();
+        }
+
+        private void ValidateTenantSelection(UserEditViewModel model)
+        {
+            if (!User.IsSuperAdmin())
+            {
+                return;
+            }
+
+            var selectedTenant = model.TenantOptions.FirstOrDefault(tenant =>
+                string.Equals(tenant.TenantId, model.TenantId, StringComparison.OrdinalIgnoreCase)
+            );
+            if (selectedTenant == null)
+            {
+                ModelState.AddModelError(nameof(model.TenantId), "يرجى اختيار جهة صحيحة.");
+            }
+            else if (!selectedTenant.IsActive)
+            {
+                ModelState.AddModelError(
+                    nameof(model.TenantId),
+                    "لا يمكن ربط المستخدم بجهة موقوفة."
+                );
+            }
         }
 
         private IEnumerable<UserActivity> FilterProtectedActivities(
@@ -1930,7 +2044,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var protectedUsernames = _userAdminService
-                .GetAllUsers()
+                .GetAllUsers(User.IsSuperAdmin())
                 .Where(user => user.IsSuperAdmin)
                 .Select(user => user.Username)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);

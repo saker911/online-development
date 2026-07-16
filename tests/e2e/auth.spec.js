@@ -129,11 +129,38 @@ test("initial setup creates owner", async ({ page }) => {
 test("owner can sign in normally and open home page", async ({ page }) => {
   await completeInitialSetup(page);
 
-  await page.goto("/Account/Logout");
+  await page.locator('form[action*="/Account/Logout"]').evaluate((form) => form.requestSubmit());
   await expect(page).toHaveURL(/\/Account\/Login/i);
 
   await signInAsOwner(page);
   await expectHomePage(page);
+});
+
+test("tenant platform link and mobile PWA entry are ready", async ({ page }) => {
+  await completeInitialSetup(page);
+  await page.context().clearCookies();
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const response = await page.goto("/o/default", { waitUntil: "networkidle" });
+  expect(response.status()).toBe(200);
+  await expect(page.getByRole("heading", { name: "الدخول إلى الجهة الافتراضية" })).toBeVisible();
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/manifest.webmanifest");
+
+  const layoutWidth = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+  }));
+  expect(layoutWidth.document).toBeLessThanOrEqual(layoutWidth.viewport);
+
+  const unknownTenantResponse = await page.request.get("/o/not-a-real-tenant");
+  expect(unknownTenantResponse.status()).toBe(404);
+
+  const manifestResponse = await page.request.get("/manifest.webmanifest");
+  expect(manifestResponse.status()).toBe(200);
+  const manifest = await manifestResponse.json();
+  expect(manifest.display).toBe("standalone");
+  expect(manifest.icons.some((icon) => icon.sizes === "192x192")).toBeTruthy();
+  expect(manifest.icons.some((icon) => icon.sizes === "512x512")).toBeTruthy();
 });
 
 test("owner can open administration backup page", async ({ page }) => {

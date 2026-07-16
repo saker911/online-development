@@ -6,43 +6,64 @@
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "login-page-body";
     var submittedUsername = ViewData["SubmittedUsername"] as string ?? string.Empty;
+    var tenant = ViewData["Tenant"] as string ?? Context.Request.Query["tenant"].FirstOrDefault() ?? string.Empty;
+    var tenantName = ViewData["TenantName"] as string ?? string.Empty;
     var administrationSettings = UserAdminService.GetAdministrationSettings();
     var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
     var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
 }
 
-<div class="login-page-shell">
-    <div class="login-page-overlay"></div>
-
-    <section class="login-page-card">
-        <img src="~/@organizationLogoPath" alt="" class="login-page-watermark" />
-        <div class="login-page-brand-row">
-            <img src="~/@organizationLogoPath" alt="شعار @organizationName" class="login-page-logo" />
-            <div>
-                <div class="login-page-kicker">نظام التصاريح</div>
-                <div class="login-page-brand-name">@organizationName</div>
-            </div>
+<div class="login-page-shell login-page-shell-light">
+    <header class="login-page-topbar">
+        <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
+            <img src="~/@organizationLogoPath" alt="" />
+            <span>
+                <strong>منصة التصاريح</strong>
+                <small>@organizationName</small>
+            </span>
+        </a>
+        <div class="login-page-topbar-actions">
+            @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+            <a asp-controller="Home" asp-action="Index" class="login-back-link">العودة للرئيسية</a>
         </div>
-        <h1 class="login-page-title">تسجيل الدخول</h1>
-        <p class="login-page-subtitle">الدخول إلى نظام إدارة تصاريح المركبات والزيارات من بوابة آمنة بتصميم موحّد مع
-            بيئة النظام.</p>
+    </header>
 
-            <form method="post" asp-controller="Account" asp-action="Login" class="login-form-grid">
-                @Html.AntiForgeryToken()
-                <div class="login-field">
-                    <label for="login-username" class="form-label">اسم المستخدم</label>
-                      <input id="login-username" name="username" class="form-control" autocomplete="username" inputmode="numeric"
-                          pattern="[12][0-9]{9}" minlength="10" maxlength="10" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2"
-                          value="@submittedUsername" />
+    <section class="login-page-card login-page-card-light">
+        <h1 class="login-page-title">@(string.IsNullOrWhiteSpace(tenantName) ? "تسجيل الدخول" : $"الدخول إلى {tenantName}")</h1>
+        <p class="login-page-subtitle">ادخل إلى حساب جهتك وتابع التصاريح والزيارات والبوابات.</p>
+
+        @await Html.PartialAsync(
+            "~/Views/Subscription/_SocialSignupActions.cshtml",
+            new ExternalAuthActionsViewModel { Mode = "Login", Tenant = tenant }
+        )
+
+        <form method="post" asp-controller="Account" asp-action="Login" class="login-form-grid">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="tenant" value="@tenant" />
+            <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] as string ?? string.Empty)" />
+            <div class="login-field">
+                <label for="login-username" class="form-label">اسم المستخدم</label>
+                <input id="login-username" name="username" class="form-control" autocomplete="username" inputmode="numeric"
+                       pattern="[12][0-9]{9}" minlength="10" maxlength="10"
+                       title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" value="@submittedUsername" />
+            </div>
+            <div class="login-field">
+                <label for="login-password" class="form-label">كلمة المرور</label>
+                <div class="login-password-control">
+                    <input id="login-password" name="password" type="password" class="form-control"
+                           autocomplete="current-password" />
+                    <button type="button" class="login-password-toggle" aria-controls="login-password"
+                            aria-pressed="false">إظهار</button>
                 </div>
-                <div class="login-field">
-                    <label for="login-password" class="form-label">كلمة المرور</label>
-                    <input id="login-password" name="password" type="password" class="form-control" autocomplete="current-password" />
-                </div>
-                <button class="btn btn-primary login-submit-button" type="submit">دخول</button>
-            </form>
-        </section>
-    </div>
+            </div>
+            <button class="btn btn-primary login-submit-button" type="submit">تسجيل الدخول</button>
+            <div class="login-secondary-action">
+                <span>ليس لديك حساب؟</span>
+                <a asp-controller="Subscription" asp-action="Plans">إنشاء حساب واختيار باقة</a>
+            </div>
+        </form>
+    </section>
+</div>
 
 @{
     var cspScriptNonce = Context.Items["CspScriptNonce"] as string;
@@ -50,12 +71,18 @@
 <script nonce="@cspScriptNonce">
     (() => {
         const usernameInput = document.getElementById('login-username');
-        if (!usernameInput) {
-            return;
-        }
+        const passwordInput = document.getElementById('login-password');
+        const passwordToggle = document.querySelector('.login-password-toggle');
 
-        usernameInput.addEventListener('input', () => {
+        usernameInput?.addEventListener('input', () => {
             usernameInput.value = usernameInput.value.replace(/\D/g, '').slice(0, 10);
+        });
+
+        passwordToggle?.addEventListener('click', () => {
+            const showPassword = passwordInput.type === 'password';
+            passwordInput.type = showPassword ? 'text' : 'password';
+            passwordToggle.textContent = showPassword ? 'إخفاء' : 'إظهار';
+            passwordToggle.setAttribute('aria-pressed', showPassword ? 'true' : 'false');
         });
     })();
 </script>

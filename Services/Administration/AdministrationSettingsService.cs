@@ -24,15 +24,19 @@ namespace VehiclePermitSystemWeb.Services.Administration
             int id
         )
         {
-            return db.AdministrationSettings.FirstOrDefault(settings => settings.Id == id);
+            return db
+                .AdministrationSettings.OrderByDescending(settings => settings.Id == id)
+                .ThenBy(settings => settings.Id)
+                .FirstOrDefault();
         }
 
         public static AdministrationSettings BuildDefaultAdministrationSettings()
         {
             return new AdministrationSettings
             {
-                Id = 1,
-                DisplayAccessKey = DisplayAccessDefaults.CreateAccessKey(),
+                DisplayAccessKey = DisplayAccessKeyHasher.Hash(
+                    DisplayAccessDefaults.CreateAccessKey()
+                ),
             };
         }
 
@@ -43,6 +47,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             return new AdministrationSettings
             {
                 Id = settings.Id,
+                TenantId = settings.TenantId,
                 IsInitialSetupCompleted = settings.IsInitialSetupCompleted,
                 OrganizationName = settings.OrganizationName,
                 DepartmentName = settings.DepartmentName,
@@ -86,8 +91,8 @@ namespace VehiclePermitSystemWeb.Services.Administration
             settings.DisplayAccessKey =
                 string.IsNullOrWhiteSpace(settings.DisplayAccessKey)
                 || DisplayAccessDefaults.LooksLikePlaceholder(settings.DisplayAccessKey)
-                    ? DisplayAccessDefaults.CreateAccessKey()
-                    : settings.DisplayAccessKey.Trim();
+                    ? DisplayAccessKeyHasher.Hash(DisplayAccessDefaults.CreateAccessKey())
+                    : DisplayAccessKeyHasher.Hash(settings.DisplayAccessKey.Trim());
             settings.AllowedClientIpRanges = (
                 settings.AllowedClientIpRanges ?? string.Empty
             ).Trim();

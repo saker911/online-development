@@ -251,7 +251,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private IEnumerable<UserAccount> GetVisibleUsers()
         {
-            var users = _userAdminService.GetAllUsers();
+            var users = _userAdminService.GetAllUsers(User.IsSuperAdmin());
             return User.IsSuperAdmin() ? users : users.Where(user => !user.IsSuperAdmin);
         }
 
@@ -263,7 +263,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var protectedUsernames = _userAdminService
-                .GetAllUsers()
+                .GetAllUsers(User.IsSuperAdmin())
                 .Where(user => user.IsSuperAdmin)
                 .Select(user => user.Username)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);

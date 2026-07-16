@@ -170,10 +170,14 @@ namespace VehiclePermitSystemWeb.Services.Users
         public static string EnsureOperatorBadgeCode(
             ApplicationDbContext db,
             string username,
-            string? preferredBadgeCode = null
+            string? preferredBadgeCode = null,
+            bool ignoreTenantFilters = false
         )
         {
-            var existing = db.UserAccounts.FirstOrDefault(u => u.Username == username);
+            var userAccounts = ignoreTenantFilters
+                ? db.UserAccounts.IgnoreQueryFilters()
+                : db.UserAccounts;
+            var existing = userAccounts.FirstOrDefault(u => u.Username == username);
             if (existing == null)
             {
                 return string.Empty;
@@ -191,7 +195,7 @@ namespace VehiclePermitSystemWeb.Services.Users
             }
 
             desiredCode = EnsureUniqueOperatorBadgeCode(
-                db.UserAccounts.AsNoTracking().ToList(),
+                userAccounts.AsNoTracking().ToList(),
                 existing.Username,
                 desiredCode
             );
@@ -209,17 +213,21 @@ namespace VehiclePermitSystemWeb.Services.Users
             string username,
             string badgeCode,
             string? temporaryPin,
-            bool requirePinChange
+            bool requirePinChange,
+            bool ignoreTenantFilters = false
         )
         {
-            var existing = db.UserAccounts.FirstOrDefault(u => u.Username == username);
+            var userAccounts = ignoreTenantFilters
+                ? db.UserAccounts.IgnoreQueryFilters()
+                : db.UserAccounts;
+            var existing = userAccounts.FirstOrDefault(u => u.Username == username);
             if (existing == null)
             {
                 return null;
             }
 
             var normalizedBadge = EnsureUniqueOperatorBadgeCode(
-                db.UserAccounts.AsNoTracking().ToList(),
+                userAccounts.AsNoTracking().ToList(),
                 existing.Username,
                 string.IsNullOrWhiteSpace(badgeCode)
                     ? BuildDefaultOperatorBadgeCode(existing.Username)
@@ -349,6 +357,11 @@ namespace VehiclePermitSystemWeb.Services.Users
                 return false;
             }
 
+            if (!IsCurrentTenantAvailableForLogin(db))
+            {
+                return false;
+            }
+
             var user = db.UserAccounts.FirstOrDefault(u => u.Username == username);
             if (user == null || !user.IsActive)
             {
@@ -373,6 +386,39 @@ namespace VehiclePermitSystemWeb.Services.Users
             displayName = user.DisplayName;
             role = user.Role;
             return true;
+        }
+
+        private static bool IsCurrentTenantAvailableForLogin(ApplicationDbContext db)
+        {
+            var tenant = db.Tenants.AsNoTracking().FirstOrDefault(item =>
+                item.TenantId == db.CurrentTenantId
+            );
+            if (tenant == null || !tenant.IsActive)
+            {
+                return false;
+            }
+
+            var status = TenantSubscriptionStatuses.Normalize(tenant.SubscriptionStatus);
+            if (
+                string.Equals(status, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal)
+                || string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
+                || string.Equals(status, TenantSubscriptionStatuses.Expired, StringComparison.Ordinal)
+            )
+            {
+                return false;
+            }
+
+            var now = DateTime.UtcNow;
+            if (
+                string.Equals(status, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal)
+                && tenant.TrialEndsAtUtc.HasValue
+                && tenant.TrialEndsAtUtc.Value < now
+            )
+            {
+                return false;
+            }
+
+            return !tenant.SubscriptionEndsAtUtc.HasValue || tenant.SubscriptionEndsAtUtc.Value >= now;
         }
 
         private static string HashPasswordLegacyCurrent(string password, string salt)

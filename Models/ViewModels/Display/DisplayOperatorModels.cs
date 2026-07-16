@@ -7,6 +7,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Display
         public string BadgeCode { get; set; } = string.Empty;
         public string DeviceId { get; set; } = string.Empty;
         public DateTime SignedInAtUtc { get; set; }
+        public DateTime ExpiresAtUtc { get; set; }
         public bool MustChangePin { get; set; }
     }
 

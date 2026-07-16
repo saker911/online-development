@@ -212,44 +212,17 @@ namespace VehiclePermitSystemWeb.Controllers
                 return false;
             }
 
-            if (!Uri.TryCreate(identifier.Trim(), UriKind.Absolute, out var uri))
+            if (!PermitVerificationUrlParser.TryGetToken(identifier, out var token))
             {
                 return false;
             }
-
-            var token = uri
-                .Query.TrimStart('?')
-                .Split('&', StringSplitOptions.RemoveEmptyEntries)
-                .Select(part => part.Split('=', 2))
-                .FirstOrDefault(part =>
-                    part.Length == 2
-                    && string.Equals(part[0], "token", StringComparison.OrdinalIgnoreCase)
-                )
-                ?[1];
-
-            if (string.IsNullOrWhiteSpace(token))
-            {
-                return false;
-            }
-
-            token = Uri.UnescapeDataString(token.Replace("+", " "));
-            if (
-                !_permitService.TryValidatePermitQrToken(
-                    token,
-                    out var permit,
-                    out var status,
-                    out _
-                )
-                || permit == null
-            )
-            {
-                return false;
-            }
-
-            if (
-                !string.Equals(status, "authorized", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase)
-            )
+            _permitService.TryValidatePermitQrToken(
+                token,
+                out var permit,
+                out _,
+                out _
+            );
+            if (permit == null)
             {
                 return false;
             }

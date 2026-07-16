@@ -35,10 +35,18 @@
     var returnUrl = ViewBag.ReturnUrl as string;
     var focusActions = ViewBag.FocusActions as bool? ?? false;
     var isStopped = string.Equals(Model.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase);
+    var organizationName = ViewData["OrganizationName"] as string ?? "منصة التصاريح";
+    var departmentName = ViewData["DepartmentName"] as string ?? string.Empty;
+    var permitExpiryText = Model.IsVisitorPermit && !Model.ExpiresAt.HasValue
+        ? "حتى نهاية الزيارة"
+        : Model.ExpiresAt.HasValue
+            ? HijriDateFormatter.Format(Model.ExpiresAt)
+            : "غير محدد";
+    var digitalPassUrl = ViewData["DigitalPassUrl"] as string ?? string.Empty;
 }
 
 <div class="row g-4">
-    <div class="col-lg-8">
+    <div class="col-lg-8 permit-details-column">
         <div class="card-permit app-card-surface app-dashboard-surface">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h1 class="h3 mb-0">تفاصيل التصريح @Model.PermitNumber</h1>
@@ -309,20 +317,75 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-4">
-                        <div class="card-permit app-card-surface app-dashboard-surface text-center">
-                            <h2 class="h5 mb-3">QR البوابة</h2>
+                    <div class="col-lg-4 permit-pass-column">
+                        <aside class="permit-digital-pass @(canRenderArtifacts ? "is-active" : "is-pending")" aria-labelledby="permit-pass-title">
+                            <div class="permit-digital-pass__header">
+                                <div>
+                                    <span>@organizationName</span>
+                                    @if (!string.IsNullOrWhiteSpace(departmentName))
+                                    {
+                                        <small>@departmentName</small>
+                                    }
+                                </div>
+                                <span class="permit-digital-pass__status">الحالة: @(canRenderArtifacts ? "فعال" : Model.ApprovalStatusDisplay)</span>
+                            </div>
+
+                            <div class="permit-digital-pass__title">
+                                <span>تصريح دخول رقمي</span>
+                                <h2 id="permit-pass-title">حامل التصريح: @Model.DriverName</h2>
+                                <small>@Model.PermitTypeDisplay</small>
+                            </div>
+
                             @if (canRenderArtifacts)
                             {
-                                <img src="@Url.Action("Barcode", "Permits", new { id = Model.PermitNumber })" alt="QR" class="qr-img mb-3" />
-                                <div class="text-muted-ar mb-2">استخدم هذا الرمز عند البوابة. يقرأ من الشاشة مباشرة ويمثل الرمز العام
-                                    @Model.PublicPermitCode.
-                                </div>
+                                <a class="permit-digital-pass__qr" href="@Url.Action("Qr", "Permits", new { id = Model.PermitNumber })"
+                                   target="_blank" aria-label="فتح رمز التصريح بالحجم الكامل">
+                                    <img src="@Url.Action("Qr", "Permits", new { id = Model.PermitNumber })"
+                                         alt="رمز QR الآمن للتصريح @Model.PublicPermitCode" />
+                                </a>
+                                <div class="permit-digital-pass__scan-label">جاهز للمسح عند البوابة</div>
                             }
                             else
                             {
-                                <div class="text-muted-ar">ستظهر رموز التحقق بعد اعتماد التصريح.</div>
+                                <div class="permit-digital-pass__placeholder">
+                                    يظهر رمز الدخول بعد اعتماد التصريح
+                                </div>
                             }
-                        </div>
+
+                            <dl class="permit-digital-pass__meta">
+                                <div>
+                                    <dt>رمز التصريح</dt>
+                                    <dd dir="ltr">@Model.PublicPermitCode</dd>
+                                </div>
+                                <div>
+                                    <dt>الصلاحية</dt>
+                                    <dd class="date-text">@permitExpiryText</dd>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(Model.PlateNumberDisplay))
+                                {
+                                    <div>
+                                        <dt>اللوحة</dt>
+                                        <dd>@Model.PlateNumberDisplay</dd>
+                                    </div>
+                                }
+                            </dl>
+                            @if (canRenderArtifacts && !string.IsNullOrWhiteSpace(digitalPassUrl))
+                            {
+                                <div class="permit-digital-pass__actions">
+                                    <a href="@digitalPassUrl" class="btn btn-light" target="_blank" rel="noopener">
+                                        فتح بطاقة المستفيد
+                                    </a>
+                                    <button type="button" class="btn btn-outline-light" data-share-permit
+                                            data-share-url="@digitalPassUrl" data-share-title="تصريح @organizationName">
+                                        مشاركة الرابط
+                                    </button>
+                                </div>
+                                <div class="permit-digital-pass__share-status" data-share-status role="status" aria-live="polite"></div>
+                            }
+                        </aside>
                     </div>
                 </div>
+
+@section Scripts {
+    <script src="~/js/permit-pass.js" asp-append-version="true"></script>
+}

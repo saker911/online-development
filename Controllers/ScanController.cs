@@ -221,8 +221,8 @@ namespace VehiclePermitSystemWeb.Controllers
                                 hostName = visit.SubjectDisplay,
                                 visitedPersonName = visit.SubjectDisplay,
                                 visitedPersonType = visit.VisitedPersonTypeDisplay,
-                                nationalId = visit.NationalId,
-                                phoneNumber = visit.PhoneNumber,
+                                nationalId = MaskSensitiveValue(visit.NationalId, 4),
+                                phoneNumber = MaskSensitiveValue(visit.PhoneNumber, 4),
                             },
                     }
                 );
@@ -256,10 +256,10 @@ namespace VehiclePermitSystemWeb.Controllers
                             departmentName = permit.DepartmentName,
                             locationDisplay = permit.LocationDisplay,
                             subject = permit.Subject,
-                            nationalId = permit.NationalId,
+                            nationalId = MaskSensitiveValue(permit.NationalId, 4),
                             vehicleType = permit.VehicleType,
                             plateNumberDisplay = permit.PlateNumberDisplay,
-                            employeePhone = permit.EmployeePhone,
+                            employeePhone = MaskSensitiveValue(permit.EmployeePhone, 4),
                             permitDateText = permit.PermitDate.HasValue
                                 ? permit.PermitDate.ToString()
                                 : string.Empty,
@@ -403,9 +403,10 @@ namespace VehiclePermitSystemWeb.Controllers
             string defaultExecutionMethod
         )
         {
-            var deviceId =
+            var requestedDeviceId =
                 ReadString(requestBody, "deviceId", "device")
                 ?? Request.Headers.UserAgent.ToString();
+            var deviceId = ResolveScanSessionKey(NormalizeAuditValue(requestedDeviceId, 180));
             var displayOperator = _userAdminService.GetDisplayOperatorSession(deviceId);
             var operatorAccount =
                 displayOperator?.Username
@@ -417,17 +418,39 @@ namespace VehiclePermitSystemWeb.Controllers
                 ?? User.Claims.FirstOrDefault(claim => claim.Type == "DisplayName")?.Value
                 ?? operatorAccount;
 
+            var requestedExecutionMethod = ReadString(
+                requestBody,
+                "executionMethod",
+                "method"
+            );
+            var executionMethod = requestedExecutionMethod switch
+            {
+                "camera" => "camera",
+                "barcode_scanner" => "barcode_scanner",
+                "manual" => "manual",
+                "scan" => "scan",
+                _ => defaultExecutionMethod,
+            };
+
             return new PermitScanAuditContext
             {
-                GateName = ReadString(requestBody, "gateName", "gate", "source") ?? defaultGateName,
-                GateOperatorName = operatorName,
-                GateOperatorAccount = operatorAccount,
+                GateName = NormalizeAuditValue(
+                    ReadString(requestBody, "gateName", "gate", "source") ?? defaultGateName,
+                    128
+                ),
+                GateOperatorName = NormalizeAuditValue(operatorName, 128),
+                GateOperatorAccount = NormalizeAuditValue(operatorAccount, 128),
                 DeviceId = deviceId,
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? string.Empty,
-                ExecutionMethod =
-                    ReadString(requestBody, "executionMethod", "method") ?? defaultExecutionMethod,
+                ExecutionMethod = executionMethod,
                 IsAutomated = false,
             };
+        }
+
+        private static string NormalizeAuditValue(string? value, int maxLength)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            return normalized.Length <= maxLength ? normalized : normalized[..maxLength];
         }
 
         private bool HasScanAccess()
@@ -441,6 +464,32 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return _displayDeviceService.GetApprovedDevice(HttpContext) != null;
+        }
+
+        private string ResolveScanSessionKey(string? clientDeviceId)
+        {
+            if (
+                User.Identity?.IsAuthenticated == true
+                && User.HasPermission(AppPermissions.ScanOperations)
+            )
+            {
+                return $"user:{User.Identity.Name}:{clientDeviceId}";
+            }
+
+            var approvedDevice = _displayDeviceService.GetApprovedDevice(HttpContext);
+            return approvedDevice == null ? string.Empty : $"display-device:{approvedDevice.Id}";
+        }
+
+        private static string MaskSensitiveValue(string? value, int visibleSuffixLength)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return string.Empty;
+            }
+
+            var suffixLength = Math.Min(Math.Max(visibleSuffixLength, 0), normalized.Length);
+            return new string('*', normalized.Length - suffixLength) + normalized[^suffixLength..];
         }
 
         private bool RequiresActiveDisplayOperatorForScan()
@@ -508,39 +557,17 @@ namespace VehiclePermitSystemWeb.Controllers
                 return !string.IsNullOrWhiteSpace(permitCode);
             }
 
-            var token = uri
-                .Query.TrimStart('?')
-                .Split('&', StringSplitOptions.RemoveEmptyEntries)
-                .Select(part => part.Split('=', 2))
-                .FirstOrDefault(part =>
-                    part.Length == 2
-                    && string.Equals(part[0], "token", StringComparison.OrdinalIgnoreCase)
-                )
-                ?[1];
-
-            if (string.IsNullOrWhiteSpace(token))
+            if (!PermitVerificationUrlParser.TryGetToken(identifier, out var token))
             {
                 return false;
             }
-
-            token = Uri.UnescapeDataString(token.Replace("+", " "));
-            if (
-                !_permitService.TryValidatePermitQrToken(
-                    token,
-                    out var permit,
-                    out var status,
-                    out _
-                )
-                || permit == null
-            )
-            {
-                return false;
-            }
-
-            if (
-                !string.Equals(status, "authorized", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase)
-            )
+            _permitService.TryValidatePermitQrToken(
+                token,
+                out var permit,
+                out _,
+                out _
+            );
+            if (permit == null)
             {
                 return false;
             }

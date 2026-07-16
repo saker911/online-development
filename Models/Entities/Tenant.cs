@@ -6,6 +6,47 @@ namespace VehiclePermitSystemWeb.Models.Entities
     {
         public const string DefaultTenantId = "default";
         public const string DefaultTenantName = "الجهة الافتراضية";
+        public const string DefaultSubscriptionStatus = TenantSubscriptionStatuses.Active;
+        public const string DefaultPlanName = "أساسية";
+    }
+
+    public static class TenantSubscriptionStatuses
+    {
+        public const string PendingPayment = "PendingPayment";
+        public const string Trial = "Trial";
+        public const string Active = "Active";
+        public const string Suspended = "Suspended";
+        public const string Expired = "Expired";
+
+        public static readonly IReadOnlyList<string> All =
+        [
+            PendingPayment,
+            Trial,
+            Active,
+            Suspended,
+            Expired,
+        ];
+
+        public static string GetDisplayName(string? status)
+        {
+            return status switch
+            {
+                PendingPayment => "بانتظار الدفع",
+                Trial => "تجريبي",
+                Active => "نشط",
+                Suspended => "موقوف",
+                Expired => "منتهي",
+                _ => "نشط",
+            };
+        }
+
+        public static string Normalize(string? status)
+        {
+            var normalized = (status ?? string.Empty).Trim();
+            return All.Contains(normalized, StringComparer.OrdinalIgnoreCase)
+                ? All.First(item => string.Equals(item, normalized, StringComparison.OrdinalIgnoreCase))
+                : Active;
+        }
     }
 
     public interface ITenantScopedEntity
@@ -28,5 +69,20 @@ namespace VehiclePermitSystemWeb.Models.Entities
 
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+        [Required]
+        [StringLength(32)]
+        public string SubscriptionStatus { get; set; } =
+            TenantDefaults.DefaultSubscriptionStatus;
+
+        [Required]
+        [StringLength(128)]
+        public string PlanName { get; set; } = TenantDefaults.DefaultPlanName;
+
+        public DateTime? TrialEndsAtUtc { get; set; }
+        public DateTime? SubscriptionEndsAtUtc { get; set; }
+        public int? MaxUsers { get; set; }
+        public int? MaxPermitsPerMonth { get; set; }
+        public int? MaxVisitsPerMonth { get; set; }
     }
 }

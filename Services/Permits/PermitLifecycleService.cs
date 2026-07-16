@@ -421,7 +421,11 @@ namespace VehiclePermitSystemWeb.Services.Permits
 
         private static AdministrationSettings GetAdministrationSettings(ApplicationDbContext db)
         {
-            return db.AdministrationSettings.AsNoTracking().SingleOrDefault(x => x.Id == 1)
+            return db
+                    .AdministrationSettings.AsNoTracking()
+                    .OrderByDescending(x => x.Id == 1)
+                    .ThenBy(x => x.Id)
+                    .FirstOrDefault()
                 ?? new AdministrationSettings
                 {
                     WorkStartTime = new TimeOnly(8, 0),

@@ -138,16 +138,21 @@ namespace VehiclePermitSystemWeb.Utilities.Permits
             Permit? permit,
             bool isAuthorized,
             string status,
-            string message
+            string message,
+            AdministrationSettings? administration = null
         )
         {
             var model = new PermitVerificationViewModel
             {
-                Permit = permit,
                 IsValid = permit != null,
                 IsAuthorized = isAuthorized,
                 IsExpired = string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase),
                 Message = message,
+                OrganizationName = administration?.OrganizationName?.Trim() ?? string.Empty,
+                PermitNumber = permit?.PublicPermitCode ?? string.Empty,
+                PermitTypeDisplay = permit?.PermitTypeDisplay ?? string.Empty,
+                PlateNumberDisplay = permit?.PlateNumberDisplay ?? string.Empty,
+                ExpiresAt = permit?.ExpiresAt,
             };
 
             if (isAuthorized)
@@ -167,6 +172,51 @@ namespace VehiclePermitSystemWeb.Utilities.Permits
                 model.Title = "تصريح غير مصرح";
                 model.StatusText = "غير مصرح";
                 model.BadgeClass = "bg-danger";
+            }
+
+            return model;
+        }
+
+        public static PermitDigitalPassViewModel BuildPermitDigitalPassModel(
+            Permit? permit,
+            bool isAuthorized,
+            string status,
+            string message,
+            AdministrationSettings? administration,
+            string qrImageUrl
+        )
+        {
+            var model = new PermitDigitalPassViewModel
+            {
+                IsValid = permit != null,
+                IsAuthorized = isAuthorized,
+                IsExpired = string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase),
+                Message = message,
+                OrganizationName = administration?.OrganizationName?.Trim() ?? string.Empty,
+                DepartmentName = administration?.DepartmentName?.Trim() ?? string.Empty,
+                HolderName = permit?.DriverName ?? string.Empty,
+                PermitNumber = permit?.PublicPermitCode ?? string.Empty,
+                PermitTypeDisplay = permit?.PermitTypeDisplay ?? string.Empty,
+                LocationDisplay = permit?.LocationDisplay ?? string.Empty,
+                PlateNumberDisplay = permit?.PlateNumberDisplay ?? string.Empty,
+                QrImageUrl = isAuthorized ? qrImageUrl : string.Empty,
+                ExpiresAt = permit?.ExpiresAt,
+            };
+
+            if (isAuthorized)
+            {
+                model.Title = "تصريح دخول فعال";
+                model.StatusText = "فعال";
+            }
+            else if (model.IsExpired)
+            {
+                model.Title = "انتهت صلاحية التصريح";
+                model.StatusText = "منتهي";
+            }
+            else
+            {
+                model.Title = permit == null ? "الرابط غير صالح" : "التصريح غير فعال";
+                model.StatusText = "غير مصرح";
             }
 
             return model;

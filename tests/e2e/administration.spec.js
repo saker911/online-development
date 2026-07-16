@@ -77,8 +77,8 @@ test("selected organization name and logo appear across the application shell", 
 
   await page.context().clearCookies();
   await page.goto("/Account/Login");
-  await expect(page.locator(".login-page-brand-name")).toHaveText(organizationName);
-  await expect(page.locator(".login-page-logo")).toHaveAttribute(
+  await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
+  await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",
     /\/uploads\/administration\/logo-.*\.png/i
   );
@@ -91,8 +91,8 @@ test("selected organization name and logo appear across the application shell", 
 
   await page.context().clearCookies();
   await page.goto("/Account/Login");
-  await expect(page.locator(".login-page-brand-name")).toHaveText(organizationName);
-  await expect(page.locator(".login-page-logo")).toHaveAttribute(
+  await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
+  await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",
     /\/images\/organization-placeholder\.svg/i
   );

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using VehiclePermitSystemWeb.Models.Entities;
 
 namespace VehiclePermitSystemWeb.Models.ViewModels.Users
 {
@@ -63,6 +64,13 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
         public string? Department { get; set; }
 
         public List<string> DepartmentOptions { get; set; } = new List<string>();
+
+        [Display(Name = "الجهة")]
+        public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
+
+        public bool CanChooseTenant { get; set; }
+
+        public List<UserTenantOptionViewModel> TenantOptions { get; set; } = new();
 
         public Dictionary<string, string> DepartmentManagerSummaryByName { get; set; } =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -172,5 +180,12 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
                 );
             }
         }
+    }
+
+    public sealed class UserTenantOptionViewModel
+    {
+        public string TenantId { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
     }
 }

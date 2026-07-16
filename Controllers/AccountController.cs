@@ -29,6 +29,7 @@ using VehiclePermitSystemWeb.Services.Management;
 using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
+using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 
@@ -37,6 +38,7 @@ namespace VehiclePermitSystemWeb.Controllers
     public class AccountController : Controller
     {
         private readonly IUserAdminService _userAdminService;
+        private readonly LoginAttemptGuard _loginAttemptGuard;
 
         private IToastNotificationService ToastNotifications =>
             HttpContext.RequestServices.GetRequiredService<IToastNotificationService>();
@@ -46,13 +48,17 @@ namespace VehiclePermitSystemWeb.Controllers
                 VehiclePermitSystemWeb.Services.Common.ISystemClock
             >();
 
-        public AccountController(IUserAdminService userAdminService)
+        public AccountController(
+            IUserAdminService userAdminService,
+            LoginAttemptGuard? loginAttemptGuard = null
+        )
         {
             _userAdminService = userAdminService;
+            _loginAttemptGuard = loginAttemptGuard ?? new LoginAttemptGuard();
         }
 
         [HttpGet]
-        public IActionResult Login(string? returnUrl = null)
+        public IActionResult Login(string? returnUrl = null, string? tenant = null)
         {
             if (_userAdminService.IsInitialSetupRequired())
             {
@@ -67,19 +73,33 @@ namespace VehiclePermitSystemWeb.Controllers
                 ViewData["SubmittedUsername"] = submittedUsername;
             }
 
-            ViewData["ReturnUrl"] = returnUrl;
+            var resolvedTenant = ResolveTenantReference(tenant);
+            if (!string.IsNullOrWhiteSpace(tenant) && resolvedTenant == null)
+            {
+                return NotFound();
+            }
+
+            ConfigureTenantLoginView(resolvedTenant, returnUrl);
             return View();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Logout()
+        [HttpGet("/o/{tenant}")]
+        [AllowAnonymous]
+        public IActionResult TenantEntry(string tenant, string? returnUrl = null)
         {
-            if (User?.Identity?.IsAuthenticated ?? false)
+            if (_userAdminService.IsInitialSetupRequired())
             {
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return RedirectToAction(nameof(InitialSetup));
             }
 
-            return RedirectToAction(nameof(Login));
+            var resolvedTenant = ResolveTenantReference(tenant);
+            if (resolvedTenant == null)
+            {
+                return NotFound();
+            }
+
+            ConfigureTenantLoginView(resolvedTenant, returnUrl);
+            return View(nameof(Login));
         }
 
         [HttpPost]
@@ -87,10 +107,29 @@ namespace VehiclePermitSystemWeb.Controllers
         public async Task<IActionResult> Login(
             string username,
             string password,
+            string? tenant = null,
             string? returnUrl = null
         )
         {
             username = (username ?? string.Empty).Trim();
+            var resolvedTenant = ResolveTenantReference(tenant);
+            if (!string.IsNullOrWhiteSpace(tenant) && resolvedTenant == null)
+            {
+                return NotFound();
+            }
+
+            tenant = resolvedTenant?.TenantId ?? (tenant ?? string.Empty).Trim();
+            ConfigureTenantLoginView(resolvedTenant, returnUrl);
+            var remoteIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+            if (_loginAttemptGuard.IsBlocked(username, tenant, remoteIp, out var retryAfter))
+            {
+                Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                Response.Headers.RetryAfter = Math.Max(1, (int)retryAfter.TotalSeconds).ToString();
+                ViewData["SubmittedUsername"] = username;
+                ToastNotifications.Error("تم إيقاف محاولات الدخول مؤقتًا. حاول بعد 15 دقيقة.");
+                return View();
+            }
 
             if (_userAdminService.IsInitialSetupRequired())
             {
@@ -99,6 +138,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (!IsNationalIdUsername(username))
             {
+                _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
                 ViewData["SubmittedUsername"] = username;
                 ToastNotifications.Error("اسم المستخدم يجب أن يكون 10 أرقام.");
                 return View();
@@ -113,6 +153,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 )
             )
             {
+                _loginAttemptGuard.Reset(username, tenant, remoteIp);
                 var user = _userAdminService.GetUserAccount(username);
                 await SignInUserAsync(user, username, displayName, role);
                 _userAdminService.RecordUserActivity(
@@ -137,8 +178,124 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             ViewData["SubmittedUsername"] = username;
+            ConfigureTenantLoginView(resolvedTenant, returnUrl);
+            _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
             ToastNotifications.Error("اسم المستخدم أو كلمة المرور غير صحيحة");
             return View();
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> ExternalLogin(
+            string provider,
+            string? tenant = null,
+            string? returnUrl = null
+        )
+        {
+            var normalizedProvider = ExternalAuthenticationDefaults.NormalizeProvider(provider);
+            var schemeProvider = HttpContext.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
+            if (
+                normalizedProvider == null
+                || await schemeProvider.GetSchemeAsync(normalizedProvider) == null
+            )
+            {
+                ToastNotifications.Warning(
+                    "خيار الدخول المطلوب غير مفعّل لهذه النسخة. استخدم بيانات الحساب أو فعّل مفاتيح مزود الهوية."
+                );
+                return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+            }
+
+            var callbackUrl = Url.Action(
+                nameof(ExternalLoginCallback),
+                new { tenant, returnUrl }
+            );
+            return Challenge(
+                new AuthenticationProperties { RedirectUri = callbackUrl },
+                normalizedProvider
+            );
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> ExternalLoginCallback(
+            string? tenant = null,
+            string? returnUrl = null
+        )
+        {
+            var externalResult = await HttpContext.AuthenticateAsync(
+                ExternalAuthenticationDefaults.CookieScheme
+            );
+            if (!externalResult.Succeeded || externalResult.Principal == null)
+            {
+                ToastNotifications.Error(
+                    "تعذر إكمال الدخول عبر الحساب الخارجي. حاول مرة أخرى أو استخدم بيانات الحساب."
+                );
+                return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+            }
+
+            var principal = externalResult.Principal;
+            var email = (
+                principal.FindFirstValue(ClaimTypes.Email)
+                ?? principal.FindFirstValue("preferred_username")
+                ?? string.Empty
+            ).Trim();
+            await HttpContext.SignOutAsync(ExternalAuthenticationDefaults.CookieScheme);
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                ToastNotifications.Error("لم يرسل مزود الهوية بريدًا إلكترونيًا يمكن ربطه بالحساب.");
+                return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+            }
+
+            var tenantKey = (tenant ?? string.Empty).Trim();
+            var tenants = _userAdminService.GetTenants(includeInactive: true).ToList();
+            var matchingTenantIds = string.IsNullOrWhiteSpace(tenantKey)
+                ? null
+                : tenants
+                    .Where(item =>
+                        string.Equals(item.TenantId, tenantKey, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(item.Slug, tenantKey, StringComparison.OrdinalIgnoreCase)
+                    )
+                    .Select(item => item.TenantId)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var matches = _userAdminService
+                .GetAllUsers(ignoreTenantFilters: true)
+                .Where(user =>
+                    user.IsActive
+                    && !string.IsNullOrWhiteSpace(user.Email)
+                    && string.Equals(user.Email.Trim(), email, StringComparison.OrdinalIgnoreCase)
+                    && (matchingTenantIds == null || matchingTenantIds.Contains(user.TenantId))
+                )
+                .ToList();
+
+            if (matches.Count != 1)
+            {
+                ToastNotifications.Error(
+                    matches.Count > 1
+                        ? "البريد مرتبط بأكثر من جهة. افتح رابط الجهة الخاص ثم أعد المحاولة."
+                        : "لا يوجد حساب نشط مرتبط بهذا البريد في الجهة المحددة."
+                );
+                return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+            }
+
+            var user = matches[0];
+            var userTenant = tenants.FirstOrDefault(item =>
+                string.Equals(item.TenantId, user.TenantId, StringComparison.OrdinalIgnoreCase)
+            );
+            if (userTenant == null || !IsTenantAvailableForLogin(userTenant))
+            {
+                ToastNotifications.Error("اشتراك الجهة غير نشط حاليًا. راجع حالة الباقة أو السداد.");
+                return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+            }
+
+            await SignInUserAsync(user, user.Username, user.DisplayName, user.Role);
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+
+            return RedirectToDefaultAuthorizedPage(user);
         }
 
         [HttpGet]
@@ -553,10 +710,80 @@ namespace VehiclePermitSystemWeb.Controllers
                 CookieAuthenticationDefaults.AuthenticationScheme
             );
             var principal = new ClaimsPrincipal(identity);
+            Response.Cookies.Append(
+                "TenantId",
+                user?.TenantId ?? TenantDefaults.DefaultTenantId,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    SameSite = SameSiteMode.Strict,
+                    Secure = Request.IsHttps,
+                    IsEssential = true,
+                }
+            );
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 principal
             );
+        }
+
+        private Tenant? ResolveTenantReference(string? tenantReference)
+        {
+            var key = (tenantReference ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                key = TenantDefaults.DefaultTenantId;
+            }
+
+            return _userAdminService
+                .GetTenants(includeInactive: true)
+                .FirstOrDefault(tenant =>
+                    string.Equals(tenant.TenantId, key, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(tenant.Slug, key, StringComparison.OrdinalIgnoreCase)
+                );
+        }
+
+        private void ConfigureTenantLoginView(Tenant? tenant, string? returnUrl)
+        {
+            if (tenant != null)
+            {
+                HttpContext.Items[HttpTenantContext.ResolvedTenantItemKey] = tenant.TenantId;
+            }
+
+            ViewData["ReturnUrl"] = returnUrl;
+            ViewData["Tenant"] = tenant?.TenantId ?? string.Empty;
+            ViewData["TenantName"] = tenant?.Name ?? string.Empty;
+            ViewData["TenantSlug"] = tenant?.Slug ?? string.Empty;
+        }
+
+        private static bool IsTenantAvailableForLogin(Tenant tenant)
+        {
+            if (!tenant.IsActive)
+            {
+                return false;
+            }
+
+            var status = TenantSubscriptionStatuses.Normalize(tenant.SubscriptionStatus);
+            if (
+                string.Equals(status, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal)
+                || string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
+                || string.Equals(status, TenantSubscriptionStatuses.Expired, StringComparison.Ordinal)
+            )
+            {
+                return false;
+            }
+
+            var now = DateTime.UtcNow;
+            if (
+                string.Equals(status, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal)
+                && tenant.TrialEndsAtUtc.HasValue
+                && tenant.TrialEndsAtUtc.Value < now
+            )
+            {
+                return false;
+            }
+
+            return !tenant.SubscriptionEndsAtUtc.HasValue || tenant.SubscriptionEndsAtUtc.Value >= now;
         }
 
         private void ConfigureChangePasswordView(bool forced = false)

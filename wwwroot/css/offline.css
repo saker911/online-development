@@ -1,0 +1,48 @@
+@font-face {
+  font-family: "Tajawal";
+  src: url("/fonts/Tajawal-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: "Tajawal", Arial, sans-serif;
+}
+
+main {
+  width: min(100%, 480px);
+  text-align: center;
+}
+
+img { width: 72px; height: 72px; }
+h1 { margin: 24px 0 8px; font-size: 30px; }
+p { margin: 0 0 24px; color: #475569; line-height: 1.8; }
+
+a {
+  display: inline-grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 10px 24px;
+  border: 0;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  body { background: #080b12; color: #f8fafc; }
+  p { color: #cbd5e1; }
+  a { background: #f8fafc; color: #0f172a; }
+}

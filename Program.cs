@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,9 +20,14 @@ using VehiclePermitSystemWeb.Services.Users;
 
 var executableDirectory = Path.GetDirectoryName(Environment.ProcessPath ?? string.Empty);
 var runningAsWindowsService = WindowsServiceHelpers.IsWindowsService();
-var contentRootPath = string.IsNullOrWhiteSpace(executableDirectory)
-    ? AppContext.BaseDirectory
-    : executableDirectory;
+var workingDirectory = Directory.GetCurrentDirectory();
+var contentRootPath = runningAsWindowsService
+    ? (
+        string.IsNullOrWhiteSpace(executableDirectory)
+            ? AppContext.BaseDirectory
+            : executableDirectory
+    )
+    : workingDirectory;
 
 var builder = WebApplication.CreateBuilder(
     new WebApplicationOptions
@@ -59,7 +65,7 @@ builder.Configuration.AddEnvironmentVariables();
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 QuestPDF.Settings.License = LicenseType.Community;
-var cookieSecurePolicy = ResolveCookieSecurePolicy(builder.Configuration);
+var cookieSecurePolicy = ResolveCookieSecurePolicy(builder.Configuration, builder.Environment);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
@@ -75,19 +81,48 @@ builder.Services.AddAntiforgery(options =>
     options.SuppressXFrameOptionsHeader = true;
 });
 builder.Services.AddMemoryCache();
+builder
+    .Services.AddDataProtection()
+    .SetApplicationName("VehiclePermitSystemWeb")
+    .PersistKeysToDbContext<ApplicationDbContext>();
 builder.Services.AddHttpContextAccessor();
 var loginPermitLimit = builder.Configuration.GetValue("Security:LoginPermitLimit", 5);
 var loginWindowSeconds = builder.Configuration.GetValue("Security:LoginWindowSeconds", 60);
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter(
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy<string>(
         "login",
-        limiterOptions =>
+        context =>
         {
-            limiterOptions.PermitLimit = loginPermitLimit;
-            limiterOptions.Window = TimeSpan.FromSeconds(loginWindowSeconds);
-            limiterOptions.QueueLimit = 0;
-            limiterOptions.AutoReplenishment = true;
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: remoteIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = loginPermitLimit,
+                    Window = TimeSpan.FromSeconds(loginWindowSeconds),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+    options.AddPolicy<string>(
+        "display-registration",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: remoteIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(15),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
         }
     );
     options.AddPolicy<string>(
@@ -143,6 +178,9 @@ if (string.Equals(dataProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 var configuredUrls = builder.Configuration["App:Urls"];
 var knownProxyAddresses = ReadKnownProxyAddresses(builder.Configuration);
 var knownProxyNetworks = ReadKnownProxyNetworks(builder.Configuration);
+var trustForwardedHeadersFromPlatform = builder.Configuration.GetValue<bool>(
+    "ForwardedHeaders:TrustPlatformProxy"
+);
 if (builder.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(configuredUrls))
 {
     builder.WebHost.UseUrls("http://127.0.0.1:5001");
@@ -217,7 +255,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 });
 builder.Services.AddVehiclePermitApplicationServices(runSchemaUpgradeOnly);
 builder.Services.AddVehiclePermitAuthorization();
-builder.Services.AddVehiclePermitCookieAuthentication(cookieSecurePolicy);
+builder.Services.AddVehiclePermitCookieAuthentication(cookieSecurePolicy, builder.Configuration);
 
 var app = builder.Build();
 app.Logger.LogInformation(
@@ -257,7 +295,11 @@ AppClock.Configure(
     app.Services.GetRequiredService<VehiclePermitSystemWeb.Services.Common.ISystemClock>()
 );
 
-var forwardedHeadersOptions = BuildForwardedHeadersOptions(knownProxyAddresses, knownProxyNetworks);
+var forwardedHeadersOptions = BuildForwardedHeadersOptions(
+    knownProxyAddresses,
+    knownProxyNetworks,
+    trustForwardedHeadersFromPlatform
+);
 if (forwardedHeadersOptions != null)
 {
     app.UseForwardedHeaders(forwardedHeadersOptions);
@@ -324,6 +366,7 @@ app.Use(
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
+    app.UseHttpsRedirection();
     app.UseHsts();
 }
 
@@ -367,7 +410,7 @@ app.Use(
             if (!headers.ContainsKey("Permissions-Policy"))
             {
                 headers["Permissions-Policy"] =
-                    "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
+                    "camera=(self), microphone=(), geolocation=(), payment=(), usb=()";
             }
 
             return Task.CompletedTask;
@@ -452,13 +495,24 @@ app.Use(
 
 app.UseAuthorization();
 
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
 
-static CookieSecurePolicy ResolveCookieSecurePolicy(IConfiguration configuration)
+static CookieSecurePolicy ResolveCookieSecurePolicy(
+    IConfiguration configuration,
+    IHostEnvironment environment
+)
 {
     var configuredPolicy = configuration["Security:CookieSecurePolicy"];
+    if (
+        !environment.IsDevelopment()
+        && !configuration.GetValue("Security:AllowInsecureCookies", false)
+    )
+    {
+        return CookieSecurePolicy.Always;
+    }
     if (string.Equals(configuredPolicy, "SameAsRequest", StringComparison.OrdinalIgnoreCase))
     {
         return CookieSecurePolicy.SameAsRequest;
@@ -479,10 +533,11 @@ static CookieSecurePolicy ResolveCookieSecurePolicy(IConfiguration configuration
 
 static ForwardedHeadersOptions? BuildForwardedHeadersOptions(
     IReadOnlyCollection<System.Net.IPAddress> knownProxies,
-    IReadOnlyCollection<IPNetwork> knownNetworks
+    IReadOnlyCollection<IPNetwork> knownNetworks,
+    bool trustPlatformProxy
 )
 {
-    if (knownProxies.Count == 0 && knownNetworks.Count == 0)
+    if (!trustPlatformProxy && knownProxies.Count == 0 && knownNetworks.Count == 0)
     {
         return null;
     }
@@ -497,6 +552,11 @@ static ForwardedHeadersOptions? BuildForwardedHeadersOptions(
     };
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
+
+    if (trustPlatformProxy)
+    {
+        return options;
+    }
 
     foreach (var address in knownProxies)
     {

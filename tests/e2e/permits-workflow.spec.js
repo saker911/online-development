@@ -142,7 +142,8 @@ test("edit, approve, reject, stop, reactivate, print, and verify permit", async 
   await page.goto(`/Permits/VerifyByNumber/${permit.permitNumber}`);
   await expect(page.getByRole("heading", { name: /تصريح/ })).toBeVisible();
   await expect(page.getByText(/التصريح فعال ومصرح به/)).toBeVisible();
-  await expect(page.getByText(editedName, { exact: false })).toBeVisible();
+  await expect(page.getByText(permit.permitNumber, { exact: true })).toBeVisible();
+  await expect(page.getByText(editedName, { exact: false })).toHaveCount(0);
 
   await submitForm(page, `/Permits/Stop/${permit.permitNumber}`, {}, { tokenPath: `/Permits/Details/${permit.permitNumber}` });
   await page.goto(`/Permits/Details/${permit.permitNumber}`);
@@ -160,6 +161,6 @@ test("reject permit workflow marks permit rejected", async ({ page }) => {
   });
   await submitForm(page, `/Permits/Reject/${permit.permitNumber}`, {}, { tokenPath: `/Permits/Details/${permit.permitNumber}` });
   await page.goto(`/Permits/Details/${permit.permitNumber}`);
-  await expect(page.getByText("مرفوض")).toBeVisible();
+  await expect(page.locator(".status-badge").getByText("مرفوض", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "طباعة ملصق Zebra" })).toHaveCount(0);
 });

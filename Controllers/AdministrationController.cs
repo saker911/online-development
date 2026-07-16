@@ -54,6 +54,21 @@ namespace VehiclePermitSystemWeb.Controllers
             _displayDeviceService = displayDeviceService;
         }
 
+        public IActionResult Index()
+        {
+            if (User.HasPermission(AppPermissions.ManageAdministration))
+            {
+                return RedirectToAction(nameof(Edit));
+            }
+
+            if (User.HasPermission(AppPermissions.ManageDepartments))
+            {
+                return RedirectToAction(nameof(Leadership));
+            }
+
+            return RedirectToAction("AccessDenied", "Home");
+        }
+
         [Authorize(Policy = AppPolicies.ManageAdministration)]
         public IActionResult Edit()
         {
@@ -1139,12 +1154,6 @@ namespace VehiclePermitSystemWeb.Controllers
                 model.DisplayBaseUrl = string.Empty;
             }
 
-            if (string.IsNullOrWhiteSpace(model.DisplayAccessKey))
-            {
-                ModelState.Remove(nameof(model.DisplayAccessKey));
-                model.DisplayAccessKey = string.Empty;
-            }
-
             if (string.IsNullOrWhiteSpace(model.AllowedClientIpRanges))
             {
                 ModelState.Remove(nameof(model.AllowedClientIpRanges));
@@ -1174,25 +1183,12 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var currentSettings = _userAdminService.GetAdministrationSettings();
-            var previousDisplayAccessKey = currentSettings.DisplayAccessKey;
             var settings = currentSettings;
             settings.DisplayBaseUrl = model.DisplayBaseUrl.Trim().TrimEnd('/');
-            settings.DisplayAccessKey = string.IsNullOrWhiteSpace(model.DisplayAccessKey)
-                ? currentSettings.DisplayAccessKey
-                : model.DisplayAccessKey.Trim();
+            settings.DisplayAccessKey = currentSettings.DisplayAccessKey;
             settings.AllowedClientIpRanges = model.AllowedClientIpRanges.Trim();
 
             _userAdminService.UpdateAdministrationSettings(settings);
-            if (
-                !string.Equals(
-                    previousDisplayAccessKey,
-                    settings.DisplayAccessKey,
-                    StringComparison.Ordinal
-                )
-            )
-            {
-                _displayDeviceService?.InvalidateDeviceTrust(User.Identity?.Name ?? string.Empty);
-            }
             this.ToastSuccess("تم تحديث إعدادات الشبكة وشاشات العرض بنجاح");
             return RedirectToAction(nameof(DisplaySettings));
         }
@@ -1203,11 +1199,13 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult RotateDisplayAccessKey()
         {
             var settings = _userAdminService.GetAdministrationSettings();
-            settings.DisplayAccessKey = DisplayAccessDefaults.CreateAccessKey();
+            var accessKey = DisplayAccessDefaults.CreateAccessKey();
+            settings.DisplayAccessKey = DisplayAccessKeyHasher.Hash(accessKey);
             _userAdminService.UpdateAdministrationSettings(settings);
             _displayDeviceService?.InvalidateDeviceTrust(User.Identity?.Name ?? string.Empty);
+            TempData["NewDisplayAccessKey"] = accessKey;
             this.ToastWarning(
-                "تم توليد مفتاح جديد. سيتم إيقاف أي شاشة تستخدم المفتاح القديم حتى يتم تحديث الرابط."
+                "تم توليد مفتاح جديد. سيظهر مرة واحدة فقط في هذه الصفحة."
             );
             return RedirectToAction(nameof(DisplaySettings));
         }
@@ -1215,12 +1213,12 @@ namespace VehiclePermitSystemWeb.Controllers
         private DisplaySettingsViewModel BuildDisplaySettingsViewModel()
         {
             var settings = _userAdminService.GetAdministrationSettings();
-            var accessKey = settings.DisplayAccessKey;
+            var oneTimeAccessKey = TempData["NewDisplayAccessKey"] as string ?? string.Empty;
             return new DisplaySettingsViewModel
             {
                 Id = settings.Id,
                 DisplayBaseUrl = settings.DisplayBaseUrl,
-                DisplayAccessKey = accessKey,
+                DisplayAccessKey = oneTimeAccessKey,
                 AllowedClientIpRanges = settings.AllowedClientIpRanges,
                 GateDisplayUrl = BuildDisplayManagementUrl(
                     nameof(DisplayController.Gate),
@@ -1232,14 +1230,18 @@ namespace VehiclePermitSystemWeb.Controllers
                 ),
                 RegistrationUrl = BuildDisplayManagementUrl(
                     nameof(DisplayController.Register),
-                    includeSetupKey: true
+                    oneTimeAccessKey
                 ),
-                MaskedDisplayAccessKey = MaskSecret(accessKey),
+                MaskedDisplayAccessKey = "محفوظ بشكل آمن",
                 DeviceManagement = _displayDeviceService?.BuildManagementViewModel() ?? new(),
             };
         }
 
-        private string BuildDisplayManagementUrl(string actionName, bool includeSetupKey)
+        private string BuildDisplayManagementUrl(
+            string actionName,
+            string? oneTimeSetupKey = null,
+            bool includeSetupKey = false
+        )
         {
             var path = Url.Action(actionName, "Display") ?? $"/Display/{actionName}";
             var settings = _userAdminService.GetAdministrationSettings();
@@ -1247,9 +1249,9 @@ namespace VehiclePermitSystemWeb.Controllers
                 ? $"{Request.Scheme}://{Request.Host}"
                 : settings.DisplayBaseUrl.TrimEnd('/');
             var url = $"{baseUrl}{path}";
-            if (includeSetupKey && !string.IsNullOrWhiteSpace(settings.DisplayAccessKey))
+            if (!string.IsNullOrWhiteSpace(oneTimeSetupKey))
             {
-                url += $"#setupKey={Uri.EscapeDataString(settings.DisplayAccessKey)}";
+                url += $"#setupKey={Uri.EscapeDataString(oneTimeSetupKey)}";
             }
 
             return url;

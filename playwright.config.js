@@ -27,10 +27,16 @@ module.exports = defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `dotnet run --project "${path.join(__dirname, "VehiclePermitSystemWeb.csproj")}" --no-build`,
+    command: `dotnet run --project "${path.join(__dirname, "VehiclePermitSystemWeb.csproj")}" --no-build --no-launch-profile`,
     env: {
       ASPNETCORE_ENVIRONMENT: "Development",
       App__Urls: e2eBaseUrl,
+      Data__Provider: "Sqlite",
+      ConnectionStrings__SqliteConnection: "Data Source=vehicle-permit-system.db",
+      DevelopmentUseLocalData: "true",
+      OnlineEdition__PrivacyMinimized: "false",
+      OnlineEdition__CollectNationalId: "true",
+      Security__CookieSecurePolicy: "SameAsRequest",
       Security__LoginPermitLimit: "100",
       Security__LoginWindowSeconds: "1",
       VehiclePermitSystemWeb__StorageRoot: e2eStorageRoot,

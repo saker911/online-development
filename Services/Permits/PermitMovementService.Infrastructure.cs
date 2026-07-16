@@ -249,7 +249,10 @@ namespace VehiclePermitSystemWeb.Services.Permits
 
         private static AdministrationSettings GetAdministrationSettings(ApplicationDbContext db)
         {
-            var existing = db.AdministrationSettings.SingleOrDefault(x => x.Id == 1);
+            var existing = db
+                .AdministrationSettings.OrderByDescending(x => x.Id == 1)
+                .ThenBy(x => x.Id)
+                .FirstOrDefault();
             if (existing != null)
             {
                 return existing;
@@ -257,7 +260,6 @@ namespace VehiclePermitSystemWeb.Services.Permits
 
             existing = new AdministrationSettings
             {
-                Id = 1,
                 WorkStartTime = new TimeOnly(8, 0),
                 WorkEndTime = new TimeOnly(16, 0),
                 AttendanceGraceMinutes = 15,

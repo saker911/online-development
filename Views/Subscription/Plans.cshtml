@@ -1,0 +1,75 @@
+@model TenantSignupLandingViewModel
+
+@{
+    ViewData["Title"] = "باقات الاشتراك";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "subscription-page-body";
+    ViewData["PublicHeaderActionLabel"] = "تسجيل الدخول";
+    ViewData["PublicHeaderActionController"] = "Account";
+    ViewData["PublicHeaderActionName"] = "Login";
+}
+
+<main class="subscription-page-shell">
+    @await Html.PartialAsync("~/Views/Shared/_SubscriptionTopbar.cshtml")
+    <section class="subscription-shell">
+        @if (TempData["SubscriptionNotice"] is string subscriptionNotice)
+        {
+            <div class="subscription-notice">@subscriptionNotice</div>
+        }
+
+        <div class="subscription-heading">
+            <div>
+                <div class="login-page-kicker">منصة التصاريح والزيارات</div>
+                <h1 class="login-page-title">اختر المدة واحصل على النظام كاملًا</h1>
+                <p class="login-page-subtitle">كل الخدمات متاحة دون تحديد لعدد المستخدمين أو التصاريح أو الزيارات. اختر مدة الاشتراك المناسبة وابدأ بعد تأكيد الدفع.</p>
+            </div>
+        </div>
+
+        <div class="subscription-value-grid">
+            <article>
+                <span>تشغيل أسرع</span>
+                <strong>من طلب التصريح إلى قراءة الباركود في مسار واحد.</strong>
+            </article>
+            <article>
+                <span>ثقة أعلى</span>
+                <strong>صلاحيات معزولة، تقارير واضحة، ومتابعة لحظية للبوابة.</strong>
+            </article>
+            <article>
+                <span>نمو مرن</span>
+                <strong>اختر المدة المناسبة وجدّد اشتراكك متى احتجت دون تغيير الخدمة.</strong>
+            </article>
+        </div>
+
+        <div class="subscription-plans-grid">
+            @foreach (var plan in Model.Plans)
+            {
+                <article class="subscription-plan-card @(plan.IsFeatured ? "is-featured" : "")">
+                    @if (plan.IsFeatured)
+                    {
+                        <span class="subscription-plan-badge">الأكثر استخدامًا</span>
+                    }
+                    <h2>@plan.Name</h2>
+                    <span class="subscription-plan-fit">@plan.DurationText</span>
+                    <p>@plan.Summary</p>
+                    <strong>@plan.PriceText</strong>
+                    <ul>
+                        @foreach (var feature in plan.Features)
+                        {
+                            <li>@feature</li>
+                        }
+                    </ul>
+                    <a asp-action="Register" asp-route-plan="@plan.Code" class="btn @(plan.IsFeatured ? "btn-primary" : "btn-outline-primary") w-100">
+                        ابدأ بهذه الباقة
+                    </a>
+                </article>
+            }
+        </div>
+
+        <div class="subscription-trust-strip">
+            <span>بدون تفعيل قبل الدفع</span>
+            <span>رابط مستقل لكل جهة</span>
+            <span>استخدام غير محدود</span>
+            <span>لوحات وتقارير للمتابعة</span>
+        </div>
+    </section>
+</main>

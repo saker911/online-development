@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ using VehiclePermitSystemWeb.Services.Tenants;
 
 namespace VehiclePermitSystemWeb.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : DbContext, IDataProtectionKeyContext
     {
         private readonly string _tenantId;
 
@@ -55,6 +56,7 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<DisplayDevice> DisplayDevices => Set<DisplayDevice>();
         public DbSet<DisplaySecuritySettings> DisplaySecuritySettings =>
             Set<DisplaySecuritySettings>();
+        public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -80,6 +82,8 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Tenant>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<Tenant>().Property(x => x.Name).HasMaxLength(256);
             modelBuilder.Entity<Tenant>().Property(x => x.Slug).HasMaxLength(256);
+            modelBuilder.Entity<Tenant>().Property(x => x.SubscriptionStatus).HasMaxLength(32);
+            modelBuilder.Entity<Tenant>().Property(x => x.PlanName).HasMaxLength(128);
             modelBuilder.Entity<Tenant>().HasIndex(x => x.Slug).IsUnique();
             ConfigureTenantScopedEntity<Permit>(modelBuilder);
             ConfigureTenantScopedEntity<Visit>(modelBuilder);
@@ -338,7 +342,14 @@ namespace VehiclePermitSystemWeb.Data
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(entry.Entity.TenantId))
+                if (
+                    string.IsNullOrWhiteSpace(entry.Entity.TenantId)
+                    || string.Equals(
+                        entry.Entity.TenantId,
+                        TenantDefaults.DefaultTenantId,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                 {
                     entry.Entity.TenantId = CurrentTenantId;
                 }

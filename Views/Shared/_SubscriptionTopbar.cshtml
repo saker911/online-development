@@ -1,0 +1,27 @@
+@using VehiclePermitSystemWeb.Services.Administration
+@inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
+
+@{
+    var administrationSettings = UserAdminService.GetAdministrationSettings();
+    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
+    var actionLabel = ViewData["PublicHeaderActionLabel"] as string;
+    var actionController = ViewData["PublicHeaderActionController"] as string;
+    var actionName = ViewData["PublicHeaderActionName"] as string;
+}
+
+<header class="subscription-topbar">
+    <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
+        <img src="~/@organizationLogoPath" alt="" />
+        <span>
+            <strong>منصة التصاريح</strong>
+            <small>إدارة الدخول والزيارات</small>
+        </span>
+    </a>
+    <div class="subscription-topbar-actions">
+        @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+        @if (!string.IsNullOrWhiteSpace(actionLabel))
+        {
+            <a asp-controller="@actionController" asp-action="@actionName" class="btn btn-outline-secondary">@actionLabel</a>
+        }
+    </div>
+</header>

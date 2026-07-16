@@ -252,7 +252,11 @@ namespace VehiclePermitSystemWeb.Services.Gate
         {
             using var db = _dbContextFactory.CreateDbContext();
             var settings =
-                db.AdministrationSettings.AsNoTracking().SingleOrDefault(x => x.Id == 1)
+                db
+                    .AdministrationSettings.AsNoTracking()
+                    .OrderByDescending(x => x.Id == 1)
+                    .ThenBy(x => x.Id)
+                    .FirstOrDefault()
                 ?? new AdministrationSettings
                 {
                     WorkStartTime = new TimeOnly(8, 0),

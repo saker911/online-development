@@ -18,11 +18,24 @@ document.addEventListener("DOMContentLoaded", function () {
     const scannedPermitCard = document.getElementById("scannedPermitCard");
     const scannedPermitPublicCode = document.getElementById("scannedPermitPublicCode");
     const scannedPermitDetails = document.getElementById("scannedPermitDetails");
+    const cameraButton = document.getElementById("scanConsoleCameraButton");
+    const cameraPanel = document.getElementById("scanConsoleCameraPanel");
+    const cameraPreview = document.getElementById("scanConsoleCameraPreview");
+    const cameraStatus = document.getElementById("scanConsoleCameraStatus");
+    const stopCameraButton = document.getElementById("scanConsoleStopCameraButton");
+    const fullscreenButton = document.getElementById("scanConsoleFullscreenButton");
     const antiforgeryTokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
     const scannerBuffer = [];
     let scannerTimer = null;
     let autoSubmitTimer = null;
     let isSubmitting = false;
+    let cameraStream = null;
+    let cameraFrameRequest = 0;
+    let cameraDetector = null;
+    let cameraRunning = false;
+    let cameraScanLocked = false;
+    let pendingExecutionMethod = "manual";
+    const scannerDeviceId = resolveScannerDeviceId();
     const topRowShiftedDigits = {
         Digit1: '!',
         Digit2: '@',
@@ -54,6 +67,23 @@ document.addEventListener("DOMContentLoaded", function () {
         NumpadAdd: ['+', '+'],
         NumpadDecimal: ['.', '.']
     };
+
+    function resolveScannerDeviceId() {
+        const storageKey = "vps_scan_device_id";
+        try {
+            const stored = window.localStorage.getItem(storageKey);
+            if (stored) {
+                return stored;
+            }
+
+            const generated = `browser-${window.crypto?.randomUUID?.() || Date.now().toString(36)}`;
+            window.localStorage.setItem(storageKey, generated);
+            return generated;
+        }
+        catch {
+            return `browser-session-${Date.now().toString(36)}`;
+        }
+    }
 
     const translations = {
         "Entry recorded": "تم السماح بالدخول بهذا التصريح.",
@@ -103,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function armScannerFocus() {
-        if (!input) {
+        if (!input || cameraRunning) {
             return;
         }
 
@@ -240,6 +270,9 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
         playToneSequence(isAllowed ? "success" : "error");
+        if (navigator.vibrate) {
+            navigator.vibrate(isAllowed ? [90] : [180, 80, 180]);
+        }
     }
 
     function renderPermitDetails(permit) {
@@ -387,9 +420,11 @@ document.addEventListener("DOMContentLoaded", function () {
                     identifier: identifier,
                     scannerUserId: form.dataset.scannerUser || "",
                     overrideEntry: !!forceOverride,
-                    gateName: "وحدة المسح اليدوي",
-                    executionMethod: "scan",
-                    deviceId: navigator.userAgent || "browser"
+                    gateName: window.matchMedia("(max-width: 767.98px)").matches
+                        ? "ماسح الجوال"
+                        : "وحدة المسح",
+                    executionMethod: pendingExecutionMethod,
+                    deviceId: scannerDeviceId
                 })
             });
 
@@ -433,7 +468,9 @@ document.addEventListener("DOMContentLoaded", function () {
             renderResult(!!payload.allowed, message, payload.identifier || identifier);
             renderPermitDetails(payload.permit || null);
             input.value = "";
-            input.focus();
+            if (!cameraRunning) {
+                input.focus();
+            }
         }
         catch {
             renderResult(false, translations.invalid_request, identifier);
@@ -441,6 +478,167 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         finally {
             isSubmitting = false;
+        }
+    }
+
+    function setCameraStatus(message, isError) {
+        if (!cameraStatus) {
+            return;
+        }
+
+        cameraStatus.textContent = message;
+        cameraStatus.classList.toggle("is-error", !!isError);
+    }
+
+    function stopCameraScanner(message) {
+        cameraRunning = false;
+        cameraScanLocked = false;
+        if (cameraFrameRequest) {
+            window.cancelAnimationFrame(cameraFrameRequest);
+            cameraFrameRequest = 0;
+        }
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(function (track) {
+                track.stop();
+            });
+            cameraStream = null;
+        }
+
+        if (cameraPreview) {
+            cameraPreview.srcObject = null;
+        }
+
+        if (cameraPanel) {
+            cameraPanel.hidden = true;
+        }
+
+        if (cameraButton) {
+            cameraButton.disabled = false;
+        }
+
+        if (isCameraFullscreen()) {
+            exitCameraFullscreen();
+        }
+
+        if (message) {
+            setCameraStatus(message, false);
+        }
+
+        if (input) {
+            if (!cameraRunning) {
+                input.focus();
+            }
+        }
+    }
+
+    async function detectCameraFrame() {
+        if (!cameraRunning || cameraScanLocked || !cameraDetector || !cameraPreview) {
+            return;
+        }
+
+        try {
+            const codes = await cameraDetector.detect(cameraPreview);
+            const rawValue = codes && codes.length ? (codes[0].rawValue || "").trim() : "";
+            if (rawValue) {
+                cameraScanLocked = true;
+                input.value = rawValue;
+                resetScannerBuffer();
+                pendingExecutionMethod = "camera";
+                setCameraStatus("تمت القراءة. جاري التحقق...");
+                await submitScan();
+                if (cameraRunning) {
+                    setCameraStatus("جاهز للرمز التالي.");
+                    window.setTimeout(function () {
+                        cameraScanLocked = false;
+                        if (cameraRunning) {
+                            cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
+                        }
+                    }, 1100);
+                }
+                return;
+            }
+        }
+        catch {
+            setCameraStatus("تعذر تحليل الصورة. قرب الكاميرا من الرمز أو استخدم قارئ الباركود.", true);
+        }
+
+        cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
+    }
+
+    function isCameraFullscreen() {
+        return document.fullscreenElement === cameraPanel
+            || document.webkitFullscreenElement === cameraPanel;
+    }
+
+    function requestCameraFullscreen() {
+        if (!cameraPanel || isCameraFullscreen()) {
+            return;
+        }
+
+        const request = cameraPanel.requestFullscreen || cameraPanel.webkitRequestFullscreen;
+        if (request) {
+            Promise.resolve(request.call(cameraPanel)).catch(function () { });
+        }
+    }
+
+    function exitCameraFullscreen() {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) {
+            Promise.resolve(exit.call(document)).catch(function () { });
+        }
+    }
+
+    async function startCameraScanner() {
+        if (!cameraButton || !cameraPanel || !cameraPreview) {
+            return;
+        }
+
+        if (!window.isSecureContext && !["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+            cameraPanel.hidden = false;
+            setCameraStatus("قراءة الكاميرا على الجوال تحتاج تشغيل الموقع عبر HTTPS.", true);
+            return;
+        }
+
+        if (!("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) {
+            cameraPanel.hidden = false;
+            setCameraStatus("الكاميرا غير مدعومة في هذا المتصفح. استخدم Chrome/Edge أو قارئ الباركود الخارجي.", true);
+            return;
+        }
+
+        try {
+            cameraButton.disabled = true;
+            cameraPanel.hidden = false;
+            setCameraStatus("جاري تشغيل كاميرا الجوال...");
+            if (window.matchMedia("(max-width: 767.98px)").matches) {
+                requestCameraFullscreen();
+            }
+
+            const formats = ["qr_code", "code_128", "code_39", "ean_13", "ean_8", "itf", "upc_a", "upc_e"];
+            const supportedFormats = typeof BarcodeDetector.getSupportedFormats === "function"
+                ? await BarcodeDetector.getSupportedFormats()
+                : formats;
+            const activeFormats = formats.filter(function (format) {
+                return supportedFormats.includes(format);
+            });
+
+            cameraDetector = new BarcodeDetector(activeFormats.length ? { formats: activeFormats } : undefined);
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } },
+                audio: false
+            });
+            cameraPreview.srcObject = cameraStream;
+            await cameraPreview.play();
+            cameraRunning = true;
+            setCameraStatus("وجّه كاميرا الجوال نحو QR أو الباركود.");
+            cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
+        }
+        catch {
+            stopCameraScanner();
+            if (cameraPanel) {
+                cameraPanel.hidden = false;
+            }
+            setCameraStatus("تعذر تشغيل الكاميرا. تحقق من السماح للمتصفح باستخدام الكاميرا.", true);
         }
     }
 
@@ -452,6 +650,7 @@ document.addEventListener("DOMContentLoaded", function () {
         autoSubmitTimer = window.setTimeout(function () {
             autoSubmitTimer = null;
             if (input && input.value.trim()) {
+                pendingExecutionMethod = "barcode_scanner";
                 resetScannerBuffer();
                 submitScan();
             }
@@ -466,6 +665,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (event.key === "Enter") {
             event.preventDefault();
             event.stopPropagation();
+            pendingExecutionMethod = scannerBuffer.length ? "barcode_scanner" : "manual";
             resetScannerBuffer();
             submitScan();
             return;
@@ -524,10 +724,36 @@ document.addEventListener("DOMContentLoaded", function () {
     if (form) {
         form.addEventListener("submit", function (event) {
             event.preventDefault();
+            pendingExecutionMethod = "manual";
             resetScannerBuffer();
             submitScan();
         });
     }
+
+    if (cameraButton) {
+        cameraButton.addEventListener("click", startCameraScanner);
+    }
+
+    if (fullscreenButton) {
+        fullscreenButton.addEventListener("click", function () {
+            if (isCameraFullscreen()) {
+                exitCameraFullscreen();
+            }
+            else {
+                requestCameraFullscreen();
+            }
+        });
+    }
+
+    if (stopCameraButton) {
+        stopCameraButton.addEventListener("click", function () {
+            stopCameraScanner("تم إيقاف الكاميرا.");
+        });
+    }
+
+    window.addEventListener("pagehide", function () {
+        stopCameraScanner();
+    });
 
     const initialPermitScript = document.getElementById("scanConsoleInitialPermit");
     if (initialPermitScript) {

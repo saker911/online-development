@@ -32,8 +32,7 @@ namespace VehiclePermitSystemWeb.Services.Users
         private readonly ISystemClock _systemClock;
         private readonly IPermitAuditService _permitAuditService;
         private readonly UserSessionService _userSessionService;
-        private readonly string _qrSecretPath;
-        private readonly string _qrSecret;
+        private readonly TimeSpan _displayOperatorSessionLifetime;
         private readonly ConcurrentDictionary<
             string,
             DisplayOperatorSessionInfo
@@ -54,14 +53,30 @@ namespace VehiclePermitSystemWeb.Services.Users
             _systemClock = systemClock;
             _permitAuditService = permitAuditService;
             _userSessionService = userSessionService;
-            _qrSecretPath = Path.Combine(AppStoragePaths.GetAppDataRoot(), "qr-secret.txt");
-            _qrSecret = QrSecretStore.LoadOrCreate(_qrSecretPath);
+            _displayOperatorSessionLifetime = TimeSpan.FromMinutes(
+                Math.Clamp(
+                    _configuration.GetValue("Security:DisplayOperatorSessionMinutes", 30),
+                    5,
+                    720
+                )
+            );
         }
 
         public AdministrationSettings GetAdministrationSettings()
         {
             using var db = _dbContextFactory.CreateDbContext();
-            var record = AdministrationSettingsService.GetAdministrationSettingsRecord(db, 1);
+            var tenantExists = db.Tenants.AsNoTracking().Any(tenant =>
+                tenant.TenantId == db.CurrentTenantId && tenant.IsActive
+            );
+            var record = tenantExists
+                ? AdministrationSettingsService.GetAdministrationSettingsRecord(db, 1)
+                : db
+                    .AdministrationSettings.IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .Where(settings => settings.TenantId == TenantDefaults.DefaultTenantId)
+                    .OrderByDescending(settings => settings.Id == 1)
+                    .ThenBy(settings => settings.Id)
+                    .FirstOrDefault();
             if (record == null)
             {
                 record = AdministrationSettingsService.BuildDefaultAdministrationSettings();
@@ -128,17 +143,25 @@ namespace VehiclePermitSystemWeb.Services.Users
             }
 
             var settings = GetAdministrationSettings();
-            return string.Equals(
-                settings.DisplayAccessKey,
-                normalizedAccessKey,
-                StringComparison.Ordinal
-            );
+            return DisplayAccessKeyHasher.Verify(settings.DisplayAccessKey, normalizedAccessKey);
         }
 
-        public IEnumerable<UserAccount> GetAllUsers()
+        public IEnumerable<UserAccount> GetAllUsers(bool ignoreTenantFilters = false)
         {
             using var db = _dbContextFactory.CreateDbContext();
-            return UserReadMapper.GetAllUsers(db);
+            return UserReadMapper.GetAllUsers(db, ignoreTenantFilters);
+        }
+
+        public IEnumerable<Tenant> GetTenants(bool includeInactive = false)
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var tenants = db.Tenants.AsNoTracking().AsQueryable();
+            if (!includeInactive)
+            {
+                tenants = tenants.Where(tenant => tenant.IsActive);
+            }
+
+            return tenants.OrderBy(tenant => tenant.Name).ToList();
         }
 
         public IEnumerable<UserActivity> GetRecentUserActivities(int take = 20)
@@ -200,10 +223,10 @@ namespace VehiclePermitSystemWeb.Services.Users
                 .ToList();
         }
 
-        public UserAccount? GetUserAccount(string username)
+        public UserAccount? GetUserAccount(string username, bool ignoreTenantFilters = false)
         {
             using var db = _dbContextFactory.CreateDbContext();
-            return UserReadMapper.GetUserAccount(db, username);
+            return UserReadMapper.GetUserAccount(db, username, ignoreTenantFilters);
         }
 
         public bool HasAnyUsers()
@@ -215,12 +238,18 @@ namespace VehiclePermitSystemWeb.Services.Users
         public bool IsInitialSetupRequired()
         {
             using var db = _dbContextFactory.CreateDbContext();
-            if (!db.UserAccounts.AsNoTracking().Any())
+            if (!db.UserAccounts.IgnoreQueryFilters().AsNoTracking().Any())
             {
                 return true;
             }
 
-            var settings = AdministrationSettingsService.GetAdministrationSettingsRecord(db, 1);
+            var settings = db
+                .AdministrationSettings.IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(item => item.TenantId == TenantDefaults.DefaultTenantId)
+                .OrderByDescending(item => item.Id == 1)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
             return settings?.IsInitialSetupCompleted != true;
         }
 
@@ -297,11 +326,18 @@ namespace VehiclePermitSystemWeb.Services.Users
         public bool CreateUser(UserAccount user, string password)
         {
             using var db = _dbContextFactory.CreateDbContext();
-            if (db.UserAccounts.Any(u => u.Username == user.Username))
+            if (db.UserAccounts.IgnoreQueryFilters().Any(u => u.Username == user.Username))
             {
                 return false;
             }
 
+            var normalizedTenantId = ResolveActiveTenantId(db, user.TenantId);
+            if (string.IsNullOrWhiteSpace(normalizedTenantId))
+            {
+                return false;
+            }
+
+            user.TenantId = normalizedTenantId;
             user.IsSuperAdmin = false;
             UserPermissionService.NormalizePrivilegedAssignments(user);
             user.OperatorBadgeCode = UserAccountService.NormalizeOperatorBadgeCode(
@@ -327,16 +363,18 @@ namespace VehiclePermitSystemWeb.Services.Users
         public bool UpdateUser(
             UserAccount user,
             string? newPassword = null,
-            string? originalUsername = null
+            string? originalUsername = null,
+            bool ignoreTenantFilters = false
         )
         {
             using var db = _dbContextFactory.CreateDbContext();
             var normalizedOriginalUsername = string.IsNullOrWhiteSpace(originalUsername)
                 ? (user.Username ?? string.Empty).Trim()
                 : originalUsername.Trim();
-            var existing = db.UserAccounts.FirstOrDefault(u =>
-                u.Username == normalizedOriginalUsername
-            );
+            var userAccounts = ignoreTenantFilters
+                ? db.UserAccounts.IgnoreQueryFilters()
+                : db.UserAccounts;
+            var existing = userAccounts.FirstOrDefault(u => u.Username == normalizedOriginalUsername);
             if (existing == null)
             {
                 return false;
@@ -376,17 +414,22 @@ namespace VehiclePermitSystemWeb.Services.Users
                     return false;
                 }
 
-                var usernameAlreadyUsed = db.UserAccounts.Any(account =>
-                    account.Username != normalizedOriginalUsername
-                    && account.Username == requestedUsername
-                );
+                var usernameAlreadyUsed = db
+                    .UserAccounts.IgnoreQueryFilters()
+                    .Any(account =>
+                        account.Username != normalizedOriginalUsername
+                        && account.Username == requestedUsername
+                    );
                 if (usernameAlreadyUsed)
                 {
                     return false;
                 }
             }
 
-            var managedDepartment = db.Departments.FirstOrDefault(department =>
+            var departmentAccounts = ignoreTenantFilters
+                ? db.Departments.IgnoreQueryFilters()
+                : db.Departments;
+            var managedDepartment = departmentAccounts.FirstOrDefault(department =>
                 department.ManagerUsername == existing.Username
             );
             if (
@@ -409,6 +452,15 @@ namespace VehiclePermitSystemWeb.Services.Users
                 return false;
             }
 
+            var normalizedTenantId = isProtectedSuperAdmin
+                ? existing.TenantId
+                : ResolveActiveTenantId(db, user.TenantId);
+            if (string.IsNullOrWhiteSpace(normalizedTenantId))
+            {
+                return false;
+            }
+
+            existing.TenantId = normalizedTenantId;
             existing.DisplayName = user.DisplayName;
             existing.FullName = user.FullName;
             existing.Department = user.Department;
@@ -541,10 +593,33 @@ namespace VehiclePermitSystemWeb.Services.Users
             );
         }
 
-        public string? SetUserActiveStatus(string username, bool isActive)
+        private static string ResolveActiveTenantId(ApplicationDbContext db, string? tenantId)
+        {
+            var normalizedTenantId = string.IsNullOrWhiteSpace(tenantId)
+                ? db.CurrentTenantId
+                : tenantId.Trim();
+            normalizedTenantId = string.IsNullOrWhiteSpace(normalizedTenantId)
+                ? TenantDefaults.DefaultTenantId
+                : normalizedTenantId;
+
+            return db.Tenants.AsNoTracking().Any(tenant =>
+                tenant.TenantId == normalizedTenantId && tenant.IsActive
+            )
+                ? normalizedTenantId
+                : string.Empty;
+        }
+
+        public string? SetUserActiveStatus(
+            string username,
+            bool isActive,
+            bool ignoreTenantFilters = false
+        )
         {
             using var db = _dbContextFactory.CreateDbContext();
-            var existing = db.UserAccounts.FirstOrDefault(u => u.Username == username);
+            var userAccounts = ignoreTenantFilters
+                ? db.UserAccounts.IgnoreQueryFilters()
+                : db.UserAccounts;
+            var existing = userAccounts.FirstOrDefault(u => u.Username == username);
             if (existing == null)
             {
                 return null;
@@ -554,9 +629,10 @@ namespace VehiclePermitSystemWeb.Services.Users
                 return null;
             }
             // Prevent deactivating a department manager
-            var isDepartmentManager = db.Departments.Any(d =>
-                d.ManagerUsername == existing.Username
-            );
+            var departments = ignoreTenantFilters
+                ? db.Departments.IgnoreQueryFilters()
+                : db.Departments;
+            var isDepartmentManager = departments.Any(d => d.ManagerUsername == existing.Username);
             if (!isActive && isDepartmentManager)
             {
                 return null;
@@ -592,17 +668,27 @@ namespace VehiclePermitSystemWeb.Services.Users
             return UserCredentialsMapper.ChangePassword(db, username, currentPassword, newPassword);
         }
 
-        public string EnsureOperatorBadgeCode(string username, string? preferredBadgeCode = null)
+        public string EnsureOperatorBadgeCode(
+            string username,
+            string? preferredBadgeCode = null,
+            bool ignoreTenantFilters = false
+        )
         {
             using var db = _dbContextFactory.CreateDbContext();
-            return UserCredentialsMapper.EnsureOperatorBadgeCode(db, username, preferredBadgeCode);
+            return UserCredentialsMapper.EnsureOperatorBadgeCode(
+                db,
+                username,
+                preferredBadgeCode,
+                ignoreTenantFilters
+            );
         }
 
         public string? ConfigureOperatorCredentials(
             string username,
             string badgeCode,
             string? temporaryPin,
-            bool requirePinChange
+            bool requirePinChange,
+            bool ignoreTenantFilters = false
         )
         {
             using var db = _dbContextFactory.CreateDbContext();
@@ -611,7 +697,8 @@ namespace VehiclePermitSystemWeb.Services.Users
                 username,
                 badgeCode,
                 temporaryPin,
-                requirePinChange
+                requirePinChange,
+                ignoreTenantFilters
             );
         }
 
@@ -624,9 +711,28 @@ namespace VehiclePermitSystemWeb.Services.Users
         public DisplayOperatorSessionInfo? GetDisplayOperatorSession(string deviceId)
         {
             var normalizedDeviceId = UserAccountService.NormalizeDeviceId(deviceId);
-            return _displayOperatorSessions.TryGetValue(normalizedDeviceId, out var session)
-                ? UserCloneMapper.CloneDisplayOperatorSession(session)
-                : null;
+            if (!_displayOperatorSessions.TryGetValue(normalizedDeviceId, out var session))
+            {
+                return null;
+            }
+
+            if (session.ExpiresAtUtc <= _systemClock.UtcNow)
+            {
+                _displayOperatorSessions.TryRemove(normalizedDeviceId, out _);
+                return null;
+            }
+
+            using var db = _dbContextFactory.CreateDbContext();
+            var operatorStillAllowed = db.UserAccounts.AsNoTracking().Any(user =>
+                user.Username == session.Username && user.IsActive && user.CanScanOperations
+            );
+            if (!operatorStillAllowed)
+            {
+                _displayOperatorSessions.TryRemove(normalizedDeviceId, out _);
+                return null;
+            }
+
+            return UserCloneMapper.CloneDisplayOperatorSession(session);
         }
 
         public DisplayOperatorSwitchResult SwitchDisplayOperator(
@@ -682,6 +788,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                 BadgeCode = user.OperatorBadgeCode,
                 DeviceId = normalizedDeviceId,
                 SignedInAtUtc = _systemClock.UtcNow,
+                ExpiresAtUtc = _systemClock.UtcNow.Add(_displayOperatorSessionLifetime),
                 MustChangePin = user.MustChangeOperatorPin,
             };
 

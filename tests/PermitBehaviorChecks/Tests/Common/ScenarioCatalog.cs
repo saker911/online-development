@@ -653,7 +653,11 @@ internal static partial class ScenarioCatalog
             Scenario(
                 "Operator PIN provisioning stays separate from login password",
                 fixture =>
-                    ScenarioOperatorPinProvisioning(fixture.UserAdminService, fixture.DbFactory)
+                    ScenarioOperatorPinProvisioning(
+                        fixture.UserAdminService,
+                        fixture.DbFactory,
+                        fixture.Clock
+                    )
             ),
             Scenario(
                 "Public permit-number verification is closed and QR tokens backfill safely",
@@ -667,9 +671,9 @@ internal static partial class ScenarioCatalog
                     )
             ),
             Scenario(
-                "Zebra label uses public permit code and plate only",
+                "Zebra label uses secure QR and plate only",
                 fixture =>
-                    ScenarioZebraLabelUsesPublicPermitCodeAndPlateOnly(
+                        ScenarioZebraLabelUsesSecureQrAndPlateOnly(
                         fixture.PermitService,
                         fixture.UserAdminService,
                         fixture.AccessControlService,

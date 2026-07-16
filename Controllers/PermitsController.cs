@@ -32,6 +32,7 @@ using VehiclePermitSystemWeb.Services.Management;
 using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
+using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 using VehiclePermitSystemWeb.Utilities.Online;
@@ -184,6 +185,27 @@ namespace VehiclePermitSystemWeb.Controllers
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
             var administration = _userAdminService.GetAdministrationSettings();
             ViewData["PermitNotice"] = BuildPermitUsageNotice(administration);
+            ViewData["OrganizationName"] = administration.OrganizationName;
+            ViewData["DepartmentName"] = administration.DepartmentName;
+            if (
+                string.Equals(
+                    permit.ApprovalStatus,
+                    "Approved",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                var passToken = PermitQrTokenGenerator.IsCurrentVersion(permit.QrToken)
+                    ? permit.QrToken
+                    : _permitService.EnsurePermitQrToken(
+                        permit.PermitNumber,
+                        User.Identity?.Name
+                    );
+                if (!string.IsNullOrWhiteSpace(passToken))
+                {
+                    ViewData["DigitalPassUrl"] = BuildPermitDigitalPassUrl(permit, passToken);
+                }
+            }
             ViewBag.CanForwardApproval = CanForwardApproval(permit);
             ViewData["CanApprovePendingPermit"] =
                 string.Equals(permit.ApprovalStatus, "Pending", StringComparison.OrdinalIgnoreCase)
@@ -355,10 +377,17 @@ namespace VehiclePermitSystemWeb.Controllers
                     return View(permit);
                 }
 
-                permit.ApprovalStatus = "Pending";
-                _permitService.AddPermit(permit, User.Identity?.Name);
-                this.ToastSuccess("تم حفظ التصريح بنجاح.");
-                return RedirectToAction(nameof(Details), new { id = permit.PermitNumber });
+                try
+                {
+                    permit.ApprovalStatus = "Pending";
+                    _permitService.AddPermit(permit, User.Identity?.Name);
+                    this.ToastSuccess("تم حفظ التصريح بنجاح.");
+                    return RedirectToAction(nameof(Details), new { id = permit.PermitNumber });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    ModelState.AddModelError(string.Empty, ex.Message);
+                }
             }
 
             PopulateDepartmentOptions(permit.DepartmentName);
@@ -916,13 +945,13 @@ namespace VehiclePermitSystemWeb.Controllers
                 return Forbid();
             }
 
-            var bytes = RenderBarcodeImage(
-                permit.PublicPermitCode,
-                BarcodeFormat.QR_CODE,
-                300,
-                300,
-                2
-            );
+            var qrContent = BuildPermitQrContent(permit);
+            if (string.IsNullOrWhiteSpace(qrContent))
+            {
+                return NotFound();
+            }
+
+            var bytes = RenderBarcodeImage(qrContent, BarcodeFormat.QR_CODE, 360, 360, 4);
             return File(bytes, "image/png");
         }
 
@@ -946,24 +975,32 @@ namespace VehiclePermitSystemWeb.Controllers
                 return NotFound();
             }
 
-            var bytes = RenderBarcodeImage(qrContent, BarcodeFormat.QR_CODE, 260, 260, 1);
+            var bytes = RenderBarcodeImage(qrContent, BarcodeFormat.QR_CODE, 360, 360, 4);
             return File(bytes, "image/png");
         }
 
         [AllowAnonymous]
-        public IActionResult Verify(string token)
+        [HttpGet("/o/{tenant}/permit/{token}")]
+        [HttpGet("/Permits/Verify")]
+        public IActionResult Verify(string token, string? tenant = null)
         {
+            if (!TryResolvePublicTenant(tenant))
+            {
+                return NotFound();
+            }
+
             var isAuthorized = _permitService.TryValidatePermitQrToken(
                 token,
                 out var permit,
                 out var status,
                 out var message
             );
+            var administration = permit != null
+                ? _userAdminService.GetAdministrationSettings()
+                : null;
             ViewData["PermitNotice"] =
-                permit != null
-                    ? PermitUiModelBuilder.BuildPermitUsageNotice(
-                        _userAdminService.GetAdministrationSettings()
-                    )
+                administration != null
+                    ? PermitUiModelBuilder.BuildPermitUsageNotice(administration)
                     : string.Empty;
 
             return View(
@@ -971,8 +1008,82 @@ namespace VehiclePermitSystemWeb.Controllers
                     permit,
                     isAuthorized,
                     status,
-                    message
+                    message,
+                    administration
                 )
+            );
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/o/{tenant}/pass/{token}")]
+        public IActionResult Pass(string token, string tenant)
+        {
+            if (!TryResolvePublicTenant(tenant))
+            {
+                return NotFound();
+            }
+
+            ApplyPrivatePassResponseHeaders();
+            var isAuthorized = _permitService.TryValidatePermitQrToken(
+                token,
+                out var permit,
+                out var status,
+                out var message
+            );
+            var administration = permit != null
+                ? _userAdminService.GetAdministrationSettings()
+                : null;
+            ViewData["Robots"] = "noindex, nofollow, noarchive";
+            ViewData["PermitNotice"] = administration != null
+                ? PermitUiModelBuilder.BuildPermitUsageNotice(administration)
+                : string.Empty;
+
+            var qrImageUrl = isAuthorized
+                ? Url.Action(nameof(PassQr), "Permits", new { tenant, token }) ?? string.Empty
+                : string.Empty;
+
+            return View(
+                PermitUiModelBuilder.BuildPermitDigitalPassModel(
+                    permit,
+                    isAuthorized,
+                    status,
+                    message,
+                    administration,
+                    qrImageUrl
+                )
+            );
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/o/{tenant}/pass/{token}/qr")]
+        public IActionResult PassQr(string token, string tenant)
+        {
+            if (!TryResolvePublicTenant(tenant))
+            {
+                return NotFound();
+            }
+
+            ApplyPrivatePassResponseHeaders();
+            var isAuthorized = _permitService.TryValidatePermitQrToken(
+                token,
+                out var permit,
+                out _,
+                out _
+            );
+            if (!isAuthorized || permit == null)
+            {
+                return NotFound();
+            }
+
+            var verificationUrl = BuildPermitVerificationUrl(permit, token);
+            if (string.IsNullOrWhiteSpace(verificationUrl))
+            {
+                return NotFound();
+            }
+
+            return Content(
+                RenderBarcodeSvg(verificationUrl, BarcodeFormat.QR_CODE, 420, 4),
+                "image/svg+xml"
             );
         }
 
@@ -1003,9 +1114,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 : string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase)
                     ? "هذا التصريح منتهي أو غير فعال."
                 : "هذا التصريح غير مصرح به حاليًا.";
-            ViewData["PermitNotice"] = PermitUiModelBuilder.BuildPermitUsageNotice(
-                _userAdminService.GetAdministrationSettings()
-            );
+            var administration = _userAdminService.GetAdministrationSettings();
+            ViewData["PermitNotice"] = PermitUiModelBuilder.BuildPermitUsageNotice(administration);
 
             return View(
                 "Verify",
@@ -1013,7 +1123,8 @@ namespace VehiclePermitSystemWeb.Controllers
                     permit,
                     isAuthorized,
                     status,
-                    message
+                    message,
+                    administration
                 )
             );
         }
@@ -1047,12 +1158,17 @@ namespace VehiclePermitSystemWeb.Controllers
                 ? "غير محدد"
                 : administration.SignatureText;
             var permitNotice = PermitUiModelBuilder.BuildPermitUsageNotice(administration);
+            var qrContent = BuildPermitQrContent(permit);
+            if (string.IsNullOrWhiteSpace(qrContent))
+            {
+                return NotFound();
+            }
             var gateQrBytes = RenderBarcodeImage(
-                permit.PublicPermitCode,
+                qrContent,
                 BarcodeFormat.QR_CODE,
                 128,
                 128,
-                2
+                4
             );
 
             var pdfBytes = Document
@@ -1307,7 +1423,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 normalizedPreset == ZebraLabelPreset
                     ? "جاهز للطباعة على Zebra بمقاس 100×50 مم."
                     : "يوضع الملصق على المركبة للتحقق السريع عند البوابة.";
-            var qrValue = permit.PublicPermitCode;
+            var qrValue = BuildPermitQrContent(permit);
             if (string.IsNullOrWhiteSpace(qrValue))
             {
                 return NotFound();
@@ -1317,7 +1433,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 BarcodeFormat.QR_CODE,
                 ConvertMillimetresToPixels(qrBoxMm),
                 ConvertMillimetresToPixels(qrBoxMm),
-                2
+                4
             );
             var organizationName = TruncateLabelValue(
                 administration.OrganizationName,
@@ -1527,7 +1643,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 BarcodeFormat.QR_CODE,
                 ConvertMillimetresToPixels(qrBoxMm),
                 ConvertMillimetresToPixels(qrBoxMm),
-                2
+                4
             );
 
             var pdfBytes = Document
@@ -1619,10 +1735,10 @@ namespace VehiclePermitSystemWeb.Controllers
             return preset == ZebraLabelPreset ? "Zebra_" : string.Empty;
         }
 
-        private static ZebraLabelContent BuildZebraLabelContent(Permit permit)
+        private ZebraLabelContent BuildZebraLabelContent(Permit permit)
         {
             return new ZebraLabelContent(
-                permit.PublicPermitCode,
+                BuildPermitQrContent(permit),
                 string.IsNullOrWhiteSpace(permit.PlateNumberDisplay)
                     ? permit.PlateNumber.Trim()
                     : permit.PlateNumberDisplay.Trim()
@@ -1693,16 +1809,57 @@ namespace VehiclePermitSystemWeb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private string BuildPermitVerificationUrl(string token)
+        private string BuildPermitVerificationUrl(Permit permit, string token)
         {
-            return BuildPermitPublicUrl(nameof(Verify), new { token });
+            var tenantReference = _userAdminService
+                .GetTenants(includeInactive: true)
+                .FirstOrDefault(item =>
+                    string.Equals(
+                        item.TenantId,
+                        permit.TenantId,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                ?.Slug;
+
+            tenantReference = string.IsNullOrWhiteSpace(tenantReference)
+                ? permit.TenantId
+                : tenantReference;
+
+            return BuildPermitPublicUrl(
+                nameof(Verify),
+                new { tenant = tenantReference, token }
+            );
+        }
+
+        private string BuildPermitDigitalPassUrl(Permit permit, string token)
+        {
+            var tenantReference = _userAdminService
+                .GetTenants(includeInactive: true)
+                .FirstOrDefault(item =>
+                    string.Equals(
+                        item.TenantId,
+                        permit.TenantId,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                ?.Slug;
+
+            tenantReference = string.IsNullOrWhiteSpace(tenantReference)
+                ? permit.TenantId
+                : tenantReference;
+
+            return BuildPermitPublicUrl(
+                nameof(Pass),
+                new { tenant = tenantReference, token }
+            );
         }
 
         private string BuildPermitQrContent(Permit permit)
         {
-            if (!string.IsNullOrWhiteSpace(permit.QrToken))
+            if (PermitQrTokenGenerator.IsCurrentVersion(permit.QrToken))
             {
-                var verificationUrl = BuildPermitVerificationUrl(permit.QrToken);
+                var verificationUrl = BuildPermitVerificationUrl(permit, permit.QrToken);
                 if (!string.IsNullOrWhiteSpace(verificationUrl))
                 {
                     return verificationUrl;
@@ -1717,7 +1874,7 @@ namespace VehiclePermitSystemWeb.Controllers
             );
             if (!string.IsNullOrWhiteSpace(persistedToken))
             {
-                var verificationUrl = BuildPermitVerificationUrl(persistedToken);
+                var verificationUrl = BuildPermitVerificationUrl(permit, persistedToken);
                 if (!string.IsNullOrWhiteSpace(verificationUrl))
                 {
                     return verificationUrl;
@@ -1727,6 +1884,36 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return string.Empty;
+        }
+
+        private bool TryResolvePublicTenant(string? tenantReference)
+        {
+            if (string.IsNullOrWhiteSpace(tenantReference))
+            {
+                return true;
+            }
+
+            var tenant = _userAdminService
+                .GetTenants(includeInactive: true)
+                .FirstOrDefault(item =>
+                    string.Equals(
+                        item.TenantId,
+                        tenantReference,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || string.Equals(
+                        item.Slug,
+                        tenantReference,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
+            if (tenant == null || !tenant.IsActive)
+            {
+                return false;
+            }
+
+            HttpContext.Items[HttpTenantContext.ResolvedTenantItemKey] = tenant.TenantId;
+            return true;
         }
 
         private static string BuildPermitUsageNotice(AdministrationSettings administration)
@@ -1753,6 +1940,14 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return Url.Action(actionName, "Permits", routeValues, Request.Scheme) ?? path;
+        }
+
+        private void ApplyPrivatePassResponseHeaders()
+        {
+            Response.Headers.CacheControl = "no-store, private";
+            Response.Headers.Pragma = "no-cache";
+            Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive";
+            Response.Headers["Referrer-Policy"] = "no-referrer";
         }
 
         private string GetPermitPublicStatus(Permit permit)
@@ -1790,44 +1985,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return "authorized";
         }
 
-        private static PermitVerificationViewModel BuildPermitVerificationModel(
-            Permit? permit,
-            bool isAuthorized,
-            string status,
-            string message
-        )
-        {
-            var model = new PermitVerificationViewModel
-            {
-                Permit = permit,
-                IsValid = permit != null,
-                IsAuthorized = isAuthorized,
-                IsExpired = string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase),
-                Message = message,
-            };
-
-            if (isAuthorized)
-            {
-                model.Title = "تصريح مصرح";
-                model.StatusText = "مصرح";
-                model.BadgeClass = "bg-success";
-            }
-            else if (string.Equals(status, "expired", StringComparison.OrdinalIgnoreCase))
-            {
-                model.Title = "تصريح منتهي";
-                model.StatusText = "منتهي";
-                model.BadgeClass = "bg-warning text-dark";
-            }
-            else
-            {
-                model.Title = "تصريح غير مصرح";
-                model.StatusText = "غير مصرح";
-                model.BadgeClass = "bg-danger";
-            }
-
-            return model;
-        }
-
         private byte[]? ResolveLogoBytes(string? logoPath)
         {
             if (string.IsNullOrWhiteSpace(logoPath))
@@ -1854,6 +2011,66 @@ namespace VehiclePermitSystemWeb.Controllers
             return !string.IsNullOrWhiteSpace(resolvedPath)
                 ? System.IO.File.ReadAllBytes(resolvedPath)
                 : null;
+        }
+
+        private static string RenderBarcodeSvg(
+            string content,
+            BarcodeFormat format,
+            int size,
+            int margin
+        )
+        {
+            var writer = new BarcodeWriterPixelData
+            {
+                Format = format,
+                Options = new EncodingOptions
+                {
+                    Width = size,
+                    Height = size,
+                    Margin = margin,
+                    PureBarcode = true,
+                },
+            };
+            var pixelData = writer.Write(content);
+            var path = new System.Text.StringBuilder(pixelData.Width * 8);
+
+            for (var y = 0; y < pixelData.Height; y++)
+            {
+                var x = 0;
+                while (x < pixelData.Width)
+                {
+                    var offset = ((y * pixelData.Width) + x) * 4;
+                    if (pixelData.Pixels[offset] >= 128)
+                    {
+                        x++;
+                        continue;
+                    }
+
+                    var start = x;
+                    while (x < pixelData.Width)
+                    {
+                        offset = ((y * pixelData.Width) + x) * 4;
+                        if (pixelData.Pixels[offset] >= 128)
+                        {
+                            break;
+                        }
+
+                        x++;
+                    }
+
+                    path.Append('M')
+                        .Append(start)
+                        .Append(' ')
+                        .Append(y)
+                        .Append('h')
+                        .Append(x - start)
+                        .Append("v1h-")
+                        .Append(x - start)
+                        .Append('z');
+                }
+            }
+
+            return $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {pixelData.Width} {pixelData.Height}\" shape-rendering=\"crispEdges\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\"/><path d=\"{path}\" fill=\"#050914\"/></svg>";
         }
 
         [SupportedOSPlatform("windows")]

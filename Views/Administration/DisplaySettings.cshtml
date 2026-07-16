@@ -45,7 +45,7 @@
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <div class="fw-bold">مفتاح الوصول</div>
-                        <div class="small text-muted">مخزن في إعدادات الإدارة: DisplayAccessKey.</div>
+                        <div class="small text-muted">المفتاح محفوظ بشكل مهشّم ولا يمكن استخراجه بعد إنشائه.</div>
                     </div>
                     <form asp-action="RotateDisplayAccessKey" method="post" data-confirm-message="سيتم إبطال المفتاح القديم. هل تريد توليد مفتاح جديد؟">
                         @Html.AntiForgeryToken()
@@ -53,10 +53,13 @@
                     </form>
                 </div>
                 <div class="input-group" dir="ltr">
-                    <input class="form-control ltr-field" value="@Model.MaskedDisplayAccessKey" readonly data-secret-mask="@Model.MaskedDisplayAccessKey" data-secret-value="@Model.DisplayAccessKey" />
-                    <button class="btn btn-outline-secondary" type="button" data-toggle-secret>إظهار</button>
+                    <input class="form-control ltr-field" value="@(string.IsNullOrWhiteSpace(Model.DisplayAccessKey) ? Model.MaskedDisplayAccessKey : Model.DisplayAccessKey)" readonly data-copy-source="display-one-time-key" />
+                    @if (!string.IsNullOrWhiteSpace(Model.DisplayAccessKey))
+                    {
+                        <button class="btn btn-outline-secondary" type="button" data-copy-target="display-one-time-key">نسخ</button>
+                    }
                 </div>
-                <div class="small text-muted mt-2">لا يتم إرسال المفتاح في query string. رابط طلب الاعتماد يضعه في جزء محلي من الرابط لتعبئة النموذج فقط.</div>
+                <div class="small text-muted mt-2">بعد التوليد يظهر المفتاح مرة واحدة، ويضاف إلى الجزء المحلي من رابط الربط دون إرساله للخادم.</div>
             </div>
         </div>
 
@@ -66,7 +69,6 @@
                 <form asp-action="DisplaySettings" method="post" data-confirm-message="هل تريد حفظ إعدادات الشبكة وشاشات العرض؟">
                     @Html.AntiForgeryToken()
                     <input asp-for="Id" type="hidden" />
-                    <input asp-for="DisplayAccessKey" type="hidden" />
                     <div class="row g-3">
                         <div class="col-md-12">
                             <label asp-for="DisplayBaseUrl" class="form-label">عنوان الوصول الخارجي</label>

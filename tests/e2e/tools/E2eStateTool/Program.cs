@@ -53,7 +53,7 @@ static void PrepareEntryOnlyStalePending(string[] args)
         UPDATE AdministrationSettings
         SET
             WorkStartTime = '08:00:00',
-            WorkEndTime = '23:59:00',
+            WorkEndTime = '16:00:00',
             AttendanceGraceMinutes = 15,
             WorkEndExitGraceMinutes = 30,
             LateReturnGraceMinutes = 5,
@@ -114,7 +114,7 @@ static void PrepareEntryOnlyStalePending(string[] args)
                 '',
                 '',
                 '08:00:00',
-                '23:59:00',
+                '16:00:00',
                 15,
                 30,
                 5,

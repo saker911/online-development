@@ -18,10 +18,16 @@ namespace VehiclePermitSystemWeb.Utilities.Users
         public static string EnsureOperatorBadgeCode(
             ApplicationDbContext db,
             string username,
-            string? preferredBadgeCode = null
+            string? preferredBadgeCode = null,
+            bool ignoreTenantFilters = false
         )
         {
-            return UserAccountService.EnsureOperatorBadgeCode(db, username, preferredBadgeCode);
+            return UserAccountService.EnsureOperatorBadgeCode(
+                db,
+                username,
+                preferredBadgeCode,
+                ignoreTenantFilters
+            );
         }
 
         public static string? ConfigureOperatorCredentials(
@@ -29,7 +35,8 @@ namespace VehiclePermitSystemWeb.Utilities.Users
             string username,
             string badgeCode,
             string? temporaryPin,
-            bool requirePinChange
+            bool requirePinChange,
+            bool ignoreTenantFilters = false
         )
         {
             return UserAccountService.ConfigureOperatorCredentials(
@@ -37,7 +44,8 @@ namespace VehiclePermitSystemWeb.Utilities.Users
                 username,
                 badgeCode,
                 temporaryPin,
-                requirePinChange
+                requirePinChange,
+                ignoreTenantFilters
             );
         }
     }

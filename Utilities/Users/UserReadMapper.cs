@@ -17,14 +17,29 @@ namespace VehiclePermitSystemWeb.Utilities.Users
 {
     public static class UserReadMapper
     {
-        public static IEnumerable<UserAccount> GetAllUsers(ApplicationDbContext db)
+        public static IEnumerable<UserAccount> GetAllUsers(
+            ApplicationDbContext db,
+            bool ignoreTenantFilters = false
+        )
         {
-            return db.UserAccounts.AsNoTracking().OrderBy(user => user.DisplayName).ToList();
+            var users = ignoreTenantFilters
+                ? db.UserAccounts.IgnoreQueryFilters()
+                : db.UserAccounts;
+
+            return users.AsNoTracking().OrderBy(user => user.DisplayName).ToList();
         }
 
-        public static UserAccount? GetUserAccount(ApplicationDbContext db, string username)
+        public static UserAccount? GetUserAccount(
+            ApplicationDbContext db,
+            string username,
+            bool ignoreTenantFilters = false
+        )
         {
-            return db.UserAccounts.AsNoTracking().FirstOrDefault(user => user.Username == username);
+            var users = ignoreTenantFilters
+                ? db.UserAccounts.IgnoreQueryFilters()
+                : db.UserAccounts;
+
+            return users.AsNoTracking().FirstOrDefault(user => user.Username == username);
         }
 
         public static bool HasAnyUsers(ApplicationDbContext db)

@@ -1,0 +1,181 @@
+@using VehiclePermitSystemWeb.Services.Administration
+@using VehiclePermitSystemWeb.Services.Tenants
+@inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
+
+@{
+    ViewData["Title"] = "منصة التصاريح والزيارات";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "public-landing-body";
+    var administrationSettings = UserAdminService.GetAdministrationSettings();
+    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
+    var plans = TenantPlanCatalog.GetPlans();
+}
+
+<main class="public-landing-shell">
+    <nav class="public-landing-nav" aria-label="التنقل الرئيسي">
+        <a asp-controller="Home" asp-action="Index" class="public-landing-brand">
+            <img src="~/@organizationLogoPath" alt="" />
+            <span>منصة التصاريح</span>
+        </a>
+        <div class="public-landing-nav-links">
+            <a href="#platform">المنصة</a>
+            <a href="#how-it-works">كيف تعمل</a>
+            <a href="#plans">الباقات</a>
+            <a href="#security">الأمان</a>
+        </div>
+        <div class="public-landing-nav-actions">
+            @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+            <a asp-controller="Account" asp-action="Login" class="btn btn-outline-secondary">تسجيل الدخول</a>
+            <a asp-controller="Subscription" asp-action="Plans" class="btn btn-primary">ابدأ الآن</a>
+        </div>
+    </nav>
+
+    <section class="public-landing-hero">
+        <div class="public-landing-copy">
+            <span class="public-landing-kicker">تشغيل احترافي للبوابات والاستقبال</span>
+            <h1>كل دخول واضح.<br />كل بوابة تحت السيطرة.</h1>
+            <p>
+                نظّم الزوار والتصاريح والمركبات في مسار رقمي واحد، من الطلب والموافقة
+                إلى قراءة الباركود والمتابعة اللحظية.
+            </p>
+            <div class="public-landing-actions">
+                <a asp-controller="Subscription" asp-action="Plans" class="btn btn-primary btn-lg">ابدأ التجربة</a>
+                <a href="#platform" class="btn btn-outline-primary btn-lg">شاهد كيف تعمل</a>
+            </div>
+            <div class="public-landing-trust">
+                <span>حساب مستقل لكل جهة</span>
+                <span>رابط مستقل لكل جهة</span>
+                <span>صلاحيات دقيقة للفريق</span>
+            </div>
+        </div>
+
+    </section>
+
+    <section class="public-proof-strip" aria-label="مزايا التشغيل الأساسية">
+        <div><strong>24/7</strong><span>تشغيل ومتابعة</span></div>
+        <div><strong>دقائق</strong><span>لإطلاق حساب الجهة</span></div>
+        <div><strong>SSL</strong><span>جاهز للنشر الآمن</span></div>
+        <div><strong>RTL</strong><span>تجربة عربية كاملة</span></div>
+    </section>
+
+    <section class="public-landing-section public-product-section" id="platform">
+        <div class="public-section-heading">
+            <span>منصة واحدة بدل الإجراءات المتفرقة</span>
+            <h2>من طلب التصريح إلى عبور البوابة في مسار واحد</h2>
+            <p>كل فريق يرى ما يحتاجه فقط، وكل عملية محفوظة وقابلة للمتابعة.</p>
+        </div>
+        <div class="public-product-grid">
+            <article>
+                <span class="public-product-index">01</span>
+                <strong>التصاريح والموافقات</strong>
+                <p>طلبات الموظفين والمركبات، الاعتماد، الإيقاف، والتجديد في سجل واضح.</p>
+            </article>
+            <article>
+                <span class="public-product-index">02</span>
+                <strong>الزوار والمرافقون</strong>
+                <p>تسجيل سريع للاستقبال مع حالات الوصول والخروج والتنبيهات المرتبطة.</p>
+            </article>
+            <article>
+                <span class="public-product-index">03</span>
+                <strong>الجوال والباركود</strong>
+                <p>قراءة من كاميرا الجوال أو جهاز الباركود دون تغيير مسار موظف البوابة.</p>
+            </article>
+            <article>
+                <span class="public-product-index">04</span>
+                <strong>التقارير والمخاطر</strong>
+                <p>متابعة لحظية، تقارير قابلة للطباعة، وتنبيهات للحالات التي تحتاج قرارًا.</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="public-process-section" id="how-it-works">
+        <div class="public-section-heading">
+            <span>ابدأ بدون مشروع تقني طويل</span>
+            <h2>ثلاث خطوات ويصبح حساب جهتك جاهزًا</h2>
+        </div>
+        <ol class="public-process-list">
+            <li><span>1</span><div><strong>اختر مدة الاشتراك</strong><p>شهر أو ستة أشهر أو سنة، مع النظام كاملًا في جميع الخيارات.</p></div></li>
+            <li><span>2</span><div><strong>أكمل بيانات الجهة</strong><p>أنشئ الحساب عبر البريد أو Google أو Microsoft بعد تفعيل الربط.</p></div></li>
+            <li><span>3</span><div><strong>فعّل وابدأ التشغيل</strong><p>بعد تأكيد الدفع، افتح رابط جهتك وأضف فريقك وبواباتك.</p></div></li>
+        </ol>
+    </section>
+
+    <section class="public-plans-section" id="plans">
+        <div class="public-section-heading public-section-heading-row">
+            <div>
+                <span>باقات واضحة وقابلة للنمو</span>
+                <h2>ابدأ بالحجم المناسب اليوم</h2>
+            </div>
+            <a asp-controller="Subscription" asp-action="Plans" class="btn btn-outline-primary">مقارنة الباقات</a>
+        </div>
+        <div class="public-plan-preview-grid">
+            @foreach (var plan in plans)
+            {
+                <article class="@(plan.IsFeatured ? "is-featured" : "")">
+                    <div>
+                        <span>@(plan.IsFeatured ? "الأكثر استخدامًا" : "باقة مرنة")</span>
+                        <h3>@plan.Name</h3>
+                        <p>@plan.Summary</p>
+                    </div>
+                    <strong>@plan.PriceText</strong>
+                    <ul>
+                        <li>@plan.DurationText</li>
+                        <li>جميع خدمات النظام</li>
+                        <li>استخدام مفتوح دون حدود</li>
+                    </ul>
+                    <a asp-controller="Subscription" asp-action="Register" asp-route-plan="@plan.Code"
+                       class="btn @(plan.IsFeatured ? "btn-light" : "btn-outline-primary")">اختيار @plan.Name</a>
+                </article>
+            }
+        </div>
+    </section>
+
+    <section class="public-security-section" id="security">
+        <div class="public-security-copy">
+            <span>الأمان والعزل أولًا</span>
+            <h2>بيانات كل جهة تبقى داخل نطاقها</h2>
+            <p>هوية مستقلة، صلاحيات حسب الدور، جلسات محدودة، وسجل للعمليات الحساسة.</p>
+            <a asp-controller="Subscription" asp-action="Plans" class="btn btn-light">إنشاء حساب جهة</a>
+        </div>
+        <div class="public-security-list">
+            <div><strong>عزل الجهات</strong><span>كل استعلام مرتبط بهوية الجهة الحالية.</span></div>
+            <div><strong>صلاحيات دقيقة</strong><span>الاستقبال والبوابة والإدارة يرون ما يخص مهامهم.</span></div>
+            <div><strong>دخول موثوق</strong><span>دعم الحساب المحلي وGoogle وMicrosoft عند تهيئة OAuth.</span></div>
+            <div><strong>رابط جهة موثوق</strong><span>مسار مستقل داخل المنصة وشهادة SSL مركزية واتصال آمن.</span></div>
+        </div>
+    </section>
+
+    <section class="public-faq-section">
+        <div class="public-section-heading">
+            <span>أسئلة قبل البدء</span>
+            <h2>إجابات مباشرة</h2>
+        </div>
+        <div class="public-faq-list">
+            <details><summary>هل بيانات الجهات منفصلة؟</summary><p>نعم. كل حساب يعمل بهوية جهة مستقلة، وتطبق فلاتر العزل على البيانات التشغيلية.</p></details>
+            <details><summary>كيف أدخل إلى حساب جهتي؟</summary><p>تحصل كل جهة بعد التفعيل على رابط مستقل داخل المنصة يمكن مشاركته مع فريقها.</p></details>
+            <details><summary>هل يعمل قارئ الباركود من الجوال؟</summary><p>نعم. تدعم صفحات البوابة الكاميرا على الجوال إضافة إلى أجهزة الباركود التقليدية.</p></details>
+            <details><summary>متى يصبح الحساب فعالًا؟</summary><p>ينشأ الحساب أولًا بحالة انتظار الدفع، ثم يفعّل بعد تأكيد السداد أو بدء التجربة.</p></details>
+        </div>
+    </section>
+
+    <section class="public-landing-band">
+        <div>
+            <span>جاهز لتنظيم الدخول؟</span>
+            <h2>ابدأ حساب جهتك اليوم، وتوسّع عندما تحتاج.</h2>
+        </div>
+        <a asp-controller="Subscription" asp-action="Plans" class="btn btn-light">عرض الباقات</a>
+    </section>
+
+    <footer class="public-landing-footer">
+        <a asp-controller="Home" asp-action="Index" class="public-landing-brand">
+            <img src="~/@organizationLogoPath" alt="" />
+            <span>منصة التصاريح</span>
+        </a>
+        <div>
+            <a href="#platform">المنصة</a>
+            <a href="#plans">الباقات</a>
+            <a asp-controller="Account" asp-action="Login">تسجيل الدخول</a>
+        </div>
+        <span>© 2026 جميع الحقوق محفوظة</span>
+    </footer>
+</main>

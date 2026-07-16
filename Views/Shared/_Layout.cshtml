@@ -283,7 +283,10 @@
     );
     AddNotification(BuildModelStateToastMessage(), "danger");
 
-    var notificationContainerClass = string.Equals(pageBodyClass, "login-page-body", StringComparison.Ordinal)
+    var isPublicSurface = string.Equals(pageBodyClass, "login-page-body", StringComparison.Ordinal)
+        || string.Equals(pageBodyClass, "public-landing-body", StringComparison.Ordinal)
+        || string.Equals(pageBodyClass, "subscription-page-body", StringComparison.Ordinal);
+    var notificationContainerClass = isPublicSurface
         ? "app-notify-container app-notify-container-login"
         : "app-notify-container";
     var appVersion = Assembly.GetEntryAssembly()?
@@ -291,7 +294,9 @@
         .InformationalVersion ?? "1.0.0";
     var hideShellMetaClass = string.Equals(pageBodyClass, "login-page-body", StringComparison.Ordinal)
         ? "app-system-meta app-system-meta-login"
-        : "app-system-meta app-system-meta-kiosk";
+        : isPublicSurface
+            ? "app-system-meta app-system-meta-public"
+            : "app-system-meta app-system-meta-kiosk";
 
     var isActive = new Func<string, string, bool>((controller, action) =>
         string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
@@ -309,7 +314,15 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @if (ViewData["Robots"] is string robots && !string.IsNullOrWhiteSpace(robots))
+    {
+        <meta name="robots" content="@robots" />
+    }
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="التصاريح" />
     <title>@ViewData["Title"] - نظام التصاريح</title>
     <script nonce="@(Context.Items["CspScriptNonce"])">
             (function () {
@@ -329,6 +342,9 @@
             })();
     </script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="icon" href="~/@organizationLogoPath" />
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="~/icons/app-icon-192.png" />
     <link rel="stylesheet" href="~/css/theme-vars.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/theme-base.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site-primitives.css" asp-append-version="true" />
@@ -348,6 +364,7 @@
     <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/visual-refresh.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/public-marketing.css" asp-append-version="true" />
 </head>
 
 <body class="@bodyClass">
@@ -395,6 +412,10 @@
                 </a>
 
                 <div class="app-topbar-actions">
+                    <button class="btn icon-only-trigger" type="button" data-pwa-install hidden
+                            aria-label="تثبيت التطبيق" title="تثبيت التطبيق">
+                        <img src="~/icons/install.svg" alt="" class="nav-icon-small" />
+                    </button>
                     <button class="btn icon-only-trigger app-sidebar-toggle" type="button" data-sidebar-toggle
                             aria-label="فتح القائمة" aria-controls="appSidebar" aria-expanded="false">
                         <span class="app-sidebar-toggle-bars" aria-hidden="true">
@@ -680,6 +701,14 @@
                                                         <span>المستخدمون والصلاحيات</span>
                                                     </a>
                                                 }
+                                                @if (User.IsSuperAdmin())
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Tenants") ? "active" : string.Empty)"
+                                                           asp-controller="Tenants" asp-action="Index">
+                                                        <img src="~/icons/administration-data.svg" alt="" class="app-sidebar-icon" />
+                                                        <span>الجهات والشركات</span>
+                                                    </a>
+                                                }
                                                 @if (User.HasPermission(AppPermissions.ManageDelegations))
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Delegations") ? "active" : string.Empty)"
@@ -760,7 +789,8 @@
                             <script src="~/js/toast-notifications.js" asp-append-version="true"></script>
                             <script src="~/js/confirm-action-modal.js" asp-append-version="true"></script>
                             <script src="~/js/permit-action-hubs.js" asp-append-version="true"></script>
-                            <script src="~/js/theme-toggle.js" asp-append-version="true"></script>
+                             <script src="~/js/theme-toggle.js" asp-append-version="true"></script>
+                             <script src="~/js/pwa-register.js" asp-append-version="true"></script>
                             @await RenderSectionAsync("Scripts", required: false)
                             <script src="~/js/form-persist.js" asp-append-version="true"></script>
                         </body>

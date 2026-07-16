@@ -35,15 +35,9 @@
 <div class="card-permit scan-console-shell mx-auto">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h1 class="mb-1">مسح باركود</h1>
-            <div class="text-muted-ar">هذه الشاشة مخصصة لتجربة أجهزة الباركود الداخلية التي تقرأ رقم التصريح أو رقم
-                الزيارة وتضغط إدخال تلقائيًا.</div>
+            <h1 class="mb-1">ماسح البوابة</h1>
         </div>
         <span class="badge bg-light text-dark border">المستخدم: @Model.ScannerUserName</span>
-    </div>
-
-    <div class="d-flex justify-content-end mb-3">
-        <span class="badge bg-info-subtle text-info-emphasis border">اكتشاف النوع تلقائيًا من القيمة المقروءة</span>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNumber))
@@ -155,45 +149,29 @@
                 <label asp-for="Identifier" class="form-label">القيمة المقروءة</label>
                 <input asp-for="Identifier" class="form-control ltr-field scan-input" autocomplete="off" autofocus
                        required />
-                <div class="form-text text-muted-ar">امسح الآن بالماسح. إذا كان الجهاز يرسل Enter تلقائيًا فسيتم إرسال
-                    النموذج مباشرة.</div>
                 <div class="small text-muted mt-1" id="detectedScanModeText">سيتم اكتشاف هل القيمة تصريح أو زيارة
                     تلقائيًا.</div>
                 <span asp-validation-for="Identifier" class="field-validation-error small"></span>
             </div>
             <div class="col-12">
-                <div class="small text-muted-ar">لا توجد أزرار تشغيل يدوية هنا. يكفي تمرير الباركود أو الزيارة وسيتم
-                    المعالجة تلقائيًا مع حماية الطلب برمز الصفحة.</div>
+                <div class="mobile-camera-panel" id="scanConsoleCameraPanel" hidden>
+                    <div class="mobile-camera-stage">
+                        <video class="mobile-camera-preview" id="scanConsoleCameraPreview" playsinline muted></video>
+                        <div class="mobile-camera-reticle" aria-hidden="true"></div>
+                    </div>
+                    <div class="mobile-camera-status" id="scanConsoleCameraStatus">وجّه كاميرا الجوال نحو QR أو الباركود.</div>
+                    <div class="mobile-camera-actions">
+                        <button type="button" class="btn btn-outline-light btn-sm mobile-camera-fullscreen" id="scanConsoleFullscreenButton"
+                                title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="scanConsoleStopCameraButton">إيقاف الكاميرا</button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary w-100 mt-2" id="scanConsoleCameraButton">
+                    قراءة بكاميرا الجوال
+                </button>
             </div>
         </div>
     </form>
-
-    <hr class="my-4" />
-
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="scan-console-info-panel rounded p-3 h-100">
-                <h2 class="h5 mb-2">طريقة عمل أجهزة الباركود</h2>
-                <div class="text-muted-ar">أغلب أجهزة الباركود السلكية واللاسلكية تعمل كلوحة مفاتيح. عند المسح تكتب
-                    القيمة في الحقل الحالي مثل <span class="ltr-field">P3</span> ثم تضغط Enter.</div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="scan-console-info-panel rounded p-3 h-100">
-                <h2 class="h5 mb-2">ماذا تختبر هذه الشاشة؟</h2>
-                <div class="text-muted-ar">تتحقق من أن الجهاز يرسل القيمة بشكل صحيح، وأن النظام يبدل حالة التصريح أو
-                    الزيارة مباشرة عبر نفس منطق المسح الداخلي.</div>
-            </div>
-        </div>
-        <div class="col-12">
-            <div class="scan-console-info-panel rounded p-3">
-                <h2 class="h5 mb-2">كيف تختبر الصوت؟</h2>
-                <div class="text-muted-ar">اضغط أولًا على زر <strong>تجربة صوت النجاح</strong> أو <strong>تجربة صوت
-                    الخطأ</strong>. إذا سمعت النغمة فهذا يعني أن المتصفح والجهاز جاهزان، وبعدها يمكنك تجربة قارئ
-                    الباركود الحقيقي. بعض المتصفحات لا تسمح بتشغيل الصوت إلا بعد أول نقرة من المستخدم.</div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script type="application/json" id="scanConsoleInitialPermit" nonce="@(Context.Items["CspScriptNonce"])">@Html.Raw(initialPermitJson)</script>

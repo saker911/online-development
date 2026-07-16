@@ -9,6 +9,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Permits
         public string Message { get; set; } = string.Empty;
         public string BadgeClass { get; set; } = "bg-secondary";
         public string StatusText { get; set; } = string.Empty;
-        public Permit? Permit { get; set; }
+        public string OrganizationName { get; set; } = string.Empty;
+        public string PermitNumber { get; set; } = string.Empty;
+        public string PermitTypeDisplay { get; set; } = string.Empty;
+        public string PlateNumberDisplay { get; set; } = string.Empty;
+        public DateTime? ExpiresAt { get; set; }
     }
 }

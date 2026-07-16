@@ -38,8 +38,14 @@ namespace VehiclePermitSystemWeb.Controllers
             _userAdminService = userAdminService;
         }
 
+        [AllowAnonymous]
         public IActionResult Index()
         {
+            if (!(User?.Identity?.IsAuthenticated ?? false))
+            {
+                return View("Landing");
+            }
+
             var permits = _permitService.GetVisiblePermits(User.Identity?.Name).ToList();
             var visits = _visitService.GetAllVisits().ToList();
             var activities = _permitService.GetRecentPermitActivities(200).ToList();

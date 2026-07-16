@@ -35,8 +35,6 @@ namespace VehiclePermitSystemWeb.Services.Permits
         private readonly IPermitApprovalService _permitApprovalService;
         private readonly IPermitLifecycleService _permitLifecycleService;
         private readonly IPermitAuditService _permitAuditService;
-        private readonly string _qrSecret;
-        private readonly string _qrSecretPath;
         private readonly IAccessControlService _accessControl;
         private readonly IDelegationService _delegationService;
 
@@ -65,8 +63,6 @@ namespace VehiclePermitSystemWeb.Services.Permits
             _permitApprovalService = permitApprovalService;
             _permitLifecycleService = permitLifecycleService;
             _permitAuditService = permitAuditService;
-            _qrSecretPath = Path.Combine(AppStoragePaths.GetAppDataRoot(), "qr-secret.txt");
-            _qrSecret = QrSecretStore.LoadOrCreate(_qrSecretPath);
             _accessControl = accessControl;
             _delegationService = delegationService;
         }
@@ -495,7 +491,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
             status = "invalid";
             message = "رمز التحقق غير صالح.";
 
-            if (string.IsNullOrWhiteSpace(token))
+            if (!PermitQrTokenGenerator.IsCurrentVersion(token))
             {
                 return false;
             }
@@ -524,6 +520,30 @@ namespace VehiclePermitSystemWeb.Services.Permits
                 return false;
             }
 
+            if (
+                !string.Equals(
+                    permit.ApprovalStatus,
+                    "Approved",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && !string.Equals(
+                    permit.ApprovalStatus,
+                    "Out",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                message = string.Equals(
+                    permit.ApprovalStatus,
+                    "Stopped",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                    ? "هذا التصريح موقوف وغير مصرح باستخدامه."
+                    : "هذا التصريح غير مصرح باستخدامه حاليًا.";
+                status = "unauthorized";
+                return false;
+            }
+
             status = "authorized";
             message = "التصريح فعال ومصرح به.";
             return true;
@@ -543,7 +563,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
                 return string.Empty;
             }
 
-            if (!string.IsNullOrWhiteSpace(permit.QrToken))
+            if (PermitQrTokenGenerator.IsCurrentVersion(permit.QrToken))
             {
                 return permit.QrToken;
             }
@@ -1161,7 +1181,10 @@ namespace VehiclePermitSystemWeb.Services.Permits
 
         private AdministrationSettings GetAdministrationSettings(ApplicationDbContext db)
         {
-            var existing = db.AdministrationSettings.SingleOrDefault(x => x.Id == 1);
+            var existing = db
+                .AdministrationSettings.OrderByDescending(x => x.Id == 1)
+                .ThenBy(x => x.Id)
+                .FirstOrDefault();
             if (existing == null)
             {
                 existing = BuildDefaultAdministrationSettings();
@@ -1176,7 +1199,6 @@ namespace VehiclePermitSystemWeb.Services.Permits
         {
             return new AdministrationSettings
             {
-                Id = 1,
                 OrganizationName =
                     _configuration["Administration:OrganizationName"] ?? string.Empty,
                 DepartmentName = _configuration["Administration:DepartmentName"] ?? string.Empty,

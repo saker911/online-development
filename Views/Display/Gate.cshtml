@@ -137,7 +137,16 @@
 
                         <div class="gate-scan-actions">
                             <button type="button" class="gate-refocus-button" id="focusScannerButton">إعادة التركيز</button>
+                            <button type="button" class="gate-refocus-button gate-camera-button" id="openGateCameraButton">قراءة بكاميرا الجوال</button>
                             <span class="gate-status-chip" id="scanHintChip">امسح باركود المشغل ثم أدخل الـ PIN</span>
+                        </div>
+
+                        <div class="gate-camera-panel" id="gateCameraPanel" hidden>
+                            <video class="gate-camera-preview" id="gateCameraPreview" playsinline muted></video>
+                            <div class="gate-camera-footer">
+                                <span class="gate-camera-status" id="gateCameraStatus">وجّه كاميرا الجوال نحو QR أو الباركود.</span>
+                                <button type="button" class="gate-refocus-button" id="stopGateCameraButton">إيقاف الكاميرا</button>
+                            </div>
                         </div>
                     </div>
                 </section>

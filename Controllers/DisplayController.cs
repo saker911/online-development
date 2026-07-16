@@ -124,6 +124,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [EnableRateLimiting("display-registration")]
         public IActionResult Register(
             DisplayDeviceRegistrationViewModel model,
             string? returnUrl = null
@@ -232,7 +233,9 @@ namespace VehiclePermitSystemWeb.Controllers
             var recentActivities = _permitService.GetRecentPermitActivities(10).ToList();
             var latestActivity = _permitService.GetLatestPermitActivity();
             var deviceId = (Request.Query["deviceId"].ToString() ?? string.Empty).Trim();
-            var activeOperator = _userAdminService.GetDisplayOperatorSession(deviceId);
+            var activeOperator = _userAdminService.GetDisplayOperatorSession(
+                ResolveDisplaySessionKey(deviceId)
+            );
             return Json(
                 new
                 {
@@ -265,7 +268,9 @@ namespace VehiclePermitSystemWeb.Controllers
                 new
                 {
                     operatorSession = SerializeDisplayOperator(
-                        _userAdminService.GetDisplayOperatorSession(deviceId)
+                        _userAdminService.GetDisplayOperatorSession(
+                            ResolveDisplaySessionKey(deviceId)
+                        )
                     ),
                 }
             );
@@ -283,7 +288,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var result = _userAdminService.SwitchDisplayOperator(
-                request.DeviceId,
+                ResolveDisplaySessionKey(request.DeviceId),
                 request.BadgeCode,
                 request.Pin,
                 User.Identity?.Name
@@ -312,7 +317,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var success = _userAdminService.SignOutDisplayOperator(
-                request.DeviceId,
+                ResolveDisplaySessionKey(request.DeviceId),
                 out var previousOperator
             );
             return Json(
@@ -339,7 +344,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var success = _userAdminService.ChangeDisplayOperatorPin(
-                request.DeviceId,
+                ResolveDisplaySessionKey(request.DeviceId),
                 request.CurrentPin,
                 request.NewPin,
                 out var errorCode
@@ -354,7 +359,9 @@ namespace VehiclePermitSystemWeb.Controllers
                         ? "يجب إدخال PIN جديد مختلف عن الرمز الحالي."
                     : "تعذر تحديث الرمز السري الحالي.",
                     operatorSession = SerializeDisplayOperator(
-                        _userAdminService.GetDisplayOperatorSession(request.DeviceId)
+                        _userAdminService.GetDisplayOperatorSession(
+                            ResolveDisplaySessionKey(request.DeviceId)
+                        )
                     ),
                 }
             );
@@ -370,7 +377,9 @@ namespace VehiclePermitSystemWeb.Controllers
                 return authorizationResult;
             }
 
-            var operatorSession = _userAdminService.GetDisplayOperatorSession(request.DeviceId);
+            var operatorSession = _userAdminService.GetDisplayOperatorSession(
+                ResolveDisplaySessionKey(request.DeviceId)
+            );
             if (operatorSession == null)
             {
                 return Json(
@@ -641,7 +650,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return authorizationResult;
             }
 
-            var normalizedDeviceId = ResolvePostedDeviceId(deviceId);
+            var normalizedDeviceId = ResolveDisplaySessionKey(ResolvePostedDeviceId(deviceId));
             if (string.IsNullOrWhiteSpace(normalizedDeviceId))
             {
                 return BuildDisplayMutationDeniedResult();
@@ -668,6 +677,20 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return Request.Query["deviceId"].ToString().Trim();
+        }
+
+        private string ResolveDisplaySessionKey(string? clientDeviceId)
+        {
+            if (
+                User.Identity?.IsAuthenticated == true
+                && User.HasPermission(AppPermissions.ViewDisplays)
+            )
+            {
+                return $"user:{User.Identity.Name}:{clientDeviceId}";
+            }
+
+            var approvedDevice = _displayDeviceService.GetApprovedDevice(HttpContext);
+            return approvedDevice == null ? string.Empty : $"display-device:{approvedDevice.Id}";
         }
 
         private IActionResult BuildDisplayMutationDeniedResult()
@@ -793,8 +816,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 companionCount = visit.CompanionCount,
                 companionSummary = visit.CompanionSummary,
                 visitLocation = visit.VisitLocation,
-                nationalId = visit.NationalId,
-                phoneNumber = visit.PhoneNumber,
+                nationalId = MaskSensitiveValue(visit.NationalId, 4),
+                phoneNumber = MaskSensitiveValue(visit.PhoneNumber, 4),
                 purpose = visit.Purpose,
                 hostName = visit.SubjectDisplay,
                 visitedPersonName = visit.SubjectDisplay,
@@ -823,6 +846,18 @@ namespace VehiclePermitSystemWeb.Controllers
                 )
                     ? "تنبيه تأخر العودة"
                 : activity.ActionLabel;
+        }
+
+        private static string MaskSensitiveValue(string? value, int visibleSuffixLength)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return string.Empty;
+            }
+
+            var suffixLength = Math.Min(Math.Max(visibleSuffixLength, 0), normalized.Length);
+            return new string('*', normalized.Length - suffixLength) + normalized[^suffixLength..];
         }
 
         private static string BuildActivityTheme(PermitActivity activity)

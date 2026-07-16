@@ -124,9 +124,16 @@ namespace VehiclePermitSystemWeb.Controllers
             ValidateVisitSchedule(visit);
             if (ModelState.IsValid)
             {
-                _visitService.AddVisit(visit, User.Identity?.Name);
-                this.ToastSuccess("تم حفظ الزيارة بنجاح.");
-                return RedirectToAction("Index");
+                try
+                {
+                    _visitService.AddVisit(visit, User.Identity?.Name);
+                    this.ToastSuccess("تم حفظ الزيارة بنجاح.");
+                    return RedirectToAction("Index");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    ModelState.AddModelError(string.Empty, ex.Message);
+                }
             }
             return View(visit);
         }

@@ -1,0 +1,101 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitDigitalPassViewModel
+
+@{
+    ViewData["Title"] = "بطاقة التصريح الرقمية";
+    var stateClass = Model.IsAuthorized ? "is-authorized" : Model.IsExpired ? "is-expired" : "is-denied";
+    var expiryText = Model.ExpiresAt.HasValue
+        ? HijriDateFormatter.Format(Model.ExpiresAt)
+        : "حسب مدة الزيارة";
+    var organizationName = string.IsNullOrWhiteSpace(Model.OrganizationName)
+        ? "منصة التصاريح"
+        : Model.OrganizationName;
+}
+
+<section class="permit-holder-shell" aria-labelledby="permit-holder-title">
+    <article class="permit-holder-pass @stateClass">
+        <header class="permit-holder-pass__brand">
+            <span class="permit-holder-pass__mark" aria-hidden="true">@organizationName.First()</span>
+            <div>
+                <strong>@organizationName</strong>
+                @if (!string.IsNullOrWhiteSpace(Model.DepartmentName))
+                {
+                    <span>@Model.DepartmentName</span>
+                }
+            </div>
+            <span class="permit-holder-pass__status">@Model.StatusText</span>
+        </header>
+
+        <div class="permit-holder-pass__heading">
+            <span>بطاقة دخول رقمية</span>
+            <h1 id="permit-holder-title">@Model.Title</h1>
+            <p>@Model.Message</p>
+        </div>
+
+        @if (Model.IsValid)
+        {
+            <div class="permit-holder-pass__identity">
+                <span>حامل التصريح</span>
+                <strong>@Model.HolderName</strong>
+                <small>@Model.PermitTypeDisplay</small>
+            </div>
+
+            @if (Model.IsAuthorized && !string.IsNullOrWhiteSpace(Model.QrImageUrl))
+            {
+                <div class="permit-holder-pass__qr">
+                    <img src="@Model.QrImageUrl" alt="رمز الدخول للتصريح @Model.PermitNumber" />
+                </div>
+                <div class="permit-holder-pass__scan-label">اعرض الرمز عند نقطة الدخول</div>
+            }
+            else
+            {
+                <div class="permit-holder-pass__blocked">لا يمكن استخدام رمز الدخول في الحالة الحالية</div>
+            }
+
+            <dl class="permit-holder-pass__details">
+                <div>
+                    <dt>رمز التصريح</dt>
+                    <dd dir="ltr">@Model.PermitNumber</dd>
+                </div>
+                <div>
+                    <dt>الصلاحية</dt>
+                    <dd class="date-text">@expiryText</dd>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.LocationDisplay))
+                {
+                    <div>
+                        <dt>الموقع</dt>
+                        <dd>@Model.LocationDisplay</dd>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.PlateNumberDisplay))
+                {
+                    <div>
+                        <dt>اللوحة</dt>
+                        <dd>@Model.PlateNumberDisplay</dd>
+                    </div>
+                }
+            </dl>
+
+            @if (Model.IsAuthorized)
+            {
+                <button type="button" class="btn permit-holder-pass__share" data-share-permit data-share-title="تصريح @organizationName">
+                    مشاركة التصريح
+                </button>
+                <div class="permit-holder-pass__share-status" data-share-status role="status" aria-live="polite"></div>
+            }
+
+            @if (ViewData["PermitNotice"] is string notice && !string.IsNullOrWhiteSpace(notice))
+            {
+                <div class="permit-holder-pass__notice">@notice</div>
+            }
+        }
+        else
+        {
+            <div class="permit-holder-pass__blocked">لا توجد بيانات مرتبطة بهذا الرابط.</div>
+        }
+    </article>
+</section>
+
+@section Scripts {
+    <script src="~/js/permit-pass.js" asp-append-version="true"></script>
+}

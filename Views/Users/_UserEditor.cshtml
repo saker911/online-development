@@ -25,6 +25,11 @@
     var applyRoleDefaultsUrl = Url.Action("ApplyRoleDefaults", "Users") ?? string.Empty;
     var currentRoleDisplay = AppRoles.GetDisplayName(Model.Role, Model.IsSuperAdmin);
     var currentDepartmentDisplay = string.IsNullOrWhiteSpace(Model.Department) ? "غير مرتبط" : Model.Department;
+    var selectedTenant = Model.TenantOptions.FirstOrDefault(tenant =>
+        string.Equals(tenant.TenantId, Model.TenantId, StringComparison.OrdinalIgnoreCase));
+    var currentTenantDisplay = selectedTenant?.Name
+        ?? (string.IsNullOrWhiteSpace(Model.TenantId) ? "الجهة الحالية" : Model.TenantId);
+    var administrativeFieldCount = Model.CanChooseTenant ? "4" : Model.IsSuperAdmin ? "2" : "3";
     var canPrintUserBadge = !isNew && !string.IsNullOrWhiteSpace(Model.Username);
     var canManageOperatorBadge = !isNew && Model.CanScanOperations;
     var createFlowReturnUrl = ViewData["CreateFlowReturnUrl"] as string;
@@ -125,6 +130,10 @@
     <input asp-for="LookupReactivateUrl" type="hidden" id="users-lookup-reactivate-url" />
     <input asp-for="PendingPermitsCount" type="hidden" id="users-pending-permits-count" />
     <input asp-for="IsSuperAdmin" type="hidden" id="users-is-super-admin" />
+    @if (!Model.CanChooseTenant)
+    {
+        <input asp-for="TenantId" type="hidden" />
+    }
     <div asp-validation-summary="ModelOnly" class="visually-hidden ue-form-summary"></div>
 
     <div class="ue-wizard-shell" data-users-wizard-shell>
@@ -162,6 +171,10 @@
                 <div class="ue-summary-item">
                     <span>الدور</span>
                     <strong data-users-summary-role>@currentRoleDisplay</strong>
+                </div>
+                <div class="ue-summary-item">
+                    <span>الجهة</span>
+                    <strong data-users-summary-tenant>@currentTenantDisplay</strong>
                 </div>
                 <div class="ue-summary-item">
                     <span>القسم</span>
@@ -349,7 +362,28 @@
 
             @if (canEditAdministrativeFields)
             {
-                <div class="ue-fields-row ue-account-admin-row ue-fields-@(Model.IsSuperAdmin ? "2" : "3") ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
+                <div class="ue-fields-row ue-account-admin-row ue-fields-@administrativeFieldCount ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
+                    @if (Model.CanChooseTenant)
+                    {
+                        <div class="ue-field">
+                            <label asp-for="TenantId" class="form-label">الجهة</label>
+                            <select asp-for="TenantId" class="form-select" id="users-tenant-select" required>
+                                @foreach (var tenant in Model.TenantOptions)
+                                {
+                                    if (tenant.IsActive)
+                                    {
+                                        <option value="@tenant.TenantId">@tenant.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@tenant.TenantId" disabled>@($"{tenant.Name} - موقوفة")</option>
+                                    }
+                                }
+                            </select>
+                            <div class="form-text">تحدد الجهة التي سيظهر داخلها المستخدم وبياناته التشغيلية.</div>
+                            <span asp-validation-for="TenantId" class="field-validation-error small"></span>
+                        </div>
+                    }
                     <div class="ue-field ue-field-status">
                         <label class="form-label">حالة المستخدم</label>
                         @if (Model.IsSuperAdmin)
@@ -862,6 +896,7 @@
                                                                                                                             const liveSummaryFullName = document.querySelector("[data-users-summary-full-name]");
                                                                                                                             const liveSummaryUsername = document.querySelector("[data-users-summary-username]");
                                                                                                                             const liveSummaryRole = document.querySelector("[data-users-summary-role]");
+                                                                                                                            const liveSummaryTenant = document.querySelector("[data-users-summary-tenant]");
                                                                                                                             const liveSummaryDepartment = document.querySelector("[data-users-summary-department]");
                                                                                                                             const liveSummaryDepartmentManager = document.querySelector("[data-users-summary-department-manager]");
                                                                                                                             const liveSummaryPermissions = document.querySelector("[data-users-summary-permissions]");
@@ -869,6 +904,7 @@
                                                                                                                             const wizardValidationText = document.querySelector("[data-users-wizard-error-text]");
                                                                                                                             const wizardValidationList = document.querySelector("[data-users-wizard-error-list]");
                                                                                                                             const departmentManagerNote = document.getElementById("users-department-manager-note");
+                                                                                                                            const tenantSelect = document.getElementById("users-tenant-select");
                                                                                                                             const departmentOptions = Array.from(document.querySelectorAll("#users-department-select option"));
                                                                                                                             const validationRequestedSteps = new Set();
                                                                                                                         function updateWizardSaveNote(message) {
@@ -1140,9 +1176,14 @@
                                                                                                                                 var roleValue = roleSelect ? roleSelect.value : "@Model.Role";
                                                                                                                                 var isSuperAdmin = isSuperAdminInput?.value === "true";
                                                                                                                                 var roleText = isSuperAdmin ? "مالك النظام" : (roleDisplayMap[roleValue] || "مستخدم النظام");
-                                                                                                                                if (liveSummaryRole) liveSummaryRole.textContent = roleText;
+                                                                                                                        if (liveSummaryRole) liveSummaryRole.textContent = roleText;
 
-                                                                                                                                var departmentText = departmentSelect && departmentSelect.selectedOptions && departmentSelect.selectedOptions.length > 0
+                                                                                                                        var tenantText = tenantSelect && tenantSelect.selectedOptions && tenantSelect.selectedOptions.length > 0
+                                                                                                                            ? tenantSelect.selectedOptions[0].textContent.trim()
+                                                                                                                            : "@currentTenantDisplay";
+                                                                                                                        if (liveSummaryTenant) liveSummaryTenant.textContent = tenantText || "الجهة الحالية";
+
+                                                                                                                        var departmentText = departmentSelect && departmentSelect.selectedOptions && departmentSelect.selectedOptions.length > 0
                                                                                                                                     ? departmentSelect.selectedOptions[0].textContent.trim()
                                                                                                                                     : "";
                                                                                                                                 if (liveSummaryDepartment) liveSummaryDepartment.textContent = departmentText || "غير مرتبط";
@@ -1460,7 +1501,7 @@
                                                                                                                                 }
                                                                                                                             });
 
-                                                                                                                            [departmentSelect, autoBindManagerToggle, statusToggle, scanToggle, manageUsersToggle, manageDepartmentsToggle, manageAdministrationToggle].forEach(function (field) {
+                                                                                                                            [tenantSelect, departmentSelect, autoBindManagerToggle, statusToggle, scanToggle, manageUsersToggle, manageDepartmentsToggle, manageAdministrationToggle].forEach(function (field) {
                                                                                                                                 if (field) {
                                                                                                                                     field.addEventListener("change", function () {
                                                                                                                                         updateLiveSummary();

@@ -11,221 +11,71 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "Visits",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
+            var tenantScopedTables = new[]
+            {
+                "Visits",
+                "VisitCompanions",
+                "UserActivities",
+                "UserAccounts",
+                "SessionRecords",
+                "Permits",
+                "PermitActivities",
+                "DisplaySecuritySettings",
+                "DisplayDevices",
+                "Departments",
+                "Delegations",
+                "DelegationPermissions",
+                "AuditLogs",
+                "AdministrationSettings",
+            };
 
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "VisitCompanions",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
+            foreach (var table in tenantScopedTables)
+            {
+                migrationBuilder.Sql(
+                    $"""
+                    ALTER TABLE "{table}"
+                    ADD COLUMN IF NOT EXISTS "TenantId" character varying(64) NOT NULL DEFAULT 'default';
+                    """
+                );
+            }
 
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "UserActivities",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "UserAccounts",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "SessionRecords",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "Permits",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "PermitActivities",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "DisplaySecuritySettings",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "DisplayDevices",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "Departments",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "Delegations",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "DelegationPermissions",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "AuditLogs",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.AddColumn<string>(
-                name: "TenantId",
-                table: "AdministrationSettings",
-                type: "character varying(64)",
-                maxLength: 64,
-                nullable: false,
-                defaultValue: "default");
-
-            migrationBuilder.CreateTable(
-                name: "Tenants",
-                columns: table => new
-                {
-                    TenantId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    Slug = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAtUtc = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Tenants", x => x.TenantId);
-                });
-
-            migrationBuilder.InsertData(
-                table: "Tenants",
-                columns: new[] { "TenantId", "Name", "Slug", "IsActive", "CreatedAtUtc" },
-                values: new object[]
-                {
-                    "default",
-                    "الجهة الافتراضية",
-                    "default",
-                    true,
-                    new DateTime(2026, 6, 18, 0, 0, 0, DateTimeKind.Unspecified),
-                }
+            migrationBuilder.Sql(
+                """
+                CREATE TABLE IF NOT EXISTS "Tenants" (
+                    "TenantId" character varying(64) NOT NULL,
+                    "Name" character varying(256) NOT NULL,
+                    "Slug" character varying(256) NOT NULL,
+                    "IsActive" boolean NOT NULL,
+                    "CreatedAtUtc" timestamp without time zone NOT NULL,
+                    CONSTRAINT "PK_Tenants" PRIMARY KEY ("TenantId")
+                );
+                """
             );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Visits_TenantId",
-                table: "Visits",
-                column: "TenantId");
+            migrationBuilder.Sql(
+                """
+                INSERT INTO "Tenants" ("TenantId", "Name", "Slug", "IsActive", "CreatedAtUtc")
+                VALUES ('default', 'الجهة الافتراضية', 'default', TRUE, TIMESTAMP '2026-06-18 00:00:00')
+                ON CONFLICT ("TenantId") DO NOTHING;
+                """
+            );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_VisitCompanions_TenantId",
-                table: "VisitCompanions",
-                column: "TenantId");
+            foreach (var table in tenantScopedTables)
+            {
+                migrationBuilder.Sql(
+                    $"""
+                    CREATE INDEX IF NOT EXISTS "IX_{table}_TenantId"
+                    ON "{table}" ("TenantId");
+                    """
+                );
+            }
 
-            migrationBuilder.CreateIndex(
-                name: "IX_UserActivities_TenantId",
-                table: "UserActivities",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UserAccounts_TenantId",
-                table: "UserAccounts",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SessionRecords_TenantId",
-                table: "SessionRecords",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Permits_TenantId",
-                table: "Permits",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PermitActivities_TenantId",
-                table: "PermitActivities",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DisplaySecuritySettings_TenantId",
-                table: "DisplaySecuritySettings",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DisplayDevices_TenantId",
-                table: "DisplayDevices",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Departments_TenantId",
-                table: "Departments",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Delegations_TenantId",
-                table: "Delegations",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DelegationPermissions_TenantId",
-                table: "DelegationPermissions",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AuditLogs_TenantId",
-                table: "AuditLogs",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AdministrationSettings_TenantId",
-                table: "AdministrationSettings",
-                column: "TenantId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Tenants_Slug",
-                table: "Tenants",
-                column: "Slug",
-                unique: true);
+            migrationBuilder.Sql(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_Tenants_Slug"
+                ON "Tenants" ("Slug");
+                """
+            );
         }
 
         /// <inheritdoc />

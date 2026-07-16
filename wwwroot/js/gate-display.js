@@ -22,6 +22,11 @@
     const saveNoteEndpoint = root.dataset.saveNoteEndpoint;
     const scannerInput = document.getElementById('barcodeScanner');
     const focusScannerButton = document.getElementById('focusScannerButton');
+    const openGateCameraButton = document.getElementById('openGateCameraButton');
+    const gateCameraPanel = document.getElementById('gateCameraPanel');
+    const gateCameraPreview = document.getElementById('gateCameraPreview');
+    const gateCameraStatus = document.getElementById('gateCameraStatus');
+    const stopGateCameraButton = document.getElementById('stopGateCameraButton');
     const antiforgeryTokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
     const permitResultCard = document.getElementById('permitResultCard');
     const permitEmptyState = document.getElementById('permitEmptyState');
@@ -111,6 +116,10 @@
     let lastSubmittedScanValue = '';
     let lastSubmittedScanAt = 0;
     let activeOperator = null;
+    let cameraStream = null;
+    let cameraDetector = null;
+    let cameraFrameRequest = 0;
+    let cameraRunning = false;
     let lastScannedPermitNumber = '';
     let pendingOperatorPin = '';
     let operatorLoginBusy = false;
@@ -1262,6 +1271,115 @@
         scannerInput.select();
     };
 
+    const setCameraStatus = (message, isError = false) => {
+        if (!gateCameraStatus) {
+            return;
+        }
+
+        gateCameraStatus.textContent = message;
+        gateCameraStatus.classList.toggle('is-error', isError);
+    };
+
+    const stopCameraScanner = (message = '') => {
+        cameraRunning = false;
+        if (cameraFrameRequest) {
+            window.cancelAnimationFrame(cameraFrameRequest);
+            cameraFrameRequest = 0;
+        }
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach((track) => track.stop());
+            cameraStream = null;
+        }
+
+        if (gateCameraPreview) {
+            gateCameraPreview.srcObject = null;
+        }
+
+        if (gateCameraPanel) {
+            gateCameraPanel.hidden = true;
+        }
+
+        if (openGateCameraButton) {
+            openGateCameraButton.disabled = false;
+        }
+
+        if (message) {
+            setCameraStatus(message);
+        }
+
+        focusScanner();
+    };
+
+    const detectCameraFrame = async () => {
+        if (!cameraRunning || !cameraDetector || !gateCameraPreview) {
+            return;
+        }
+
+        try {
+            const codes = await cameraDetector.detect(gateCameraPreview);
+            const rawValue = codes && codes.length ? String(codes[0].rawValue || '').trim() : '';
+            if (rawValue) {
+                scannerInput.value = rawValue;
+                resetScannerBuffer();
+                stopCameraScanner('تمت قراءة الرمز من الكاميرا');
+                submitScan();
+                return;
+            }
+        } catch {
+            setCameraStatus('تعذر تحليل الصورة. قرب الكاميرا من الرمز أو استخدم قارئ الباركود.', true);
+        }
+
+        cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
+    };
+
+    const startCameraScanner = async () => {
+        if (!openGateCameraButton || !gateCameraPanel || !gateCameraPreview) {
+            return;
+        }
+
+        if (!window.isSecureContext && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+            gateCameraPanel.hidden = false;
+            setCameraStatus('قراءة الكاميرا على الجوال تحتاج تشغيل الموقع عبر HTTPS.', true);
+            return;
+        }
+
+        if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+            gateCameraPanel.hidden = false;
+            setCameraStatus('الكاميرا غير مدعومة في هذا المتصفح. استخدم Chrome/Edge أو قارئ الباركود الخارجي.', true);
+            return;
+        }
+
+        try {
+            openGateCameraButton.disabled = true;
+            gateCameraPanel.hidden = false;
+            setCameraStatus('جاري تشغيل كاميرا الجوال...');
+
+            const formats = ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e'];
+            const supportedFormats = typeof BarcodeDetector.getSupportedFormats === 'function'
+                ? await BarcodeDetector.getSupportedFormats()
+                : formats;
+            const activeFormats = formats.filter((format) => supportedFormats.includes(format));
+
+            cameraDetector = new BarcodeDetector(activeFormats.length ? { formats: activeFormats } : undefined);
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' } },
+                audio: false,
+            });
+            gateCameraPreview.srcObject = cameraStream;
+            await gateCameraPreview.play();
+            cameraRunning = true;
+            setCameraStatus('وجّه كاميرا الجوال نحو QR أو الباركود.');
+            cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
+        } catch {
+            stopCameraScanner();
+            if (gateCameraPanel) {
+                gateCameraPanel.hidden = false;
+            }
+            setCameraStatus('تعذر تشغيل الكاميرا. تحقق من السماح للمتصفح باستخدام الكاميرا.', true);
+        }
+    };
+
     kioskDeviceLabel.textContent = deviceId.toUpperCase();
     kioskIpLabel.textContent = window.location.hostname || '--';
 
@@ -1276,6 +1394,8 @@
     });
 
     focusScannerButton.addEventListener('click', focusScanner);
+    openGateCameraButton?.addEventListener('click', startCameraScanner);
+    stopGateCameraButton?.addEventListener('click', () => stopCameraScanner('تم إيقاف الكاميرا.'));
     openOperatorModalButton.addEventListener('click', () => openOperatorModal(activeOperator ? 'switch' : 'login'));
     signOutOperatorButton.addEventListener('click', signOutOperator);
     closeOperatorModalButton.addEventListener('click', closeOperatorModal);
@@ -1365,4 +1485,5 @@
     });
 
     window.addEventListener('focus', focusScanner);
+    window.addEventListener('pagehide', () => stopCameraScanner());
 })();

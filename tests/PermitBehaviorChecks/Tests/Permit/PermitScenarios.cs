@@ -35,6 +35,10 @@ internal static partial class ScenarioCatalog
             "legacy permits should receive a QR token when it is missing"
         );
         Require(
+            backfilledToken.StartsWith("p1.", StringComparison.Ordinal),
+            "permit QR tokens should use the current opaque token format"
+        );
+        Require(
             permitService.TryValidatePermitQrToken(
                 backfilledToken,
                 out var permit,
@@ -82,6 +86,72 @@ internal static partial class ScenarioCatalog
             !qrContent!.Contains("VerifyByNumber", StringComparison.OrdinalIgnoreCase),
             "QR content should stop falling back to permit-number verification links"
         );
+        Require(
+            qrContent.Contains("tenant=default", StringComparison.OrdinalIgnoreCase),
+            "QR verification links should preserve the tenant reference"
+        );
+        Require(
+            PermitVerificationUrlParser.TryGetToken(qrContent, out var parsedToken)
+                && string.Equals(
+                    parsedToken,
+                    permitService
+                        .GetPermitByNumber(permitNumber, "tester")
+                        ?.QrToken,
+                    StringComparison.Ordinal
+                ),
+            "QR verification links should expose the stored opaque token to the scanner parser"
+        );
+        Require(
+            PermitVerificationUrlParser.TryGetToken(
+                $"https://example.test/o/default/permit/{Uri.EscapeDataString(parsedToken)}",
+                out var pathToken
+            ) && string.Equals(pathToken, parsedToken, StringComparison.Ordinal),
+            "scanner parser should support tenant verification path URLs"
+        );
+
+        var passMethod = typeof(PermitsController).GetMethod(nameof(PermitsController.Pass));
+        Require(passMethod != null, "permit controller should expose the digital pass action");
+        Require(
+            passMethod!
+                .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: true)
+                .Any(),
+            "the opaque digital pass link should be available without a user login"
+        );
+        var passProperties = typeof(PermitDigitalPassViewModel)
+            .GetProperties()
+            .Select(property => property.Name)
+            .ToArray();
+        Require(
+            !passProperties.Contains("NationalId", StringComparer.Ordinal)
+                && !passProperties.Contains("EmployeePhone", StringComparer.Ordinal)
+                && !passProperties.Contains("PhoneNumber", StringComparer.Ordinal),
+            "digital pass model should not expose identity numbers or phone numbers"
+        );
+        var digitalPassModel = PermitUiModelBuilder.BuildPermitDigitalPassModel(
+            permit,
+            isAuthorized: true,
+            status: "authorized",
+            message: "active",
+            administration: null,
+            qrImageUrl: "/o/default/pass/token/qr"
+        );
+        Require(
+            digitalPassModel.IsAuthorized
+                && !string.IsNullOrWhiteSpace(digitalPassModel.QrImageUrl),
+            "active digital passes should include a gate QR image"
+        );
+        var deniedPassModel = PermitUiModelBuilder.BuildPermitDigitalPassModel(
+            permit,
+            isAuthorized: false,
+            status: "unauthorized",
+            message: "stopped",
+            administration: null,
+            qrImageUrl: "/must-not-leak"
+        );
+        Require(
+            string.IsNullOrWhiteSpace(deniedPassModel.QrImageUrl),
+            "inactive digital passes should never render a scannable QR image"
+        );
 
         var persistedPermit =
             permitService.GetPermitByNumber(permitNumber, "tester")
@@ -90,11 +160,59 @@ internal static partial class ScenarioCatalog
             !string.IsNullOrWhiteSpace(persistedPermit.QrToken),
             "QR content generation should persist a missing QR token"
         );
+        var scanAuditContext = new PermitScanAuditContext
+        {
+            GateName = "Mobile Gate",
+            GateOperatorName = "Test Operator",
+            GateOperatorAccount = "operator.test",
+            DeviceId = "browser-test-device",
+            IpAddress = "127.0.0.1",
+            ExecutionMethod = "camera",
+        };
+        var (scanAllowed, _) = permitService.RecordPermitScan(
+            permitNumber,
+            "operator.test",
+            auditContext: scanAuditContext
+        );
+        Require(scanAllowed, "approved permit should accept the audited camera scan");
+        using (var auditDb = dbFactory.CreateDbContext())
+        {
+            var scanActivity = auditDb.PermitActivities
+                .Where(activity => activity.PermitNumber == permitNumber)
+                .OrderByDescending(activity => activity.Id)
+                .First();
+            Require(
+                scanActivity.GateName == scanAuditContext.GateName
+                    && scanActivity.GateOperatorAccount == scanAuditContext.GateOperatorAccount
+                    && scanActivity.DeviceId == scanAuditContext.DeviceId
+                    && scanActivity.ExecutionMethod == scanAuditContext.ExecutionMethod,
+                "permit scan audit should persist gate, operator, device, and capture method"
+            );
+        }
+        Require(
+            permitService.StopPermit(permitNumber, "tester"),
+            "approved permit should stop before QR status validation"
+        );
+        Require(
+            !permitService.TryValidatePermitQrToken(
+                persistedPermit.QrToken,
+                out var stoppedPermit,
+                out var stoppedStatus,
+                out _
+            )
+                && stoppedPermit != null
+                && string.Equals(
+                    stoppedStatus,
+                    "unauthorized",
+                    StringComparison.OrdinalIgnoreCase
+                ),
+            "stopped permits should never appear authorized through public QR verification"
+        );
 
         return Task.CompletedTask;
     }
 
-    private static Task ScenarioZebraLabelUsesPublicPermitCodeAndPlateOnly(
+    private static Task ScenarioZebraLabelUsesSecureQrAndPlateOnly(
         IPermitService permitService,
         IUserAdminService userAdminService,
         IAccessControlService accessControlService,
@@ -106,16 +224,24 @@ internal static partial class ScenarioCatalog
             permitService.GetPermitByNumber(permitNumber, "tester")
             ?? throw new InvalidOperationException("permit not found for Zebra label test");
 
+        var controller = CreatePermitsController(
+            permitService,
+            userAdminService,
+            accessControlService,
+            BuildPrincipal("tester", AppRoles.GeneralManager, AppPermissions.ViewPermits),
+            clock
+        );
+
         var buildContent = typeof(PermitsController).GetMethod(
             "BuildZebraLabelContent",
-            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic
         );
         Require(
             buildContent != null,
             "permit controller should build Zebra label content centrally"
         );
 
-        var labelContent = buildContent!.Invoke(null, new object[] { permit });
+        var labelContent = buildContent!.Invoke(controller, new object[] { permit });
         Require(labelContent != null, "Zebra label content should be created for approved permits");
 
         var contentType = labelContent!.GetType();
@@ -134,8 +260,10 @@ internal static partial class ScenarioCatalog
         var plateNumberDisplay =
             contentType.GetProperty("PlateNumberDisplay")?.GetValue(labelContent) as string;
         Require(
-            string.Equals(barcodeValue, permit.PublicPermitCode, StringComparison.Ordinal),
-            "Zebra label barcode should use PublicPermitCode"
+            !string.IsNullOrWhiteSpace(barcodeValue)
+                && barcodeValue.Contains("/Permits/Verify", StringComparison.OrdinalIgnoreCase)
+                && barcodeValue.Contains("token=", StringComparison.OrdinalIgnoreCase),
+            "Zebra label barcode should use the tenant-aware secure verification link"
         );
         Require(
             string.Equals(plateNumberDisplay, permit.PlateNumberDisplay, StringComparison.Ordinal),
@@ -151,13 +279,6 @@ internal static partial class ScenarioCatalog
             "Zebra label should not expose permit holder or department as visible text"
         );
 
-        var controller = CreatePermitsController(
-            permitService,
-            userAdminService,
-            accessControlService,
-            BuildPrincipal("tester", AppRoles.GeneralManager, AppPermissions.ViewPermits),
-            clock
-        );
 #pragma warning disable CA1416
         var result = controller.PrintZebraLabel(permitNumber) as FileContentResult;
 #pragma warning restore CA1416
@@ -173,6 +294,43 @@ internal static partial class ScenarioCatalog
         Require(
             result.FileContents.Length > 1000,
             "PrintZebraLabel should generate a non-empty PDF"
+        );
+
+#pragma warning disable CA1416
+        var qrResult = controller.Qr(permitNumber) as FileContentResult;
+#pragma warning restore CA1416
+        Require(qrResult != null, "approved permit should render a QR image");
+        using var qrStream = new MemoryStream(qrResult!.FileContents);
+#pragma warning disable CA1416
+        using var qrBitmap = new System.Drawing.Bitmap(qrStream);
+        var qrRectangle = new System.Drawing.Rectangle(0, 0, qrBitmap.Width, qrBitmap.Height);
+        var qrBitmapData = qrBitmap.LockBits(
+            qrRectangle,
+            System.Drawing.Imaging.ImageLockMode.ReadOnly,
+            System.Drawing.Imaging.PixelFormat.Format32bppArgb
+        );
+        var qrPixels = new byte[Math.Abs(qrBitmapData.Stride) * qrBitmapData.Height];
+        System.Runtime.InteropServices.Marshal.Copy(
+            qrBitmapData.Scan0,
+            qrPixels,
+            0,
+            qrPixels.Length
+        );
+        qrBitmap.UnlockBits(qrBitmapData);
+        var decodedQr = new ZXing.BarcodeReaderGeneric().Decode(
+            new ZXing.RGBLuminanceSource(
+                qrPixels,
+                qrBitmap.Width,
+                qrBitmap.Height,
+                ZXing.RGBLuminanceSource.BitmapFormat.BGRA32
+            )
+        );
+#pragma warning restore CA1416
+        Require(
+            decodedQr != null
+                && PermitVerificationUrlParser.TryGetToken(decodedQr.Text, out var decodedToken)
+                && string.Equals(decodedToken, permit.QrToken, StringComparison.Ordinal),
+            "rendered permit QR should decode to the stored secure token"
         );
 
         return Task.CompletedTask;
@@ -1390,7 +1548,8 @@ internal static partial class ScenarioCatalog
 
     private static Task ScenarioOperatorPinProvisioning(
         IUserAdminService userAdminService,
-        IDbContextFactory<ApplicationDbContext> dbFactory
+        IDbContextFactory<ApplicationDbContext> dbFactory,
+        MutableSystemClock clock
     )
     {
         const string username = "1888888888";
@@ -1510,6 +1669,36 @@ internal static partial class ScenarioCatalog
             "test-user"
         );
         Require(newPinResult.Success, "new operator PIN should work after change");
+
+        using (var db = dbFactory.CreateDbContext())
+        {
+            var storedUser = db.UserAccounts.Single(user => user.Username == username);
+            storedUser.IsActive = false;
+            db.SaveChanges();
+        }
+        Require(
+            userAdminService.GetDisplayOperatorSession("gate-default-2") == null,
+            "disabling an operator should revoke the active display session immediately"
+        );
+
+        using (var db = dbFactory.CreateDbContext())
+        {
+            var storedUser = db.UserAccounts.Single(user => user.Username == username);
+            storedUser.IsActive = true;
+            db.SaveChanges();
+        }
+        var expiringSession = userAdminService.SwitchDisplayOperator(
+            "gate-expiring",
+            badgeCode,
+            "654321",
+            "test-user"
+        );
+        Require(expiringSession.Success, "operator should sign in before expiry validation");
+        clock.Advance(TimeSpan.FromMinutes(31));
+        Require(
+            userAdminService.GetDisplayOperatorSession("gate-expiring") == null,
+            "display operator session should expire after the configured lifetime"
+        );
 
         return Task.CompletedTask;
     }

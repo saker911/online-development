@@ -128,7 +128,10 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             bool hasAnyUsers
         )
         {
-            var settings = db.AdministrationSettings.SingleOrDefault(x => x.Id == 1);
+            var settings = db
+                .AdministrationSettings.OrderByDescending(x => x.Id == 1)
+                .ThenBy(x => x.Id)
+                .FirstOrDefault();
             if (settings == null)
             {
                 return;
@@ -149,7 +152,12 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
 
             var configuredNames = new[]
             {
-                db.AdministrationSettings.AsNoTracking().SingleOrDefault()?.DepartmentName,
+                db
+                    .AdministrationSettings.AsNoTracking()
+                    .OrderByDescending(x => x.Id == 1)
+                    .ThenBy(x => x.Id)
+                    .FirstOrDefault()
+                    ?.DepartmentName,
             }
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Select(x => x!.Trim())
@@ -488,6 +496,10 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 }
 
                 defaultTenant.IsActive = true;
+                defaultTenant.SubscriptionStatus = TenantSubscriptionStatuses.Active;
+                defaultTenant.PlanName = string.IsNullOrWhiteSpace(defaultTenant.PlanName)
+                    ? TenantDefaults.DefaultPlanName
+                    : defaultTenant.PlanName;
                 return;
             }
 
@@ -499,6 +511,8 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     Slug = TenantDefaults.DefaultTenantId,
                     IsActive = true,
                     CreatedAtUtc = DateTime.UtcNow,
+                    SubscriptionStatus = TenantSubscriptionStatuses.Active,
+                    PlanName = TenantDefaults.DefaultPlanName,
                 }
             );
         }
@@ -511,12 +525,33 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     Name TEXT NOT NULL DEFAULT '',
                     Slug TEXT NOT NULL DEFAULT '',
                     IsActive INTEGER NOT NULL DEFAULT 1,
-                    CreatedAtUtc TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    CreatedAtUtc TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    SubscriptionStatus TEXT NOT NULL DEFAULT 'Active',
+                    PlanName TEXT NOT NULL DEFAULT 'أساسية',
+                    TrialEndsAtUtc TEXT NULL,
+                    SubscriptionEndsAtUtc TEXT NULL,
+                    MaxUsers INTEGER NULL,
+                    MaxPermitsPerMonth INTEGER NULL,
+                    MaxVisitsPerMonth INTEGER NULL
                 );"
             );
             db.Database.ExecuteSqlRaw(
                 "CREATE UNIQUE INDEX IF NOT EXISTS IX_Tenants_Slug ON Tenants (Slug);"
             );
+            EnsureSqliteColumn(
+                db,
+                "Tenants",
+                "SubscriptionStatus",
+                "TEXT NOT NULL DEFAULT 'Active'"
+            );
+            EnsureSqliteColumn(db, "Tenants", "PlanName", "TEXT NOT NULL DEFAULT 'أساسية'");
+            EnsureSqliteColumn(db, "Tenants", "TrialEndsAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Tenants", "SubscriptionEndsAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Tenants", "MaxUsers", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Tenants", "MaxPermitsPerMonth", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Tenants", "MaxVisitsPerMonth", "INTEGER NULL");
+            db.Database.ExecuteSqlRaw("DROP INDEX IF EXISTS IX_Tenants_PrimaryDomain;");
+            RemoveSqliteColumnIfExists(db, "Tenants", "PrimaryDomain");
 
             foreach (var tableName in new[]
             {
@@ -662,7 +697,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 department.ManagerDisplayName = newDisplayName;
             }
 
-            var settings = db.AdministrationSettings.SingleOrDefault();
+            var settings = db.AdministrationSettings.OrderBy(settings => settings.Id).FirstOrDefault();
             if (settings != null && settings.GeneralManagerUsername == oldUsername)
             {
                 settings.GeneralManagerUsername = newUsername;
@@ -1257,6 +1292,55 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             }
         }
 
+        private static void RemoveSqliteColumnIfExists(
+            ApplicationDbContext db,
+            string tableName,
+            string columnName
+        )
+        {
+            var connection = db.Database.GetDbConnection();
+            var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
+            if (shouldCloseConnection)
+            {
+                connection.Open();
+            }
+
+            try
+            {
+                var columnExists = false;
+                using (var pragmaCommand = connection.CreateCommand())
+                {
+                    pragmaCommand.CommandText = $"PRAGMA table_info(\"{tableName}\")";
+                    using var reader = pragmaCommand.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            columnExists = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!columnExists)
+                {
+                    return;
+                }
+
+                using var alterCommand = connection.CreateCommand();
+                alterCommand.CommandText =
+                    $"ALTER TABLE \"{tableName}\" DROP COLUMN \"{columnName}\"";
+                alterCommand.ExecuteNonQuery();
+            }
+            finally
+            {
+                if (shouldCloseConnection)
+                {
+                    connection.Close();
+                }
+            }
+        }
+
         private static void ApplyPermissionUpgrades(UserAccount user)
         {
             if (
@@ -1627,7 +1711,15 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 || DisplayAccessDefaults.LooksLikePlaceholder(settings.DisplayAccessKey)
             )
             {
-                settings.DisplayAccessKey = DisplayAccessDefaults.CreateAccessKey();
+                settings.DisplayAccessKey = DisplayAccessKeyHasher.Hash(
+                    DisplayAccessDefaults.CreateAccessKey()
+                );
+            }
+            else
+            {
+                settings.DisplayAccessKey = DisplayAccessKeyHasher.Hash(
+                    settings.DisplayAccessKey
+                );
             }
 
             if (settings.LateReturnGraceMinutes < 0)
