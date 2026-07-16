@@ -343,7 +343,6 @@ body {
     flex: 0 0 auto;
     overflow: hidden;
     position: relative;
-    transition: width 0.2s ease;
 }
 
 .app-brand-mark img {
@@ -452,7 +451,6 @@ body {
     flex: 0 0 auto;
     overflow: hidden;
     position: relative;
-    transition: width 0.2s ease;
 }
 
 .app-sidebar-logo-wrap img {
