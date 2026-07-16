@@ -1,7 +1,3 @@
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +29,7 @@ using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Tenants;
+using VehiclePermitSystemWeb.Utilities.Barcodes;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 using VehiclePermitSystemWeb.Utilities.Online;
@@ -931,7 +928,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return RedirectToLocal(returnUrl);
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult Barcode(string id)
         {
             var permit = _permitService.GetPermitByNumber(id, User.Identity?.Name);
@@ -955,7 +951,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return File(bytes, "image/png");
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult Qr(string id)
         {
             var permit = _permitService.GetPermitByNumber(id, User.Identity?.Name);
@@ -1129,7 +1124,6 @@ namespace VehiclePermitSystemWeb.Controllers
             );
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult Print(string id)
         {
             var permit = _permitService.GetPermitByNumber(id, User.Identity?.Name);
@@ -1384,7 +1378,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return File(pdfBytes, "application/pdf", $"Permit_{permit.PermitNumber}.pdf");
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult PrintLabel(
             string id,
             string? preset = null,
@@ -1617,7 +1610,6 @@ namespace VehiclePermitSystemWeb.Controllers
             );
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult PrintZebraLabel(string id)
         {
             var permit = _permitService.GetPermitByNumber(id, User.Identity?.Name);
@@ -2073,7 +2065,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return $"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {pixelData.Width} {pixelData.Height}\" shape-rendering=\"crispEdges\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\"/><path d=\"{path}\" fill=\"#050914\"/></svg>";
         }
 
-        [SupportedOSPlatform("windows")]
         private static byte[] RenderBarcodeImage(
             string content,
             BarcodeFormat format,
@@ -2082,42 +2073,7 @@ namespace VehiclePermitSystemWeb.Controllers
             int margin = 0
         )
         {
-            var writer = new BarcodeWriterPixelData
-            {
-                Format = format,
-                Options = new EncodingOptions
-                {
-                    Width = width,
-                    Height = height,
-                    Margin = margin,
-                    PureBarcode = true,
-                },
-            };
-
-            var pixelData = writer.Write(content);
-            using var bitmap = new Bitmap(
-                pixelData.Width,
-                pixelData.Height,
-                PixelFormat.Format32bppRgb
-            );
-            var bitmapData = bitmap.LockBits(
-                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                ImageLockMode.WriteOnly,
-                PixelFormat.Format32bppRgb
-            );
-
-            try
-            {
-                Marshal.Copy(pixelData.Pixels, 0, bitmapData.Scan0, pixelData.Pixels.Length);
-            }
-            finally
-            {
-                bitmap.UnlockBits(bitmapData);
-            }
-
-            using var stream = new MemoryStream();
-            bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-            return stream.ToArray();
+            return BarcodePngRenderer.Render(content, format, width, height, margin);
         }
     }
 }

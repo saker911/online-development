@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.Runtime.Versioning;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -1027,7 +1026,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult OperatorBadge(string id)
         {
             var user = GetManagedUserAccount(id);
@@ -1061,7 +1059,6 @@ namespace VehiclePermitSystemWeb.Controllers
             return View(user);
         }
 
-        [SupportedOSPlatform("windows")]
         public IActionResult UserBadge(string id)
         {
             var user = GetManagedUserAccount(id);
