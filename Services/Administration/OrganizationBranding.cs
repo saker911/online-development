@@ -7,7 +7,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
     public static class OrganizationBranding
     {
         public const string DefaultOrganizationName = "الجهة المستخدمة";
-        public const string DefaultLogoPath = "images/organization-placeholder.svg";
+        public const string DefaultLogoPath = "images/tasreehgate-logo.png";
 
         public static string GetOrganizationName(AdministrationSettings? settings)
         {
