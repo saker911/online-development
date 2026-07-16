@@ -41,15 +41,21 @@ namespace VehiclePermitSystemWeb.Controllers
         }
 
         [AllowAnonymous]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             if (!(User?.Identity?.IsAuthenticated ?? false))
             {
                 return View("Landing");
             }
 
-            var permits = _permitService.GetVisiblePermits(User.Identity?.Name).ToList();
-            var visits = _visitService.GetAllVisits().ToList();
+            var username = User.Identity?.Name;
+            var permitsTask = Task.Run(() => _permitService.GetVisiblePermits(username).ToList());
+            var visitsTask = Task.Run(() => _visitService.GetAllVisits().ToList());
+            var administrationTask = Task.Run(_userAdminService.GetAdministrationSettings);
+            await Task.WhenAll(permitsTask, visitsTask, administrationTask);
+
+            var permits = await permitsTask;
+            var visits = await visitsTask;
             var activities = new List<PermitActivity>();
             ReportsDashboardViewModel? workflowDashboard = null;
             if (permits.Count > 0)
@@ -61,11 +67,11 @@ namespace VehiclePermitSystemWeb.Controllers
                         "All",
                         1,
                         200,
-                        User.Identity?.Name
+                        username
                     );
             }
             var today = DateTime.Today;
-            var administration = _userAdminService.GetAdministrationSettings();
+            var administration = await administrationTask;
             var officialWorkDays = AdministrationWorkSchedule.ParseOfficialWorkDays(
                 administration.OfficialWorkDaysCsv
             );
