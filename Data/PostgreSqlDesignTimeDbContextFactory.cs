@@ -14,7 +14,7 @@ public sealed class PostgreSqlDesignTimeDbContextFactory
             ?? "Host=127.0.0.1;Port=5432;Database=vehicle_permit_online_design;Username=postgres";
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(PostgreSqlConnectionStringNormalizer.Normalize(connectionString))
             .Options;
 
         return new ApplicationDbContext(options);

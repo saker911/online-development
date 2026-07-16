@@ -214,7 +214,9 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
             );
         }
 
-        options.UseNpgsql(postgreSqlConnectionString);
+        options.UseNpgsql(
+            PostgreSqlConnectionStringNormalizer.Normalize(postgreSqlConnectionString)
+        );
     }
     else if (string.Equals(dataProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
     {
