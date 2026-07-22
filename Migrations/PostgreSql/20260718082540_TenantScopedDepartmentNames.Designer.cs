@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VehiclePermitSystemWeb.Data;
@@ -11,9 +12,11 @@ using VehiclePermitSystemWeb.Data;
 namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718082540_TenantScopedDepartmentNames")]
+    partial class TenantScopedDepartmentNames
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -91,9 +94,6 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     b.Property<int>("LateReturnGraceMinutes")
                         .HasColumnType("integer");
-
-                    b.Property<bool>("LeaveRequestsEnabled")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("LogoPath")
                         .HasColumnType("text");

@@ -16,9 +16,7 @@
     <div class="card-permit app-card-surface app-dashboard-surface compact-form-card">
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
             <div>
-                <div class="text-muted-ar small">إدارة الزيارات</div>
                 <h1 class="h5 mb-1">تفاصيل الزيارة @Model.VisitId</h1>
-                <div class="text-muted-ar small">عرض كامل لحالة الزيارة، الاعتماد، وأوقات الدخول والخروج.</div>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <span
@@ -139,36 +137,6 @@
                         <div class="text-muted-ar small">لا يوجد مرافقون مرتبطون بهذه الزيارة.</div>
                     }
                 </div>
-
-                <div class="mt-4 p-3 rounded-3 border bg-white">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                        <h2 class="h6 mb-0">دورة انتهاء الزيارة</h2>
-                        <span class="badge text-bg-light border">مرجع تشغيلي</span>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-md-6 col-lg-3">
-                            <strong>1. الإنشاء</strong>
-                            <div class="text-muted-ar small">تبدأ الزيارة بحالة <span class="ltr-field">Active</span> واعتماد
-                                <span class="ltr-field">Pending</span> حتى تتم المراجعة.
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <strong>2. قبل الوصول</strong>
-                            <div class="text-muted-ar small">إذا لم يحضر الزائر خلال 20 دقيقة من موعده تتحول الزيارة إلى <span
-                                class="ltr-field">Completed</span> تلقائيًا.</div>
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <strong>3. عند الدخول</strong>
-                                <div class="text-muted-ar small">عند تسجيل الدخول تصبح الزيارة <span class="ltr-field">Inside</span>
-                                    ويُضبط الانتهاء بعد 24 ساعة من وقت الدخول.</div>
-                                </div>
-                                <div class="col-md-6 col-lg-3">
-                                    <strong>4. عند الخروج</strong>
-                                    <div class="text-muted-ar small">عند تسجيل الخروج تنتهي الزيارة وتصبح <span
-                                        class="ltr-field">Completed</span> مع حفظ وقت الخروج.</div>
-                                    </div>
-                                </div>
-                            </div>
 
                             <div class="mt-4 d-flex gap-2 flex-wrap">
                                 <a asp-action="Index" class="btn btn-secondary">رجوع</a>

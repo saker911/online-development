@@ -166,7 +166,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Department>().Property(x => x.Name).HasMaxLength(128);
             modelBuilder.Entity<Department>().Property(x => x.ManagerUsername).HasMaxLength(64);
             modelBuilder.Entity<Department>().Property(x => x.ManagerDisplayName).HasMaxLength(128);
-            modelBuilder.Entity<Department>().HasIndex(x => x.Name).IsUnique();
+            modelBuilder.Entity<Department>().HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
             modelBuilder
                 .Entity<Visit>()
                 .HasMany(x => x.Companions)

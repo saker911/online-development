@@ -17,12 +17,14 @@ test("owner updates administration data and opens display settings", async ({ pa
   await page.locator('[name="SignatureText"]').fill("توقيع قبول E2E");
   await page.locator('[name="AttendanceGraceMinutes"]').fill("12");
   await page.locator('[name="WorkEndExitGraceMinutes"]').fill("35");
+  await page.locator('input[type="checkbox"][name="LeaveRequestsEnabled"]').check();
   await page.locator('[name="LateReturnGraceMinutes"]').fill("7");
   await page.getByRole("button", { name: "حفظ البيانات" }).click();
   await page.getByRole("button", { name: "متابعة" }).click();
   await expect(page.getByRole("heading", { name: /تعديل بيانات الإدارة/ })).toBeVisible();
   await expect(page.locator('[name="AttendanceGraceMinutes"]')).toHaveValue("12");
   await expect(page.locator('[name="WorkEndExitGraceMinutes"]')).toHaveValue("35");
+  await expect(page.locator('input[type="checkbox"][name="LeaveRequestsEnabled"]')).toBeChecked();
   await expect(page.locator('[name="LateReturnGraceMinutes"]')).toHaveValue("7");
 
   await page.goto("/Administration/DisplaySettings");

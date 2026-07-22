@@ -364,6 +364,7 @@
     <link rel="stylesheet" href="~/css/reports.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/visual-refresh.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/shell-actions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/public-marketing.css" asp-append-version="true" />
 </head>
 
@@ -414,15 +415,15 @@
                 <div class="app-topbar-actions">
                     <button class="btn icon-only-trigger" type="button" data-pwa-install hidden
                             aria-label="تثبيت التطبيق" title="تثبيت التطبيق">
-                        <img src="~/icons/install.svg" alt="" class="nav-icon-small" />
+                        <svg class="shell-action-icon" aria-hidden="true">
+                            <use href="@Url.Content("~/icons/shell-actions.svg#download")"></use>
+                        </svg>
                     </button>
                     <button class="btn icon-only-trigger app-sidebar-toggle" type="button" data-sidebar-toggle
-                            aria-label="فتح القائمة" aria-controls="appSidebar" aria-expanded="false">
-                        <span class="app-sidebar-toggle-bars" aria-hidden="true">
-                            <span></span>
-                            <span></span>
-                            <span></span>
-                        </span>
+                            aria-label="فتح القائمة" title="القائمة" aria-controls="appSidebar" aria-expanded="false">
+                        <svg class="shell-action-icon" aria-hidden="true">
+                            <use href="@Url.Content("~/icons/shell-actions.svg#menu")"></use>
+                        </svg>
                     </button>
 
                     @if (canViewNotificationCenter)
@@ -430,8 +431,10 @@
                         <div class="nav-item dropdown notification-bell-dropdown">
                             <button id="notificationBellDropdown" class="btn notification-bell-trigger icon-only-trigger"
                                     data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
-                                    aria-label="الإشعارات" type="button">
-                                <img src="~/icons/bell.svg" alt="" class="nav-icon-small" />
+                                    aria-label="الإشعارات" title="الإشعارات" type="button">
+                                <svg class="shell-action-icon" aria-hidden="true">
+                                    <use href="@Url.Content("~/icons/shell-actions.svg#bell")"></use>
+                                </svg>
                                 @if (notificationCenterTotalCount > 0)
                                 {
                                     <span class="notification-bell-badge">@notificationCenterTotalCount</span>
@@ -547,7 +550,14 @@
                     @* Theme toggle *@
                     <button class="btn icon-only-trigger theme-toggle-btn" type="button" title="تبديل الوضع ليلي/نهاري"
                             aria-label="تبديل الوضع">
-                        <span class="theme-toggle-icon" aria-hidden="true">☀</span>
+                        <span class="theme-toggle-icon" aria-hidden="true">
+                            <svg class="shell-action-icon theme-toggle-sun">
+                                <use href="@Url.Content("~/icons/shell-actions.svg#sun")"></use>
+                            </svg>
+                            <svg class="shell-action-icon theme-toggle-moon">
+                                <use href="@Url.Content("~/icons/shell-actions.svg#moon")"></use>
+                            </svg>
+                        </span>
                     </button>
 
                     @if (isAuthenticated)
@@ -555,8 +565,10 @@
                         <div class="nav-item dropdown user-menu">
                             <button id="accountDropdown" class="btn dropdown-toggle user-menu-toggle icon-only-trigger"
                                     data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-label="الحساب" type="button"
-                                    aria-expanded="false">
-                                <img src="~/icons/account.svg" alt="" class="nav-icon" />
+                                    title="الحساب" aria-expanded="false">
+                                <svg class="shell-action-icon shell-action-icon-user" aria-hidden="true">
+                                    <use href="@Url.Content("~/icons/shell-actions.svg#user-round")"></use>
+                                </svg>
                             </button>
                             <div class="dropdown-menu dropdown-menu-end user-menu-panel" aria-labelledby="accountDropdown">
                                 <div class="user-menu-header">
@@ -695,7 +707,7 @@
                                                     <a class="app-sidebar-link @(isControllerActive("Users") ? "active" : string.Empty)"
                                                            asp-controller="Users" asp-action="Index">
                                                         <img src="~/icons/users.svg" alt="" class="app-sidebar-icon" />
-                                                        <span>المستخدمون والصلاحيات</span>
+                                                        <span>فريق التشغيل</span>
                                                     </a>
                                                 }
                                                 @if (User.IsSuperAdmin())
@@ -716,14 +728,6 @@
                                                 }
                                                 @if (canManageDepartments || canManageAdministration)
                                                 {
-                                                    @if (canManageDepartments)
-                                                    {
-                                                        <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && (string.Equals(currentAction, "Leadership", StringComparison.OrdinalIgnoreCase) || string.Equals(currentAction, "Departments", StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty)"
-                                                               asp-controller="Administration" asp-action="Leadership">
-                                                            <img src="~/icons/departments.svg" alt="" class="app-sidebar-icon" />
-                                                            <span>مركز القيادات</span>
-                                                        </a>
-                                                    }
                                                     <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Edit", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
                                                            asp-controller="Administration" asp-action="Edit">
                                                         <img src="~/icons/administration-data.svg" alt="" class="app-sidebar-icon" />

@@ -98,6 +98,8 @@ namespace VehiclePermitSystemWeb.Security
         // New canonical roles
         public const string Employee = "Employee";
         public const string Manager = "Manager";
+        public const string SecurityManager = "SecurityManager";
+        public const string PermitReviewer = "PermitReviewer";
         public const string GateSecurity = "GateSecurity";
         public const string Receptionist = "Receptionist";
         public const string SystemAdmin = "SystemAdmin";
@@ -107,12 +109,14 @@ namespace VehiclePermitSystemWeb.Security
 
         private static readonly IReadOnlyList<string> _orderedRoles =
         [
+            SecurityManager,
+            PermitReviewer,
+            Receptionist,
+            GateSecurity,
             SystemAdmin,
             GeneralManager,
             Manager,
             Employee,
-            GateSecurity,
-            Receptionist,
         ];
 
         public static IReadOnlyList<string> OrderedRoles => _orderedRoles;
@@ -122,12 +126,14 @@ namespace VehiclePermitSystemWeb.Security
                 ? "مالك النظام"
                 : role switch
                 {
+                    SecurityManager => "مدير الأمن",
+                    PermitReviewer => "مدقق التصاريح",
                     GeneralManager => "مدير عام",
-                    Manager or DepartmentManager => "مدير",
-                    Employee => "موظف",
-                    SystemAdmin => "مشرف نظام",
-                    GateSecurity => "أمن البوابة",
-                    Receptionist => "موظف استقبال",
+                    Manager or DepartmentManager => "مدير قسم",
+                    Employee => "مستخدم قديم",
+                    SystemAdmin => "مشرف النظام",
+                    GateSecurity => "مأمور بوابة",
+                    Receptionist => "موظف إدخال",
                     _ => "مستخدم النظام",
                 };
 
@@ -293,11 +299,28 @@ namespace VehiclePermitSystemWeb.Security
                     user.CanApproveVisits = true;
                     user.CanStopPermit = true;
                     user.CanReviewUnauthorizedExit = true;
-                    user.CanScanOperations = false;
-                    user.CanViewDisplays = false;
-                    user.CanManageUsers = false;
-                    user.CanManageDepartments = false;
-                    user.CanManageAdministration = false;
+                    break;
+                case AppRoles.SecurityManager:
+                    user.CanViewDashboard = true;
+                    user.CanViewPermits = true;
+                    user.CanViewVisitorPermits = true;
+                    user.CanApprovePermit = true;
+                    user.CanApproveLeaveRequest = true;
+                    user.CanStopPermit = true;
+                    user.CanReviewUnauthorizedExit = true;
+                    user.CanViewVisits = true;
+                    user.CanApproveVisits = true;
+                    user.CanApproveDetainedVisit = true;
+                    user.CanViewDisplays = true;
+                    break;
+                case AppRoles.PermitReviewer:
+                    user.CanViewDashboard = true;
+                    user.CanViewPermits = true;
+                    user.CanViewVisitorPermits = true;
+                    user.CanEditPermit = true;
+                    user.CanEditVisitorPermit = true;
+                    user.CanViewVisits = true;
+                    user.CanEditVisit = true;
                     break;
                 case AppRoles.Employee:
                     user.CanViewDashboard = true;
@@ -321,8 +344,11 @@ namespace VehiclePermitSystemWeb.Security
                     break;
                 case AppRoles.Receptionist:
                     user.CanViewDashboard = true;
+                    user.CanViewPermits = true;
                     user.CanViewVisitorPermits = true;
+                    user.CanCreatePermit = true;
                     user.CanCreateVisitorPermit = true;
+                    user.CanEditPermit = true;
                     user.CanEditVisitorPermit = true;
                     user.CanViewVisits = true;
                     user.CanCreateVisit = true;
@@ -385,7 +411,7 @@ namespace VehiclePermitSystemWeb.Security
                 new(
                     "employee-permits",
                     "تصاريح الموظفين",
-                    "عرض وإنشاء وتعديل واعتماد التصاريح وما يتبعها من استئذان ومراجعة",
+                    "إدخال التصاريح وتدقيقها واعتمادها ومتابعة الحركة",
                     "📄",
                     "🧾",
                     new List<PermissionEditorItem>

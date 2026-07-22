@@ -606,6 +606,7 @@ internal static partial class ScenarioCatalog
                 fixture =>
                     ScenarioLeaveRequestWithReturnAllowsExitAndLateReturn(
                         fixture.Clock,
+                        fixture.DbFactory,
                         fixture.PermitService
                     )
             ),
@@ -648,6 +649,15 @@ internal static partial class ScenarioCatalog
                     ScenarioGatePolicyServiceResolvesDecisions(
                         fixture.Clock,
                         fixture.ServiceProvider
+                    )
+            ),
+            Scenario(
+                "Disabled leave requests use automatic employee movement",
+                fixture =>
+                    ScenarioDisabledLeaveRequestsUseAutomaticMovement(
+                        fixture.Clock,
+                        fixture.DbFactory,
+                        fixture.PermitService
                     )
             ),
             Scenario(
@@ -766,7 +776,11 @@ internal static partial class ScenarioCatalog
             Scenario(
                 "Daily scheduled leave with return authorizes exit and keeps schedule",
                 fixture =>
-                    ScenarioDailyScheduledLeaveWithReturn(fixture.Clock, fixture.PermitService)
+                    ScenarioDailyScheduledLeaveWithReturn(
+                        fixture.Clock,
+                        fixture.DbFactory,
+                        fixture.PermitService
+                    )
             ),
             Scenario(
                 "Daily scheduled leave without return authorizes final exit and keeps schedule",
@@ -904,6 +918,14 @@ internal static partial class ScenarioCatalog
                     )
             ),
             Scenario(
+                "Super admin creates the first general manager inside the selected tenant",
+                fixture =>
+                    ScenarioSuperAdminCreatesGeneralManagerInsideSelectedTenant(
+                        fixture.DbFactory,
+                        fixture.UserAdminService
+                    )
+            ),
+            Scenario(
                 "Pending unauthorized exit appears as a rejection in monitoring",
                 fixture =>
                     ScenarioPendingUnauthorizedExitAppearsInMonitoring(
@@ -918,6 +940,7 @@ internal static partial class ScenarioCatalog
                 fixture =>
                     ScenarioExpiredPermitClearsPendingUnauthorizedExit(
                         fixture.Clock,
+                        fixture.DbFactory,
                         fixture.PermitService
                     )
             ),

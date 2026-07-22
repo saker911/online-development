@@ -159,6 +159,20 @@ namespace VehiclePermitSystemWeb.Controllers
             var requestedScannerUserId = ResolveScannerUserId(requestBody);
             var auditContext = BuildPermitAuditContext(requestBody, "البوابة", "scan");
             var displayOperator = ResolveActiveDisplayOperatorForScan(auditContext.DeviceId);
+            if (displayOperator?.MustChangePin == true)
+            {
+                return Ok(
+                    new
+                    {
+                        allowed = false,
+                        reason = "operator_pin_change_required",
+                        overrideEntry = false,
+                        identifier,
+                        scanMode,
+                    }
+                );
+            }
+
             if (RequiresActiveDisplayOperatorForScan() && displayOperator == null)
             {
                 return Ok(

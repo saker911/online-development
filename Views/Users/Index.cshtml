@@ -2,15 +2,20 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Users.UserManagementDashboardViewModel
 
 @{
-    ViewData["Title"] = "المستخدمون والصلاحيات";
+    ViewData["Title"] = "فريق التشغيل";
     var totalUsers = Model.Users.Count;
     var activeUsers = Model.Users.Count(x => x.IsActive);
     var inactiveUsers = totalUsers - activeUsers;
     var totalPermissions = Model.PermissionDistribution.Values.Sum();
     var currentUsername = User.Identity?.Name ?? string.Empty;
     var recentActivityCount = Model.RecentActivities.Count;
-    var canOpenLeadershipCenter = User.HasPermission(AppPermissions.ManageDepartments);
+    var canOpenLeadershipCenter = false;
     var canViewTenantScope = User.IsSuperAdmin();
+    var userGroups = Model.Users
+        .GroupBy(user => user.TenantId, StringComparer.OrdinalIgnoreCase)
+        .OrderBy(group => Model.TenantNamesById.TryGetValue(group.Key, out var tenantName) ? tenantName : group.Key,
+            StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
     var canViewAuditLogs = User.IsSuperAdmin() || User.IsInRole(AppRoles.GeneralManager) ||
 User.IsInRole(AppRoles.DepartmentManager) ||
 User.IsInRole(AppRoles.SystemAdmin);
@@ -22,23 +27,16 @@ User.IsInRole(AppRoles.SystemAdmin);
 
     <div class="users-index-hero app-card-surface">
         <div class="users-index-hero-copy">
-            <span class="users-section-kicker">إدارة الوصول</span>
             <div class="users-index-title-row">
                 <span class="users-index-title-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none">
                         <path d="M16 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-4A4.5 4.5 0 0 0 3 18.5V20M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM17 8v6M14 11h6" />
                     </svg>
                 </span>
-                <h1>المستخدمون والصلاحيات</h1>
+                <h1>فريق التشغيل</h1>
             </div>
-            <p>لوحة حديثة لإدارة الحسابات، فحص توزيع الأدوار، ومراجعة آخر التغييرات مع بحث وفلاتر مباشرة داخل الجدول.
-            </p>
             <div class="users-index-actions">
                 <a asp-action="Create" class="btn btn-primary btn-sm">إضافة مستخدم</a>
-                @if (canOpenLeadershipCenter)
-                {
-                    <a asp-controller="Administration" asp-action="Leadership" class="btn btn-outline-secondary btn-sm">مركز القيادات</a>
-                }
                 @if (canViewAuditLogs)
                 {
                     <a asp-action="ActivityLog" class="btn btn-outline-primary btn-sm">سجل العمليات</a>
@@ -47,9 +45,9 @@ User.IsInRole(AppRoles.SystemAdmin);
         </div>
 
         <div class="users-index-hero-stats">
-            <div class="users-index-stat users-index-stat-total"><span>إجمالي المستخدمين</span><strong>@totalUsers</strong><small>حساب مسجل</small></div>
-            <div class="users-index-stat users-index-stat-active"><span>النشطون</span><strong>@activeUsers</strong><small>يمكنهم الدخول الآن</small></div>
-            <div class="users-index-stat users-index-stat-inactive"><span>الموقوفون</span><strong>@inactiveUsers</strong><small>وصولهم معطل</small></div>
+            <div class="users-index-stat users-index-stat-total"><span>إجمالي المستخدمين</span><strong>@totalUsers</strong></div>
+            <div class="users-index-stat users-index-stat-active"><span>النشطون</span><strong>@activeUsers</strong></div>
+            <div class="users-index-stat users-index-stat-inactive"><span>الموقوفون</span><strong>@inactiveUsers</strong></div>
             <div class="users-index-stat users-index-stat-role"><span>أعلى دور انتشارًا</span><strong>@(string.IsNullOrWhiteSpace(topRole.Key)
                                                                                                                                                                                                                                     ? "-" : topRole.Key)</strong></div>
             </div>
@@ -100,8 +98,6 @@ User.IsInRole(AppRoles.SystemAdmin);
                     <a asp-controller="Display" asp-action="Gate">@Url.Action("Gate", "Display")</a>
                     <a asp-controller="Display" asp-action="Visits">@Url.Action("Visits", "Display")</a>
                 </div>
-                <p class="users-card-footnote">يمكن فتح هذه الروابط مباشرة للمستخدمين المخولين أو استخدامها مع مفاتيح الوصول
-                    في صفحات العرض.</p>
                 </div>
             </div>
 
@@ -155,9 +151,22 @@ User.IsInRole(AppRoles.SystemAdmin);
                         <span class="users-section-kicker">الفهرسة</span>
                         <h2>جدول المستخدمين</h2>
                     </div>
-                    <div class="users-inline-actions users-inline-actions-grow">
+                    <div class="users-inline-actions users-inline-actions-grow @(canViewTenantScope ? "users-inline-actions-with-tenant" : string.Empty)">
                         <input type="search" class="form-control form-control-sm" id="users-table-search"
                                placeholder="ابحث بالاسم أو المعرف الداخلي أو القسم أو الجهة" />
+                        @if (canViewTenantScope)
+                        {
+                            <select class="form-select form-select-sm" id="users-tenant-filter" aria-label="تصفية حسب الجهة">
+                                <option value="">كل الجهات</option>
+                                @foreach (var tenantGroup in userGroups)
+                                {
+                                    var tenantName = Model.TenantNamesById.TryGetValue(tenantGroup.Key, out var resolvedTenantName)
+                                        ? resolvedTenantName
+                                        : tenantGroup.Key;
+                                    <option value="@tenantGroup.Key">@tenantName (@tenantGroup.Count())</option>
+                                }
+                            </select>
+                        }
                         <select class="form-select form-select-sm" id="users-role-filter">
                             <option value="">كل الأدوار</option>
                             @foreach (var role in Model.Users
@@ -191,7 +200,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                         <strong id="users-visible-count">@totalUsers</strong>
                         <span>من أصل</span>
                         <strong>@totalUsers</strong>
-                        <span class="users-page-size-pill">5 موظفين لكل صفحة</span>
+                        <span class="users-page-size-pill">@(canViewTenantScope ? "10 مستخدمين لكل صفحة" : "5 مستخدمين لكل صفحة")</span>
                     </div>
 
                     <div class="table-responsive users-table-responsive">
@@ -206,8 +215,39 @@ User.IsInRole(AppRoles.SystemAdmin);
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var user in Model.Users)
+                                @foreach (var tenantGroup in userGroups)
                                 {
+                                    var tenantDisplayName = Model.TenantNamesById.TryGetValue(
+                                        tenantGroup.Key,
+                                        out var resolvedTenantName
+                                    )
+                                        ? resolvedTenantName
+                                        : tenantGroup.Key;
+                                    var tenantActiveUsers = tenantGroup.Count(user => user.IsActive);
+
+                                    @if (canViewTenantScope)
+                                    {
+                                        <tr class="users-tenant-group-row" data-tenant-group-header="@tenantGroup.Key">
+                                            <td colspan="5">
+                                                <div class="users-tenant-group-heading">
+                                                    <div class="users-tenant-group-identity">
+                                                        <span class="users-tenant-group-mark" aria-hidden="true"></span>
+                                                        <div>
+                                                            <strong>@tenantDisplayName</strong>
+                                                            <small class="ltr-field">@tenantGroup.Key</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="users-tenant-group-meta">
+                                                        <span>@tenantGroup.Count() مستخدم</span>
+                                                        <span>@tenantActiveUsers نشط</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+
+                                    @foreach (var user in tenantGroup)
+                                    {
                                     var userPrimaryName = string.IsNullOrWhiteSpace(user.FullName)
                                         ? (string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName)
                                         : user.FullName;
@@ -229,12 +269,6 @@ User.IsInRole(AppRoles.SystemAdmin);
                                     )
                                         ? resolvedManagedDepartmentId
                                         : 0;
-                                    var tenantDisplayName = Model.TenantNamesById.TryGetValue(
-                                        user.TenantId,
-                                        out var resolvedTenantName
-                                    )
-                                        ? resolvedTenantName
-                                        : user.TenantId;
                                     var isDepartmentManagerWithoutManagedDepartment = string.Equals(
                                         user.Role,
                                         AppRoles.DepartmentManager,
@@ -245,7 +279,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                                     var rowSearch = string.Join(' ', new[] { user.Username, userPrimaryName, userSecondaryName,
                     user.Department, user.JobTitle, roleDisplay, tenantDisplayName }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-                                    <tr data-user-row="true" data-role="@roleDisplay"
+                                    <tr data-user-row="true" data-role="@roleDisplay" data-tenant-id="@tenantGroup.Key"
                                         data-status="@(user.IsActive ? "active" : "inactive")"
                                         data-search="@rowSearch.ToLowerInvariant()">
                                         <td data-label="الحساب">
@@ -408,6 +442,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                                             </td>
                                         </tr>
                                     }
+                                }
                                 </tbody>
                             </table>
                         </div>
@@ -427,16 +462,18 @@ User.IsInRole(AppRoles.SystemAdmin);
             <script nonce="@(Context.Items["CspScriptNonce"])">
                 document.addEventListener("DOMContentLoaded", function () {
                     const searchInput = document.getElementById("users-table-search");
+                    const tenantFilter = document.getElementById("users-tenant-filter");
                     const roleFilter = document.getElementById("users-role-filter");
                     const statusFilter = document.getElementById("users-status-filter");
                     const rows = Array.from(document.querySelectorAll("[data-user-row='true']"));
+                    const tenantGroupHeaders = Array.from(document.querySelectorAll("[data-tenant-group-header]"));
                     const visibleCount = document.getElementById("users-visible-count");
                     const paginationShell = document.getElementById("users-pagination-shell");
                     const pagination = document.getElementById("users-pagination");
                     const pageInfo = document.getElementById("users-page-info");
                     const prevButton = document.getElementById("users-page-prev");
                     const nextButton = document.getElementById("users-page-next");
-                    const pageSize = 5;
+                    const pageSize = @(canViewTenantScope ? 10 : 5);
                     let currentPage = 1;
 
                     if (window.bootstrap?.Tooltip) {
@@ -523,13 +560,15 @@ User.IsInRole(AppRoles.SystemAdmin);
 
                     function applyUsersTableFilter(resetPage) {
                         const searchValue = (searchInput?.value || "").trim().toLowerCase();
+                        const tenantValue = tenantFilter?.value || "";
                         const roleValue = roleFilter?.value || "";
                         const statusValue = statusFilter?.value || "";
                         const filteredRows = rows.filter(function (row) {
                             const matchesSearch = !searchValue || row.dataset.search.includes(searchValue);
+                            const matchesTenant = !tenantValue || row.dataset.tenantId === tenantValue;
                             const matchesRole = !roleValue || row.dataset.role === roleValue;
                             const matchesStatus = !statusValue || row.dataset.status === statusValue;
-                            return matchesSearch && matchesRole && matchesStatus;
+                            return matchesSearch && matchesTenant && matchesRole && matchesStatus;
                         });
 
                         const totalMatches = filteredRows.length;
@@ -553,6 +592,13 @@ User.IsInRole(AppRoles.SystemAdmin);
                             row.hidden = index < startIndex || index >= endIndex;
                         });
 
+                        const visibleRows = filteredRows.slice(startIndex, endIndex);
+                        tenantGroupHeaders.forEach(function (header) {
+                            header.hidden = !visibleRows.some(function (row) {
+                                return row.dataset.tenantId === header.dataset.tenantGroupHeader;
+                            });
+                        });
+
                         if (visibleCount) {
                             visibleCount.textContent = totalMatches;
                         }
@@ -560,7 +606,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                         renderPagination(totalPages, totalMatches, currentVisible);
                     }
 
-                    [searchInput, roleFilter, statusFilter].forEach(function (element) {
+                    [searchInput, tenantFilter, roleFilter, statusFilter].forEach(function (element) {
                         if (!element) {
                             return;
                         }

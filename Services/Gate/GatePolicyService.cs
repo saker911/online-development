@@ -105,6 +105,15 @@ namespace VehiclePermitSystemWeb.Services.Gate
                         "final_exit_allowed"
                     );
                 }
+
+                if (!workHours.LeaveRequestsEnabled)
+                {
+                    return new GateDecision(
+                        GateDecisionOutcome.AllowFinalExit,
+                        "ExitRecorded",
+                        "exit_allowed"
+                    );
+                }
             }
 
             if (permit.PendingExitRequest)
@@ -262,6 +271,7 @@ namespace VehiclePermitSystemWeb.Services.Gate
                     WorkStartTime = new TimeOnly(8, 0),
                     WorkEndTime = new TimeOnly(16, 0),
                     LateReturnGraceMinutes = 5,
+                    LeaveRequestsEnabled = false,
                     OfficialWorkDaysCsv = AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv,
                 };
 
@@ -269,6 +279,7 @@ namespace VehiclePermitSystemWeb.Services.Gate
                 settings.WorkStartTime,
                 settings.WorkEndTime,
                 TimeSpan.FromMinutes(Math.Max(0, settings.LateReturnGraceMinutes)),
+                settings.LeaveRequestsEnabled,
                 settings.OfficialWorkDaysCsv
             );
         }
@@ -277,6 +288,7 @@ namespace VehiclePermitSystemWeb.Services.Gate
             TimeOnly WorkStartTime,
             TimeOnly WorkEndTime,
             TimeSpan LateReturnGrace,
+            bool LeaveRequestsEnabled,
             string OfficialWorkDaysCsv
         );
     }

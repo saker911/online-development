@@ -9,7 +9,6 @@
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
             <h1 class="mb-1">شاشات العرض</h1>
-            <p class="text-muted-ar mb-0">إدارة الروابط، مفتاح التهيئة، الشبكة، واعتماد أجهزة شاشات العرض من مكان واحد.</p>
         </div>
         <a asp-action="Edit" class="btn btn-outline-secondary">بيانات الإدارة</a>
     </div>
@@ -24,7 +23,6 @@
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <div class="fw-bold">رابط ربط شاشة العرض</div>
-                        <div class="small text-muted">انسخ هذا الرابط إلى الجهاز الجديد ليظهر نموذج ربط واعتماد الشاشة مباشرة.</div>
                     </div>
                     <a href="@Model.RegistrationUrl" target="_blank" class="btn btn-primary btn-sm">فتح الربط</a>
                 </div>
@@ -35,7 +33,6 @@
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="@Model.GateDisplayUrl" target="_blank" class="btn btn-outline-primary btn-sm">شاشة البوابة</a>
                     <a href="@Model.VisitsDisplayUrl" target="_blank" class="btn btn-outline-primary btn-sm">شاشة الزيارات</a>
-                    <span class="small text-muted align-self-center">روابط البوابة والزيارات تعمل بعد اعتماد الجهاز.</span>
                 </div>
             </div>
         </div>
@@ -45,7 +42,6 @@
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <div class="fw-bold">مفتاح الوصول</div>
-                        <div class="small text-muted">المفتاح محفوظ بشكل مهشّم ولا يمكن استخراجه بعد إنشائه.</div>
                     </div>
                     <form asp-action="RotateDisplayAccessKey" method="post" data-confirm-message="سيتم إبطال المفتاح القديم. هل تريد توليد مفتاح جديد؟">
                         @Html.AntiForgeryToken()
@@ -59,7 +55,6 @@
                         <button class="btn btn-outline-secondary" type="button" data-copy-target="display-one-time-key">نسخ</button>
                     }
                 </div>
-                <div class="small text-muted mt-2">بعد التوليد يظهر المفتاح مرة واحدة، ويضاف إلى الجزء المحلي من رابط الربط دون إرساله للخادم.</div>
             </div>
         </div>
 
@@ -74,14 +69,12 @@
                             <label asp-for="DisplayBaseUrl" class="form-label">عنوان الوصول الخارجي</label>
                             <input asp-for="DisplayBaseUrl" class="form-control" dir="ltr" placeholder="http://10.3.25.1:5001" />
                             <span asp-validation-for="DisplayBaseUrl" class="text-danger"></span>
-                            <div class="form-text">إذا تركته فارغًا فسيستخدم النظام عنوان الطلب الحالي عند بناء الروابط.</div>
                         </div>
                         <div class="col-md-12">
                             <label asp-for="AllowedClientIpRanges" class="form-label">عناوين IP المسموح بها</label>
                             <textarea asp-for="AllowedClientIpRanges" class="form-control" rows="3" dir="ltr"
                                       placeholder="10.3.25.x&#10;10.3.100.x"></textarea>
                             <span asp-validation-for="AllowedClientIpRanges" class="text-danger"></span>
-                            <div class="form-text">تبقى إعدادات الشبكة من نفس إعدادات الإدارة ولا يتم إنشاء مخزن جديد لها.</div>
                         </div>
                         <div class="col-12">
                             <button type="submit" class="btn btn-primary">حفظ إعدادات الشبكة</button>

@@ -72,8 +72,6 @@
         <div>
             <span class="reports-kicker">تقارير الزيارات</span>
             <h1 class="mb-2">تقارير الزيارات اليومية والفترية</h1>
-            <p class="text-muted-ar mb-0">يمكنك الطباعة حسب اليوم الحالي أو الأسبوع أو الشهر أو يوم محدد أو من تاريخ إلى
-                تاريخ، مع فلترة الحالة والبحث النصي.</p>
             </div>
             <div class="reports-hero-actions">
                 <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
@@ -92,7 +90,6 @@
                     <div class="report-panel-header">
                         <div>
                             <h2>اختيار سريع للفترة</h2>
-                            <span class="text-muted-ar">اختر فترة شائعة بضغطة واحدة، ثم عدّل الحالة أو البحث عند الحاجة.</span>
                         </div>
                     </div>
                     <div class="report-chip-row">
@@ -121,8 +118,6 @@
                                 <div class="report-panel-header">
                                     <div>
                                         <h2>طباعة سريعة</h2>
-                                        <span class="text-muted-ar">طباعة مباشرة للفترات الأكثر استخدامًا دون الحاجة إلى إعادة ضبط الفلاتر
-                                            كل مرة.</span>
                                         </div>
                                     </div>
                                     <div class="report-quick-grid">
@@ -130,24 +125,20 @@
                                                class="report-quick-card report-quick-card-visit" target="_blank">
                                             <span class="report-quick-card-kicker">PDF</span>
                                             <strong>طباعة تقرير اليوم</strong>
-                                            <small>كل زيارات اليوم الحالي.</small>
                                         </a>
                                         <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Weekly"
                                                class="report-quick-card report-quick-card-visit" target="_blank">
                                             <span class="report-quick-card-kicker">PDF</span>
                                             <strong>طباعة تقرير الأسبوع</strong>
-                                            <small>من بداية الأسبوع حتى الآن.</small>
                                         </a>
                                         <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Monthly"
                                                class="report-quick-card report-quick-card-visit" target="_blank">
                                             <span class="report-quick-card-kicker">PDF</span>
                                             <strong>طباعة تقرير الشهر</strong>
-                                            <small>سجل كامل للشهر الحالي.</small>
                                         </a>
                                         <a href="@printVisitsUrl" class="report-quick-card" target="_blank">
                                             <span class="report-quick-card-kicker">مخصص</span>
                                             <strong>طباعة التصفية الحالية</strong>
-                                            <small>بنفس الفترة والحالة والبحث المعروض الآن.</small>
                                         </a>
                                     </div>
                                 </div>
@@ -170,8 +161,6 @@
                                                 <div class="report-panel-header">
                                                     <div>
                                                         <h2>فلاتر تقرير الزيارات</h2>
-                                                        <span class="text-muted-ar">اختر نوع الفترة ثم اليوم المحدد أو من/إلى عند الحاجة، ويمكنك أيضًا تحديد
-                                                            حالة الزيارة أو البحث باسم أو @identitySearchLabel أو رقم زيارة.</span>
                                                         </div>
                                                     </div>
 
@@ -247,10 +236,6 @@
                                                                         <a asp-action="Visits" class="report-mini-action"><span>مسح</span></a>
                                                                     </div>
 
-                                                                    <div class="report-helper-note">
-                                                                        ستظهر حقول التاريخ المطلوبة فقط حسب نوع الفترة المختار، بينما يبقى البحث وحالة الزيارة متاحين في كل
-                                                                        الحالات.
-                                                                    </div>
                                                                 </form>
                                                             </section>
 
@@ -258,8 +243,7 @@
                                                                 <div class="report-inner-panel">
                                                                     <div class="report-panel-header">
                                                                         <div>
-                                                                            <h2>ملخص التصفية الحالية</h2><span class="text-muted-ar">الوصف الحالي المستخدم أيضًا داخل ملف
-                                                                            PDF.</span>
+                                                                            <h2>ملخص التصفية الحالية</h2>
                                                                         </div>
                                                                     </div>
                                                                     <div class="report-summary-card mb-0">@Model.VisitFilterSummary</div>
@@ -268,8 +252,7 @@
                                                                 <div class="report-inner-panel">
                                                                     <div class="report-panel-header">
                                                                         <div>
-                                                                            <h2>مؤشرات عامة</h2><span class="text-muted-ar">ملخص سريع لنشاط الزيارات خلال اليوم والأسبوع
-                                                                            والشهر.</span>
+                                                                            <h2>مؤشرات عامة</h2>
                                                                         </div>
                                                                     </div>
                                                                     <div class="report-strip">

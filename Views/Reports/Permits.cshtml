@@ -85,7 +85,6 @@
         <div>
             <span class="reports-kicker">تقارير التصاريح</span>
             <h1 class="mb-2">تقارير تصاريح المركبات</h1>
-            <p class="text-muted-ar mb-0">صفحة مستقلة لبحث التصاريح وطباعة تقاريرها وطلبات الاعتماد فقط.</p>
         </div>
         <div class="reports-hero-actions">
             <a asp-action="Index" class="report-mini-action"><span>كل التقارير</span></a>
@@ -119,8 +118,6 @@
                                     <div class="report-panel-header">
                                         <div>
                                             <h2>فلترة وبحث</h2>
-                                            <span class="text-muted-ar">ابحث برقم التصريح أو الاسم أو @identitySearchLabel أو اللوحة، وحدد نوع التصريح قبل
-                                                الطباعة.</span>
                                             </div>
                                             <span class="report-section-badge">@Model.PermitTypeFilterDisplay</span>
                                         </div>
@@ -168,7 +165,6 @@
                                             <div class="report-panel-header">
                                                 <div>
                                                     <h2>نتائج البحث</h2>
-                                                    <span class="text-muted-ar">اختر تصريحًا واحدًا لعرض التقرير التفصيلي.</span>
                                                 </div>
                                             </div>
                                             <div class="table-responsive report-scroll-table">
@@ -209,7 +205,7 @@
                                             <section class="report-inner-panel mt-4">
                                                 <div class="report-panel-header">
                                                     <div>
-                                                        <h2>بطاقة التصريح</h2><span class="text-muted-ar">ملخص كامل للتصريح المحدد.</span>
+                                                        <h2>بطاقة التصريح</h2>
                                                     </div>
                                                     <div class="report-inline-controls report-inline-controls-tight">
                                                         <a asp-action="PermitActivity" asp-route-activityQuery="@Model.SelectedPermit.PermitNumber"
@@ -252,8 +248,7 @@
                                                                     <div class="report-inner-panel">
                                                                         <div class="report-panel-header">
                                                                             <div>
-                                                                                <h2>مؤشرات الخروج</h2><span class="text-muted-ar">متابعة يومية وأسبوعية وشهرية لخروج
-                                                                                المركبات.</span>
+                                                                                <h2>مؤشرات الخروج</h2>
                                                                             </div>
                                                                         </div>
                                                                         <div class="report-strip">
@@ -269,7 +264,7 @@
                                                                     <div class="report-inner-panel">
                                                                         <div class="report-panel-header">
                                                                             <div>
-                                                                                <h2>أسماء المصرح لهم</h2><span class="text-muted-ar">قائمة مختصرة للمخولين بالحركة.</span>
+                                                                                <h2>أسماء المصرح لهم</h2>
                                                                             </div>
                                                                         </div>
                                                                         @if (Model.PermitHolders.Any())
@@ -344,8 +339,7 @@
                                                                     <section class="report-inner-panel mt-4" id="pending-permit-requests">
                                                                         <div class="report-panel-header">
                                                                             <div>
-                                                                                <h2>طلبات التصاريح غير المعتمدة</h2><span class="text-muted-ar">اعتماد أو رفض الطلبات مباشرة من هذا
-                                                                                القسم.</span>
+                                                                                <h2>طلبات التصاريح غير المعتمدة</h2>
                                                                             </div>
                                                                         </div>
                                                                         @if (Model.PendingApprovalPermits.Any())

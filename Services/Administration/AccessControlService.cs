@@ -238,13 +238,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
-            if (
-                string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+            if (HasGlobalOperationalAccess(user))
             {
                 return true;
             }
@@ -293,13 +287,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
-            if (
-                string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+            if (HasGlobalOperationalAccess(user))
             {
                 return true;
             }
@@ -327,13 +315,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
-            if (
-                string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+            if (HasGlobalOperationalAccess(user))
             {
                 return true;
             }
@@ -387,13 +369,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
-            if (
-                string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+            if (HasGlobalOperationalAccess(user))
             {
                 return true;
             }
@@ -423,13 +399,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
-            if (
-                string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+            if (HasGlobalOperationalAccess(user))
             {
                 return true;
             }
@@ -445,13 +415,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
-            if (
-                string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
+            if (HasGlobalOperationalAccess(user))
             {
                 return true;
             }
@@ -527,11 +491,22 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 return false;
             if (AppRoles.IsSuperAdmin(user))
                 return false;
-            return !string.Equals(
-                user.Role,
-                AppRoles.GeneralManager,
-                StringComparison.OrdinalIgnoreCase
-            );
+            return string.Equals(user.Role, AppRoles.Manager, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(user.Role, AppRoles.Employee, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool HasGlobalOperationalAccess(UserAccount user)
+        {
+            return string.Equals(
+                    user.Role,
+                    AppRoles.GeneralManager,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || string.Equals(
+                    user.Role,
+                    AppRoles.SecurityManager,
+                    StringComparison.OrdinalIgnoreCase
+                );
         }
 
         private static bool PermitMatchesDepartmentScope(Permit permit, string department)

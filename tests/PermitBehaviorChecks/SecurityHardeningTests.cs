@@ -231,13 +231,144 @@ public sealed class SecurityHardeningTests
         using (var db = factory.CreateDbContext())
         {
             Assert.False(db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
-            Assert.False(db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789").IsActive);
+            var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
+            var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup");
+            Assert.False(owner.IsActive);
+            Assert.Equal(owner.Username, settings.GeneralManagerUsername);
+            Assert.Equal(owner.DisplayName, settings.ManagerName);
+            Assert.Equal("مالك الحساب", settings.ManagerTitle);
+            Assert.Contains(
+                db.Departments.IgnoreQueryFilters(),
+                department => department.TenantId == "secure-signup" && department.Name == "الإدارة العامة"
+            );
         }
 
         Assert.True(service.ActivatePaidSubscription("secure-signup").Succeeded);
         using var verifiedDb = factory.CreateDbContext();
         Assert.True(verifiedDb.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
         Assert.True(verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789").IsActive);
+    }
+
+    [Fact]
+    public void TenantCreationSeedsAnIsolatedDefaultDepartment()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITenantContext, DefaultTenantContext>();
+        services.AddDbContextFactory<ApplicationDbContext>(options =>
+            options.UseInMemoryDatabase($"tenant-seed-{Guid.NewGuid():N}")
+        );
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+
+        var result = service.CreateTenant(
+            new TenantEditorViewModel
+            {
+                TenantId = "seeded-tenant",
+                Name = "جهة مهيأة",
+                Slug = "seeded-tenant",
+                DepartmentName = string.Empty,
+            }
+        );
+
+        Assert.True(result.Succeeded, result.Message);
+        using var db = factory.CreateDbContext();
+        var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == "seeded-tenant");
+        var department = db.Departments.IgnoreQueryFilters().Single(x => x.TenantId == "seeded-tenant");
+        Assert.Equal("الإدارة العامة", settings.DepartmentName);
+        Assert.Equal(settings.DepartmentName, department.Name);
+        Assert.True(department.IsActive);
+    }
+
+    [Fact]
+    public void TenantDeletionRequiresStopAndExactNameThenRemovesScopedData()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITenantContext, DefaultTenantContext>();
+        services.AddDbContextFactory<ApplicationDbContext>(options =>
+            options.UseInMemoryDatabase($"tenant-delete-{Guid.NewGuid():N}")
+        );
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+
+        var created = service.CreateTenant(
+            new TenantEditorViewModel
+            {
+                TenantId = "deletable-tenant",
+                Name = "جهة قابلة للحذف",
+                Slug = "deletable-tenant",
+            }
+        );
+        Assert.True(created.Succeeded, created.Message);
+
+        using (var db = factory.CreateDbContext())
+        {
+            db.UserAccounts.Add(
+                new UserAccount
+                {
+                    TenantId = "deletable-tenant",
+                    Username = "1999999999",
+                    DisplayName = "مستخدم اختبار",
+                    FullName = "مستخدم اختبار",
+                    PhoneNumber = "0500000000",
+                }
+            );
+            db.SessionRecords.Add(
+                new SessionRecord
+                {
+                    TenantId = "deletable-tenant",
+                    SessionId = "tenant-delete-session",
+                    Username = "1999999999",
+                    ExpiresAtUtc = DateTime.UtcNow.AddHours(1),
+                    LastActivityUtc = DateTime.UtcNow,
+                }
+            );
+            db.SaveChanges();
+        }
+
+        Assert.False(service.DeleteTenant("deletable-tenant", "جهة قابلة للحذف").Succeeded);
+        Assert.True(service.SetTenantActive("deletable-tenant", false).Succeeded);
+        using (var stoppedDb = factory.CreateDbContext())
+        {
+            Assert.DoesNotContain(
+                stoppedDb.SessionRecords.IgnoreQueryFilters(),
+                item => item.TenantId == "deletable-tenant"
+            );
+        }
+        Assert.False(service.DeleteTenant("deletable-tenant", "اسم غير مطابق").Succeeded);
+        Assert.True(service.DeleteTenant("deletable-tenant", "جهة قابلة للحذف").Succeeded);
+
+        using var verifiedDb = factory.CreateDbContext();
+        Assert.DoesNotContain(
+            verifiedDb.Tenants.IgnoreQueryFilters(),
+            item => item.TenantId == "deletable-tenant"
+        );
+        Assert.DoesNotContain(
+            verifiedDb.UserAccounts.IgnoreQueryFilters(),
+            item => item.TenantId == "deletable-tenant"
+        );
+        Assert.DoesNotContain(
+            verifiedDb.SessionRecords.IgnoreQueryFilters(),
+            item => item.TenantId == "deletable-tenant"
+        );
+    }
+
+    [Fact]
+    public void DepartmentNamesAreUniqueWithinEachTenant()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"department-index-{Guid.NewGuid():N}")
+            .Options;
+        using var db = new ApplicationDbContext(options, new DefaultTenantContext());
+        var index = db.Model.FindEntityType(typeof(Department))!
+            .GetIndexes()
+            .Single(item => item.IsUnique && item.Properties.Any(property => property.Name == nameof(Department.Name)));
+
+        Assert.Equal(
+            new[] { nameof(Department.TenantId), nameof(Department.Name) },
+            index.Properties.Select(property => property.Name)
+        );
     }
 
     [Fact]

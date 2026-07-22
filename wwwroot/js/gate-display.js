@@ -207,19 +207,26 @@
         updateOperatorUi(activeOperator);
     };
 
+    const isActiveOperatorReady = () => Boolean(activeOperator && !activeOperator.mustChangePin);
+
     const updateOperatorUi = (session) => {
         activeOperator = session || null;
-        activeOperatorName.textContent = session ? session.displayName : 'لا يوجد مشغل نشط';
+        const operatorReady = isActiveOperatorReady();
+        activeOperatorName.textContent = session
+            ? `${session.displayName}${operatorReady ? '' : ' - تغيير PIN مطلوب'}`
+            : 'لا يوجد مشغل نشط';
         activeOperatorSessionStart.textContent = session ? session.signedInAtText || '--:--:--' : '--:--:--';
-        openOperatorModalButton.textContent = session ? 'تبديل مشغل' : 'دخول مشغل';
+        openOperatorModalButton.textContent = session
+            ? (operatorReady ? 'تبديل مشغل' : 'تغيير PIN')
+            : 'دخول مشغل';
         signOutOperatorButton.disabled = !session;
         noteTargetChip.textContent = lastScannedPermitNumber || 'لا يوجد تصريح محدد';
-        saveOperatorNoteButton.disabled = !(session && lastScannedPermitNumber);
-        operatorNoteHint.textContent = session
+        saveOperatorNoteButton.disabled = !(operatorReady && lastScannedPermitNumber);
+        operatorNoteHint.textContent = operatorReady
             ? (lastScannedPermitNumber
                 ? `ستُحفظ هذه الملاحظة باسم ${session.displayName} على التصريح ${lastScannedPermitNumber}.`
                 : 'يجب عرض تصريح أولاً قبل حفظ الملاحظة.')
-            : 'يجب تسجيل دخول مشغل قبل حفظ أي ملاحظة.';
+            : (session ? 'يجب تغيير PIN المؤقت قبل حفظ أي ملاحظة.' : 'يجب تسجيل دخول مشغل قبل حفظ أي ملاحظة.');
     };
 
     const renderRecentActivities = (activities) => {
@@ -624,9 +631,15 @@
     };
 
     const closeOperatorModal = () => {
+        const mustSignOut = operatorModal.dataset.mode === 'pin-change'
+            && activeOperator?.mustChangePin;
         operatorModal.classList.add('is-hidden');
         operatorModal.setAttribute('aria-hidden', 'true');
         operatorBadgeBuffer.length = 0;
+        if (mustSignOut) {
+            void signOutOperator();
+            return;
+        }
         focusScanner();
     };
 
@@ -878,10 +891,10 @@
         if (permit?.permitNumber) {
             lastScannedPermitNumber = permit.permitNumber;
             noteTargetChip.textContent = permit.permitNumber;
-            saveOperatorNoteButton.disabled = !activeOperator;
-            operatorNoteHint.textContent = activeOperator
+            saveOperatorNoteButton.disabled = !isActiveOperatorReady();
+            operatorNoteHint.textContent = isActiveOperatorReady()
                 ? `ستُحفظ هذه الملاحظة باسم ${activeOperator.displayName} على التصريح ${permit.permitNumber}.`
-                : 'يجب تسجيل دخول مشغل قبل حفظ أي ملاحظة.';
+                : (activeOperator ? 'يجب تغيير PIN المؤقت قبل حفظ أي ملاحظة.' : 'يجب تسجيل دخول مشغل قبل حفظ أي ملاحظة.');
         }
 
         scanHintChip.textContent = allowed ? 'تمت القراءة بنجاح' : 'توجد ملاحظة على هذه القراءة';
@@ -1091,7 +1104,7 @@
     };
 
     const saveOperatorNote = async () => {
-        if (!activeOperator || !lastScannedPermitNumber) {
+        if (!isActiveOperatorReady() || !lastScannedPermitNumber) {
             return;
         }
 
@@ -1209,9 +1222,11 @@
             return;
         }
 
-        if (!activeOperator) {
-            scanHintChip.textContent = 'يجب تسجيل دخول مشغل قبل البدء بالمسح';
-            openOperatorModal('login');
+        if (!isActiveOperatorReady()) {
+            scanHintChip.textContent = activeOperator
+                ? 'يجب تغيير PIN المؤقت قبل البدء بالمسح'
+                : 'يجب تسجيل دخول مشغل قبل البدء بالمسح';
+            openOperatorModal(activeOperator ? 'pin-change' : 'login');
             resetScannerBuffer();
             scannerInput.value = '';
             return;
@@ -1396,7 +1411,9 @@
     focusScannerButton.addEventListener('click', focusScanner);
     openGateCameraButton?.addEventListener('click', startCameraScanner);
     stopGateCameraButton?.addEventListener('click', () => stopCameraScanner('تم إيقاف الكاميرا.'));
-    openOperatorModalButton.addEventListener('click', () => openOperatorModal(activeOperator ? 'switch' : 'login'));
+    openOperatorModalButton.addEventListener('click', () => openOperatorModal(
+        activeOperator?.mustChangePin ? 'pin-change' : (activeOperator ? 'switch' : 'login')
+    ));
     signOutOperatorButton.addEventListener('click', signOutOperator);
     closeOperatorModalButton.addEventListener('click', closeOperatorModal);
     cancelOperatorModalButton.addEventListener('click', closeOperatorModal);

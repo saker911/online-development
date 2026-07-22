@@ -77,6 +77,9 @@ namespace VehiclePermitSystemWeb.Controllers
             var normalizedPageSize = PermitInputNormalizer.NormalizePageSize(pageSize);
             var hasSearchTerm = !string.IsNullOrWhiteSpace(searchTerm);
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            ViewData["LeaveRequestsEnabled"] = _userAdminService
+                .GetAdministrationSettings()
+                .LeaveRequestsEnabled;
             var allPermits = _permitService
                 .GetAllPermits(User.Identity?.Name)
                 .OrderByDescending(p => PermitInputNormalizer.ParsePermitNumber(p.PermitNumber))
@@ -133,6 +136,10 @@ namespace VehiclePermitSystemWeb.Controllers
                 )
                 .Select(p => p.PermitNumber)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var reviewablePermitNumbers = pagePermits
+                .Where(p => CanForwardApproval(p, currentUser))
+                .Select(p => p.PermitNumber)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var pendingApprovalCount = permits.Count(p =>
                 string.Equals(p.ApprovalStatus, "Pending", StringComparison.OrdinalIgnoreCase)
                 && _accessControl.CanApprovePermit(p, currentUser)
@@ -142,7 +149,9 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 SearchTerm = searchTerm,
                 ApprovablePermitNumbers = approvablePermitNumbers,
+                ReviewablePermitNumbers = reviewablePermitNumbers,
                 PendingApprovalCount = pendingApprovalCount,
+                PendingReviewCount = permits.Count(p => CanForwardApproval(p, currentUser)),
                 StoppedPermitsCount = allPermits.Count(p =>
                     string.Equals(p.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase)
                 ),
@@ -182,6 +191,7 @@ namespace VehiclePermitSystemWeb.Controllers
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
             var administration = _userAdminService.GetAdministrationSettings();
             ViewData["PermitNotice"] = BuildPermitUsageNotice(administration);
+            ViewData["LeaveRequestsEnabled"] = administration.LeaveRequestsEnabled;
             ViewData["OrganizationName"] = administration.OrganizationName;
             ViewData["DepartmentName"] = administration.DepartmentName;
             if (
@@ -377,7 +387,9 @@ namespace VehiclePermitSystemWeb.Controllers
 
                 try
                 {
-                    permit.ApprovalStatus = "Pending";
+                    permit.ApprovalStatus = permit.IsVisitorPermit
+                        ? Permit.ApprovalStatusPending
+                        : Permit.ApprovalStatusPendingReview;
                     _permitService.AddPermit(permit, User.Identity?.Name);
                     this.ToastSuccess("تم حفظ التصريح بنجاح.");
                     return RedirectToAction(nameof(Details), new { id = permit.PermitNumber });
@@ -470,13 +482,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(x => x)
                 .ToList();
-            var approvalRoutes =
-                PermitDepartmentApprovalRoutesBuilder.BuildDepartmentApprovalRoutes(
-                    _userAdminService,
-                    departments
-                );
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
-
             if (
                 currentUser != null
                 && string.Equals(
@@ -492,7 +498,6 @@ namespace VehiclePermitSystemWeb.Controllers
                     options = new List<string> { scopedDepartment };
                 }
             }
-
             var selectedDepartment = (currentDepartment ?? string.Empty).Trim();
             if (
                 !string.IsNullOrWhiteSpace(selectedDepartment)
@@ -510,9 +515,11 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             ViewBag.DepartmentOptions = options;
-            ViewBag.DepartmentApprovalRoutesJson = JsonSerializer.Serialize(approvalRoutes);
-            ViewBag.ApprovalRouteHint =
-                "سيُوجَّه الطلب إلى مدير القسم أولًا، ويمكنه رفعه إلى المدير العام إذا لم تتوفر لديه صلاحية الاعتماد.";
+            ViewBag.DepartmentApprovalRoutesJson = "{}";
+            ViewBag.ApprovalRouteHint = "يراجع المدقق الطلب ثم يرفعه لاعتماد مدير الأمن.";
+            ViewData["LeaveRequestsEnabled"] = _userAdminService
+                .GetAdministrationSettings()
+                .LeaveRequestsEnabled;
         }
 
         private void ApplyEmployeeApprovalRoute(Permit permit)
@@ -522,52 +529,67 @@ namespace VehiclePermitSystemWeb.Controllers
                 return;
             }
 
-            var departments = _userAdminService.GetDepartments().ToList();
-            var selectedDepartment = departments.FirstOrDefault(department =>
-                string.Equals(
-                    department.Name,
-                    permit.DepartmentName,
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (
+                currentUser == null
+                || !string.Equals(
+                    currentUser.Role,
+                    AppRoles.DepartmentManager,
                     StringComparison.OrdinalIgnoreCase
                 )
-            );
-
-            var approvalRoutes =
-                PermitDepartmentApprovalRoutesBuilder.BuildDepartmentApprovalRoutes(
-                    _userAdminService,
-                    departments
-                );
-            var routeName = string.Empty;
-            if (
-                selectedDepartment != null
-                && approvalRoutes.TryGetValue(selectedDepartment.Name.Trim(), out var resolvedRoute)
             )
             {
-                routeName = resolvedRoute;
+                permit.ManagerName = string.Empty;
+                return;
             }
 
-            if (string.IsNullOrWhiteSpace(routeName))
-            {
-                routeName = permit.ManagerName?.Trim();
-            }
-
-            permit.ManagerName = routeName ?? string.Empty;
+            var departments = _userAdminService.GetDepartments().ToList();
+            var approvalRoutes = PermitDepartmentApprovalRoutesBuilder.BuildDepartmentApprovalRoutes(
+                _userAdminService,
+                departments
+            );
+            permit.ManagerName = approvalRoutes.TryGetValue(
+                permit.DepartmentName.Trim(),
+                out var routeName
+            )
+                ? routeName
+                : string.Empty;
         }
 
         private bool CanForwardApproval(Permit permit)
         {
-            if (permit.IsVisitorPermit || permit.ArchivedAt.HasValue)
-            {
-                return false;
-            }
-
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
-            if (currentUser == null || !currentUser.IsActive || currentUser.CanApprovePermit)
+            return CanForwardApproval(permit, currentUser);
+        }
+
+        private static bool CanForwardApproval(Permit permit, UserAccount? currentUser)
+        {
+            if (
+                permit.IsVisitorPermit
+                || permit.ArchivedAt.HasValue
+                || !string.Equals(
+                    permit.ApprovalStatus,
+                    Permit.ApprovalStatusPendingReview,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 return false;
             }
 
-            return _accessControl.IsCurrentDepartmentManager(currentUser, permit.EmployeeDepartment)
-                || _accessControl.IsCurrentDepartmentManager(currentUser, permit.DepartmentName);
+            if (currentUser == null || !currentUser.IsActive)
+            {
+                return false;
+            }
+
+            return AppRoles.IsSuperAdmin(currentUser)
+                || (
+                    string.Equals(
+                        currentUser.Role,
+                        AppRoles.PermitReviewer,
+                        StringComparison.OrdinalIgnoreCase
+                    ) && currentUser.CanEditPermit
+                );
         }
 
         private static string NormalizeDepartmentName(string? departmentName)
@@ -578,13 +600,9 @@ namespace VehiclePermitSystemWeb.Controllers
         private void EnforceDepartmentScope(Permit permit)
         {
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
-            if (currentUser == null)
-            {
-                return;
-            }
-
             if (
-                !string.Equals(
+                currentUser == null
+                || !string.Equals(
                     currentUser.Role,
                     AppRoles.DepartmentManager,
                     StringComparison.OrdinalIgnoreCase
@@ -662,6 +680,13 @@ namespace VehiclePermitSystemWeb.Controllers
                 _ when permit.IsVisitorPermit => false,
                 _ => true,
             };
+            if (
+                permit.IsPermanentPermit
+                && !_userAdminService.GetAdministrationSettings().LeaveRequestsEnabled
+            )
+            {
+                permit.RequiresReturn = true;
+            }
             permit.AccessMode =
                 permit.PermitType == Permit.PermitTypePermanent
                     ? (
@@ -673,9 +698,10 @@ namespace VehiclePermitSystemWeb.Controllers
             permit.NormalizeAccessModeState();
         }
 
-        private static bool CanOpenLeaveRequest(Permit permit)
+        private bool CanOpenLeaveRequest(Permit permit)
         {
-            return permit.IsPermanentPermit
+            return _userAdminService.GetAdministrationSettings().LeaveRequestsEnabled
+                && permit.IsPermanentPermit
                 && string.Equals(
                     permit.ApprovalStatus,
                     "Approved",
@@ -752,12 +778,12 @@ namespace VehiclePermitSystemWeb.Controllers
             if (!_permitService.ForwardPermitToGeneralManager(id, User.Identity?.Name))
             {
                 this.ToastError(
-                    "تعذر رفع الطلب للمدير العام. تأكد من وجود مدير عام صالح ثم حاول مرة أخرى."
+                    "تعذر رفع الطلب. تأكد من وجود مدير أمن نشط ثم حاول مرة أخرى."
                 );
                 return RedirectToAction(nameof(Details), new { id = permit.PermitNumber });
             }
 
-            this.ToastSuccess("تم رفع الطلب إلى المدير العام بنجاح.");
+            this.ToastSuccess("اكتمل التدقيق وتم رفع الطلب لاعتماد مدير الأمن.");
             return RedirectToAction(nameof(Details), new { id = permit.PermitNumber });
         }
 
@@ -771,7 +797,14 @@ namespace VehiclePermitSystemWeb.Controllers
                 return NotFound();
             }
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
-            if (!_accessControl.CanApprovePermit(permit, currentUser))
+            if (
+                !string.Equals(
+                    permit.ApprovalStatus,
+                    Permit.ApprovalStatusPending,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || !_accessControl.CanApprovePermit(permit, currentUser)
+            )
             {
                 return Forbid();
             }
@@ -820,7 +853,14 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
-            if (!_accessControl.CanApprovePermit(permit, currentUser))
+            if (
+                !string.Equals(
+                    permit.ApprovalStatus,
+                    Permit.ApprovalStatusPending,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || !_accessControl.CanApprovePermit(permit, currentUser)
+            )
             {
                 return Forbid();
             }
@@ -862,7 +902,14 @@ namespace VehiclePermitSystemWeb.Controllers
                 return NotFound();
             }
 
-            if (!_accessControl.CanApprovePermit(permit, currentUser))
+            if (
+                !string.Equals(
+                    permit.ApprovalStatus,
+                    Permit.ApprovalStatusPending,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || !_accessControl.CanApprovePermit(permit, currentUser)
+            )
             {
                 return Forbid();
             }

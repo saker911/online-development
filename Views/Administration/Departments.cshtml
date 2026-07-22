@@ -273,11 +273,6 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
         </div>
     </div>
 
-    <div class="app-inline-note app-inline-note-info leadership-guidance">
-        <strong>كيف تستخدم المركز؟</strong>
-        <span>أنشئ الحسابات من شاشة المستخدمين، ثم استخدم هذه الصفحة لإسناد القيادة أو نقل المدير أو تقاعده مع سحب الصلاحيات السابقة تلقائيًا.</span>
-    </div>
-
     <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
 
     @if (Model.AdministrationDepartment != null)
@@ -286,7 +281,6 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
             <div>
                 <span class="leadership-card-label">الإدارة الرئيسية</span>
                 <h2>@Model.AdministrationDepartment.Name</h2>
-                <p>يمثل هذا السجل الإدارة العامة ويعرض منفصلًا عن أقسام التشغيل.</p>
             </div>
             <div class="leadership-administration-manager">
                 <span>المدير العام الحالي</span>
@@ -303,7 +297,6 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
                         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                             <div>
                                 <h5 class="mb-1">@(isEditing ? "تحديث بيانات القسم" : "تهيئة قسم جديد")</h5>
-                                <div class="text-muted small">@(isEditing ? "حدّث الاسم أو الحالة للحفاظ على الهيكل التنظيمي المعتمد." : "هذه المنطقة مخصصة لتهيئة الهيكل التنظيمي قبل إسناد المديرين ونقلهم.")</div>
                             </div>
                             @if (isEditing)
                             {
@@ -464,7 +457,7 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
                                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                                         <div>
                                             <h5 class="mb-1">نقل المدير الحالي</h5>
-                                            <div class="text-muted small">من كل صف قسم يمكنك فتح نموذج خطوات واضح: تحديد نوع الإسناد، اختيار المدير
+                                            <div class="app-inline-note app-inline-note-info mb-0">من كل صف قسم يمكنك فتح نموذج خطوات واضح: تحديد نوع الإسناد، اختيار المدير
                                                 الجديد، ثم اعتماد وضع المدير السابق قبل التنفيذ.</div>
                                             </div>
                                             <div class="text-muted small">متاح فقط لمالك النظام</div>

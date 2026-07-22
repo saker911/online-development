@@ -10,19 +10,14 @@
 <div class="reports-page-shell">
     <section class="reports-hero card-permit">
         <div>
-            <span class="reports-kicker">مركز التقارير</span>
-            <h1 class="mb-2">اختر نوع التقرير</h1>
-            <p class="text-muted-ar mb-0">تم فصل تقارير التصاريح عن تقارير الزيارات لتصبح الطباعة والبحث والفلاتر أوضح
-                وأسرع.</p>
+            <h1 class="mb-2">التقارير</h1>
             </div>
         </section>
 
         <section class="report-inner-panel mt-4">
             <div class="report-panel-header">
                 <div>
-                    <h2>اختصارات سريعة</h2>
-                    <span class="text-muted-ar">دخول مباشر لأكثر العمليات استخدامًا بدون المرور على كل الفلاتر في كل
-                        مرة.</span>
+                    <h2>اختر نوع التقرير</h2>
                     </div>
                 </div>
 
@@ -32,28 +27,23 @@
                         <a asp-action="Permits" class="report-quick-card">
                             <span class="report-quick-card-kicker">التصاريح</span>
                             <strong>فتح مركز تقارير التصاريح</strong>
-                            <small>الطباعة حسب النوع والبحث في التصاريح والطلبات غير المعتمدة.</small>
                         </a>
                         <a asp-action="StoppedPermits" class="report-quick-card report-quick-card-warning">
                             <span class="report-quick-card-kicker">موقوف</span>
                             <strong>فتح التصاريح الموقوفة</strong>
-                            <small>مراجعة أسباب الإيقاف وإعادة التفعيل من لوحة واحدة.</small>
                         </a>
                         <a asp-action="UnauthorizedExitWorkflow" class="report-quick-card report-quick-card-warning">
                             <span class="report-quick-card-kicker">المسار</span>
                             <strong>لوحة مخالفات الخروج</strong>
-                            <small>المعلقة وتحت المراجعة والموقوفة والمغلقة في شاشة واحدة.</small>
                         </a>
                         <a asp-action="PermitActivity" class="report-quick-card">
                             <span class="report-quick-card-kicker">السجل</span>
                             <strong>فتح سجل الحركة</strong>
-                            <small>بحث مستقل في الحركات مع طباعة خاصة بالسجل فقط.</small>
                         </a>
                         <a asp-action="PrintPermitsReport" asp-route-permitTypeFilter="All" class="report-quick-card"
                                target="_blank">
                             <span class="report-quick-card-kicker">PDF</span>
                             <strong>طباعة كل التصاريح</strong>
-                            <small>نسخة جاهزة للطباعة لجميع التصاريح الحالية.</small>
                         </a>
                     }
 
@@ -62,13 +52,11 @@
                         <a asp-action="Visits" asp-route-visitQuickRange="Daily" class="report-quick-card report-quick-card-visit">
                             <span class="report-quick-card-kicker">يومي</span>
                             <strong>تقارير زيارات اليوم</strong>
-                            <small>فتح الفلاتر على اليوم الحالي مباشرة.</small>
                         </a>
                         <a asp-action="PrintVisitsReport" asp-route-visitQuickRange="Weekly"
                                class="report-quick-card report-quick-card-visit" target="_blank">
                             <span class="report-quick-card-kicker">أسبوعي</span>
                             <strong>طباعة تقرير الأسبوع</strong>
-                            <small>إخراج مباشر لزيارات الأسبوع الحالي.</small>
                         </a>
                     }
                 </div>
@@ -81,8 +69,6 @@
                         <div class="report-panel-header">
                             <div>
                                 <h2>تقارير تصاريح المركبات</h2>
-                                <span class="text-muted-ar">بحث تفصيلي، تقرير نوع التصريح، والطلبات غير
-                                    المعتمدة.</span>
                                 </div>
                                 <a asp-action="Permits" class="report-mini-action report-mini-action-solid"><span>فتح القسم</span></a>
                             </div>
@@ -106,8 +92,6 @@
                                             <div class="report-panel-header">
                                                 <div>
                                                     <h2>تقارير الزيارات</h2>
-                                                    <span class="text-muted-ar">تقارير يومية وأسبوعية وشهرية ويوم محدد ومن تاريخ إلى تاريخ مع طباعة
-                                                        مباشرة.</span>
                                                     </div>
                                                     <a asp-action="Visits" class="report-mini-action report-mini-action-success"><span>فتح القسم</span></a>
                                                 </div>

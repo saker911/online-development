@@ -487,7 +487,7 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 IsActive = true,
                 Role = AppRoles.Receptionist,
-                ApplyRoleDefaults = false,
+                ApplyRoleDefaults = true,
                 MustChangeOperatorPin = true,
                 TenantId = GetCurrentTenantId(),
             };
@@ -520,10 +520,10 @@ namespace VehiclePermitSystemWeb.Controllers
                 }
 
                 model.Role = AppRoles.GeneralManager;
-                model.JobTitle = "مدير عام";
-                ViewData["CreateFlowTitle"] = "تعيين أو تغيير المدير العام";
+                model.JobTitle = "مدير الأمن";
+                ViewData["CreateFlowTitle"] = "إضافة مدير أمن";
                 ViewData["CreateFlowMessage"] =
-                    "أنت الآن في مسار إنشاء مدير عام جديد. بعد الحفظ ستتحدث بيانات الإدارة تلقائيًا من الحساب النشط بدون أي ربط يدوي إضافي.";
+                    "مدير الأمن يراجع الطلبات المدققة ويملك الاعتماد النهائي للتصاريح.";
             }
             else if (isDepartmentManagerFlow)
             {
@@ -583,29 +583,25 @@ namespace VehiclePermitSystemWeb.Controllers
             PopulateTenantOptions(model);
             ValidateTenantSelection(model);
             PopulateDepartmentOptions(model);
-            PopulateGeneralManagerContext();
+            PopulateGeneralManagerContext(
+                _userAdminService.GetAdministrationSettings(model.TenantId, User.IsSuperAdmin())
+            );
             ApplyUsernameValidation(model);
             ApplyEmailValidation(model);
             ValidateManagedUserSubmission(model);
 
             var safeReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : string.Empty;
-            var isGeneralManagerFlow =
-                string.Equals(
-                    creationFlow,
-                    "general-manager-transfer",
-                    StringComparison.OrdinalIgnoreCase
-                )
-                || string.Equals(
-                    model.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                );
+            var isGeneralManagerFlow = string.Equals(
+                model.Role,
+                AppRoles.GeneralManager,
+                StringComparison.OrdinalIgnoreCase
+            );
 
             if (isGeneralManagerFlow)
             {
-                ViewData["CreateFlowTitle"] = "تعيين أو تغيير المدير العام";
+                ViewData["CreateFlowTitle"] = "إضافة مدير أمن";
                 ViewData["CreateFlowMessage"] =
-                    "أنت الآن في مسار إنشاء مدير عام جديد. بعد الحفظ ستتحدث بيانات الإدارة تلقائيًا من الحساب النشط بدون أي ربط يدوي إضافي.";
+                    "مدير الأمن يراجع الطلبات المدققة ويملك الاعتماد النهائي للتصاريح.";
             }
 
             ViewData["CreateFlowReturnUrl"] = safeReturnUrl;
@@ -637,24 +633,6 @@ namespace VehiclePermitSystemWeb.Controllers
                 return departmentManagerRedirect;
             }
 
-            // Auto-bind manager username from department if requested
-            if (
-                model.AutoBindManager
-                && string.IsNullOrWhiteSpace(model.ManagerUsername)
-                && !string.IsNullOrWhiteSpace(model.Department)
-            )
-            {
-                var dept = _userAdminService
-                    .GetDepartments()
-                    .FirstOrDefault(d =>
-                        string.Equals(d.Name, model.Department, StringComparison.OrdinalIgnoreCase)
-                    );
-                if (dept != null && !string.IsNullOrWhiteSpace(dept.ManagerUsername))
-                {
-                    model.ManagerUsername = dept.ManagerUsername;
-                }
-            }
-
             var tempPassword = UserAccountService.GenerateTemporaryPassword();
             if (!_userAdminService.CreateUser(MapToUser(model), tempPassword))
             {
@@ -676,17 +654,6 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var successMessage =
                 $"تمت إضافة المستخدم بنجاح. كلمة مرور الدخول المؤقتة هي {tempPassword} ويجب تغييرها بعد أول دخول.{BuildOperatorSetupMessage(badgeCode, operatorPin)}";
-            if (
-                string.Equals(
-                    model.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-            )
-            {
-                successMessage += " تم تحديث ربط بيانات الإدارة تلقائيًا إلى المدير العام النشط.";
-            }
-
             QueueToastSuccess(successMessage);
             SetCredentialNotice(
                 title: "بيانات الدخول المؤقتة للمستخدم الجديد",
@@ -719,7 +686,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var targetDepartment = _userAdminService
-                .GetDepartments()
+                .GetDepartments(model.TenantId, User.IsSuperAdmin())
                 .FirstOrDefault(department =>
                     string.Equals(
                         department.Name,
@@ -766,7 +733,10 @@ namespace VehiclePermitSystemWeb.Controllers
                 return null;
             }
 
-            var administrationSettings = _userAdminService.GetAdministrationSettings();
+            var administrationSettings = _userAdminService.GetAdministrationSettings(
+                model.TenantId,
+                User.IsSuperAdmin()
+            );
             if (!IsAdministrationConfiguredForGeneralManager(administrationSettings))
             {
                 ModelState.AddModelError(
@@ -782,6 +752,23 @@ namespace VehiclePermitSystemWeb.Controllers
             ).Trim();
             if (!string.IsNullOrWhiteSpace(currentGeneralManagerUsername))
             {
+                if (
+                    User.IsSuperAdmin()
+                    && !string.Equals(
+                        model.TenantId,
+                        GetCurrentTenantId(),
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    ModelState.AddModelError(
+                        nameof(model.Role),
+                        "الجهة المختارة لديها مدير عام حالي. افتح الجهة نفسها لإدارة تناقل المدير العام."
+                    );
+                    PopulateGeneralManagerContext(administrationSettings);
+                    return View("Create", model);
+                }
+
                 QueueToastWarning(
                     "يوجد مدير عام حالي. سيتم فتح معالج تعيين / تغيير المدير العام لاستكمال مسار التناقل ومعالجة وضع المدير السابق."
                 );
@@ -809,16 +796,20 @@ namespace VehiclePermitSystemWeb.Controllers
             var temporaryPassword = UserAccountService.GenerateTemporaryPassword();
             var request = new GeneralManagerAssignmentRequest
             {
+                TenantId = model.TenantId,
                 SelectionMode = GeneralManagerSelectionModes.CreateNew,
                 NewUserUsername = model.Username,
                 NewUserFullName = model.FullName,
                 NewUserPhoneNumber = model.PhoneNumber,
+                NewUserEmail = model.Email,
+                NewUserEmployeeNumber = model.EmployeeNumber,
                 NewUserPassword = temporaryPassword,
                 NewUserConfirmPassword = temporaryPassword,
                 NewUserJobTitle = string.IsNullOrWhiteSpace(model.JobTitle)
                     ? "مدير عام"
                     : model.JobTitle,
                 NewUserIsActive = model.IsActive,
+                NewUserMustChangePassword = true,
                 AssignmentType = GeneralManagerAssignmentTypes.Permanent,
                 PreviousGeneralManagerAction = GeneralManagerPreviousActions.EndAssignment,
             };
@@ -831,17 +822,6 @@ namespace VehiclePermitSystemWeb.Controllers
                     "تعذر تعيين المدير العام. تحقق من بيانات الإدارة وبيانات المستخدم."
                 );
                 return View("Create", model);
-            }
-
-            var createdGeneralManager = GetManagedUserAccount(model.Username);
-            if (createdGeneralManager != null)
-            {
-                _userAdminService.UpdateUser(
-                    createdGeneralManager,
-                    temporaryPassword,
-                    createdGeneralManager.Username,
-                    User.IsSuperAdmin()
-                );
             }
 
             QueueToastSuccess(
@@ -962,7 +942,7 @@ namespace VehiclePermitSystemWeb.Controllers
             )
             {
                 var dept = _userAdminService
-                    .GetDepartments()
+                    .GetDepartments(model.TenantId, User.IsSuperAdmin())
                     .FirstOrDefault(d =>
                         string.Equals(d.Name, model.Department, StringComparison.OrdinalIgnoreCase)
                     );
@@ -1644,8 +1624,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private static bool ShouldHideManagerBinding(string? role)
         {
-            return IsGeneralManagerRole(role)
-                || string.Equals(role, AppRoles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
+            return true;
         }
 
         private static bool IsAdministrationConfiguredForGeneralManager(
@@ -1828,7 +1807,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private void PopulateDepartmentOptions(UserEditViewModel model)
         {
             var departments = _userAdminService
-                .GetDepartments()
+                .GetDepartments(model.TenantId, User.IsSuperAdmin())
                 .Where(department => department.IsActive)
                 .Where(department => !string.IsNullOrWhiteSpace(department.Name))
                 .GroupBy(department => department.Name, StringComparer.OrdinalIgnoreCase)

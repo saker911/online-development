@@ -50,9 +50,7 @@
 <div class="app-card-surface p-4 delegation-editor-surface">
     <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
         <div>
-            <span class="users-section-kicker">تفويض مؤقت</span>
             <h2 class="h4 mb-1">@(editor.IsEditMode ? "تعديل التفويض" : "إنشاء تفويض جديد")</h2>
-            <p class="text-muted mb-0">تفويض كامل أو مخصص مع تفعيل زمني وسجل مركزي متوافق مع الصلاحيات الحالية.</p>
         </div>
         @if (editor.IsEditMode)
         {
@@ -127,8 +125,6 @@
                         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
                             <div>
                                 <h3 class="h6 mb-1">الصلاحيات القابلة للتفويض</h3>
-                                <p class="text-muted small mb-0">في التفويض الكامل سيطبق النظام كل الصلاحيات القابلة للتفويض
-                                    التي يملكها المفوِّض مباشرة. في التفويض المخصص اختر ما تحتاجه فقط.</p>
                                 </div>
                                 <span asp-validation-for="Editor.SelectedPermissions" class="text-danger small"></span>
                             </div>

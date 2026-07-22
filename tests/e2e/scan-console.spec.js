@@ -22,6 +22,9 @@ async function approvePermitForScan(page, permitNumber) {
   await page.locator('[name="SignatureText"]').fill("اعتماد E2E للمسح");
   await page.getByRole("button", { name: "حفظ البيانات" }).click();
   await page.getByRole("button", { name: "متابعة" }).click({ timeout: 2000 }).catch(() => { });
+  await submitForm(page, `/Permits/ForwardToGeneralManager/${permitNumber}`, {}, {
+    tokenPath: `/Permits/Details/${permitNumber}`,
+  });
   await page.goto(`/Permits/Approve/${permitNumber}`);
   await page.getByRole("button", { name: "اعتماد مباشر" }).click();
   await page.goto(`/Permits/Details/${permitNumber}`);
@@ -93,7 +96,7 @@ function runStateTool(command, ...args) {
 test("GateSecurity can open scan console and invalid scan shows denial", async ({ page }) => {
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);
-  await page.goto("/ScanConsole");
+  await expect(page).toHaveURL(/\/ScanConsole/i);
   await expect(page.getByRole("heading", { name: "ماسح البوابة" })).toBeVisible();
 
   await page.getByLabel("القيمة المقروءة").fill("NOT-A-REAL-CODE");
@@ -119,6 +122,9 @@ test("valid, stopped, and rejected permit scans return expected states", async (
   await approvePermitForScan(page, stopped.permitNumber);
   await submitForm(page, `/Permits/Stop/${stopped.permitNumber}`, {}, { tokenPath: `/Permits/Details/${stopped.permitNumber}` });
   const rejected = await createEmployeePermit(page);
+  await submitForm(page, `/Permits/ForwardToGeneralManager/${rejected.permitNumber}`, {}, {
+    tokenPath: `/Permits/Details/${rejected.permitNumber}`,
+  });
   await submitForm(page, `/Permits/Reject/${rejected.permitNumber}`, {}, { tokenPath: `/Permits/Details/${rejected.permitNumber}` });
 
   const gate = await createReadyGateUser(page);

@@ -131,6 +131,10 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             var name = NormalizeText(model.Name);
             var slug = NormalizeKey(model.Slug);
             var departmentName = NormalizeText(model.DepartmentName);
+            if (string.IsNullOrWhiteSpace(departmentName))
+            {
+                departmentName = "الإدارة العامة";
+            }
             var subscriptionStatus = TenantSubscriptionStatuses.Normalize(model.SubscriptionStatus);
             var planName = NormalizeText(model.PlanName);
 
@@ -203,6 +207,14 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                         DisplayAccessDefaults.CreateAccessKey()
                     ),
                     OfficialWorkDaysCsv = AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv,
+                }
+            );
+            db.Departments.Add(
+                new Department
+                {
+                    TenantId = tenantId,
+                    Name = departmentName,
+                    IsActive = true,
                 }
             );
 
@@ -302,11 +314,24 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     TenantId = tenantId,
                     OrganizationName = companyName,
                     DepartmentName = "الإدارة العامة",
+                    GeneralManagerUsername = ownerUsername,
+                    ManagerName = ownerFullName,
+                    ManagerTitle = "مالك الحساب",
+                    ManagerPhoneNumber = ownerPhone,
                     DisplayAccessKey = DisplayAccessKeyHasher.Hash(
                         DisplayAccessDefaults.CreateAccessKey()
                     ),
                     OfficialWorkDaysCsv = AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv,
                     IsInitialSetupCompleted = true,
+                }
+            );
+
+            db.Departments.Add(
+                new Department
+                {
+                    TenantId = tenantId,
+                    Name = "الإدارة العامة",
+                    IsActive = true,
                 }
             );
 
@@ -499,11 +524,108 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             }
 
             tenant.IsActive = isActive;
+            if (!isActive)
+            {
+                db.SessionRecords.RemoveRange(
+                    db.SessionRecords
+                        .IgnoreQueryFilters()
+                        .Where(session => session.TenantId == tenant.TenantId)
+                );
+            }
             db.SaveChanges();
             return new TenantOperationResult(
                 true,
-                isActive ? "تم تفعيل الجهة." : "تم إيقاف الجهة."
+                isActive
+                    ? "تم تفعيل الجهة."
+                    : "تم إيقاف الجهة وإغلاق جلسات حساباتها."
             );
+        }
+
+        public TenantOperationResult DeleteTenant(string tenantId, string confirmationName)
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var normalizedTenantId = NormalizeKey(tenantId);
+            var tenant = db.Tenants.FirstOrDefault(item => item.TenantId == normalizedTenantId);
+            if (tenant == null)
+            {
+                return new TenantOperationResult(false, "تعذر العثور على الجهة.");
+            }
+
+            if (
+                string.Equals(
+                    tenant.TenantId,
+                    TenantDefaults.DefaultTenantId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                return new TenantOperationResult(false, "لا يمكن حذف الجهة الافتراضية.");
+            }
+
+            if (tenant.IsActive)
+            {
+                return new TenantOperationResult(false, "يجب إيقاف الجهة قبل حذفها.");
+            }
+
+            if (!string.Equals(tenant.Name, (confirmationName ?? string.Empty).Trim(), StringComparison.Ordinal))
+            {
+                return new TenantOperationResult(false, "اسم الجهة المدخل للتأكيد غير مطابق.");
+            }
+
+            using var transaction = db.Database.IsRelational()
+                ? db.Database.BeginTransaction()
+                : null;
+
+            db.PermitActivities.RemoveRange(
+                db.PermitActivities.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.VisitCompanions.RemoveRange(
+                db.VisitCompanions.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.DelegationPermissions.RemoveRange(
+                db.DelegationPermissions.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.Permits.RemoveRange(
+                db.Permits.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.Visits.RemoveRange(
+                db.Visits.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.AuditLogs.RemoveRange(
+                db.AuditLogs.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.UserActivities.RemoveRange(
+                db.UserActivities.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.SessionRecords.RemoveRange(
+                db.SessionRecords.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.Delegations.RemoveRange(
+                db.Delegations.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.DisplayDevices.RemoveRange(
+                db.DisplayDevices.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.DisplaySecuritySettings.RemoveRange(
+                db.DisplaySecuritySettings.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.ExternalUserLogins.RemoveRange(
+                db.ExternalUserLogins.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.UserAccounts.RemoveRange(
+                db.UserAccounts.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.Departments.RemoveRange(
+                db.Departments.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.AdministrationSettings.RemoveRange(
+                db.AdministrationSettings.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.Tenants.Remove(tenant);
+            db.SaveChanges();
+            transaction?.Commit();
+
+            return new TenantOperationResult(true, "تم حذف الجهة وجميع بياناتها نهائيًا.");
         }
 
         public TenantOperationResult ActivatePaidSubscription(string tenantId)

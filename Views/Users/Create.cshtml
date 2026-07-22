@@ -6,10 +6,6 @@
     var createFlowReturnUrl = ViewData["CreateFlowReturnUrl"] as string;
     var createFlowKey = ViewData["CreateFlowKey"] as string;
     var pageTitle = string.IsNullOrWhiteSpace(createFlowTitle) ? "تسجيل المستخدم" : createFlowTitle;
-    var pageDescription = string.IsNullOrWhiteSpace(createFlowMessage)
-        ? "أدخل بيانات المستخدم، أكمل معلومات التواصل والربط الإداري، ثم تابع بين الخطوات حتى اعتماد الحساب."
-        : createFlowMessage;
-
     ViewData["Title"] = pageTitle;
 }
 
@@ -17,18 +13,16 @@
     <section class="users-registration-card">
         <header class="users-registration-head">
             <h1>@pageTitle</h1>
-            <p>@pageDescription</p>
+            @if (!string.IsNullOrWhiteSpace(createFlowMessage))
+            {
+                <p>@createFlowMessage</p>
+            }
         </header>
 
         <form method="post" asp-action="Create" class="users-editor-form users-editor-form-create users-registration-form needs-validation" novalidate data-form-persist="true" data-form-persist-id="users-wizard-create">
             <input type="hidden" name="returnUrl" value="@createFlowReturnUrl" />
             <input type="hidden" name="creationFlow" value="@createFlowKey" />
             @await Html.PartialAsync("_UserEditor", Model)
-
-            <div class="users-registration-footnote">
-                <span class="users-registration-footnote-icon">ⓘ</span>
-                <span>يتم حفظ بياناتك تلقائيًا مع نهاية كل خطوة</span>
-            </div>
         </form>
     </section>
 </div>

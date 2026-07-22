@@ -11,6 +11,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public const string PermitTypeVisitor = "Visitor";
         public const string AccessModeFullAccess = "FullAccess";
         public const string AccessModeEntryOnly = "EntryOnly";
+        public const string ApprovalStatusPendingReview = "PendingReview";
+        public const string ApprovalStatusPending = "Pending";
 
         public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string PermitNumber { get; set; } = string.Empty;
@@ -116,7 +118,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
 
         public string ApprovalStatusDisplay =>
             ApprovalStatus == "Approved" ? "معتمد"
-            : ApprovalStatus == "Pending" ? "قيد الانتظار"
+            : ApprovalStatus == ApprovalStatusPendingReview ? "قيد التدقيق"
+            : ApprovalStatus == ApprovalStatusPending ? "بانتظار اعتماد الأمن"
             : ApprovalStatus == "Rejected" ? "مرفوض"
             : ApprovalStatus == "Stopped" ? "موقوف"
             : ApprovalStatus == "Expired" && ArchivedAt.HasValue ? "منتهي ومؤرشف"
@@ -343,14 +346,6 @@ namespace VehiclePermitSystemWeb.Models.Entities
                 yield return new ValidationResult(
                     "يرجى إدخال موقع العمل.",
                     new[] { nameof(DepartmentName) }
-                );
-            }
-
-            if (!RequiresVisitLocation && string.IsNullOrWhiteSpace(ManagerName))
-            {
-                yield return new ValidationResult(
-                    "يرجى إدخال اسم مدير الموظف.",
-                    new[] { nameof(ManagerName) }
                 );
             }
 

@@ -1345,6 +1345,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 AttendanceGraceMinutes = postedSettings.AttendanceGraceMinutes,
                 WorkEndExitGraceMinutes = postedSettings.WorkEndExitGraceMinutes,
                 LateReturnGraceMinutes = postedSettings.LateReturnGraceMinutes,
+                LeaveRequestsEnabled = postedSettings.LeaveRequestsEnabled,
                 LastWorkEndClosureAt = currentSettings.LastWorkEndClosureAt,
                 OfficialWorkDaysCsv = postedSettings.OfficialWorkDaysCsv,
             };

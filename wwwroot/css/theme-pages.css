@@ -768,6 +768,28 @@
         width: 100%;
     }
 
+    .users-index-table {
+        min-width: 0;
+        table-layout: auto;
+    }
+
+    table.app-data-table.users-index-table,
+    table.app-data-table.users-index-table tbody,
+    table.app-data-table.users-index-table tr,
+    table.app-data-table.users-index-table td {
+        display: block;
+        width: 100% !important;
+    }
+
+    table.app-data-table.users-index-table {
+        min-width: 0;
+        table-layout: auto;
+    }
+
+    table.app-data-table.users-index-table thead {
+        display: none;
+    }
+
     .users-index-table tbody tr {
         margin-bottom: 14px;
         border: 1px solid rgba(148, 163, 184, 0.2);

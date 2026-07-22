@@ -24,12 +24,6 @@
     @if (hideSensitiveIdentityFields)
     {
         <input asp-for="NationalId" type="hidden" />
-        <div class="col-md-4">
-            <div class="app-inline-note h-100 mb-0">
-                <strong>خصوصية الزائر</strong>
-                <div class="text-muted-ar small mt-1">نسخة الأون لاين لا تجمع بيانات تعريف حساسة. ينشئ النظام معرفًا داخليًا للحفظ فقط.</div>
-            </div>
-        </div>
     }
     else
     {
@@ -37,7 +31,6 @@
             <label asp-for="NationalId" class="form-label">المعرف الداخلي للزائر الرئيسي</label>
             <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
                  pattern="[12][0-9]{9}" placeholder="1023456789" required />
-             <div class="form-text text-muted-ar">المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2.</div>
             <span asp-validation-for="NationalId" class="field-validation-error small"></span>
         </div>
     }
@@ -45,7 +38,6 @@
         <label asp-for="PhoneNumber" class="form-label">جوال الزائر الرئيسي</label>
         <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" maxlength="10"
              pattern="05[0-9]{8}" placeholder="0501234567" required />
-         <div class="form-text text-muted-ar">رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05.</div>
         <span asp-validation-for="PhoneNumber" class="field-validation-error small"></span>
     </div>
     <div class="col-md-4">
@@ -65,7 +57,6 @@
     <div class="col-md-6">
         <label asp-for="VisitedPersonName" class="form-label" data-visited-person-label>اسم الشخص المُزار</label>
         <input asp-for="VisitedPersonName" class="form-control" required />
-        <div class="form-text text-muted-ar">هذا الحقل هو الشخص أو الجهة المقصودة بالزيارة.</div>
         <span asp-validation-for="VisitedPersonName" class="field-validation-error small"></span>
     </div>
     <div class="col-md-4 date-field-shell" data-date-field data-date-display-mode="hijri">
@@ -87,18 +78,14 @@
                 <span class="date-hijri-toggle-track"></span>
             </label>
         </div>
-        <div class="form-text text-muted-ar">يجب أن يكون الموعد اليوم نفسه وبنفس وقت النظام أو بعده مباشرة.
-            هذا الحقل يمثل موعد الحضور وليس وقت الدخول.</div>
-            <span asp-validation-for="VisitDate" class="field-validation-error small"></span>
+        <span asp-validation-for="VisitDate" class="field-validation-error small"></span>
         </div>
         <div class="col-12">
             <div class="visit-companions-panel rounded-3 p-3">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                     <div>
                         <h2 class="h6 mb-1">المرافقون</h2>
-                        <div class="text-muted-ar small">أضف المرافقين المرتبطين بنفس الزيارة. يبقى الزائر الرئيسي في الحقول
-                            الأساسية أعلاه.</div>
-                        </div>
+                    </div>
                         <button type="button" class="btn btn-outline-primary btn-sm" data-add-companion>إضافة مرافق</button>
                     </div>
 
@@ -177,12 +164,6 @@
                             </div>
                         </div>
                     </template>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">انتهاء الزيارة</label>
-                <div class="form-control-plaintext text-muted-ar">
-                    ينتهي التصريح تلقائيا بعد دخول الزائر، أو بعد يوم واحد من الدخول إذا لم يتم الخروج.
                 </div>
             </div>
         </div>

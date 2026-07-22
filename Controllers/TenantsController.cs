@@ -92,6 +92,20 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public IActionResult Delete(string id, string confirmationName)
+        {
+            if (!User.IsSuperAdmin())
+            {
+                return RedirectToAction("AccessDenied", "Home");
+            }
+
+            var result = _tenantManagementService.DeleteTenant(id, confirmationName);
+            TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ActivatePayment(string id)
         {
             if (!User.IsSuperAdmin())

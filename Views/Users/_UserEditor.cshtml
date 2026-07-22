@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using VehiclePermitSystemWeb.Security
 @model VehiclePermitSystemWeb.Models.ViewModels.Users.UserEditViewModel
 
@@ -8,6 +9,7 @@
         StringComparison.OrdinalIgnoreCase
     );
     var isNew = isCreateRoute || string.IsNullOrWhiteSpace(Model.OriginalUsername);
+    var isSimplifiedCreate = isNew && !Model.IsSuperAdmin;
     var editedUsername = string.IsNullOrWhiteSpace(Model.OriginalUsername)
         ? Model.Username
         : Model.OriginalUsername;
@@ -17,12 +19,8 @@
     var canManageOwnGateSettings = isEditingCurrentUser && Model.CanScanOperations;
     var showGateSettingsSection = canEditAdministrativeFields || canManageOwnGateSettings;
     var usernameLabel = Model.IsSuperAdmin ? "معرف مالك النظام" : "اسم المستخدم";
-    var selfEditSummaryText = canManageOwnGateSettings
-        ? "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الحساب أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور وPIN البوابة عند توفر الصلاحية."
-        : "هذه شاشة عرض لحسابك. لا يمكن تعديل بيانات الحساب أو الصلاحيات منها، ويمكنك فقط تغيير كلمة المرور من هذه الشاشة.";
     var resetTemporaryPasswordUrl = Url.Action("ResetTemporaryPassword", "Users", new { id = Model.Username }) ?? string.Empty;
     var resetTemporaryOperatorPinUrl = Url.Action("ResetTemporaryOperatorPin", "Users", new { id = Model.Username }) ?? string.Empty;
-    var applyRoleDefaultsUrl = Url.Action("ApplyRoleDefaults", "Users") ?? string.Empty;
     var currentRoleDisplay = AppRoles.GetDisplayName(Model.Role, Model.IsSuperAdmin);
     var currentDepartmentDisplay = string.IsNullOrWhiteSpace(Model.Department) ? "غير مرتبط" : Model.Department;
     var selectedTenant = Model.TenantOptions.FirstOrDefault(tenant =>
@@ -43,15 +41,38 @@
         .Count(permission => IsPermissionGranted(Model, permission.UserFlagPropertyName));
     var orderedRoleOptions = AppRoles
         .OrderedRoles
+        .Where(role => !isSimplifiedCreate || !new[] { AppRoles.Employee, AppRoles.Manager, AppRoles.GeneralManager }.Contains(role, StringComparer.OrdinalIgnoreCase))
         .Select(role => new { Value = role, Text = AppRoles.GetDisplayName(role) })
         .ToList();
-    var wizardSteps = new[]
-    {
-        new { Number = 1, Title = "الحساب", Description = "الاسم، المعرف، وبيانات التواصل" },
-        new { Number = 2, Title = "الإدارة", Description = "الدور، القسم، والربط الإداري" },
-        new { Number = 3, Title = "الاعتماد", Description = "كلمة المرور وإعدادات البوابة" },
-        new { Number = 4, Title = "الصلاحيات", Description = "الصلاحيات والمراجعة النهائية" },
-    };
+    var rolePermissionDefaults = AppRoles.OrderedRoles.ToDictionary(
+        role => role,
+        role =>
+        {
+            var roleUser = new UserAccount { Role = role };
+            AppPermissions.ApplyRoleDefaults(roleUser);
+            return permissionGroups
+                .SelectMany(group => group.Permissions)
+                .Where(permission =>
+                    typeof(UserAccount).GetProperty(permission.UserFlagPropertyName)?.GetValue(roleUser) is true)
+                .Select(permission => permission.UserFlagPropertyName)
+                .ToArray();
+        }
+    );
+    var rolePermissionDefaultsJson = JsonSerializer.Serialize(rolePermissionDefaults);
+    var wizardSteps = isSimplifiedCreate
+        ? new[]
+        {
+            new { Number = 1, Title = "البيانات", Description = "الاسم وبيانات التواصل" },
+            new { Number = 2, Title = "الدور", Description = "مهمة المستخدم وموقعه" },
+            new { Number = 3, Title = "الدخول", Description = "الاعتماد والحفظ" },
+        }
+        : new[]
+        {
+            new { Number = 1, Title = "الحساب", Description = "الاسم، المعرف، وبيانات التواصل" },
+            new { Number = 2, Title = "الإدارة", Description = "الدور، القسم، والربط الإداري" },
+            new { Number = 3, Title = "الاعتماد", Description = "كلمة المرور وإعدادات البوابة" },
+            new { Number = 4, Title = "الصلاحيات", Description = "الصلاحيات والمراجعة النهائية" },
+        };
     var activeWizardStep = Model.WizardStep < 1
         ? 1
         : Model.WizardStep > wizardSteps.Length
@@ -74,52 +95,10 @@
 }
 
 <div class="users-editor-shell">
-    <!-- Hero -->
-    <div class="ue-hero app-card-surface">
-        <div class="ue-hero-content">
-            <div class="ue-hero-identity">
-                <div class="ue-hero-avatars">
-                    <span class="ue-avatar ue-avatar-lg">👤</span>
-                    <span class="ue-avatar ue-avatar-sm">🔧</span>
-                </div>
-                @if (!isNew)
-                {
-                    <span class="ue-hero-username ltr-field">@Model.Username</span>
-                }
-            </div>
-            <div class="ue-hero-copy">
-                @if (isNew)
-                {
-                    <h1>بيانات الحساب الجديد</h1>
-                    <p>أكمل بيانات الحساب والربط الإداري ثم راجع الصلاحيات قبل اعتماد إنشاء المستخدم.</p>
-                }
-                else if (isEditingCurrentUser)
-                {
-                    <h1>تعديل بيانات حسابي</h1>
-                    <p>@Model.FullName — يمكنك تحديث بياناتك الشخصية وكلمة المرور فقط من هذه الشاشة.</p>
-                }
-                else
-                {
-                    <h1>تعديل بيانات</h1>
-                    <p>@Model.FullName — قم بتحديث بيانات المستخدم وصلاحياته</p>
-                }
-            </div>
-        </div>
-        @if (!isNew)
-        {
-            <div class="ue-inline-note ue-inline-note-info">
-                @(isEditingCurrentUser
-                    ? selfEditSummaryText
-                    : "أنت الآن تعدل حسابًا موجودًا. ستُطبق تغييرات الصلاحيات والبيانات بعد الحفظ، وإذا كنت تعدل حسابك الحالي فسيُطلب منك تسجيل الدخول مرة أخرى.")
-            </div>
-        }
-        @if (Model.IsSuperAdmin)
-        {
-            <div class="ue-inline-note ue-inline-note-info">
-                هذا الحساب هو مالك النظام بصلاحيات سيادية. يمكن تعديل المعرف والاسم وكلمة المرور مع بقاء الصلاحيات محفوظة، بينما تبقى الحالة نشطة دائمًا ولا يظهر له قسم أو ربط إداري.
-            </div>
-        }
-    </div>
+    @if (Model.IsSuperAdmin)
+    {
+        <div class="ue-inline-note ue-inline-note-info">حساب مالك النظام بصلاحيات سيادية.</div>
+    }
 
     @Html.AntiForgeryToken()
     <input asp-for="OriginalUsername" type="hidden" />
@@ -153,6 +132,8 @@
         </div>
     </div>
 
+    @if (!isSimplifiedCreate)
+    {
     <div class="ue-wizard-ux-grid">
         <section class="ue-wizard-summary app-card-surface" aria-live="polite">
             <div class="ue-card-title">
@@ -180,10 +161,13 @@
                     <span>القسم</span>
                     <strong data-users-summary-department>@currentDepartmentDisplay</strong>
                 </div>
-                <div class="ue-summary-item">
-                    <span>مدير القسم</span>
-                    <strong data-users-summary-department-manager>غير مرتبط</strong>
-                </div>
+                @if (!isSimplifiedCreate)
+                {
+                    <div class="ue-summary-item">
+                        <span>مدير القسم</span>
+                        <strong data-users-summary-department-manager>غير مرتبط</strong>
+                    </div>
+                }
                 <div class="ue-summary-item">
                     <span>الصلاحيات</span>
                     <strong data-users-summary-permissions>@grantedPermissionsCount صلاحية</strong>
@@ -202,6 +186,7 @@
             </div>
         </section>
     </div>
+    }
 
     <div class="ue-card app-card-surface" data-users-panel-container>
         <div class="ue-card-title">
@@ -347,15 +332,12 @@
             }
 
             <div class="ue-identity-lookup-row ue-wizard-panel @(activeWizardStep == 1 ? string.Empty : "is-hidden")" data-users-wizard-panel="1">
-                <p class="ue-inline-hint" data-users-lookup-result>
-                    استخدم فحص المعرف السريع قبل المتابعة. إذا كان الرقم مسجلًا مسبقًا فسيتم نقلك إلى شاشة التعديل أو إعادة التفعيل.
-                </p>
+                <p class="ue-inline-hint" data-users-lookup-result aria-live="polite" hidden></p>
                 @if (isNew)
                 {
                     <div class="ue-identity-lookup-actions">
                         <button type="button" class="btn btn-outline-primary btn-sm" id="users-identity-lookup-btn">فحص المعرف</button>
                         <button type="button" class="btn btn-outline-warning btn-sm" id="users-reactivate-btn" hidden>إعادة التفعيل</button>
-                        <span class="small text-muted" id="users-identity-lookup-hint">يساعدك على اكتشاف المستخدم الموجود قبل إنشاء حساب جديد.</span>
                     </div>
                 }
             </div>
@@ -380,7 +362,6 @@
                                     }
                                 }
                             </select>
-                            <div class="form-text">تحدد الجهة التي سيظهر داخلها المستخدم وبياناته التشغيلية.</div>
                             <span asp-validation-for="TenantId" class="field-validation-error small"></span>
                         </div>
                     }
@@ -392,7 +373,14 @@
                             <div class="ue-readonly-info-card ue-readonly-info-card-success">
                                 <span class="ue-readonly-role-kicker">الحالة السيادية</span>
                                 <strong>نشط دائمًا</strong>
-                                <small>لا يمكن إيقاف حساب السوبر أدمن من واجهة الإدارة أو من الحفظ اليدوي.</small>
+                            </div>
+                        }
+                        else if (isSimplifiedCreate)
+                        {
+                            <input asp-for="IsActive" type="hidden" />
+                            <div class="ue-readonly-info-card ue-readonly-info-card-success">
+                                <span class="ue-readonly-role-kicker">حالة الحساب</span>
+                                <strong>نشط</strong>
                             </div>
                         }
                         else
@@ -432,7 +420,7 @@
                     @if (!Model.IsSuperAdmin)
                     {
                         <div class="ue-field" id="users-department-field">
-                            <label for="users-department-select" class="form-label">القسم</label>
+                            <label for="users-department-select" class="form-label">الموقع أو القسم</label>
                                 <select asp-for="Department" class="form-select" id="users-department-select"
                                     data-smart-select="true" data-smart-select-placeholder="ابحث عن القسم أو اختره">
                                 <option value="">-- اختر القسم --</option>
@@ -484,7 +472,7 @@
                 </div>
             }
 
-                <div class="ue-stats-bar ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
+                <div class="ue-stats-bar ue-wizard-panel @(isSimplifiedCreate ? "d-none" : string.Empty) @(activeWizardStep == 2 ? string.Empty : "is-hidden")" data-users-wizard-panel="2">
                     <div class="ue-stat-item">
                         <span class="ue-stat-icon">🔑</span>
                         <div><small>إجمالي الصلاحيات</small><strong id="ue-stat-perm"><span
@@ -503,7 +491,7 @@
 
                 <div class="ue-admin-sections">
                     <!-- الربط الإداري -->
-                    @if (canEditAdministrativeFields && !Model.IsSuperAdmin)
+                    @if (canEditAdministrativeFields && !Model.IsSuperAdmin && !isSimplifiedCreate)
                     {
                         <div class="ue-card app-card-surface ue-wizard-panel @(activeWizardStep == 2 ? string.Empty : "is-hidden")" id="users-general-manager-card" data-users-wizard-panel="2">
                             <div class="ue-card-title">
@@ -585,15 +573,14 @@
                             </div>
                             @if (canEditAdministrativeFields)
                             {
+                                <input type="hidden" name="ApplyRoleDefaults" id="ApplyRoleDefaults" value="@(isSimplifiedCreate ? "true" : "false")" />
                                 <div class="ue-field">
-                                    <label class="ue-compact-switch ue-toggle-card">
-                                        <span class="ue-toggle-card-copy">
-                                            <strong>تحميل صلاحيات الدور الافتراضية</strong>
-                                            <small>يعيد توزيع الصلاحيات بحسب الدور قبل الحفظ.</small>
-                                        </span>
-                                        <input asp-for="ApplyRoleDefaults" class="form-check-input" />
-                                        </label>
+                                    <div class="ue-readonly-info-card">
+                                        <span class="ue-readonly-role-kicker">صلاحيات الدور</span>
+                                        <strong>تُطبّق فور اختيار الدور</strong>
+                                        <small>@(isSimplifiedCreate ? "سيحصل المستخدم على صلاحيات مهمته فقط." : "يمكنك تخصيص أي صلاحية يدويًا في الخطوة التالية قبل الحفظ.")</small>
                                     </div>
+                                </div>
                             }
                             </div>
                             @if (!isNew && canEditAdministrativeFields)
@@ -665,7 +652,6 @@
                                         <label asp-for="TemporaryOperatorPin" class="form-label">PIN مؤقت جديد</label>
                                         <input asp-for="TemporaryOperatorPin" class="form-control ltr-field" inputmode="numeric"
                                                maxlength="6" placeholder="مثال: 482913" />
-                                        <div class="form-text">يمكنك تغيير PIN البوابة لحسابك إذا كانت صلاحية التشغيل مفعلة.</div>
                                         <span asp-validation-for="TemporaryOperatorPin" class="field-validation-error small"></span>
                                     </div>
                                     <div class="ue-field">
@@ -718,7 +704,7 @@
                 </div>
 
                         <!-- الصلاحيات -->
-                        <div class="ue-card app-card-surface ue-permissions-card ue-wizard-panel @(activeWizardStep == 4 ? string.Empty : "is-hidden") @(canEditAdministrativeFields ? string.Empty : "is-readonly")" data-users-wizard-panel="4">
+                        <div class="ue-card app-card-surface ue-permissions-card ue-wizard-panel @(isSimplifiedCreate ? "d-none" : string.Empty) @(activeWizardStep == 4 ? string.Empty : "is-hidden") @(canEditAdministrativeFields ? string.Empty : "is-readonly")" data-users-wizard-panel="@(isSimplifiedCreate ? 3 : 4)">
                             <div class="ue-card-title">
                                 <span class="ue-card-icon ue-icon-perm">🛡️</span>
                                 <h2>الصلاحيات</h2>
@@ -732,9 +718,7 @@
                             @if (canEditAdministrativeFields)
                             {
                                 <div class="ue-perm-toolbar">
-                                        <button type="submit" formaction="@applyRoleDefaultsUrl"
-                                            formnovalidate
-                                            data-skip-validation="true"
+                                        <button type="button" id="users-reset-role-defaults"
                                             class="btn btn-outline-primary btn-sm">
                                         🔄 إعادة صلاحيات الدور
                                     </button>
@@ -816,7 +800,7 @@
                         </div>
 
                                                                                                                 <!-- إجراءات الحفظ -->
-                                                                                                                <div class="ue-actions app-card-surface ue-wizard-panel @(activeWizardStep == 4 ? string.Empty : "is-hidden")" data-users-wizard-panel="4">
+                                                                                                                <div class="ue-actions app-card-surface ue-wizard-panel @(activeWizardStep == (isSimplifiedCreate ? 3 : 4) ? string.Empty : "is-hidden")" data-users-wizard-panel="@(isSimplifiedCreate ? 3 : 4)">
                                                                                                                     <div class="ue-actions-end">
                                                                                                                         <a href="@cancelUrl" class="btn btn-secondary btn-sm">✓ إلغاء</a>
                                                                                                                         @if (isNew)
@@ -874,7 +858,9 @@
                                                                                                                         const grantedCountEl = document.getElementById("ue-granted-count");
                                                                                                                         const statRoleEl = document.getElementById("ue-stat-role");
                                                                                                                         const permInputs = Array.from(document.querySelectorAll(".ue-perm-input"));
+                                                                                                                        const resetRoleDefaultsButton = document.getElementById("users-reset-role-defaults");
                                                                                                                         const totalPerms = @totalPermissions;
+                                                                                                                        const rolePermissionDefaults = @Html.Raw(rolePermissionDefaultsJson);
                                                                                                                         const wizardMaxStep = @wizardSteps.Length;
                                                                                                                         const wizardStepInput = document.getElementById("users-wizard-step");
                                                                                                                         const wizardShell = document.querySelector("[data-users-wizard-shell]");
@@ -917,12 +903,25 @@
 
                                                                                                                         const roleDisplayMap = {
                                                                                                                             "@AppRoles.SystemAdmin": "مشرف نظام",
+                                                                                                                            "@AppRoles.SecurityManager": "مدير الأمن",
+                                                                                                                            "@AppRoles.PermitReviewer": "مدقق التصاريح",
                                                                                                                             "@AppRoles.GeneralManager": "مدير عام",
                                                                                                                             "@AppRoles.Manager": "مدير",
                                                                                                                             "@AppRoles.Employee": "موظف",
-                                                                                                                            "@AppRoles.GateSecurity": "أمن البوابة",
-                                                                                                                            "@AppRoles.Receptionist": "موظف استقبال"
+                                                                                                                            "@AppRoles.GateSecurity": "مأمور بوابة",
+                                                                                                                            "@AppRoles.Receptionist": "موظف إدخال"
                                                                                                                         };
+
+                                                                                                                        function applyRolePermissionDefaults(roleValue) {
+                                                                                                                            const grantedPermissions = new Set(rolePermissionDefaults[roleValue] || []);
+                                                                                                                            permInputs.forEach(function (input) {
+                                                                                                                                input.checked = grantedPermissions.has(input.name);
+                                                                                                                            });
+                                                                                                                            refreshCounts();
+                                                                                                                            refreshGroupToggles();
+                                                                                                                            updateLiveSummary();
+                                                                                                                            syncStepperState();
+                                                                                                                        }
 
                                                                                                                         // === Accordion toggle ===
                                                                                                                         document.querySelectorAll("[data-toggle-group]").forEach(function (head) {
@@ -986,6 +985,12 @@
                                                                                                                                 permInputs.forEach(function (i) { i.checked = !allChecked; });
                                                                                                                                 refreshCounts();
                                                                                                                                 refreshGroupToggles();
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        if (resetRoleDefaultsButton) {
+                                                                                                                            resetRoleDefaultsButton.addEventListener("click", function () {
+                                                                                                                                applyRolePermissionDefaults(roleSelect ? roleSelect.value : "@Model.Role");
                                                                                                                             });
                                                                                                                         }
 
@@ -1379,6 +1384,7 @@
                                                                                                                             if (typeof data?.pendingPermitsCount === "number") {
                                                                                                                                 details.push(data.pendingPermitsCount + " طلبًا معلقًا");
                                                                                                                             }
+                                                                                                                            identityLookupResult.hidden = !message;
                                                                                                                             identityLookupResult.textContent = details.length > 0 ? message + " — " + details.join(" · ") : message;
                                                                                                                             if (reactivateButton) {
                                                                                                                                 reactivateButton.hidden = status !== "inactive";
@@ -1578,7 +1584,18 @@
                                                                                                                             });
                                                                                                                         }
 
-                                                                                                                        [roleSelect, statusToggle, scanToggle, manageUsersToggle, manageDepartmentsToggle, manageAdministrationToggle, autoBindManagerToggle].forEach(function (el) {
+                                                                                                                        if (roleSelect) {
+                                                                                                                            roleSelect.addEventListener("change", function () {
+                                                                                                                                applyRolePermissionDefaults(roleSelect.value);
+                                                                                                                                refreshRoleState();
+                                                                                                                                refreshStatusState();
+                                                                                                                                updateDepartmentManagerNote();
+                                                                                                                                updateLiveSummary();
+                                                                                                                                syncStepperState();
+                                                                                                                            });
+                                                                                                                        }
+
+                                                                                                                        [statusToggle, scanToggle, manageUsersToggle, manageDepartmentsToggle, manageAdministrationToggle, autoBindManagerToggle].forEach(function (el) {
                                                                                                                             if (el) el.addEventListener("change", function () {
                                                                                                                                 refreshCounts();
                                                                                                                                 refreshRoleState();

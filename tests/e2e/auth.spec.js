@@ -130,7 +130,8 @@ test("owner can sign in normally and open home page", async ({ page }) => {
   await completeInitialSetup(page);
 
   await page.locator('form[action*="/Account/Logout"]').evaluate((form) => form.requestSubmit());
-  await expect(page).toHaveURL(/\/Account\/Login/i);
+  await expect(page).toHaveURL(/\/o\/default/i);
+  await expect(page.getByRole("heading", { name: "الدخول إلى الجهة الافتراضية" })).toBeVisible();
 
   await signInAsOwner(page);
   await expectHomePage(page);

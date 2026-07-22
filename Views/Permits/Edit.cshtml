@@ -5,9 +5,7 @@
     ViewData["Title"] = "تعديل التصريح";
     var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
     var departmentOptions = (IEnumerable<string>)(ViewBag.DepartmentOptions ?? Array.Empty<string>());
-    var approvalRoutesJson = ViewBag.DepartmentApprovalRoutesJson as string ?? "{}";
-    var approvalRouteHint = ViewBag.ApprovalRouteHint as string
-        ?? "سيُوجَّه الطلب إلى مدير القسم أولًا، ويمكنه رفعه إلى المدير العام إذا لم تتوفر لديه صلاحية الاعتماد.";
+    var leaveRequestsEnabled = ViewData["LeaveRequestsEnabled"] as bool? == true;
 }
 
 <h1>تعديل التصريح</h1>
@@ -15,10 +13,9 @@
 @if (ViewData["PermitConflicts"] is IEnumerable<VehiclePermitSystemWeb.Models.ViewModels.Permits.PermitConflictViewModel> conflicts &&
 conflicts.Any())
 {
-    <div class="app-inline-note app-inline-note-warning mb-4">
-        <div class="fw-bold mb-1">تم العثور على تصريح آخر مطابق بنفس الاسم أو المعرف الداخلي أو رقم اللوحة.</div>
-        <div class="mb-3">راجع التصريح المتكرر قبل الحفظ أو افتحه مباشرة إذا كان هو المقصود.</div>
-        <div class="table-responsive">
+        <div class="app-inline-note app-inline-note-warning mb-4">
+            <div class="fw-bold mb-1">تم العثور على تصريح آخر مطابق بنفس الاسم أو المعرف الداخلي أو رقم اللوحة.</div>
+            <div class="table-responsive">
             <table class="table table-sm align-middle app-data-table permit-conflict-table mb-0">
                 <thead>
                     <tr>
@@ -75,14 +72,22 @@ conflicts.Any())
                     <option value="@VehiclePermitSystemWeb.Models.Entities.Permit.PermitTypePermanent">موظف</option>
                     <option value="@VehiclePermitSystemWeb.Models.Entities.Permit.PermitTypeVisitor">زائر</option>
                 </select>
-                <div class="form-text text-muted-ar">نوع التصريح ثابت بعد الإنشاء ولا يمكن تغييره من هنا.</div>
             </div>
             <div class="col-md-4" id="returnRequirementGroup">
-                <label for="requiresReturnSelect" class="form-label" id="movementModeLabel">نوع الحركة</label>
-                <select asp-for="RequiresReturn" class="form-select" id="requiresReturnSelect">
-                    <option value="true">خروج ودخول كامل</option>
-                    <option value="false">دخول فقط</option>
-                </select>
+                @if (leaveRequestsEnabled)
+                {
+                    <label for="requiresReturnSelect" class="form-label" id="movementModeLabel">سياسة الخروج</label>
+                    <select asp-for="RequiresReturn" class="form-select" id="requiresReturnSelect">
+                        <option value="true">تسجيل الدخول والخروج تلقائيًا</option>
+                        <option value="false">الخروج أثناء الدوام يتطلب استئذانًا</option>
+                    </select>
+                }
+                else
+                {
+                    <input asp-for="RequiresReturn" type="hidden" value="true" />
+                    <label class="form-label">سياسة الخروج</label>
+                    <div class="form-control bg-body-tertiary">تسجيل تلقائي دون استئذان</div>
+                }
             </div>
             <div class="col-md-4">
                 <label asp-for="DriverName" class="form-label" id="holderNameLabel">اسم الموظف</label>
@@ -92,12 +97,6 @@ conflicts.Any())
             @if (hideSensitiveIdentityFields)
             {
                 <input asp-for="NationalId" type="hidden" />
-                <div class="col-md-4">
-                    <div class="app-inline-note h-100 mb-0">
-                        <strong>خصوصية المستفيد</strong>
-                        <div class="text-muted-ar small mt-1">المعرف الداخلي مخفي في نسخة الأون لاين ولا يطلب من المستخدم.</div>
-                    </div>
-                </div>
             }
             else
             {
@@ -105,7 +104,6 @@ conflicts.Any())
                     <label asp-for="NationalId" class="form-label">المعرف الداخلي</label>
                     <input asp-for="NationalId" class="form-control national-id-field" inputmode="numeric" maxlength="10"
                           pattern="[12][0-9]{9}" placeholder="1023456789" required />
-                    <div class="form-text text-muted-ar">يظهر المعرف الداخلي أسفل العنوان مباشرة ويقبل 10 أرقام فقط.</div>
                     <span asp-validation-for="NationalId" class="field-validation-error small"></span>
                 </div>
             }
@@ -139,7 +137,6 @@ conflicts.Any())
                             توجد أقسام مطابقة.</div>
                         </div>
                     </div>
-                    <div class="form-text text-muted-ar">اكتب جزءًا من اسم القسم ثم اختره من القائمة.</div>
                     <span asp-validation-for="DepartmentName" class="field-validation-error small"></span>
                 </div>
                 <div class="col-md-4 d-none" id="visitLocationGroup">
@@ -147,12 +144,7 @@ conflicts.Any())
                     <input asp-for="VisitLocation" class="form-control" />
                     <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
                 </div>
-                <div class="col-md-4 d-none" id="managerGroup">
-                    <label asp-for="ManagerName" class="form-label" id="managerNameLabel">مدير الموظف</label>
-                    <input asp-for="ManagerName" class="form-control" readonly required />
-                    <div class="form-text text-muted-ar">@approvalRouteHint</div>
-                    <span asp-validation-for="ManagerName" class="field-validation-error small"></span>
-                </div>
+                <input asp-for="ManagerName" type="hidden" />
                 <div class="col-md-4">
                     <label asp-for="EmployeePhone" class="form-label" id="phoneLabel">رقم الجوال</label>
                     <input asp-for="EmployeePhone" class="form-control ltr-field" inputmode="numeric" maxlength="10"
@@ -177,9 +169,7 @@ conflicts.Any())
                             <span class="date-hijri-toggle-track"></span>
                         </label>
                     </div>
-                    <div class="form-text text-muted-ar" id="permitDateHelp">تاريخ الإصدار ثابت بعد الإنشاء ولا يمكن تعديله
-                        من هنا.</div>
-                        <span asp-validation-for="PermitDate" class="field-validation-error small"></span>
+                    <span asp-validation-for="PermitDate" class="field-validation-error small"></span>
                     </div>
                     <div class="col-md-4 date-field-shell" id="expiresAtGroup" data-date-field data-date-display-mode="hijri">
                         <div class="date-field-head">
@@ -199,9 +189,7 @@ conflicts.Any())
                                 <span class="date-hijri-toggle-track"></span>
                             </label>
                         </div>
-                        <div class="form-text text-muted-ar" id="expiresAtHelp">عدّل هذا التاريخ لتجديد التصريح أو لضبط تاريخ
-                            الانتهاء، ويستخدمه الباركود للتحقق من الصلاحية.</div>
-                            <span asp-validation-for="ExpiresAt" class="field-validation-error small"></span>
+                        <span asp-validation-for="ExpiresAt" class="field-validation-error small"></span>
                         </div>
                         <div class="col-md-4">
                             <label asp-for="VehicleType" class="form-label">نوع المركبة</label>
@@ -221,10 +209,6 @@ conflicts.Any())
                                    placeholder="ل ح م 1236 أو ABC 1234" required id="PlateNumberInput" />
                             <span asp-validation-for="PlateNumber" class="field-validation-error small"></span>
                         </div>
-                        <div class="col-12">
-                            <div class="form-text text-muted-ar plate-help-full" id="PlateHelp">اكتبها مثل: ل ح م 1236 أو ABC 1234،
-                                وسيتم حفظها تلقائيا بصيغة موحدة.</div>
-                            </div>
                         </div>
 
                         <div class="mt-4 d-flex gap-2">
@@ -238,7 +222,7 @@ conflicts.Any())
                     <partial name="_ValidationScriptsPartial" />
                     <script nonce="@(Context.Items["CspScriptNonce"])">
                         (function () {
-                            const departmentApprovalRoutes = @Html.Raw(approvalRoutesJson);
+                            const departmentApprovalRoutes = {};
                             const permitTypeSelect = document.getElementById('permitTypeSelect');
                             const returnRequirementGroup = document.getElementById('returnRequirementGroup');
                             const movementModeLabel = document.getElementById('movementModeLabel');
@@ -252,7 +236,6 @@ conflicts.Any())
                             const visitLocationInput = document.getElementById('VisitLocation');
                             const expiresAtGroup = document.getElementById('expiresAtGroup');
                             const expiresAtLabel = document.getElementById('expiresAtLabel');
-                            const expiresAtHelp = document.getElementById('expiresAtHelp');
                             const expiresAtInput = document.getElementById('ExpiresAt');
                             const holderNameLabel = document.getElementById('holderNameLabel');
                             const managerNameLabel = document.getElementById('managerNameLabel');
@@ -285,8 +268,8 @@ conflicts.Any())
                                 }
                                 if (movementModeLabel && requiresReturnOptions.length >= 2) {
                                     movementModeLabel.textContent = 'نوع الحركة';
-                                    requiresReturnOptions[0].textContent = 'خروج ودخول كامل';
-                                    requiresReturnOptions[1].textContent = 'دخول فقط';
+                                    requiresReturnOptions[0].textContent = 'تسجيل الدخول والخروج تلقائيًا';
+                                    requiresReturnOptions[1].textContent = 'الخروج أثناء الدوام يتطلب استئذانًا';
                                 }
 
                                 if (!isPermanent && !isVisitor && requiresReturnSelect) {
@@ -307,11 +290,8 @@ conflicts.Any())
                                 visitLocationGroup.classList.toggle('d-none', !isVisitor);
                                 if (expiresAtGroup) {
                                     expiresAtGroup.classList.remove('d-none');
-                                    if (expiresAtLabel && expiresAtHelp) {
+                                    if (expiresAtLabel) {
                                         expiresAtLabel.textContent = 'تاريخ الانتهاء';
-                                        expiresAtHelp.textContent = isVisitor
-                                            ? 'عدّل هذا التاريخ لتجديد التصريح أو لضبط تاريخ الانتهاء، ويستخدمه الباركود للتحقق من الصلاحية.'
-                                            : 'مطلوب للتصريح الموظف، ويستخدمه الباركود للتحقق من الانتهاء.';
                                     }
                                 }
                                 if (permitDateInput) {

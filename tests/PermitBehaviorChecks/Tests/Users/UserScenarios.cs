@@ -9,6 +9,105 @@ internal static partial class ScenarioCatalog
         JsonSerializerDefaults.Web
     );
 
+    private static Task ScenarioSuperAdminCreatesGeneralManagerInsideSelectedTenant(
+        IDbContextFactory<ApplicationDbContext> dbFactory,
+        IUserAdminService userAdminService
+    )
+    {
+        const string tenantId = "selected-gm-tenant";
+        const string username = "2699999998";
+        var departmentName = $"إدارة جهة مختارة {Guid.NewGuid():N}";
+        string defaultManagerUsername;
+
+        using (var db = dbFactory.CreateDbContext())
+        {
+            var defaultSettings = db.AdministrationSettings.SingleOrDefault();
+            if (defaultSettings == null)
+            {
+                defaultSettings = new AdministrationSettings
+                {
+                    Id = 1,
+                    TenantId = TenantDefaults.DefaultTenantId,
+                    OrganizationName = "الجهة الافتراضية",
+                    DepartmentName = "الإدارة العامة",
+                };
+                db.AdministrationSettings.Add(defaultSettings);
+            }
+            defaultManagerUsername = defaultSettings.GeneralManagerUsername;
+            var nextSettingsId = defaultSettings.Id + 1;
+            db.Tenants.Add(
+                new Tenant
+                {
+                    TenantId = tenantId,
+                    Name = "جهة المدير المختارة",
+                    Slug = tenantId,
+                    IsActive = true,
+                    SubscriptionStatus = TenantSubscriptionStatuses.Active,
+                }
+            );
+            db.AdministrationSettings.Add(
+                new AdministrationSettings
+                {
+                    Id = nextSettingsId,
+                    TenantId = tenantId,
+                    OrganizationName = "جهة المدير المختارة",
+                    DepartmentName = departmentName,
+                }
+            );
+            db.Departments.Add(
+                new Department
+                {
+                    TenantId = tenantId,
+                    Name = departmentName,
+                    IsActive = true,
+                }
+            );
+            db.SaveChanges();
+        }
+
+        var message = userAdminService.AssignGeneralManager(
+            new GeneralManagerAssignmentRequest
+            {
+                TenantId = tenantId,
+                SelectionMode = GeneralManagerSelectionModes.CreateNew,
+                NewUserUsername = username,
+                NewUserFullName = "مدير الجهة المختارة",
+                NewUserPhoneNumber = "0557777777",
+                NewUserEmail = "selected-manager@example.com",
+                NewUserEmployeeNumber = "GM-SELECTED",
+                NewUserPassword = "Aa123456!",
+                NewUserConfirmPassword = "Aa123456!",
+                NewUserJobTitle = "مدير عام",
+                NewUserIsActive = true,
+                NewUserMustChangePassword = true,
+                AssignmentType = GeneralManagerAssignmentTypes.Permanent,
+                PreviousGeneralManagerAction = GeneralManagerPreviousActions.EndAssignment,
+            },
+            "super-admin"
+        );
+
+        Require(!string.IsNullOrWhiteSpace(message), "selected-tenant general-manager assignment should succeed");
+        using var assertDb = dbFactory.CreateDbContext();
+        var manager = assertDb.UserAccounts.IgnoreQueryFilters().Single(user => user.Username == username);
+        var targetSettings = assertDb.AdministrationSettings.IgnoreQueryFilters().Single(settings => settings.TenantId == tenantId);
+        var defaultSettingsAfter = assertDb.AdministrationSettings.Single();
+        Require(manager.TenantId == tenantId, "created general manager must belong to the selected tenant");
+        Require(manager.MustChangePassword, "temporary general-manager credentials must require a password change");
+        Require(manager.CanManageAdministration && manager.CanManageUsers, "created general manager must receive role defaults");
+        Require(targetSettings.GeneralManagerUsername == username, "selected tenant settings must link the new general manager");
+        Require(defaultSettingsAfter.GeneralManagerUsername == defaultManagerUsername, "default tenant settings must not be changed");
+        Require(
+            assertDb.UserActivities.IgnoreQueryFilters().Any(activity =>
+                activity.TenantId == tenantId
+                && activity.Username == username
+                && activity.ActionType == "GeneralManagerAssigned"
+            ),
+            "general-manager audit activity must be recorded in the selected tenant"
+        );
+
+        return Task.CompletedTask;
+    }
+
     private static Task ScenarioUserManagerAssignmentReplacesPreviousManager(
         IDbContextFactory<ApplicationDbContext> dbFactory,
         IUserAdminService userAdminService

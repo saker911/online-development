@@ -9,6 +9,8 @@ const owner = {
 
 const roles = {
   systemAdmin: "SystemAdmin",
+  securityManager: "SecurityManager",
+  permitReviewer: "PermitReviewer",
   generalManager: "GeneralManager",
   manager: "Manager",
   employee: "Employee",
@@ -281,7 +283,7 @@ async function createUser(page, options = {}) {
     Role: role,
     IsActive: options.isActive === false ? "false" : "true",
     ApplyRoleDefaults: applyRoleDefaults ? "true" : "false",
-    WizardStep: "4",
+    WizardStep: "3",
     ManagerUsername: options.managerUsername ?? "",
     AutoBindManager: options.autoBindManager ? "true" : "false",
     MustChangeOperatorPin: "true",

@@ -258,6 +258,12 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(
                 db,
                 "AdministrationSettings",
+                "LeaveRequestsEnabled",
+                "INTEGER NOT NULL DEFAULT 0"
+            );
+            EnsureSqliteColumn(
+                db,
+                "AdministrationSettings",
                 "OfficialWorkDaysCsv",
                 "TEXT NOT NULL DEFAULT ''"
             );
@@ -593,6 +599,11 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                         + " (TenantId);"
                 );
             }
+
+            db.Database.ExecuteSqlRaw("DROP INDEX IF EXISTS IX_Departments_Name;");
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_Departments_TenantId_Name ON Departments (TenantId, Name);"
+            );
         }
 
         private static void EnsureSqliteDisplayDeviceTables(ApplicationDbContext db)
@@ -1610,6 +1621,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 AttendanceGraceMinutes = 15,
                 WorkEndExitGraceMinutes = 30,
                 LateReturnGraceMinutes = 5,
+                LeaveRequestsEnabled = false,
                 OfficialWorkDaysCsv = AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv,
             };
 

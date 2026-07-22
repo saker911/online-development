@@ -8,10 +8,6 @@
     var isSelfEdit = !string.IsNullOrWhiteSpace(editedUsername)
         && string.Equals(editedUsername, User.Identity?.Name, StringComparison.OrdinalIgnoreCase);
     var pageTitle = isSelfEdit ? "تحديث بيانات الحساب" : "تعديل المستخدم";
-    var pageDescription = isSelfEdit
-        ? "راجع بيانات الحساب، عدّل المعلومات المتاحة لك، ثم انتقل بين الخطوات حتى حفظ التحديثات النهائية."
-        : "حدّث بيانات المستخدم، عدّل الربط الإداري والصلاحيات، ثم راجع التغييرات قبل حفظها من نفس الصفحة.";
-
     ViewData["Title"] = isCreateRoute ? "إضافة مستخدم" : pageTitle;
 }
 
@@ -19,7 +15,6 @@
     <section class="users-registration-card">
         <header class="users-registration-head">
             <h1>@pageTitle</h1>
-            <p>@pageDescription</p>
         </header>
 
         @if (!isCreateRoute && !string.IsNullOrWhiteSpace(editedUsername))
@@ -33,11 +28,6 @@
         <form method="post" asp-action="Edit" class="users-editor-form users-editor-form-create users-editor-form-edit users-registration-form needs-validation" novalidate data-form-persist="false" data-form-persist-id="users-wizard-edit" data-user-edit-authoritative="true" autocomplete="off">
             @await Html.PartialAsync("_CredentialNotice")
             @await Html.PartialAsync("_UserEditor", Model)
-
-            <div class="users-registration-footnote">
-                <span class="users-registration-footnote-icon">ⓘ</span>
-                <span>يتم عرض البيانات المحفوظة فعليًا لهذا المستخدم بدون استرجاع مسودة مؤقتة</span>
-            </div>
         </form>
     </section>
 </div>

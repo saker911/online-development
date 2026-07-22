@@ -319,9 +319,11 @@ internal static partial class ScenarioCatalog
 
     private static Task ScenarioDailyScheduledLeaveWithReturn(
         MutableSystemClock clock,
+        IDbContextFactory<ApplicationDbContext> dbFactory,
         IPermitService permitService
     )
     {
+        ResetStandardAdministrationSchedule(dbFactory);
         clock.SetLocalNow(new DateTime(2026, 4, 14, 8, 0, 0));
 
         var permitNumber = CreateApprovedEmployeePermit(
@@ -1744,9 +1746,11 @@ internal static partial class ScenarioCatalog
 
     private static Task ScenarioExpiredPermitClearsPendingUnauthorizedExit(
         MutableSystemClock clock,
+        IDbContextFactory<ApplicationDbContext> dbFactory,
         IPermitService permitService
     )
     {
+        ResetStandardAdministrationSchedule(dbFactory);
         clock.SetLocalNow(new DateTime(2026, 4, 13, 10, 0, 0));
 
         var permitNumber = CreateApprovedEmployeePermit(
@@ -1760,7 +1764,10 @@ internal static partial class ScenarioCatalog
 
         clock.Advance(TimeSpan.FromSeconds(6));
         var deniedExit = permitService.RecordPermitScan(permitNumber, "tester");
-        Require(!deniedExit.allowed, "unauthorized exit should still be blocked before expiry");
+        Require(
+            !deniedExit.allowed,
+            $"unauthorized exit should still be blocked before expiry, but returned '{deniedExit.reason}'"
+        );
 
         var permitAfterAttempt =
             permitService.GetPermitByNumber(permitNumber)
@@ -2074,6 +2081,7 @@ internal static partial class ScenarioCatalog
         IReportsDashboardService reportsDashboardService
     )
     {
+        ResetStandardAdministrationSchedule(dbFactory);
         clock.SetLocalNow(new DateTime(2026, 4, 26, 10, 0, 0));
         const string notificationManagerUsername = "2000000009";
 

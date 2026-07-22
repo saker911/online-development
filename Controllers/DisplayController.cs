@@ -657,7 +657,17 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             operatorSession = _userAdminService.GetDisplayOperatorSession(normalizedDeviceId);
-            return operatorSession == null ? BuildDisplayMutationDeniedResult() : null;
+            if (operatorSession == null)
+            {
+                return BuildDisplayMutationDeniedResult();
+            }
+
+            return operatorSession.MustChangePin
+                ? BuildDisplayMutationDeniedResult(
+                    "operator_pin_change_required",
+                    "يجب تغيير PIN المؤقت قبل تنفيذ عمليات البوابة."
+                )
+                : null;
         }
 
         private string ResolvePostedDeviceId(string? deviceId)
@@ -693,9 +703,11 @@ namespace VehiclePermitSystemWeb.Controllers
             return approvedDevice == null ? string.Empty : $"display-device:{approvedDevice.Id}";
         }
 
-        private IActionResult BuildDisplayMutationDeniedResult()
+        private IActionResult BuildDisplayMutationDeniedResult(
+            string errorCode = "operator_not_signed_in",
+            string message = "يجب تسجيل دخول مشغل بوابة فعّال قبل تنفيذ العملية."
+        )
         {
-            const string message = "يجب تسجيل دخول مشغل بوابة فعّال قبل تنفيذ العملية.";
             if (
                 string.Equals(
                     Request.Headers.XRequestedWith,
@@ -709,7 +721,7 @@ namespace VehiclePermitSystemWeb.Controllers
                     new
                     {
                         success = false,
-                        errorCode = "operator_not_signed_in",
+                        errorCode,
                         message,
                     }
                 );

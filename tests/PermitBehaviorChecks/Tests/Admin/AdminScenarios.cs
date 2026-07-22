@@ -32,9 +32,10 @@ internal static partial class ScenarioCatalog
                     Department = "الإدارة التشغيلية",
                     JobTitle = "مدير قسم",
                     PhoneNumber = "0554444444",
-                    Role = VehiclePermitSystemWeb.Security.AppRoles.DepartmentManager,
+                    Role = VehiclePermitSystemWeb.Security.AppRoles.PermitReviewer,
                     IsActive = true,
                     CanViewPermits = true,
+                    CanEditPermit = true,
                     CanApprovePermit = false,
                 },
                 new UserAccount
@@ -83,16 +84,16 @@ internal static partial class ScenarioCatalog
         var departmentManagerView = permitService.GetPendingPermits("2000000001").ToList();
         Require(
             departmentManagerView.Count == 0,
-            "department manager without approval rights should not see pending permits"
+            "reviewer without final approval rights should not see security approval queue"
         );
 
         var forwarded = permitService.ForwardPermitToGeneralManager(permitNumber, "2000000001");
-        Require(forwarded, "department manager should be able to forward the request");
+        Require(forwarded, "reviewer should be able to submit the reviewed request");
 
         var generalManagerView = permitService.GetPendingPermits("1000000001").ToList();
         Require(
             generalManagerView.Count == 1,
-            "general manager should receive the pending permit after forwarding"
+            "security manager should receive the permit after review"
         );
         Require(
             string.Equals(
@@ -100,7 +101,7 @@ internal static partial class ScenarioCatalog
                 "موظف بيانات",
                 StringComparison.OrdinalIgnoreCase
             ),
-            "general manager should see the forwarded permit"
+            "security manager should see the reviewed permit"
         );
 
         return Task.CompletedTask;
@@ -255,7 +256,7 @@ internal static partial class ScenarioCatalog
                 JobTitle = "مدير قسم",
                 PhoneNumber = "0555555557",
                 IsActive = true,
-                Role = AppRoles.DepartmentManager,
+                Role = AppRoles.PermitReviewer,
             };
             AppPermissions.ApplyRoleDefaults(departmentManager);
             departmentManager.CanApprovePermit = false;
@@ -389,7 +390,7 @@ internal static partial class ScenarioCatalog
                 .UserActivities.AsNoTracking()
                 .Any(activity =>
                     activity.Username == promotedGeneralManagerUsername
-                    && activity.ActionType == "ForwardedRequest"
+                    && activity.ActionType == "SecurityApprovalRequested"
                 ),
             "forwarding audit should target the linked general manager account"
         );
@@ -398,7 +399,7 @@ internal static partial class ScenarioCatalog
                 .UserActivities.AsNoTracking()
                 .Any(activity =>
                     activity.Username == linkedGeneralManagerUsername
-                    && activity.ActionType == "ForwardedRequest"
+                    && activity.ActionType == "SecurityApprovalRequested"
                 ),
             "previous general manager should not receive forwarding activity after the link changes"
         );
@@ -630,7 +631,7 @@ internal static partial class ScenarioCatalog
                 creatorDepartmentName,
                 StringComparison.Ordinal
             ),
-            "department manager create should persist creator department instead of submitted foreign department"
+            "legacy department manager create should preserve its scoped department"
         );
         Require(
             string.Equals(
@@ -638,11 +639,11 @@ internal static partial class ScenarioCatalog
                 creatorDepartmentName,
                 StringComparison.Ordinal
             ),
-            "employee department should stay aligned with enforced scoped department"
+            "legacy employee department should stay aligned with its scoped department"
         );
         Require(
             string.Equals(savedPermit.ManagerName, creatorDisplayName, StringComparison.Ordinal),
-            "approval route manager should be recalculated after department scope enforcement"
+            "legacy approval route should remain compatible for existing department managers"
         );
 
         return Task.CompletedTask;

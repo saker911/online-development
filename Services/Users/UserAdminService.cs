@@ -114,6 +114,72 @@ namespace VehiclePermitSystemWeb.Services.Users
                 ?? AdministrationSettingsService.BuildDefaultAdministrationSettings();
         }
 
+        public AdministrationSettings GetAdministrationSettings(
+            string tenantId,
+            bool ignoreTenantFilters = false
+        )
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var normalizedTenantId = string.IsNullOrWhiteSpace(tenantId)
+                ? db.CurrentTenantId
+                : tenantId.Trim();
+            if (
+                !ignoreTenantFilters
+                && !string.Equals(
+                    normalizedTenantId,
+                    db.CurrentTenantId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                normalizedTenantId = db.CurrentTenantId;
+            }
+
+            var cacheKey = BuildAdministrationSettingsCacheKey(normalizedTenantId);
+            if (
+                _memoryCache.TryGetValue(cacheKey, out AdministrationSettings? cachedSettings)
+                && cachedSettings != null
+            )
+            {
+                return AdministrationSettingsService.CloneAdministrationSettings(cachedSettings);
+            }
+
+            var record = db
+                .AdministrationSettings.IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(settings => settings.TenantId == normalizedTenantId)
+                .OrderByDescending(settings => settings.Id == 1)
+                .ThenBy(settings => settings.Id)
+                .FirstOrDefault();
+            if (record == null)
+            {
+                return new AdministrationSettings { TenantId = normalizedTenantId };
+            }
+
+            var settings = AdministrationSettingsService.CloneAdministrationSettings(record);
+            AdministrationSettingsService.NormalizeAdministrationSettings(settings);
+
+            var linkedUsername = (settings.GeneralManagerUsername ?? string.Empty).Trim();
+            var linkedManager = string.IsNullOrWhiteSpace(linkedUsername)
+                ? null
+                : db
+                    .UserAccounts.IgnoreQueryFilters()
+                    .AsNoTracking()
+                    .FirstOrDefault(user =>
+                        user.TenantId == normalizedTenantId && user.Username == linkedUsername
+                    );
+            if (AdministrationSettingsService.IsEligibleGeneralManager(linkedManager))
+            {
+                settings.ManagerName = linkedManager!.DisplayName;
+                settings.ManagerTitle = linkedManager.JobTitle;
+                settings.ManagerPhoneNumber = linkedManager.PhoneNumber;
+            }
+
+            var cacheSnapshot = AdministrationSettingsService.CloneAdministrationSettings(settings);
+            _memoryCache.Set(cacheKey, cacheSnapshot, AdministrationSettingsCacheLifetime);
+            return AdministrationSettingsService.CloneAdministrationSettings(cacheSnapshot);
+        }
+
         public void UpdateAdministrationSettings(AdministrationSettings settings)
         {
             using var db = _dbContextFactory.CreateDbContext();
@@ -150,6 +216,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                 existing.AttendanceGraceMinutes = settings.AttendanceGraceMinutes;
                 existing.WorkEndExitGraceMinutes = settings.WorkEndExitGraceMinutes;
                 existing.LateReturnGraceMinutes = settings.LateReturnGraceMinutes;
+                existing.LeaveRequestsEnabled = settings.LeaveRequestsEnabled;
                 existing.OfficialWorkDaysCsv = settings.OfficialWorkDaysCsv;
                 AdministrationSettingsService.NormalizeAdministrationSettings(existing);
                 AdministrationSettingsService.ApplyAdministrationGeneralManagerLink(db, existing);
@@ -361,6 +428,16 @@ namespace VehiclePermitSystemWeb.Services.Users
                 + (string.IsNullOrWhiteSpace(tenantId)
                     ? TenantDefaults.DefaultTenantId
                     : tenantId.Trim().ToLowerInvariant());
+        }
+
+        private static int GetNextAdministrationSettingsId(ApplicationDbContext db)
+        {
+            return db
+                    .AdministrationSettings.IgnoreQueryFilters()
+                    .Select(settings => (int?)settings.Id)
+                    .Max()
+                + 1
+                ?? 1;
         }
 
         public bool CreateUser(UserAccount user, string password)
@@ -992,6 +1069,35 @@ namespace VehiclePermitSystemWeb.Services.Users
             return DepartmentManagementMapper.GetDepartments(db);
         }
 
+        public IEnumerable<Department> GetDepartments(
+            string tenantId,
+            bool ignoreTenantFilters = false
+        )
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var normalizedTenantId = string.IsNullOrWhiteSpace(tenantId)
+                ? db.CurrentTenantId
+                : tenantId.Trim();
+            if (
+                !ignoreTenantFilters
+                && !string.Equals(
+                    normalizedTenantId,
+                    db.CurrentTenantId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                normalizedTenantId = db.CurrentTenantId;
+            }
+
+            return db
+                .Departments.IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(department => department.TenantId == normalizedTenantId)
+                .OrderBy(department => department.Name)
+                .ToList();
+        }
+
         public IEnumerable<UserAccount> GetUsersByDepartment(string departmentName)
         {
             using var db = _dbContextFactory.CreateDbContext();
@@ -1094,11 +1200,29 @@ namespace VehiclePermitSystemWeb.Services.Users
         )
         {
             using var db = _dbContextFactory.CreateDbContext();
+            var targetTenantId = string.IsNullOrWhiteSpace(request.TenantId)
+                ? db.CurrentTenantId
+                : request.TenantId.Trim();
+            if (
+                !db.Tenants.Any(tenant =>
+                    tenant.TenantId == targetTenantId && tenant.IsActive
+                )
+            )
+            {
+                return null;
+            }
 
-            var settings = AdministrationSettingsService.GetAdministrationSettingsRecord(db, 1);
+            var settings = db
+                .AdministrationSettings.IgnoreQueryFilters()
+                .Where(item => item.TenantId == targetTenantId)
+                .OrderByDescending(item => item.Id == 1)
+                .ThenBy(item => item.Id)
+                .FirstOrDefault();
             if (settings == null)
             {
                 settings = AdministrationSettingsService.BuildDefaultAdministrationSettings();
+                settings.Id = GetNextAdministrationSettingsId(db);
+                settings.TenantId = targetTenantId;
                 db.AdministrationSettings.Add(settings);
             }
 
@@ -1115,8 +1239,9 @@ namespace VehiclePermitSystemWeb.Services.Users
             ).Trim();
             var currentGeneralManager = string.IsNullOrWhiteSpace(currentGeneralManagerUsername)
                 ? null
-                : db.UserAccounts.FirstOrDefault(user =>
-                    user.Username == currentGeneralManagerUsername
+                : db.UserAccounts.IgnoreQueryFilters().FirstOrDefault(user =>
+                    user.TenantId == targetTenantId
+                    && user.Username == currentGeneralManagerUsername
                 );
 
             var normalizedSelectionMode =
@@ -1144,13 +1269,17 @@ namespace VehiclePermitSystemWeb.Services.Users
                 var newUsername = (request.NewUserUsername ?? string.Empty).Trim();
                 var newFullName = (request.NewUserFullName ?? string.Empty).Trim();
                 var newPhoneNumber = (request.NewUserPhoneNumber ?? string.Empty).Trim();
+                var newEmail = (request.NewUserEmail ?? string.Empty).Trim();
+                var newEmployeeNumber = (request.NewUserEmployeeNumber ?? string.Empty).Trim();
                 var newPassword = request.NewUserPassword ?? string.Empty;
                 if (
                     string.IsNullOrWhiteSpace(newUsername)
                     || string.IsNullOrWhiteSpace(newFullName)
                     || !ManagerTransitionService.IsSaudiMobileNumber(newPhoneNumber)
                     || string.IsNullOrWhiteSpace(newPassword)
-                    || db.UserAccounts.Any(user => user.Username == newUsername)
+                    || db
+                        .UserAccounts.IgnoreQueryFilters()
+                        .Any(user => user.Username == newUsername)
                 )
                 {
                     return null;
@@ -1158,13 +1287,15 @@ namespace VehiclePermitSystemWeb.Services.Users
 
                 nextGeneralManager = new UserAccount
                 {
+                    TenantId = targetTenantId,
                     Username = newUsername,
                     DisplayName = newFullName,
                     FullName = newFullName,
                     Department = string.Empty,
                     JobTitle = replacementJobTitle,
                     PhoneNumber = newPhoneNumber,
-                    Email = string.Empty,
+                    Email = newEmail,
+                    EmployeeNumber = newEmployeeNumber,
                     IsActive = request.NewUserIsActive,
                     Role = AppRoles.GeneralManager,
                     ManagerUsername = string.Empty,
@@ -1173,7 +1304,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                 UserPermissionService.NormalizePrivilegedAssignments(nextGeneralManager);
                 AppPermissions.ApplyRoleDefaults(nextGeneralManager);
                 UserAccountService.SetPassword(nextGeneralManager, newPassword);
-                nextGeneralManager.MustChangePassword = false;
+                nextGeneralManager.MustChangePassword = request.NewUserMustChangePassword;
                 db.UserAccounts.Add(nextGeneralManager);
             }
             else
@@ -1184,8 +1315,8 @@ namespace VehiclePermitSystemWeb.Services.Users
                     return null;
                 }
 
-                nextGeneralManager = db.UserAccounts.FirstOrDefault(user =>
-                    user.Username == existingUsername
+                nextGeneralManager = db.UserAccounts.IgnoreQueryFilters().FirstOrDefault(user =>
+                    user.TenantId == targetTenantId && user.Username == existingUsername
                 )!;
                 if (nextGeneralManager == null || nextGeneralManager.IsSuperAdmin)
                 {
@@ -1210,8 +1341,9 @@ namespace VehiclePermitSystemWeb.Services.Users
                     .Trim()
                     .ToUpperInvariant();
                 if (
-                    db.Departments.Any(department =>
-                        !string.IsNullOrWhiteSpace(department.ManagerUsername)
+                    db.Departments.IgnoreQueryFilters().Any(department =>
+                        department.TenantId == targetTenantId
+                        && !string.IsNullOrWhiteSpace(department.ManagerUsername)
                         && department.ManagerUsername.Trim().ToUpper()
                             == normalizedNextGeneralManagerUsername
                     )
@@ -1242,7 +1374,8 @@ namespace VehiclePermitSystemWeb.Services.Users
                         db,
                         currentGeneralManager,
                         normalizedPreviousAction,
-                        request.PreviousGeneralManagerTargetDepartmentId
+                        request.PreviousGeneralManagerTargetDepartmentId,
+                        targetTenantId
                     ) ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(previousGeneralManagerResult))
                 {
@@ -1250,10 +1383,15 @@ namespace VehiclePermitSystemWeb.Services.Users
                 }
             }
 
-            AdministrationSettingsService.SyncAdministrationGeneralManagerForUser(
+            settings.GeneralManagerUsername = nextGeneralManagerUsername;
+            settings.ManagerName = nextGeneralManager.DisplayName;
+            settings.ManagerTitle = nextGeneralManager.JobTitle;
+            settings.ManagerPhoneNumber = nextGeneralManager.PhoneNumber;
+            AdministrationSettingsService.NormalizeAdministrationSettings(settings);
+            AdministrationSettingsService.StopOtherGeneralManagers(
                 db,
-                nextGeneralManager,
-                forceLink: true
+                nextGeneralManagerUsername,
+                targetTenantId
             );
 
             _permitAuditService.RecordUserActivity(
@@ -1265,7 +1403,8 @@ namespace VehiclePermitSystemWeb.Services.Users
                 $"تم تعيين {nextGeneralManager.DisplayName} مديرًا عامًا بصيغة {ManagerTransitionService.GetGeneralManagerAssignmentTypeLabel(normalizedAssignmentType)} عبر مسار {(normalizedSelectionMode == GeneralManagerSelectionModes.CreateNew ? "إنشاء جديد" : "اختيار مستخدم موجود")}.",
                 nameof(UserAdminService),
                 recordedBy,
-                _systemClock.UtcNow
+                _systemClock.UtcNow,
+                tenantId: targetTenantId
             );
 
             if (currentGeneralManager != null)
@@ -1279,7 +1418,8 @@ namespace VehiclePermitSystemWeb.Services.Users
                     $"تم إنهاء تكليف {currentGeneralManager.DisplayName} كمدير عام بسبب {ManagerTransitionService.GetGeneralManagerPreviousActionLabel(normalizedPreviousAction)}. {previousGeneralManagerResult}",
                     nameof(UserAdminService),
                     recordedBy,
-                    _systemClock.UtcNow
+                    _systemClock.UtcNow,
+                    tenantId: targetTenantId
                 );
             }
 
@@ -1292,10 +1432,12 @@ namespace VehiclePermitSystemWeb.Services.Users
                 $"تم تحديث بيانات الإدارة وربط المدير العام بالحساب {nextGeneralManagerUsername} تلقائيًا مع مزامنة الاسم والمسمى والجوال.",
                 nameof(UserAdminService),
                 recordedBy,
-                _systemClock.UtcNow
+                _systemClock.UtcNow,
+                tenantId: targetTenantId
             );
 
             db.SaveChanges();
+            _memoryCache.Remove(BuildAdministrationSettingsCacheKey(targetTenantId));
 
             return currentGeneralManager == null
                 ? $"تم تعيين {nextGeneralManager.DisplayName} مديرًا عامًا بنجاح وربطه بالإدارة تلقائيًا."

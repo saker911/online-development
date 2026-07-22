@@ -7,7 +7,6 @@
         || !string.IsNullOrWhiteSpace(Model.SignatureImagePath);
     var hasSignatureText = !string.IsNullOrWhiteSpace(Model.SignatureText);
     var hasWorkdays = !string.IsNullOrWhiteSpace(Model.OfficialWorkDaysCsv);
-    var hasAutoLinkedGeneralManager = !string.IsNullOrWhiteSpace(Model.GeneralManagerUsername);
     var workdayLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         ["Saturday"] = "السبت",
@@ -30,12 +29,7 @@
 <div class="administration-edit-shell compact-form-shell">
     <section class="administration-edit-hero card-permit app-card-surface">
         <div class="administration-edit-hero-copy">
-            <span class="administration-edit-kicker">إدارة الإعدادات</span>
             <h1 class="mb-2">تعديل بيانات الإدارة</h1>
-            <p class="text-muted-ar mb-0">
-                البيانات هنا تستخدم في الطباعة الرسمية، إعدادات البوابة، وتعبئة النماذج الجديدة. التعديل يحافظ على كل الوظائف الحالية
-                ويؤثر على السجلات الجديدة وما يعتمد على الإعدادات التشغيلية المباشرة.
-            </p>
         </div>
 
         <div class="administration-edit-hero-panel">
@@ -59,12 +53,10 @@
     <section class="administration-edit-toolbar card-permit app-card-surface">
         <div class="administration-edit-toolbar-copy">
             <h2>روابط سريعة</h2>
-            <p class="text-muted-ar mb-0">تنقل سريع إلى النسخ الاحتياطي، شاشات العرض، ومركز التعيين والنقل القيادي.</p>
         </div>
         <div class="administration-edit-toolbar-actions">
             <a asp-action="Backup" class="btn btn-outline-success">النسخ الاحتياطي</a>
             <a asp-action="DisplaySettings" class="btn btn-outline-primary">إعدادات الشبكة وشاشات العرض</a>
-            <a asp-action="Leadership" class="btn btn-outline-secondary">مركز القيادات</a>
         </div>
     </section>
 
@@ -80,7 +72,6 @@
                         <span class="administration-edit-card-kicker">البيانات الأساسية</span>
                         <h2>تعريف الجهة والإدارة</h2>
                     </div>
-                    <p class="text-muted-ar mb-0">هذه البيانات تظهر في رأس النماذج والطباعة الرسمية والتعريف العام للمنشأة.</p>
                 </div>
 
                 <div class="row g-3">
@@ -94,47 +85,9 @@
                         <input asp-for="DepartmentName" class="form-control" />
                         <span asp-validation-for="DepartmentName" class="field-validation-error"></span>
                     </div>
-                    <div class="col-12">
-                        <div class="app-inline-note @(hasAutoLinkedGeneralManager ? "app-inline-note-success" : "app-inline-note-warning") py-2 mb-0">
-                            @if (hasAutoLinkedGeneralManager)
-                            {
-                                <span>يتم جلب بيانات المدير العام تلقائيًا من الحساب النشط @Model.ManagerName (@Model.GeneralManagerUsername) المعتمد للقيادة داخل النظام.</span>
-                            }
-                            else
-                            {
-                                <span>لا يوجد حاليًا حساب نشط بدور مدير عام، لذلك ستبقى بيانات المدير للعرض فقط حتى يتم تعيين مدير عام من مركز التعيين والنقل القيادي.</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="administration-manager-readonly-panel">
-                            <div class="administration-manager-readonly-head">
-                                <div>
-                                    <label class="form-label mb-1">بيانات المدير العام</label>
-                                    <div class="form-text mt-0">تُعرض هذه البيانات فقط وتُحدَّث تلقائيًا من تعيين المدير العام داخل النظام.</div>
-                                </div>
-                                <span class="administration-manager-readonly-badge">@(hasAutoLinkedGeneralManager ? "مربوطة تلقائيًا" : "بانتظار التعيين")</span>
-                            </div>
-                            <div class="administration-manager-readonly-grid">
-                                <div class="administration-manager-readonly-item">
-                                    <span>اسم المدير</span>
-                                    <strong>@(string.IsNullOrWhiteSpace(Model.ManagerName) ? "-" : Model.ManagerName)</strong>
-                                </div>
-                                <div class="administration-manager-readonly-item">
-                                    <span>المسمى الإداري</span>
-                                    <strong>@(string.IsNullOrWhiteSpace(Model.ManagerTitle) ? "-" : Model.ManagerTitle)</strong>
-                                </div>
-                                <div class="administration-manager-readonly-item administration-manager-readonly-item-wide">
-                                    <span>رقم الجوال</span>
-                                    <strong>@(string.IsNullOrWhiteSpace(Model.ManagerPhoneNumber) ? "-" : Model.ManagerPhoneNumber)</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="col-md-6">
                         <label asp-for="Phone" class="form-label">الهاتف</label>
                         <input asp-for="Phone" class="form-control" />
-                        <div class="form-text">رقم هاتف الإدارة المستخدم في رأس التقارير والمخاطبات، ولا يغيّر جوال المدير العام.</div>
                         <span asp-validation-for="Phone" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
@@ -151,7 +104,6 @@
                         <span class="administration-edit-card-kicker">الهوية البصرية</span>
                         <h2>الشعار والتوقيع</h2>
                     </div>
-                    <p class="text-muted-ar mb-0">معاينة مباشرة للملفات الحالية قبل الاستبدال، مع الحفاظ على نفس آلية الرفع والحفظ.</p>
                 </div>
 
                 <div class="administration-brand-grid">
@@ -166,7 +118,6 @@
                             {
                                 <div class="administration-media-placeholder">
                                     <strong>لا يوجد شعار محفوظ</strong>
-                                    <span>يمكن رفع ملف PNG أو JPG أو WEBP</span>
                                 </div>
                             }
                         </div>
@@ -212,7 +163,6 @@
                         <span class="administration-edit-card-kicker administration-edit-card-kicker-highlight">الإعدادات التشغيلية</span>
                         <h2>الدوام وأيام العمل الرسمية</h2>
                     </div>
-                    <p class="text-muted-ar mb-0">هذه القيم تؤثر مباشرة على سياسات البوابة، التأخير، والمعالجة اليومية للتصاريح.</p>
                 </div>
 
                 <div class="administration-work-summary">
@@ -233,10 +183,18 @@
                         <strong>@Model.WorkEndExitGraceMinutes دقيقة</strong>
                     </div>
                     <div class="administration-work-summary-item">
-                        <span>سماح عودة الاستئذان</span>
-                        <strong>@Model.LateReturnGraceMinutes دقيقة</strong>
+                        <span>نظام الاستئذان</span>
+                        <strong>@(Model.LeaveRequestsEnabled ? "مفعّل" : "غير مفعّل")</strong>
                     </div>
                 </div>
+
+                <label class="ue-status-switch ue-toggle-card @(Model.LeaveRequestsEnabled ? "is-active" : "is-inactive") mb-4">
+                    <input asp-for="LeaveRequestsEnabled" class="form-check-input" />
+                    <span class="ue-toggle-card-copy">
+                        <strong>تفعيل الاستئذان للخروج أثناء الدوام</strong>
+                        <small>عند تعطيله يسجل النظام الدخول والخروج تلقائيًا ويحلل الحركة دون طلب مسبق.</small>
+                    </span>
+                </label>
 
                 <div class="row g-3">
                     <div class="col-md-4">
@@ -259,7 +217,7 @@
                         <input asp-for="WorkEndExitGraceMinutes" type="number" min="0" step="1" class="form-control" />
                         <span asp-validation-for="WorkEndExitGraceMinutes" class="field-validation-error"></span>
                     </div>
-                    <div class="col-md-4">
+                    <div id="administration-late-return-field" class="col-md-4 @(Model.LeaveRequestsEnabled ? string.Empty : "d-none")">
                         <label asp-for="LateReturnGraceMinutes" class="form-label">سماح عودة الاستئذان بالدقائق</label>
                         <input asp-for="LateReturnGraceMinutes" type="number" min="0" step="1" class="form-control" />
                         <span asp-validation-for="LateReturnGraceMinutes" class="field-validation-error"></span>
@@ -270,7 +228,6 @@
                     <div class="administration-workdays-head">
                         <div>
                             <h3>أيام الدوام الرسمي</h3>
-                            <p class="text-muted-ar mb-0">اختر الأيام التي تُعتمد فيها قواعد الدوام والإغلاق اليومي.</p>
                         </div>
                         <span class="administration-workdays-hint" id="officialWorkdaysSummary">@workdaysSummary</span>
                     </div>
@@ -301,7 +258,6 @@
         <div class="administration-edit-actions card-permit app-card-surface">
             <div>
                 <strong>جاهز للحفظ</strong>
-                <div class="text-muted-ar">سيتم الاحتفاظ بجميع السلوكيات الحالية مع تحسين العرض فقط.</div>
             </div>
             <div class="administration-edit-actions-buttons">
                 <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">عودة</a>
@@ -351,6 +307,17 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             loadWorkdays();
+            var leaveRequestsToggle = document.getElementById('LeaveRequestsEnabled');
+            var lateReturnField = document.getElementById('administration-late-return-field');
+            function syncLeaveRequestFields() {
+                if (leaveRequestsToggle && lateReturnField) {
+                    lateReturnField.classList.toggle('d-none', !leaveRequestsToggle.checked);
+                }
+            }
+            if (leaveRequestsToggle) {
+                leaveRequestsToggle.addEventListener('change', syncLeaveRequestFields);
+            }
+            syncLeaveRequestFields();
             document.querySelectorAll('.official-workday-checkbox').forEach(function (checkbox) {
                 checkbox.addEventListener('change', collectWorkdays);
             });

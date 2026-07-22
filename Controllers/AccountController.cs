@@ -450,6 +450,8 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             // remove server-side session if exists
             var sessionId = User?.Claims?.FirstOrDefault(c => c.Type == "sessionId")?.Value;
+            var tenantId = User?.FindFirst(AppClaimTypes.TenantId)?.Value;
+            var tenantSlug = ResolveTenantReference(tenantId)?.Slug;
             var username = User?.Identity?.Name ?? string.Empty;
             var displayName =
                 User?.Claims?.FirstOrDefault(c => c.Type == "DisplayName")?.Value ?? username;
@@ -470,7 +472,9 @@ namespace VehiclePermitSystemWeb.Controllers
                 );
             }
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("Login", "Account");
+            return !string.IsNullOrWhiteSpace(tenantSlug)
+                ? RedirectToAction(nameof(TenantEntry), new { tenant = tenantSlug })
+                : RedirectToAction(nameof(Login));
         }
 
         [Authorize]
@@ -767,6 +771,15 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private IActionResult RedirectToDefaultAuthorizedPage(UserAccount? user)
         {
+            if (
+                user != null
+                && string.Equals(user.Role, AppRoles.GateSecurity, StringComparison.Ordinal)
+                && user.CanScanOperations
+            )
+            {
+                return RedirectToAction("Index", "ScanConsole");
+            }
+
             if (user?.CanViewDashboard == true)
             {
                 return RedirectToAction("Index", "Home");

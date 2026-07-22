@@ -43,6 +43,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Departments
 
     public sealed class GeneralManagerAssignmentRequest
     {
+        public string TenantId { get; set; } = string.Empty;
+
         public int WizardStep { get; set; } = 1;
 
         public string SelectionMode { get; set; } = GeneralManagerSelectionModes.ExistingUser;
@@ -55,6 +57,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Departments
 
         public string NewUserPhoneNumber { get; set; } = string.Empty;
 
+        public string NewUserEmail { get; set; } = string.Empty;
+
+        public string NewUserEmployeeNumber { get; set; } = string.Empty;
+
         public string NewUserPassword { get; set; } = string.Empty;
 
         public string NewUserConfirmPassword { get; set; } = string.Empty;
@@ -64,6 +70,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Departments
         public int NewUserDepartmentId { get; set; }
 
         public bool NewUserIsActive { get; set; } = true;
+
+        public bool NewUserMustChangePassword { get; set; }
 
         public string PreviousGeneralManagerAction { get; set; } =
             GeneralManagerPreviousActions.EndAssignment;

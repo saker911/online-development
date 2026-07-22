@@ -8,13 +8,16 @@
     var canRenderArtifacts = string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
     var canApprove = ViewData["CanApprovePendingPermit"] as bool? == true;
     var canForwardApproval = ViewBag.CanForwardApproval as bool? ?? false;
-    var canLeaveRequest = User.HasPermission(AppPermissions.ApproveLeaveRequest)
+    var leaveRequestsEnabled = ViewData["LeaveRequestsEnabled"] as bool? == true;
+    var canLeaveRequest = leaveRequestsEnabled
+        && User.HasPermission(AppPermissions.ApproveLeaveRequest)
         && Model.IsPermanentPermit
         && !Model.RequiresReturn
         && string.Equals(Model.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)
         && string.Equals(Model.CurrentState, "Inside", StringComparison.OrdinalIgnoreCase)
         && !Model.ArchivedAt.HasValue;
-    var canClearDailySchedule = User.HasPermission(AppPermissions.ApproveLeaveRequest)
+    var canClearDailySchedule = leaveRequestsEnabled
+        && User.HasPermission(AppPermissions.ApproveLeaveRequest)
         && Model.IsPermanentPermit
         && Model.HasDailyLeaveSchedule
         && !Model.PendingExitRequest
@@ -87,22 +90,17 @@
                     <strong>@(Model.RequiresVisitLocation ? "مكان الزيارة" : "موقع العمل")</strong>
                     <div>@Model.LocationDisplay</div>
                 </div>
-                @if (!Model.IsVisitorPermit)
-                {
-                    <div class="col-md-6">
-                        <strong>مدير الموظف</strong>
-                        <div>@Model.ManagerName</div>
-                    </div>
-                }
                 <div class="col-md-6">
                     <strong>تاريخ التصريح</strong>
                     <div class="date-text">@(Model.PermitDate.HasValue ? HijriDateFormatter.Format(Model.PermitDate) :
                       "غير محدد")</div>
                     </div>
                     <div class="col-md-6">
-                        <strong>نوع الحركة</strong>
-                        <div>@Model.ReturnRequirementDisplay</div>
+                        <strong>سياسة الحركة</strong>
+                        <div>@(leaveRequestsEnabled ? Model.ReturnRequirementDisplay : "تسجيل دخول وخروج تلقائي")</div>
                     </div>
+                    @if (leaveRequestsEnabled)
+                    {
                     <div class="col-md-6">
                         <strong>تصريح الخروج المؤقت</strong>
                         <div>@temporaryExitPermissionText</div>
@@ -115,6 +113,7 @@
                         <strong>الجدولة اليومية</strong>
                         <div>@Model.DailyLeaveScheduleDisplay</div>
                     </div>
+                    }
                     <div class="col-md-6">
                         <strong>تنبيهات التأخر</strong>
                         <div>@Model.LateReturnWarningDisplay</div>
@@ -274,7 +273,7 @@
                                         <form asp-action="ForwardToGeneralManager" asp-route-id="@Model.PermitNumber" method="post"
                                               class="d-inline">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-warning">رفع الطلب للمدير العام</button>
+                                            <button type="submit" class="btn btn-warning">اعتماد التدقيق ورفعه لمدير الأمن</button>
                                         </form>
                                     }
                                     @if (canStop)

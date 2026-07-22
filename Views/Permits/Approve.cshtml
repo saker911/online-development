@@ -9,8 +9,6 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <h1 class="mb-1">اعتماد التصريح</h1>
-                <div class="text-muted-ar">الاعتماد هنا مباشر فقط، أما الاستئذان والتواريخ فتدار من صفحاتها المخصصة.
-                </div>
             </div>
             <a asp-action="Details" asp-route-id="@Model.PermitNumber" class="btn btn-outline-secondary">رجوع إلى
                 التفاصيل</a>
@@ -41,10 +39,6 @@
         <form asp-action="Approve" asp-route-returnUrl="@approveReturnUrl" method="post" class="card-permit">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="PermitNumber" />
-
-            <div class="app-inline-note app-inline-note-info mb-4">
-                سيتم اعتماد التصريح كما هو بدون تعديل نوع الحركة أو إضافة استئذان أو تواريخ من هذه الصفحة.
-            </div>
 
             <div class="d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn btn-primary">اعتماد مباشر</button>

@@ -25,6 +25,9 @@ async function ensureAdministrationSignature(page) {
 
 async function approvePermit(page, permitNumber) {
   await ensureAdministrationSignature(page);
+  await submitForm(page, `/Permits/ForwardToGeneralManager/${permitNumber}`, {}, {
+    tokenPath: `/Permits/Details/${permitNumber}`,
+  });
   await page.goto(`/Permits/Approve/${permitNumber}`);
   await expect(page.getByRole("heading", { name: "اعتماد التصريح" })).toBeVisible();
   await page.getByRole("button", { name: "اعتماد مباشر" }).click();

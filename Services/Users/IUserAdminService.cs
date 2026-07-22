@@ -17,6 +17,10 @@ namespace VehiclePermitSystemWeb.Services.Users
     public interface IUserAdminService
     {
         AdministrationSettings GetAdministrationSettings();
+        AdministrationSettings GetAdministrationSettings(
+            string tenantId,
+            bool ignoreTenantFilters = false
+        );
         void UpdateAdministrationSettings(AdministrationSettings settings);
         void InvalidateAdministrationSettingsCache();
         bool ValidateDisplayAccessKey(string? accessKey);
@@ -76,6 +80,10 @@ namespace VehiclePermitSystemWeb.Services.Users
             out string errorCode
         );
         IEnumerable<Department> GetDepartments();
+        IEnumerable<Department> GetDepartments(
+            string tenantId,
+            bool ignoreTenantFilters = false
+        );
         IEnumerable<UserAccount> GetUsersByDepartment(string departmentName);
         Department? GetDepartment(int id);
         bool UpsertDepartment(Department department);

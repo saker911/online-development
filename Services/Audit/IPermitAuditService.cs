@@ -43,7 +43,8 @@ namespace VehiclePermitSystemWeb.Services.Audit
             string? actualActorUsername = null,
             bool actedUnderDelegation = false,
             string? delegatedFromUsername = null,
-            int? delegationId = null
+            int? delegationId = null,
+            string? tenantId = null
         );
 
         void NotifyPermitManagerOfActivity(

@@ -46,11 +46,6 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
                     <h2 class="h5 mb-1">@(Model.IsSpecificPermitBarcode ? "باركود التصريح المعتمد" : "رمز تجريبي")</h2>
-                    <div class="text-muted-ar">
-                        @(Model.IsSpecificPermitBarcode
-                            ? "هذا الرمز خاص بنفس التصريح المطلوب ويمثل قيمة البوابة فقط."
-                            : "هذا رمز تجريبي من تصريح معتمد لاختبار الجهاز والصوت والرد الفوري، ولا يمثل تصريحًا محددًا من صفحة أخرى.")
-                    </div>
                 </div>
                 <span class="badge bg-primary-subtle text-primary-emphasis">@Model.SamplePermitPublicCode</span>
             </div>
@@ -62,8 +57,6 @@
                 </div>
                 <div class="col-md-8">
                     <div class="fw-semibold mb-1">@Model.SamplePermitDisplayName</div>
-                    <div class="text-muted-ar mb-2">امسح هذا الـ QR من الجهاز الحقيقي، وسيظهر اسم صاحب التصريح مع الصوت.
-                    </div>
                     <div class="small text-muted">رمز التصريح: <span class="ltr-field">@Model.SamplePermitPublicCode</span>
                     </div>
                 </div>
@@ -79,7 +72,6 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
                 <h2 class="h5 mb-1">بيانات التصريح المقروء</h2>
-                <div class="text-muted-ar">تظهر هذه البيانات تلقائيًا بعد قراءة الباركود أو إدخال الرقم.</div>
             </div>
             <span class="badge bg-primary-subtle text-primary-emphasis" id="scannedPermitPublicCode">
                 @(Model.ScannedPermit?.PublicPermitCode ?? string.Empty)
@@ -149,8 +141,7 @@
                 <label asp-for="Identifier" class="form-label">القيمة المقروءة</label>
                 <input asp-for="Identifier" class="form-control ltr-field scan-input" autocomplete="off" autofocus
                        required />
-                <div class="small text-muted mt-1" id="detectedScanModeText">سيتم اكتشاف هل القيمة تصريح أو زيارة
-                    تلقائيًا.</div>
+                <div class="small text-muted mt-1" id="detectedScanModeText" aria-live="polite"></div>
                 <span asp-validation-for="Identifier" class="field-validation-error small"></span>
             </div>
             <div class="col-12">

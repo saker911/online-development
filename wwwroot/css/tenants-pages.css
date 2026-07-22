@@ -1,0 +1,550 @@
+.tenants-page {
+    width: min(100%, 1500px);
+    margin-inline: auto;
+    color: var(--app-text, #122438);
+}
+
+.tenants-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 8px 0 24px;
+    border-bottom: 1px solid var(--app-border, #dbe4ec);
+}
+
+.tenants-header-copy {
+    min-width: 0;
+}
+
+.tenants-kicker {
+    display: block;
+    margin-bottom: 5px;
+    color: #16818d;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.tenants-header h1,
+.tenant-registry h2,
+.tenant-delete-dialog h2 {
+    margin: 0;
+    letter-spacing: 0;
+}
+
+.tenants-header h1 {
+    font-size: clamp(1.75rem, 2.2rem, 2.4rem);
+}
+
+.tenants-header p {
+    margin: 8px 0 0;
+    color: var(--app-muted, #65778d);
+}
+
+.tenants-stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--app-border, #dbe4ec);
+}
+
+.tenants-stat-strip>div {
+    display: grid;
+    gap: 4px;
+    min-height: 92px;
+    padding: 18px 20px;
+    border-inline-end: 1px solid var(--app-border, #dbe4ec);
+}
+
+.tenants-stat-strip>div:last-child {
+    border-inline-end: 0;
+}
+
+.tenants-stat-strip span {
+    color: var(--app-muted, #65778d);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.tenants-stat-strip strong {
+    font-size: 1.55rem;
+}
+
+.tenant-editor,
+.tenant-registry {
+    border: 1px solid var(--app-border, #dbe4ec);
+    border-radius: 8px;
+    background: var(--app-surface, #fff);
+}
+
+.tenant-editor {
+    margin-bottom: 22px;
+}
+
+.tenant-editor summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 72px;
+    padding: 15px 20px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.tenant-editor summary::-webkit-details-marker {
+    display: none;
+}
+
+.tenant-editor summary>span:first-child {
+    display: grid;
+    gap: 3px;
+}
+
+.tenant-editor summary strong {
+    font-size: 1rem;
+}
+
+.tenant-editor summary small {
+    color: var(--app-muted, #65778d);
+}
+
+.tenant-editor-chevron {
+    font-size: 1.35rem;
+    transition: transform 160ms ease;
+}
+
+.tenant-editor[open] .tenant-editor-chevron {
+    transform: rotate(180deg);
+}
+
+.tenant-editor-form {
+    padding: 20px;
+    border-top: 1px solid var(--app-border, #dbe4ec);
+}
+
+.tenant-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.tenant-field {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    min-width: 0;
+}
+
+.tenant-field-wide {
+    grid-column: span 2;
+}
+
+.tenant-field>label {
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.tenant-form-actions,
+.tenant-delete-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.tenant-registry {
+    overflow: hidden;
+}
+
+.tenant-registry-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--app-border, #dbe4ec);
+}
+
+.tenant-registry h2 {
+    font-size: 1.15rem;
+}
+
+.tenant-registry-tools {
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 150px auto;
+    align-items: center;
+    gap: 10px;
+}
+
+.tenant-visible-count {
+    min-width: 72px;
+    color: var(--app-muted, #65778d);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.tenant-table-wrap {
+    overflow-x: auto;
+}
+
+.tenant-table {
+    width: 100%;
+    min-width: 1050px;
+    border-collapse: collapse;
+}
+
+.tenant-table th {
+    padding: 12px 16px;
+    color: var(--app-muted, #65778d);
+    background: var(--app-subtle-surface, #f6f8fa);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-align: start;
+}
+
+.tenant-table td {
+    padding: 15px 16px;
+    border-top: 1px solid var(--app-border, #e4eaf0);
+    vertical-align: middle;
+}
+
+.tenant-table tbody tr:first-child td {
+    border-top: 0;
+}
+
+.tenant-table tbody tr:hover td {
+    background: rgba(22, 129, 141, 0.035);
+}
+
+.tenant-identity,
+.tenant-table td:nth-child(2),
+.tenant-table td:nth-child(4),
+.tenant-table td:nth-child(5) {
+    display: grid;
+    gap: 5px;
+}
+
+.tenant-identity strong {
+    max-width: 300px;
+    overflow: hidden;
+    color: var(--app-text, #122438);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tenant-identity span,
+.tenant-date,
+.tenant-table td:nth-child(5) small {
+    color: var(--app-muted, #65778d);
+    font-size: 0.72rem;
+}
+
+.tenant-table code {
+    width: fit-content;
+    max-width: 260px;
+    overflow: hidden;
+    color: #466176;
+    font-size: 0.7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tenant-subscription,
+.tenant-state {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 25px;
+    padding: 3px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.tenant-subscription.is-active,
+.tenant-state.is-active {
+    border-color: #9bd4be;
+    color: #12643f;
+    background: #edf9f3;
+}
+
+.tenant-subscription.is-trial {
+    border-color: #a9c8e8;
+    color: #24557f;
+    background: #eef6fd;
+}
+
+.tenant-subscription.is-pending,
+.tenant-subscription.is-suspended {
+    border-color: #ead096;
+    color: #76540d;
+    background: #fff8e8;
+}
+
+.tenant-subscription.is-expired,
+.tenant-state.is-inactive {
+    border-color: #e1b1b7;
+    color: #8a2834;
+    background: #fff1f2;
+}
+
+.tenant-plan {
+    font-size: 0.78rem;
+}
+
+.tenant-usage {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(60px, 1fr));
+    gap: 6px;
+}
+
+.tenant-usage span {
+    display: grid;
+    gap: 2px;
+    color: var(--app-muted, #65778d);
+    font-size: 0.66rem;
+}
+
+.tenant-usage strong {
+    color: var(--app-text, #122438);
+    font-size: 0.92rem;
+}
+
+.tenant-entry-link {
+    width: fit-content;
+    color: #14727c;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.tenant-entry-link:hover {
+    text-decoration: underline;
+}
+
+.tenant-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    min-width: 205px;
+}
+
+.tenant-actions form {
+    display: inline-flex;
+}
+
+.tenant-actions .btn {
+    min-height: 34px;
+}
+
+.tenant-empty-state {
+    padding: 40px 20px;
+    color: var(--app-muted, #65778d);
+    text-align: center;
+}
+
+.tenant-delete-dialog {
+    width: min(92vw, 520px);
+    padding: 0;
+    border: 1px solid var(--app-border, #dbe4ec);
+    border-radius: 8px;
+    color: var(--app-text, #122438);
+    background: var(--app-surface, #fff);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24);
+}
+
+.tenant-delete-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.tenant-delete-dialog form {
+    padding: 22px;
+}
+
+.tenant-delete-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    color: #9c2837;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.tenant-dialog-close {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: inherit;
+    background: transparent;
+    font-size: 1.4rem;
+}
+
+.tenant-delete-dialog h2 {
+    font-size: 1.25rem;
+}
+
+.tenant-delete-dialog p {
+    margin: 10px 0 20px;
+    color: var(--app-muted, #65778d);
+}
+
+.tenant-delete-dialog label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+[data-theme="dark"] .tenant-table th {
+    background: rgba(8, 18, 30, 0.48);
+}
+
+[data-theme="dark"] .tenant-table tbody tr:hover td {
+    background: rgba(69, 182, 166, 0.05);
+}
+
+[data-theme="dark"] .tenant-subscription.is-active,
+[data-theme="dark"] .tenant-state.is-active {
+    border-color: rgba(69, 182, 166, 0.45);
+    color: #a8e6ce;
+    background: rgba(22, 100, 63, 0.24);
+}
+
+[data-theme="dark"] .tenant-subscription.is-trial {
+    border-color: rgba(84, 142, 196, 0.5);
+    color: #b9daf7;
+    background: rgba(36, 85, 127, 0.28);
+}
+
+[data-theme="dark"] .tenant-subscription.is-pending,
+[data-theme="dark"] .tenant-subscription.is-suspended {
+    border-color: rgba(194, 155, 66, 0.5);
+    color: #f1d792;
+    background: rgba(118, 84, 13, 0.28);
+}
+
+[data-theme="dark"] .tenant-subscription.is-expired,
+[data-theme="dark"] .tenant-state.is-inactive {
+    border-color: rgba(190, 84, 96, 0.45);
+    color: #f2b9c0;
+    background: rgba(138, 40, 52, 0.24);
+}
+
+[data-theme="dark"] .tenant-table code,
+[data-theme="dark"] .tenant-entry-link {
+    color: #83d1ca;
+}
+
+@media (max-width: 1000px) {
+    .tenants-stat-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tenants-stat-strip>div:nth-child(2) {
+        border-inline-end: 0;
+    }
+
+    .tenant-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tenant-registry-head,
+    .tenant-registry-tools {
+        align-items: stretch;
+    }
+
+    .tenant-registry-head {
+        flex-direction: column;
+    }
+
+    .tenant-registry-tools {
+        grid-template-columns: minmax(0, 1fr) 150px auto;
+    }
+}
+
+@media (max-width: 700px) {
+    .tenants-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tenants-header .btn {
+        width: 100%;
+    }
+
+    .tenants-stat-strip>div {
+        min-height: 80px;
+        padding: 14px;
+    }
+
+    .tenant-form-grid,
+    .tenant-registry-tools {
+        grid-template-columns: 1fr;
+    }
+
+    .tenant-field-wide {
+        grid-column: auto;
+    }
+
+    .tenant-visible-count {
+        text-align: start;
+    }
+
+    .tenant-table-wrap {
+        overflow: visible;
+    }
+
+    .tenant-table {
+        display: block;
+        min-width: 0;
+    }
+
+    .tenant-table thead {
+        display: none;
+    }
+
+    .tenant-table tbody,
+    .tenant-table tr,
+    .tenant-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .tenant-table tr {
+        padding: 14px;
+        border-bottom: 8px solid var(--app-page-bg, #f4f7fa);
+    }
+
+    .tenant-table td {
+        display: grid;
+        grid-template-columns: 95px minmax(0, 1fr);
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid var(--app-border, #e4eaf0);
+    }
+
+    .tenant-table td:first-child {
+        border-top: 0;
+    }
+
+    .tenant-table td::before {
+        content: attr(data-label);
+        color: var(--app-muted, #65778d);
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .tenant-usage {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tenant-actions {
+        min-width: 0;
+    }
+}

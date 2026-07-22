@@ -489,10 +489,10 @@ internal static partial class ScenarioCatalog
         Require(
             string.Equals(
                 editedPermit.ApprovalStatus,
-                "Pending",
+                Permit.ApprovalStatusPendingReview,
                 StringComparison.OrdinalIgnoreCase
             ),
-            "editing an active employee permit should move it back to pending"
+            "editing an active employee permit should move it back to review"
         );
 
         permitService.UpdatePermitApprovalStatus(permitNumber, "Approved");
@@ -882,9 +882,11 @@ internal static partial class ScenarioCatalog
 
     private static Task ScenarioLeaveRequestWithReturnAllowsExitAndLateReturn(
         MutableSystemClock clock,
+        IDbContextFactory<ApplicationDbContext> dbFactory,
         IPermitService permitService
     )
     {
+        ResetStandardAdministrationSchedule(dbFactory);
         clock.SetLocalNow(new DateTime(2026, 4, 13, 9, 0, 0));
 
         var permitNumber = CreateApprovedEmployeePermit(
@@ -1399,6 +1401,10 @@ internal static partial class ScenarioCatalog
         IServiceProvider serviceProvider
     )
     {
+        var dbFactory = serviceProvider.GetRequiredService<
+            IDbContextFactory<ApplicationDbContext>
+        >();
+        ResetStandardAdministrationSchedule(dbFactory);
         var gatePolicyService = serviceProvider.GetRequiredService<IGatePolicyService>();
 
         var outsidePermit = new Permit
@@ -1552,6 +1558,56 @@ internal static partial class ScenarioCatalog
             "expired permit should resolve to denied expired"
         );
 
+        return Task.CompletedTask;
+    }
+
+    private static Task ScenarioDisabledLeaveRequestsUseAutomaticMovement(
+        MutableSystemClock clock,
+        IDbContextFactory<ApplicationDbContext> dbFactory,
+        IPermitService permitService
+    )
+    {
+        ResetStandardAdministrationSchedule(dbFactory);
+        clock.SetLocalNow(new DateTime(2026, 4, 13, 9, 0, 0));
+
+        var permitNumber = CreateApprovedEmployeePermit(
+            permitService,
+            requiresReturn: true,
+            expiresAt: clock.LocalNow.AddDays(2)
+        );
+
+        using (var db = dbFactory.CreateDbContext())
+        {
+            var settings = db.AdministrationSettings.Single(x => x.Id == 1);
+            settings.LeaveRequestsEnabled = false;
+            db.SaveChanges();
+        }
+
+        var entry = permitService.RecordPermitScan(permitNumber, "tester");
+        Require(entry.allowed, "automatic movement should record the employee entry");
+
+        clock.Advance(TimeSpan.FromSeconds(6));
+        var exit = permitService.RecordPermitScan(permitNumber, "tester");
+        Require(exit.allowed, "automatic movement should record exit without a leave request");
+
+        var permitAfterExit =
+            permitService.GetPermitByNumber(permitNumber)
+            ?? throw new InvalidOperationException("automatic-movement permit was not found");
+        Require(
+            string.Equals(
+                permitAfterExit.CurrentState,
+                "Outside",
+                StringComparison.OrdinalIgnoreCase
+            ),
+            "automatic movement should leave the employee outside"
+        );
+        Require(
+            !permitAfterExit.PendingExitRequest
+                && !permitAfterExit.PendingUnauthorizedExitAt.HasValue,
+            "automatic movement should not create leave or unauthorized-exit state"
+        );
+
+        ResetStandardAdministrationSchedule(dbFactory);
         return Task.CompletedTask;
     }
 

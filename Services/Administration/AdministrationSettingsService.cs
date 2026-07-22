@@ -71,6 +71,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 AttendanceGraceMinutes = settings.AttendanceGraceMinutes,
                 WorkEndExitGraceMinutes = settings.WorkEndExitGraceMinutes,
                 LateReturnGraceMinutes = settings.LateReturnGraceMinutes,
+                LeaveRequestsEnabled = settings.LeaveRequestsEnabled,
                 OfficialWorkDaysCsv = settings.OfficialWorkDaysCsv,
             };
         }
@@ -292,10 +293,14 @@ namespace VehiclePermitSystemWeb.Services.Administration
             ApplicationDbContext db,
             UserAccount currentGeneralManager,
             string previousAction,
-            int targetDepartmentId
+            int targetDepartmentId,
+            string? tenantId = null
         )
         {
-            var targetDepartment = db.Departments.FirstOrDefault(item =>
+            var departments = string.IsNullOrWhiteSpace(tenantId)
+                ? db.Departments.AsQueryable()
+                : db.Departments.IgnoreQueryFilters().Where(item => item.TenantId == tenantId);
+            var targetDepartment = departments.FirstOrDefault(item =>
                 item.Id == targetDepartmentId && item.IsActive
             );
 
@@ -361,7 +366,8 @@ namespace VehiclePermitSystemWeb.Services.Administration
 
         public static int StopOtherGeneralManagers(
             ApplicationDbContext db,
-            string activeGeneralManagerUsername
+            string activeGeneralManagerUsername,
+            string? tenantId = null
         )
         {
             var normalizedActiveUsername = (activeGeneralManagerUsername ?? string.Empty).Trim();
@@ -370,8 +376,11 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 return 0;
             }
 
-            var duplicates = db
-                .UserAccounts.Where(user => !user.IsSuperAdmin)
+            var users = string.IsNullOrWhiteSpace(tenantId)
+                ? db.UserAccounts.AsQueryable()
+                : db.UserAccounts.IgnoreQueryFilters().Where(user => user.TenantId == tenantId);
+            var duplicates = users
+                .Where(user => !user.IsSuperAdmin)
                 .ToList()
                 .Where(user =>
                     !user.IsSuperAdmin

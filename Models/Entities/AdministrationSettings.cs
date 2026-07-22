@@ -27,6 +27,7 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public int AttendanceGraceMinutes { get; set; } = 15;
         public int WorkEndExitGraceMinutes { get; set; } = 30;
         public int LateReturnGraceMinutes { get; set; } = 5;
+        public bool LeaveRequestsEnabled { get; set; }
         public DateTime? LastWorkEndClosureAt { get; set; }
 
         // Comma-separated list of official work days (e.g. "Sunday,Monday,Tuesday,Wednesday,Thursday")

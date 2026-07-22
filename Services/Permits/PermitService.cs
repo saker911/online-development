@@ -307,7 +307,9 @@ namespace VehiclePermitSystemWeb.Services.Permits
             using var db = _dbContextFactory.CreateDbContext();
             var workHours = GetWorkHoursSettings(db);
             permit.PermitNumber = GenerateNextPermitNumber(db);
-            permit.ApprovalStatus = "Pending";
+            permit.ApprovalStatus = permit.IsVisitorPermit
+                ? Permit.ApprovalStatusPending
+                : Permit.ApprovalStatusPendingReview;
             permit.CurrentState = PermitCurrentStateOutside;
             permit.UnauthorizedExitWarningCount = 0;
             permit.LastUnauthorizedExitWarningAt = null;
@@ -410,7 +412,9 @@ namespace VehiclePermitSystemWeb.Services.Permits
             }
             else if (!preserveLifecycleState)
             {
-                existing.ApprovalStatus = "Pending";
+                existing.ApprovalStatus = existing.IsVisitorPermit
+                    ? Permit.ApprovalStatusPending
+                    : Permit.ApprovalStatusPendingReview;
                 existing.QrToken = GenerateQrToken(existing);
             }
             db.SaveChanges();
@@ -965,10 +969,17 @@ namespace VehiclePermitSystemWeb.Services.Permits
         private static bool IsGeneralManager(UserAccount? user)
         {
             return user != null
-                && string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
+                && (
+                    string.Equals(
+                        user.Role,
+                        AppRoles.GeneralManager,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || string.Equals(
+                        user.Role,
+                        AppRoles.SecurityManager,
+                        StringComparison.OrdinalIgnoreCase
+                    )
                 );
         }
 

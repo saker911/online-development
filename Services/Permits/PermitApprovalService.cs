@@ -262,7 +262,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
                         || permit.ArchivedAt.HasValue
                         || !string.Equals(
                             permit.ApprovalStatus,
-                            "Pending",
+                            Permit.ApprovalStatusPendingReview,
                             StringComparison.OrdinalIgnoreCase
                         )
                     )
@@ -270,13 +270,23 @@ namespace VehiclePermitSystemWeb.Services.Permits
                         return false;
                     }
 
+                    var securityManager = db
+                        .UserAccounts.AsNoTracking()
+                        .Where(user =>
+                            user.IsActive
+                            && user.Role == AppRoles.SecurityManager
+                            && user.CanApprovePermit
+                        )
+                        .OrderBy(user => user.DisplayName)
+                        .FirstOrDefault();
+
                     var configuredGeneralManagerUsername = db
                         .AdministrationSettings.AsNoTracking()
                         .Where(settings => settings.Id == 1)
                         .Select(settings => settings.GeneralManagerUsername)
                         .FirstOrDefault();
 
-                    var generalManager = !string.IsNullOrWhiteSpace(
+                    var generalManager = securityManager ?? (!string.IsNullOrWhiteSpace(
                         configuredGeneralManagerUsername
                     )
                         ? db
@@ -287,7 +297,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
                                 && user.Role == AppRoles.GeneralManager
                                 && user.CanApprovePermit
                             )
-                        : null;
+                        : null);
 
                     generalManager ??= db
                         .UserAccounts.AsNoTracking()
@@ -296,6 +306,13 @@ namespace VehiclePermitSystemWeb.Services.Permits
                             && user.Role == AppRoles.GeneralManager
                             && user.CanApprovePermit
                         )
+                        .OrderBy(user => user.DisplayName)
+                        .FirstOrDefault();
+
+                    // Keep initial setup operational until a dedicated security manager exists.
+                    generalManager ??= db
+                        .UserAccounts.AsNoTracking()
+                        .Where(user => user.IsActive && user.IsSuperAdmin)
                         .OrderBy(user => user.DisplayName)
                         .FirstOrDefault();
 
@@ -309,19 +326,15 @@ namespace VehiclePermitSystemWeb.Services.Permits
                         var forwardedBy = db.UserAccounts.FirstOrDefault(user =>
                             user.Username == performedBy
                         );
-                        var departmentName = permit.EmployeeDepartment;
-                        if (string.IsNullOrWhiteSpace(departmentName))
-                        {
-                            departmentName = permit.DepartmentName;
-                        }
-
                         if (
                             forwardedBy == null
                             || !forwardedBy.IsActive
-                            || forwardedBy.CanApprovePermit
-                            || !_accessControlService.IsCurrentDepartmentManager(
-                                forwardedBy,
-                                departmentName
+                            || !(
+                                AppRoles.IsSuperAdmin(forwardedBy)
+                                || (
+                                    forwardedBy.Role == AppRoles.PermitReviewer
+                                    && forwardedBy.CanEditPermit
+                                )
                             )
                         )
                         {
@@ -330,25 +343,26 @@ namespace VehiclePermitSystemWeb.Services.Permits
                     }
 
                     permit.ManagerName = generalManager.DisplayName;
+                    permit.ApprovalStatus = Permit.ApprovalStatusPending;
 
                     _permitAuditService.RecordPermitActivity(
                         db,
                         permit,
-                        "ForwardToGeneralManager",
-                        "رفع الطلب للمدير العام",
-                        $"تم رفع الطلب رقم {permit.PermitNumber} من مدير القسم إلى المدير العام.",
+                        "SubmitForSecurityApproval",
+                        "اكتمال التدقيق",
+                        $"اكتمل تدقيق الطلب رقم {permit.PermitNumber} وتم رفعه إلى مدير الأمن.",
                         "PermitsController",
                         performedBy,
                         _systemClock.LocalNow,
-                        reasonCode: "ForwardToGeneralManager"
+                        reasonCode: "SubmitForSecurityApproval"
                     );
                     _permitAuditService.RecordUserActivity(
                         db,
                         generalManager.Username,
                         generalManager.DisplayName,
-                        "ForwardedRequest",
-                        "طلب محوّل من مدير القسم",
-                        $"تم رفع الطلب رقم {permit.PermitNumber} من مدير القسم إلى المدير العام.",
+                        "SecurityApprovalRequested",
+                        "طلب بانتظار اعتماد الأمن",
+                        $"اكتمل تدقيق الطلب رقم {permit.PermitNumber} وهو بانتظار اعتماد مدير الأمن.",
                         "PermitsController",
                         performedBy,
                         _systemClock.LocalNow
@@ -390,6 +404,11 @@ namespace VehiclePermitSystemWeb.Services.Permits
                 string.Equals(
                     user.Role,
                     AppRoles.GeneralManager,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || string.Equals(
+                    user.Role,
+                    AppRoles.SecurityManager,
                     StringComparison.OrdinalIgnoreCase
                 )
             )

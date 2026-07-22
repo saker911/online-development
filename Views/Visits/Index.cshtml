@@ -119,12 +119,7 @@
 <div class="records-page-shell records-page-shell-visits">
     <section class="records-page-hero card-permit app-card-surface">
         <div class="records-page-hero-copy">
-            <span class="records-page-kicker">@(Model.SuspendedOnly ? "الزيارات الموقوفة" : "إدارة الزيارات")</span>
-            <h1>@(Model.SuspendedOnly ? "متابعة الزيارات الموقوفة" : "الزيارات وحالة الوصول")</h1>
-            <p class="text-muted-ar mb-0">
-                شاشة مرنة لمتابعة الزيارات اليومية، الوصول والمغادرة، والحالات التي تحتاج تدخلاً أو اعتمادًا مع أقل قدر
-                من التشتيت.
-            </p>
+            <h1>@(Model.SuspendedOnly ? "الزيارات الموقوفة" : "الزيارات")</h1>
 
             <div class="records-page-chip-list">
                 <span class="records-page-chip">الحالة الحالية: @(Model.SuspendedOnly ? "موقوفة" :
@@ -134,10 +129,6 @@
                     @if (hasSearch)
                     {
                         <span class="records-page-chip records-page-chip-accent">البحث: @Model.SearchTerm</span>
-                    }
-                    else
-                    {
-                        <span class="records-page-chip">العرض الحالي: السجلات المتاحة ضمن صلاحياتك</span>
                     }
                 </div>
             </div>
@@ -290,20 +281,6 @@
                 <div class="records-page-table-head">
                     <div>
                         <h2>@(Model.SuspendedOnly ? "الزيارات الموقوفة" : "قائمة الزيارات")</h2>
-                        <p class="text-muted-ar mb-0">
-                            @if (hasSearch)
-                            {
-                                <span>نتائج البحث الحالية عن: <strong>@Model.SearchTerm</strong></span>
-                            }
-                            else if (Model.SuspendedOnly)
-                            {
-                                <span>عرض مباشر للسجلات الموقوفة لتسهيل الاستئناف أو المراجعة.</span>
-                            }
-                            else
-                            {
-                                <span>عرض موحد للزيارات الجارية والمنتهية والمعلقة ضمن نطاق العرض الحالي.</span>
-                            }
-                        </p>
                     </div>
                     <div class="records-page-table-meta">
                         <span class="records-page-meta-chip">الصفحة @Model.CurrentPage من @Math.Max(Model.TotalPages, 1)</span>
@@ -316,20 +293,6 @@
                     <div class="records-page-empty-state">
                         <div class="records-page-empty-illustration" aria-hidden="true">🧾</div>
                         <h3>لا توجد زيارات مطابقة</h3>
-                        <p class="text-muted-ar mb-0">
-                            @if (hasSearch)
-                            {
-                                <span>غيّر نص البحث أو عدّل حالة العرض الحالية لعرض نتائج أخرى.</span>
-                            }
-                            else if (Model.SuspendedOnly)
-                            {
-                                <span>لا توجد زيارات موقوفة ضمن العرض الحالي.</span>
-                            }
-                            else
-                            {
-                                <span>لا توجد زيارات متاحة حاليًا ضمن النطاق المرئي لهذه الجلسة.</span>
-                            }
-                        </p>
                         <div class="records-page-empty-actions">
                             <a asp-action="@(Model.SuspendedOnly ? "Suspended" : "Index")"
                                class="btn btn-outline-secondary btn-sm">إعادة ضبط</a>

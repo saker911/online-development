@@ -1,280 +1,354 @@
-@model TenantManagementViewModel
+@model VehiclePermitSystemWeb.Models.ViewModels.Tenants.TenantManagementViewModel
+@using VehiclePermitSystemWeb.Models.Entities
 
 @{
-    ViewData["Title"] = "الجهات والشركات";
+    ViewData["Title"] = "إدارة الجهات";
     var isEditMode = !string.IsNullOrWhiteSpace(Model.Editor.TenantId);
+    var forceEditorOpen = isEditMode || !ViewData.ModelState.IsValid;
 
-    string GetSubscriptionBadgeClass(string status)
+    string GetSubscriptionClass(string status) => status switch
     {
-        return status switch
-        {
-            TenantSubscriptionStatuses.PendingPayment => "bg-warning text-dark",
-            TenantSubscriptionStatuses.Trial => "bg-info text-dark",
-            TenantSubscriptionStatuses.Active => "bg-success",
-            TenantSubscriptionStatuses.Suspended => "bg-warning text-dark",
-            TenantSubscriptionStatuses.Expired => "bg-danger",
-            _ => "bg-secondary"
-        };
-    }
+        TenantSubscriptionStatuses.PendingPayment => "is-pending",
+        TenantSubscriptionStatuses.Trial => "is-trial",
+        TenantSubscriptionStatuses.Active => "is-active",
+        TenantSubscriptionStatuses.Suspended => "is-suspended",
+        TenantSubscriptionStatuses.Expired => "is-expired",
+        _ => "is-neutral",
+    };
 }
 
-<div class="users-index-shell users-index-shell-compact">
-    <div class="users-index-hero app-card-surface">
-        <div class="users-index-hero-copy">
-            <span class="users-section-kicker">إدارة SaaS</span>
-            <div class="users-index-title-row">
-                <h1>الجهات والشركات</h1>
-            </div>
-            <p>إدارة الجهات المعزولة داخل نسخة الأون لاين، مع متابعة عدد المستخدمين والتصاريح والزيارات لكل جهة.</p>
-        </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/tenants-pages.css" asp-append-version="true" />
+}
 
-        <div class="users-index-hero-stats">
-            <div class="users-index-stat users-index-stat-total">
-                <span>إجمالي الجهات</span>
-                <strong>@Model.TotalTenants</strong>
-                <small>جهة مسجلة</small>
-            </div>
-            <div class="users-index-stat users-index-stat-active">
-                <span>النشطة</span>
-                <strong>@Model.ActiveTenants</strong>
-                <small>يمكن استخدامها</small>
-            </div>
-            <div class="users-index-stat users-index-stat-warning">
-                <span>الموقوفة</span>
-                <strong>@Model.BlockedTenants</strong>
-                <small>بسبب الحالة أو الاشتراك</small>
-            </div>
-            <div class="users-index-stat users-index-stat-role">
-                <span>المستخدمون</span>
-                <strong>@Model.TotalUsers</strong>
-                <small>عبر كل الجهات</small>
-            </div>
+<div class="tenants-page">
+    <header class="tenants-header">
+        <div class="tenants-header-copy">
+            <span class="tenants-kicker">إدارة المنصة</span>
+            <h1>إدارة الجهات</h1>
+            <p>متابعة الاشتراكات والحسابات والاستخدام من مكان واحد.</p>
         </div>
+        <button type="button" class="btn btn-primary" data-open-tenant-editor>
+            إضافة جهة
+        </button>
+    </header>
+
+    <div class="tenants-stat-strip" aria-label="ملخص الجهات">
+        <div><span>إجمالي الجهات</span><strong>@Model.TotalTenants</strong></div>
+        <div><span>الجهات النشطة</span><strong>@Model.ActiveTenants</strong></div>
+        <div><span>غير المتاحة</span><strong>@Model.BlockedTenants</strong></div>
+        <div><span>إجمالي الحسابات</span><strong>@Model.TotalUsers</strong></div>
     </div>
 
-    <div class="users-index-summary-grid">
-        <section class="users-card app-card-surface">
-            <div class="users-card-header users-card-header-inline">
-                <div>
-                    <span class="users-section-kicker">@(isEditMode ? "تعديل جهة" : "جهة جديدة")</span>
-                    <h2>@(isEditMode ? Model.Editor.Name : "إضافة جهة")</h2>
+    <details class="tenant-editor" id="tenantEditor" data-force-open="@forceEditorOpen.ToString().ToLowerInvariant()">
+        <summary>
+            <span>
+                <strong>@(isEditMode ? "تعديل الجهة" : "إضافة جهة جديدة")</strong>
+                <small>@(isEditMode ? Model.Editor.Name : "بيانات الجهة والاشتراك والرابط المختصر")</small>
+            </span>
+            <span class="tenant-editor-chevron" aria-hidden="true">⌄</span>
+        </summary>
+
+        <form asp-action="@(isEditMode ? "Update" : "Create")"
+              asp-route-id="@(isEditMode ? Model.Editor.TenantId : null)"
+              method="post"
+              class="tenant-editor-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="field-validation-error"></div>
+
+            <div class="tenant-form-grid">
+                <div class="tenant-field tenant-field-wide">
+                    <label asp-for="Editor.Name"></label>
+                    <input asp-for="Editor.Name" name="Name" class="form-control" />
+                    <span asp-validation-for="Editor.Name" class="field-validation-error"></span>
                 </div>
+                <div class="tenant-field">
+                    <label asp-for="Editor.TenantId"></label>
+                    <input asp-for="Editor.TenantId" name="TenantId" class="form-control ltr-field" readonly="@isEditMode" />
+                    <span asp-validation-for="Editor.TenantId" class="field-validation-error"></span>
+                </div>
+                <div class="tenant-field">
+                    <label asp-for="Editor.Slug"></label>
+                    <input asp-for="Editor.Slug" name="Slug" class="form-control ltr-field" />
+                    <span asp-validation-for="Editor.Slug" class="field-validation-error"></span>
+                </div>
+                <div class="tenant-field">
+                    <label asp-for="Editor.DepartmentName"></label>
+                    <input asp-for="Editor.DepartmentName" name="DepartmentName" class="form-control" />
+                    <span asp-validation-for="Editor.DepartmentName" class="field-validation-error"></span>
+                </div>
+                <div class="tenant-field">
+                    <label asp-for="Editor.SubscriptionStatus"></label>
+                    <select asp-for="Editor.SubscriptionStatus" name="SubscriptionStatus" class="form-select">
+                        @foreach (var status in Model.Editor.SubscriptionStatusOptions)
+                        {
+                            <option value="@status">@TenantSubscriptionStatuses.GetDisplayName(status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="tenant-field">
+                    <label asp-for="Editor.PlanName"></label>
+                    <input asp-for="Editor.PlanName" name="PlanName" class="form-control" />
+                    <span asp-validation-for="Editor.PlanName" class="field-validation-error"></span>
+                </div>
+                <div class="tenant-field date-field-shell" data-date-field data-date-display-mode="hijri">
+                    <label asp-for="Editor.TrialEndsAtUtc"></label>
+                    <div class="date-input-shell">
+                        <input asp-for="Editor.TrialEndsAtUtc"
+                               asp-format="{0:yyyy-MM-dd}"
+                               id="TrialEndsAtUtc"
+                               name="TrialEndsAtUtc"
+                               type="date"
+                               value="@(Model.Editor.TrialEndsAtUtc?.ToString("yyyy-MM-dd"))"
+                               class="form-control ltr-field hijri-source-input date-native-hidden"
+                               lang="ar-SA"
+                               data-hijri-source />
+                        <div class="date-inline-preview date-inline-overlay"
+                             data-hijri-preview-for="TrialEndsAtUtc"
+                             data-empty-text="يوم/شهر/سنة">
+                            @(Model.Editor.TrialEndsAtUtc.HasValue ? DateHelper.ToArabicHijri(Model.Editor.TrialEndsAtUtc.Value) : "يوم/شهر/سنة")
+                        </div>
+                        <label class="date-hijri-toggle" dir="rtl">
+                            <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                            <input type="checkbox" checked data-date-hijri-switch />
+                            <span class="date-hijri-toggle-track"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="tenant-field date-field-shell" data-date-field data-date-display-mode="hijri">
+                    <label asp-for="Editor.SubscriptionEndsAtUtc"></label>
+                    <div class="date-input-shell">
+                        <input asp-for="Editor.SubscriptionEndsAtUtc"
+                               asp-format="{0:yyyy-MM-dd}"
+                               id="SubscriptionEndsAtUtc"
+                               name="SubscriptionEndsAtUtc"
+                               type="date"
+                               value="@(Model.Editor.SubscriptionEndsAtUtc?.ToString("yyyy-MM-dd"))"
+                               class="form-control ltr-field hijri-source-input date-native-hidden"
+                               lang="ar-SA"
+                               data-hijri-source />
+                        <div class="date-inline-preview date-inline-overlay"
+                             data-hijri-preview-for="SubscriptionEndsAtUtc"
+                             data-empty-text="يوم/شهر/سنة">
+                            @(Model.Editor.SubscriptionEndsAtUtc.HasValue ? DateHelper.ToArabicHijri(Model.Editor.SubscriptionEndsAtUtc.Value) : "يوم/شهر/سنة")
+                        </div>
+                        <label class="date-hijri-toggle" dir="rtl">
+                            <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                            <input type="checkbox" checked data-date-hijri-switch />
+                            <span class="date-hijri-toggle-track"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tenant-form-actions">
                 @if (isEditMode)
                 {
-                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">إلغاء التعديل</a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
                 }
+                <button type="submit" class="btn btn-primary">@(isEditMode ? "حفظ التعديل" : "إضافة الجهة")</button>
             </div>
+        </form>
+    </details>
 
-            <form asp-action="@(isEditMode ? "Update" : "Create")"
-                  asp-route-id="@(isEditMode ? Model.Editor.TenantId : null)"
-                  method="post"
-                  class="compact-form-card">
-                @Html.AntiForgeryToken()
-                <div asp-validation-summary="ModelOnly" class="field-validation-error mb-2"></div>
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="Editor.Name" class="form-label"></label>
-                        <input asp-for="Editor.Name" name="Name" class="form-control" />
-                        <span asp-validation-for="Editor.Name" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="Editor.TenantId" class="form-label"></label>
-                        <input asp-for="Editor.TenantId" name="TenantId" class="form-control" dir="ltr" readonly="@isEditMode" />
-                        <div class="form-text">يستخدم داخليًا في العزل والصلاحيات. اتركه فارغًا عند الإضافة لتوليده من الاسم.</div>
-                        <span asp-validation-for="Editor.TenantId" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="Editor.Slug" class="form-label"></label>
-                        <input asp-for="Editor.Slug" name="Slug" class="form-control" dir="ltr" />
-                        <div class="form-text">رابط الجهة داخل المنصة: /o/company-name</div>
-                        <span asp-validation-for="Editor.Slug" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="Editor.DepartmentName" class="form-label"></label>
-                        <input asp-for="Editor.DepartmentName" name="DepartmentName" class="form-control" />
-                        <span asp-validation-for="Editor.DepartmentName" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-4">
-                        <label asp-for="Editor.SubscriptionStatus" class="form-label"></label>
-                        <select asp-for="Editor.SubscriptionStatus" name="SubscriptionStatus" class="form-select">
-                            @foreach (var status in Model.Editor.SubscriptionStatusOptions)
-                            {
-                                <option value="@status">@TenantSubscriptionStatuses.GetDisplayName(status)</option>
-                            }
-                        </select>
-                        <span asp-validation-for="Editor.SubscriptionStatus" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-4">
-                        <label asp-for="Editor.PlanName" class="form-label"></label>
-                        <input asp-for="Editor.PlanName" name="PlanName" class="form-control" />
-                        <span asp-validation-for="Editor.PlanName" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-6 date-field-shell" data-date-field data-date-display-mode="hijri">
-                        <div class="date-field-head">
-                            <label asp-for="Editor.TrialEndsAtUtc" class="form-label mb-0"></label>
-                        </div>
-                        <div class="date-input-shell">
-                            <input asp-for="Editor.TrialEndsAtUtc"
-                                   asp-format="{0:yyyy-MM-dd}"
-                                   id="TrialEndsAtUtc"
-                                   name="TrialEndsAtUtc"
-                                   type="date"
-                                   value="@(Model.Editor.TrialEndsAtUtc?.ToString("yyyy-MM-dd"))"
-                                   class="form-control ltr-field hijri-source-input date-native-hidden"
-                                   lang="ar-SA"
-                                   data-hijri-source />
-                            <div class="date-inline-preview date-inline-overlay"
-                                 data-hijri-preview-for="TrialEndsAtUtc"
-                                 data-empty-text="يوم/شهر/سنة">
-                                @(Model.Editor.TrialEndsAtUtc.HasValue ? DateHelper.ToArabicHijri(Model.Editor.TrialEndsAtUtc.Value) : "يوم/شهر/سنة")
-                            </div>
-                            <label class="date-hijri-toggle" dir="rtl">
-                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
-                                <input type="checkbox" checked data-date-hijri-switch />
-                                <span class="date-hijri-toggle-track"></span>
-                            </label>
-                        </div>
-                        <span asp-validation-for="Editor.TrialEndsAtUtc" class="field-validation-error"></span>
-                    </div>
-                    <div class="col-md-6 date-field-shell" data-date-field data-date-display-mode="hijri">
-                        <div class="date-field-head">
-                            <label asp-for="Editor.SubscriptionEndsAtUtc" class="form-label mb-0"></label>
-                        </div>
-                        <div class="date-input-shell">
-                            <input asp-for="Editor.SubscriptionEndsAtUtc"
-                                   asp-format="{0:yyyy-MM-dd}"
-                                   id="SubscriptionEndsAtUtc"
-                                   name="SubscriptionEndsAtUtc"
-                                   type="date"
-                                   value="@(Model.Editor.SubscriptionEndsAtUtc?.ToString("yyyy-MM-dd"))"
-                                   class="form-control ltr-field hijri-source-input date-native-hidden"
-                                   lang="ar-SA"
-                                   data-hijri-source />
-                            <div class="date-inline-preview date-inline-overlay"
-                                 data-hijri-preview-for="SubscriptionEndsAtUtc"
-                                 data-empty-text="يوم/شهر/سنة">
-                                @(Model.Editor.SubscriptionEndsAtUtc.HasValue ? DateHelper.ToArabicHijri(Model.Editor.SubscriptionEndsAtUtc.Value) : "يوم/شهر/سنة")
-                            </div>
-                            <label class="date-hijri-toggle" dir="rtl">
-                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
-                                <input type="checkbox" checked data-date-hijri-switch />
-                                <span class="date-hijri-toggle-track"></span>
-                            </label>
-                        </div>
-                        <span asp-validation-for="Editor.SubscriptionEndsAtUtc" class="field-validation-error"></span>
-                    </div>
-                </div>
-
-                <div class="users-index-actions mt-3">
-                    <button type="submit" class="btn btn-primary btn-sm">@(isEditMode ? "حفظ التعديل" : "إضافة الجهة")</button>
-                </div>
-            </form>
-        </section>
-
-        <section class="users-card app-card-surface">
-            <div class="users-card-header users-card-header-inline">
-                <div>
-                    <span class="users-section-kicker">المتابعة</span>
-                    <h2>حالة العزل</h2>
-                </div>
-            </div>
-            <div class="users-mini-list">
-                <div class="users-mini-list-row"><span>فلترة البيانات حسب الجهة</span><strong>مفعلة</strong></div>
-                <div class="users-mini-list-row"><span>إعدادات مستقلة لكل جهة</span><strong>مفعلة</strong></div>
-                <div class="users-mini-list-row"><span>إدارة الاشتراكات</span><strong>مفعلة</strong></div>
-                <div class="users-mini-list-row"><span>رابط دخول مستقل لكل جهة</span><strong>مفعل</strong></div>
-            </div>
-        </section>
-    </div>
-
-    <section class="users-card app-card-surface">
-        <div class="users-card-header users-card-header-inline">
+    <section class="tenant-registry" aria-labelledby="tenantRegistryTitle">
+        <div class="tenant-registry-head">
             <div>
-                <span class="users-section-kicker">السجل</span>
-                <h2>الجهات المسجلة</h2>
+                <span class="tenants-kicker">السجل</span>
+                <h2 id="tenantRegistryTitle">الجهات المسجلة</h2>
             </div>
-            <span class="users-count-pill">@Model.Tenants.Count جهة</span>
+            <div class="tenant-registry-tools">
+                <label class="tenant-search">
+                    <span class="visually-hidden">بحث في الجهات</span>
+                    <input id="tenantSearch" type="search" class="form-control" placeholder="بحث بالاسم أو المعرف" autocomplete="off" />
+                </label>
+                <label>
+                    <span class="visually-hidden">تصفية حسب الحالة</span>
+                    <select id="tenantStateFilter" class="form-select">
+                        <option value="all">كل الحالات</option>
+                        <option value="active">النشطة</option>
+                        <option value="inactive">الموقوفة</option>
+                    </select>
+                </label>
+                <span class="tenant-visible-count"><strong id="tenantVisibleCount">@Model.Tenants.Count</strong> جهة</span>
+            </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table users-table align-middle">
+        <div class="tenant-table-wrap">
+            <table class="tenant-table">
                 <thead>
                     <tr>
                         <th>الجهة</th>
-                        <th>المعرف</th>
                         <th>الاشتراك</th>
-                        <th>رابط الدخول</th>
-                        <th>المستخدمون</th>
-                        <th>التصاريح</th>
-                        <th>الزيارات</th>
+                        <th>الاستخدام</th>
+                        <th>الوصول</th>
                         <th>الحالة</th>
-                        <th class="text-end">إجراءات</th>
+                        <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var tenant in Model.Tenants)
                     {
-                        <tr>
-                            <td>
-                                <strong>@tenant.Name</strong>
-                                <div class="text-muted small">@(string.IsNullOrWhiteSpace(tenant.OrganizationName) ? "بدون إعدادات محفوظة" : tenant.OrganizationName)</div>
+                        var isDefault = string.Equals(tenant.TenantId, TenantDefaults.DefaultTenantId, StringComparison.OrdinalIgnoreCase);
+                        var searchValue = $"{tenant.Name} {tenant.OrganizationName} {tenant.TenantId} {tenant.Slug}".ToLowerInvariant();
+                        <tr data-tenant-row data-search="@searchValue" data-state="@(tenant.IsActive ? "active" : "inactive")">
+                            <td data-label="الجهة">
+                                <div class="tenant-identity">
+                                    <strong>@tenant.Name</strong>
+                                    <span>@(string.IsNullOrWhiteSpace(tenant.OrganizationName) ? "بدون اسم تشغيلي" : tenant.OrganizationName)</span>
+                                    <code>@tenant.TenantId</code>
+                                </div>
                             </td>
-                            <td dir="ltr">@tenant.TenantId<br /><span class="text-muted small">@tenant.Slug</span></td>
-                            <td>
-                                <span class="badge @GetSubscriptionBadgeClass(tenant.SubscriptionStatus)">
-                                    @tenant.SubscriptionStatusDisplayName
-                                </span>
-                                <div class="text-muted small">@tenant.PlanName</div>
+                            <td data-label="الاشتراك">
+                                <span class="tenant-subscription @GetSubscriptionClass(tenant.SubscriptionStatus)">@tenant.SubscriptionStatusDisplayName</span>
+                                <strong class="tenant-plan">@tenant.PlanName</strong>
                                 @if (tenant.SubscriptionEndsAtUtc.HasValue)
                                 {
-                                    <div class="text-muted small">ينتهي @tenant.SubscriptionEndsAtUtc.Value.ToString("yyyy-MM-dd")</div>
+                                    <span class="tenant-date">حتى @tenant.SubscriptionEndsAtUtc.Value.ToString("yyyy-MM-dd")</span>
                                 }
                             </td>
-                            <td>
+                            <td data-label="الاستخدام">
+                                <div class="tenant-usage">
+                                    <span><strong>@tenant.UserCount</strong> حساب</span>
+                                    <span><strong>@tenant.PermitCount</strong> تصريح</span>
+                                    <span><strong>@tenant.VisitCount</strong> زيارة</span>
+                                </div>
+                            </td>
+                            <td data-label="الوصول">
                                 <a asp-controller="Account"
                                    asp-action="TenantEntry"
                                    asp-route-tenant="@tenant.Slug"
-                                   class="btn btn-outline-secondary btn-sm"
+                                   class="tenant-entry-link"
                                    target="_blank"
-                                   rel="noopener">فتح الرابط</a>
-                                <div class="text-muted small" dir="ltr">/o/@tenant.Slug</div>
+                                   rel="noopener">فتح صفحة الدخول</a>
+                                <code>/o/@tenant.Slug</code>
                             </td>
-                            <td>@tenant.UserCount</td>
-                            <td>@tenant.PermitCount</td>
-                            <td>@tenant.VisitCount</td>
-                            <td>
-                                <span class="badge @(tenant.IsActive ? "bg-success" : "bg-secondary")">
+                            <td data-label="الحالة">
+                                <span class="tenant-state @(tenant.IsActive ? "is-active" : "is-inactive")">
                                     @(tenant.IsActive ? "نشطة" : "موقوفة")
                                 </span>
+                                <small>@(tenant.IsActive ? "الحسابات متاحة" : "الحسابات محجوبة")</small>
                             </td>
-                            <td class="text-end">
-                                <div class="users-inline-actions justify-content-end">
+                            <td data-label="الإجراءات">
+                                <div class="tenant-actions">
                                     <a asp-action="Index" asp-route-edit="@tenant.TenantId" class="btn btn-outline-primary btn-sm">تعديل</a>
                                     @if (string.Equals(tenant.SubscriptionStatus, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal))
                                     {
-                                        <form asp-action="ActivatePayment" asp-route-id="@tenant.TenantId" method="post" class="d-inline">
+                                        <form asp-action="ActivatePayment" asp-route-id="@tenant.TenantId" method="post">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-success btn-sm">تأكيد الدفع</button>
                                         </form>
                                     }
-                                    <form asp-action="SetActive" asp-route-id="@tenant.TenantId" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="isActive" value="@(!tenant.IsActive)" />
-                                        <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                            @(tenant.IsActive ? "إيقاف" : "تفعيل")
+                                    @if (!isDefault)
+                                    {
+                                        <form asp-action="SetActive" asp-route-id="@tenant.TenantId" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="isActive" value="@(!tenant.IsActive)" />
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                                @(tenant.IsActive ? "إيقاف" : "تفعيل")
+                                            </button>
+                                        </form>
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm"
+                                                data-delete-tenant
+                                                data-tenant-id="@tenant.TenantId"
+                                                data-tenant-name="@tenant.Name"
+                                                disabled="@tenant.IsActive"
+                                                title="@(tenant.IsActive ? "أوقف الجهة قبل حذفها" : "حذف الجهة نهائياً")">
+                                            حذف
                                         </button>
-                                    </form>
+                                    }
                                 </div>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
+            <div class="tenant-empty-state" id="tenantEmptyState" hidden>لا توجد جهات مطابقة.</div>
         </div>
     </section>
 </div>
 
+<dialog class="tenant-delete-dialog" id="tenantDeleteDialog">
+    <form asp-action="Delete" method="post" id="tenantDeleteForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="deleteTenantId" />
+        <div class="tenant-delete-head">
+            <span>حذف نهائي</span>
+            <button type="button" class="tenant-dialog-close" data-close-delete-dialog aria-label="إغلاق">×</button>
+        </div>
+        <h2>حذف <span id="deleteTenantName"></span>؟</h2>
+        <p>سيتم حذف الحسابات والتصاريح والزيارات والإعدادات نهائياً.</p>
+        <label for="deleteTenantConfirmation">اكتب اسم الجهة للتأكيد</label>
+        <input type="text" class="form-control" name="confirmationName" id="deleteTenantConfirmation" autocomplete="off" />
+        <div class="tenant-delete-actions">
+            <button type="button" class="btn btn-outline-secondary" data-close-delete-dialog>إلغاء</button>
+            <button type="submit" class="btn btn-danger" id="confirmTenantDelete" disabled>حذف نهائي</button>
+        </div>
+    </form>
+</dialog>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        (() => {
+            const editor = document.getElementById('tenantEditor');
+            if (editor?.dataset.forceOpen === 'true') editor.open = true;
+            document.querySelector('[data-open-tenant-editor]')?.addEventListener('click', () => {
+                if (!editor) return;
+                editor.open = true;
+                editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                window.setTimeout(() => editor.querySelector('input:not([readonly])')?.focus(), 350);
+            });
+
+            const search = document.getElementById('tenantSearch');
+            const stateFilter = document.getElementById('tenantStateFilter');
+            const rows = Array.from(document.querySelectorAll('[data-tenant-row]'));
+            const visibleCount = document.getElementById('tenantVisibleCount');
+            const emptyState = document.getElementById('tenantEmptyState');
+            const applyFilters = () => {
+                const query = (search?.value || '').trim().toLowerCase();
+                const state = stateFilter?.value || 'all';
+                let count = 0;
+                rows.forEach((row) => {
+                    const matchesSearch = !query || (row.dataset.search || '').includes(query);
+                    const matchesState = state === 'all' || row.dataset.state === state;
+                    row.hidden = !(matchesSearch && matchesState);
+                    if (!row.hidden) count += 1;
+                });
+                if (visibleCount) visibleCount.textContent = String(count);
+                if (emptyState) emptyState.hidden = count !== 0;
+            };
+            search?.addEventListener('input', applyFilters);
+            stateFilter?.addEventListener('change', applyFilters);
+
+            const dialog = document.getElementById('tenantDeleteDialog');
+            const deleteId = document.getElementById('deleteTenantId');
+            const deleteName = document.getElementById('deleteTenantName');
+            const confirmation = document.getElementById('deleteTenantConfirmation');
+            const confirmButton = document.getElementById('confirmTenantDelete');
+            let expectedName = '';
+
+            document.querySelectorAll('[data-delete-tenant]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    expectedName = button.dataset.tenantName || '';
+                    if (deleteId) deleteId.value = button.dataset.tenantId || '';
+                    if (deleteName) deleteName.textContent = expectedName;
+                    if (confirmation) confirmation.value = '';
+                    if (confirmButton) confirmButton.disabled = true;
+                    dialog?.showModal();
+                    confirmation?.focus();
+                });
+            });
+            confirmation?.addEventListener('input', () => {
+                if (confirmButton) confirmButton.disabled = confirmation.value.trim() !== expectedName;
+            });
+            document.querySelectorAll('[data-close-delete-dialog]').forEach((button) => {
+                button.addEventListener('click', () => dialog?.close());
+            });
+            dialog?.addEventListener('click', (event) => {
+                if (event.target === dialog) dialog.close();
+            });
+        })();
+    </script>
 }

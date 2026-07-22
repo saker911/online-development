@@ -366,6 +366,7 @@ internal static partial class ScenarioCatalog
         settings.AttendanceGraceMinutes = attendanceGraceMinutes;
         settings.WorkEndExitGraceMinutes = workEndExitGraceMinutes;
         settings.LateReturnGraceMinutes = lateReturnGraceMinutes;
+        settings.LeaveRequestsEnabled = true;
         settings.OfficialWorkDaysCsv = officialWorkDaysCsv;
         settings.LastWorkEndClosureAt = null;
         db.SaveChanges();

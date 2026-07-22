@@ -938,6 +938,13 @@ main:has(.users-registration-shell) {
     box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
 }
 
+.users-registration-form .ue-card[data-users-panel-container] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
 .users-registration-form .ue-field .form-control,
 .users-registration-form .ue-field .form-select,
 .users-registration-form .ue-field textarea.form-control,
@@ -2109,6 +2116,10 @@ main:has(.users-registration-shell) {
     grid-auto-flow: initial;
 }
 
+.users-inline-actions-grow.users-inline-actions-with-tenant {
+    grid-template-columns: minmax(220px, 1fr) 180px 170px 150px;
+}
+
 .users-index-shell-compact {
     gap: 10px;
 }
@@ -2130,6 +2141,10 @@ main:has(.users-registration-shell) {
 .users-index-shell-compact .users-inline-actions-grow {
     grid-template-columns: minmax(180px, 1fr) 150px 130px;
     gap: 8px;
+}
+
+.users-index-shell-compact .users-inline-actions-grow.users-inline-actions-with-tenant {
+    grid-template-columns: minmax(180px, 1fr) 170px 145px 125px;
 }
 
 .users-mini-list {
@@ -2264,6 +2279,94 @@ main:has(.users-registration-shell) {
 
 .users-index-table tbody td {
     background: #ffffff;
+}
+
+.users-index-table .users-tenant-group-row td {
+    width: 100% !important;
+    padding: 0.68rem 0.85rem;
+    border: 0;
+    border-block: 1px solid #d9e5f1;
+    border-inline-start: 3px solid #16818d;
+    background: #f1f7f8;
+}
+
+.users-tenant-group-heading,
+.users-tenant-group-identity,
+.users-tenant-group-meta {
+    display: flex;
+    align-items: center;
+}
+
+.users-tenant-group-heading {
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.users-tenant-group-identity {
+    min-width: 0;
+    gap: 10px;
+}
+
+.users-tenant-group-identity>div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.users-tenant-group-identity strong {
+    color: #122438;
+    font-size: 0.9rem;
+}
+
+.users-tenant-group-identity small {
+    overflow: hidden;
+    color: #65778d;
+    font-size: 0.68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.users-tenant-group-mark {
+    width: 10px;
+    height: 30px;
+    flex: 0 0 10px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #16818d, #1f9d73);
+}
+
+.users-tenant-group-meta {
+    flex: 0 0 auto;
+    gap: 6px;
+}
+
+.users-tenant-group-meta span {
+    padding: 0.18rem 0.5rem;
+    border: 1px solid #cbdde1;
+    border-radius: 999px;
+    color: #37566a;
+    background: rgba(255, 255, 255, 0.72);
+    font-size: 0.69rem;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .users-index-table .users-tenant-group-row td {
+    border-block-color: rgba(71, 85, 105, 0.58);
+    border-inline-start-color: #45b6a6;
+    background: rgba(18, 42, 51, 0.96);
+}
+
+[data-theme="dark"] .users-tenant-group-identity strong {
+    color: #e8f2f5;
+}
+
+[data-theme="dark"] .users-tenant-group-identity small {
+    color: #9fb4c6;
+}
+
+[data-theme="dark"] .users-tenant-group-meta span {
+    border-color: rgba(94, 137, 146, 0.5);
+    color: #c8e3e4;
+    background: rgba(8, 18, 30, 0.5);
 }
 
 .users-table-identity,
@@ -3638,5 +3741,42 @@ main:has(.users-registration-shell) {
     .users-index-table tbody tr,
     .user-management-table tbody tr {
         border-radius: var(--t-input-radius, 8px);
+    }
+
+    .users-index-table tbody tr.users-tenant-group-row {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .users-index-shell-compact .users-index-table .users-tenant-group-row td,
+    .users-index-table .users-tenant-group-row td {
+        padding: 0.65rem 0.75rem;
+        border-block: 1px solid #d9e5f1 !important;
+        border-inline-start: 3px solid #16818d !important;
+        background: #f1f7f8;
+    }
+
+    .users-index-table .users-tenant-group-row td::before {
+        display: none;
+        content: none;
+    }
+
+    .users-tenant-group-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .users-tenant-group-meta {
+        width: 100%;
+    }
+
+    [data-theme="dark"] .users-index-table .users-tenant-group-row td {
+        border-block-color: rgba(71, 85, 105, 0.58) !important;
+        border-inline-start-color: #45b6a6 !important;
+        background: rgba(18, 42, 51, 0.96);
     }
 }

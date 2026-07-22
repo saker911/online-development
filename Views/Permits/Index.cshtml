@@ -6,6 +6,7 @@
 @{
     ViewData["Title"] = "إدارة التصاريح";
     var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
+    var leaveRequestsEnabled = ViewData["LeaveRequestsEnabled"] as bool? == true;
 
     var totalPermits = Model.Permits.Count;
     var approvedPermits = Model.Permits.Count(p =>
@@ -28,6 +29,7 @@
     var canApproveLeaveRequest = User.HasPermission(AppPermissions.ApproveLeaveRequest);
     var canStopPermit = User.HasPermission(AppPermissions.StopPermit);
     var approvablePermitNumbers = Model.ApprovablePermitNumbers;
+    var reviewablePermitNumbers = Model.ReviewablePermitNumbers;
 
     var permitPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
     {
@@ -71,6 +73,8 @@
             ? "permit-state-badge is-approved"
             : string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase)
                 ? "permit-state-badge is-pending"
+                : string.Equals(status, "PendingReview", StringComparison.OrdinalIgnoreCase)
+                    ? "permit-state-badge is-pending"
                 : string.Equals(status, "Out", StringComparison.OrdinalIgnoreCase)
                     ? "permit-state-badge is-info"
                     : string.Equals(status, "Returned", StringComparison.OrdinalIgnoreCase)
@@ -121,24 +125,16 @@
 <div class="records-page-shell records-page-shell-permits">
     <section class="records-page-hero card-permit app-card-surface">
         <div class="records-page-hero-copy">
-            <span class="records-page-kicker">إدارة التصاريح</span>
-            <h1>التصاريح وحالة التنفيذ</h1>
-            <p class="text-muted-ar mb-0">
-                متابعة الطلبات، الحالات التشغيلية، والانتقال السريع إلى الإجراءات اليومية بدون ازدحام بصري أو عناصر تثقل
-                الصفحة.
-            </p>
+            <h1>التصاريح</h1>
 
             <div class="records-page-chip-list">
                 <span class="records-page-chip">الموقوفة: @Model.StoppedPermitsCount</span>
+                <span class="records-page-chip">قيد التدقيق: @Model.PendingReviewCount</span>
                 <span class="records-page-chip">أرشفة ظاهرة: @archivedPermits</span>
                 <span class="records-page-chip">تنبيهات تشغيلية: @operationalAlerts</span>
                 @if (hasSearch)
                 {
                     <span class="records-page-chip records-page-chip-accent">البحث: @Model.SearchTerm</span>
-                }
-                else
-                {
-                    <span class="records-page-chip">العرض الحالي: كل السجلات المتاحة ضمن صلاحياتك</span>
                 }
             </div>
         </div>
@@ -153,8 +149,8 @@
                     </svg>
                 </span>
                 <div class="permit-stat-copy">
-                    <span>بانتظار التنفيذ</span>
-                    <strong>@pendingPermits</strong>
+                    <span>بانتظار اعتماد الأمن</span>
+                    <strong>@Model.PendingApprovalCount</strong>
                 </div>
             </div>
             <div class="permit-stat-card permit-stat-card-approved">
@@ -288,16 +284,6 @@
                     <div class="records-page-table-head">
                         <div>
                             <h2>قائمة التصاريح</h2>
-                            <p class="text-muted-ar mb-0">
-                                @if (hasSearch)
-                                {
-                                    <span>نتائج البحث الحالية عن: <strong>@Model.SearchTerm</strong></span>
-                                }
-                                else
-                                {
-                                    <span>عرض مركّز للسجلات المتاحة ضمن صلاحياتك الحالية.</span>
-                                }
-                            </p>
                         </div>
                         <div class="records-page-table-meta">
                             <span class="records-page-meta-chip">الصفحة @Model.CurrentPage من @Math.Max(Model.TotalPages, 1)</span>
@@ -310,16 +296,6 @@
                         <div class="records-page-empty-state">
                             <div class="records-page-empty-illustration" aria-hidden="true">📄</div>
                             <h3>لا توجد نتائج مطابقة</h3>
-                            <p class="text-muted-ar mb-0">
-                                @if (hasSearch)
-                                {
-                                    <span>جرّب تغيير عبارة البحث أو إعادة ضبط الفلاتر لعرض السجلات المتاحة.</span>
-                                }
-                                else
-                                {
-                                    <span>لا توجد تصاريح مرئية حاليًا ضمن نطاق العرض الحالي.</span>
-                                }
-                            </p>
                             <div class="records-page-empty-actions">
                                 <a asp-action="Index" class="btn btn-outline-secondary btn-sm">إعادة ضبط</a>
                                 @if (canCreatePermit)
@@ -456,10 +432,12 @@
                                                                 <div class="permit-action-grid">
                                                                     @{
                                                                         var canApprovePermit = approvablePermitNumbers.Contains(item.PermitNumber);
+                                                                        var canReviewPermit = reviewablePermitNumbers.Contains(item.PermitNumber);
                                                                         var canDeletePermit = canEditPermit && !item.ArchivedAt.HasValue;
                                                                         var isApproved = string.Equals(item.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
                                                                         var canPrintLabel = CanRenderIssuedArtifacts(item.ApprovalStatus);
-                                                                        var canLeaveRequest = canApproveLeaveRequest
+                                                                        var canLeaveRequest = leaveRequestsEnabled
+                                                                            && canApproveLeaveRequest
                                                                             && isApproved
                                                                             && item.IsPermanentPermit
                                                                             && !item.RequiresReturn
@@ -543,6 +521,22 @@
                                                                                         aria-label="رفض التصريح @item.PermitNumber">
                                                                                     <span class="action-icon-glyph" aria-hidden="true">✕</span>
                                                                                     <span class="visually-hidden">رفض</span>
+                                                                                </button>
+                                                                            </form>
+                                                                        }
+
+                                                                        @if (canReviewPermit)
+                                                                        {
+                                                                            <form asp-action="ForwardToGeneralManager" asp-route-id="@item.PermitNumber"
+                                                                                  method="post" class="permit-action-form">
+                                                                                @Html.AntiForgeryToken()
+                                                                                <button type="submit"
+                                                                                        class="permit-action-tile permit-action-tile-warning action-icon-btn"
+                                                                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                        data-bs-title="اعتماد التدقيق" title="اعتماد التدقيق"
+                                                                                        aria-label="اعتماد تدقيق التصريح @item.PermitNumber">
+                                                                                    <span class="action-icon-glyph" aria-hidden="true">↥</span>
+                                                                                    <span class="visually-hidden">اعتماد التدقيق</span>
                                                                                 </button>
                                                                             </form>
                                                                         }

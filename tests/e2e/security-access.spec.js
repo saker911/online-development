@@ -88,22 +88,31 @@ test("Receptionist, GateSecurity, and Employee direct URL permissions are enforc
   await expectAccessDeniedOrLogin(page, "/Permits/Create");
 });
 
-test("manager with approval permission can access permit approval page", async ({ page }) => {
+test("reviewer forwards employee permit and security manager approves it", async ({ page }) => {
   await ensureOwnerSignedIn(page);
   await page.goto("/Administration/Edit");
   await page.locator('[name="SignatureText"]').fill("توقيع اعتماد المدير");
   await page.getByRole("button", { name: "حفظ البيانات" }).click();
   await page.getByRole("button", { name: "متابعة" }).click({ timeout: 2000 }).catch(() => {});
 
-  const departmentName = `قسم اختبار المدير ${uniqueSuffix()}`;
-  const manager = await createReadyUser(page, roles.manager, { department: departmentName });
-  await createManagedDepartment(page, departmentName, manager.username);
+  const departmentName = `موقع اختبار الأمن ${uniqueSuffix()}`;
+  const securityManager = await createReadyUser(page, roles.securityManager, {
+    department: departmentName,
+  });
+  const reviewer = await createReadyUser(page, roles.permitReviewer, {
+    department: departmentName,
+  });
   const permit = await createEmployeePermit(page, {
     departmentName,
-    managerName: manager.fullName,
   });
 
-  await signIn(page, manager.username, manager.password);
+  await signIn(page, reviewer.username, reviewer.password);
+  await submitForm(page, `/Permits/ForwardToGeneralManager/${permit.permitNumber}`, {}, {
+    tokenPath: `/Permits/Details/${permit.permitNumber}`,
+  });
+
+  await signOut(page);
+  await signIn(page, securityManager.username, securityManager.password);
   await page.goto(`/Permits/Approve/${permit.permitNumber}`);
   await expect(page.getByRole("heading", { name: "اعتماد التصريح" })).toBeVisible();
 });

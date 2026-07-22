@@ -112,12 +112,17 @@ namespace VehiclePermitSystemWeb.Services.Audit
             string? actualActorUsername = null,
             bool actedUnderDelegation = false,
             string? delegatedFromUsername = null,
-            int? delegationId = null
+            int? delegationId = null,
+            string? tenantId = null
         )
         {
+            var activityTenantId = string.IsNullOrWhiteSpace(tenantId)
+                ? db.CurrentTenantId
+                : tenantId.Trim();
             db.UserActivities.Add(
                 new UserActivity
                 {
+                    TenantId = activityTenantId,
                     Username = username,
                     DisplayName = displayName,
                     ActionType = actionType,
@@ -134,6 +139,7 @@ namespace VehiclePermitSystemWeb.Services.Audit
                 db.AuditLogs.Add(
                     new AuditLog
                     {
+                        TenantId = activityTenantId,
                         Username = username,
                         ActualActorUsername = actualActorUsername ?? recordedBy ?? username,
                         ActionType = actionType,

@@ -5,6 +5,10 @@
 }
 
 <div class="compact-form-shell">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <h1 class="mb-0">تعديل الزيارة</h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">العودة إلى القائمة</a>
+    </div>
     <form asp-action="Edit" method="post"
           class="card-permit app-card-surface app-form-surface compact-form-card permit-form needs-validation" novalidate>
         @Html.AntiForgeryToken()

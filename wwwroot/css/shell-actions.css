@@ -1,0 +1,159 @@
+/* Unified topbar action controls. Icons use the same Lucide geometry and stroke. */
+.app-topbar-actions {
+    gap: 7px;
+    flex-wrap: nowrap;
+}
+
+.app-topbar .icon-only-trigger,
+.app-topbar .notification-bell-trigger,
+.app-topbar .theme-toggle-btn,
+.app-topbar .user-menu-toggle {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+    padding: 0;
+    border: 1px solid #dbe3ec;
+    border-radius: 10px;
+    color: #334155;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+    transform: none;
+    transition: color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.app-topbar .icon-only-trigger:hover,
+.app-topbar .icon-only-trigger:focus-visible,
+.app-topbar .notification-bell-trigger:hover,
+.app-topbar .notification-bell-trigger:focus-visible,
+.app-topbar .theme-toggle-btn:hover,
+.app-topbar .theme-toggle-btn:focus-visible,
+.app-topbar .user-menu-toggle:hover,
+.app-topbar .user-menu-toggle:focus-visible {
+    color: #0f172a;
+    background: #f8fafc;
+    border-color: #aebdcd;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, .08), 0 4px 12px rgba(15, 23, 42, .08);
+    transform: translateY(-1px);
+}
+
+.app-topbar .icon-only-trigger:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+}
+
+.shell-action-icon {
+    width: 21px;
+    height: 21px;
+    display: block;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.shell-action-icon-user,
+.theme-toggle-icon,
+.theme-toggle-icon .shell-action-icon {
+    width: 22px;
+    height: 22px;
+}
+
+.theme-toggle-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+}
+
+.theme-toggle-icon .shell-action-icon {
+    grid-area: 1 / 1;
+    transition: opacity .2s ease, transform .25s ease;
+}
+
+.theme-toggle-moon {
+    opacity: 0;
+    transform: rotate(-18deg) scale(.72);
+}
+
+.theme-toggle-sun {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+}
+
+.theme-toggle-btn {
+    color: #b76b00 !important;
+}
+
+[data-theme="dark"] .theme-toggle-sun {
+    opacity: 0;
+    transform: rotate(35deg) scale(.72);
+}
+
+[data-theme="dark"] .theme-toggle-moon {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+}
+
+[data-theme="dark"] .app-topbar .icon-only-trigger,
+[data-theme="dark"] .app-topbar .notification-bell-trigger,
+[data-theme="dark"] .app-topbar .theme-toggle-btn,
+[data-theme="dark"] .app-topbar .user-menu-toggle {
+    color: #d4d4d4 !important;
+    background: #181818 !important;
+    border-color: #353535 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .28) !important;
+}
+
+[data-theme="dark"] .app-topbar .theme-toggle-btn {
+    color: #f4c15d !important;
+}
+
+[data-theme="dark"] .app-topbar .icon-only-trigger:hover,
+[data-theme="dark"] .app-topbar .icon-only-trigger:focus-visible,
+[data-theme="dark"] .app-topbar .notification-bell-trigger:hover,
+[data-theme="dark"] .app-topbar .notification-bell-trigger:focus-visible,
+[data-theme="dark"] .app-topbar .theme-toggle-btn:hover,
+[data-theme="dark"] .app-topbar .theme-toggle-btn:focus-visible,
+[data-theme="dark"] .app-topbar .user-menu-toggle:hover,
+[data-theme="dark"] .app-topbar .user-menu-toggle:focus-visible {
+    color: #fff !important;
+    background: #242424 !important;
+    border-color: #575757 !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .07), 0 4px 12px rgba(0, 0, 0, .28) !important;
+}
+
+[data-theme="dark"] .app-topbar .theme-toggle-btn:hover,
+[data-theme="dark"] .app-topbar .theme-toggle-btn:focus-visible {
+    color: #ffd171 !important;
+}
+
+@media (max-width: 575.98px) {
+    .app-topbar-actions {
+        gap: 5px;
+    }
+
+    .app-topbar .icon-only-trigger,
+    .app-topbar .notification-bell-trigger,
+    .app-topbar .theme-toggle-btn,
+    .app-topbar .user-menu-toggle {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
+        flex-basis: 42px;
+    }
+}
+
+@media (max-width: 359.98px) {
+    .app-topbar .app-brand-copy {
+        display: none;
+    }
+
+    .app-topbar .app-brand {
+        gap: 0;
+    }
+}

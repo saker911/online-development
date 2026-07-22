@@ -1,0 +1,62 @@
+const { expect, test } = require("@playwright/test");
+const { ensureOwnerSignedIn, uniqueSuffix } = require("./helpers/e2e-helpers");
+
+test("owner can stop and safely delete a tenant", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  await page.goto("/Tenants");
+  await expect(page.getByRole("heading", { name: "إدارة الجهات" })).toBeVisible();
+
+  const suffix = uniqueSuffix();
+  const tenantName = `جهة حذف ${suffix}`;
+  const tenantId = `delete-${suffix}`;
+
+  await page.getByRole("button", { name: "إضافة جهة" }).click();
+  await page.locator('[name="Name"]').fill(tenantName);
+  await page.locator('[name="TenantId"]').fill(tenantId);
+  await page.locator('[name="Slug"]').fill(tenantId);
+  await page.locator('[name="DepartmentName"]').fill("الإدارة العامة");
+  await page.getByRole("button", { name: "إضافة الجهة" }).click();
+
+  let row = page.getByRole("row", { name: new RegExp(tenantId) });
+  await expect(row).toBeVisible();
+  await expect(row.getByRole("button", { name: "حذف" })).toBeDisabled();
+
+  await row.getByRole("button", { name: "إيقاف" }).click();
+  row = page.getByRole("row", { name: new RegExp(tenantId) });
+  await expect(row.getByText("الحسابات محجوبة")).toBeVisible();
+
+  await row.getByRole("button", { name: "حذف" }).click();
+  const dialog = page.locator("#tenantDeleteDialog");
+  await expect(dialog).toBeVisible();
+  const confirmation = dialog.getByLabel("اكتب اسم الجهة للتأكيد");
+  const deleteButton = dialog.getByRole("button", { name: "حذف نهائي" });
+  await confirmation.fill("اسم غير مطابق");
+  await expect(deleteButton).toBeDisabled();
+  await confirmation.fill(tenantName);
+  await expect(deleteButton).toBeEnabled();
+  await deleteButton.click();
+
+  await expect(page.getByRole("row", { name: new RegExp(tenantId) })).toHaveCount(0);
+  await expect(page.getByText("تم حذف الجهة وجميع بياناتها نهائيًا.")).toBeVisible();
+});
+
+test("tenant registry remains orderly on mobile", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/Tenants");
+
+  const metrics = await page.evaluate(() => {
+    const firstRow = document.querySelector("[data-tenant-row]");
+    const firstCell = firstRow?.querySelector("td");
+    return {
+      viewport: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      rowDisplay: firstRow ? getComputedStyle(firstRow).display : "",
+      cellDisplay: firstCell ? getComputedStyle(firstCell).display : "",
+    };
+  });
+
+  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewport + 1);
+  expect(metrics.rowDisplay).toBe("block");
+  expect(metrics.cellDisplay).toBe("grid");
+});
