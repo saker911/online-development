@@ -1887,3 +1887,92 @@ body.login-page-body:has(.subscription-page-shell) .subscription-page-shell :is(
 [data-theme="dark"] .permit-verification-card {
     box-shadow: 0 22px 55px rgba(0, 0, 0, .32);
 }
+
+/* User registration: match the rail to its real step count and keep dark mode neutral. */
+.users-registration-form .ue-wizard-shell {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.users-registration-form .ue-wizard-stepper-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.users-registration-form .ue-wizard-stepper-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.users-registration-form .ue-wizard-step {
+    min-height: 76px;
+    padding: 12px 14px;
+    border-radius: 10px;
+}
+
+.users-registration-form .ue-wizard-step-number {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    border-radius: 9px;
+}
+
+.users-registration-form .ue-wizard-step.is-locked {
+    opacity: 1;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-shell {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-step,
+[data-theme="dark"] .users-registration-form .ue-wizard-step.is-locked {
+    color: #d4d4d4 !important;
+    background: #1a1a1a !important;
+    background-image: none !important;
+    border-color: #383838 !important;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-step:hover:not(:disabled) {
+    color: #fff !important;
+    background: #222 !important;
+    border-color: #565656 !important;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-step.is-active {
+    color: #fff !important;
+    background: #202624 !important;
+    border-color: #2dd4bf !important;
+    box-shadow: inset 0 0 0 1px rgba(45, 212, 191, .18) !important;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-step.is-complete {
+    color: #ecfdf5 !important;
+    background: #192522 !important;
+    border-color: rgba(45, 212, 191, .42) !important;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-step-number,
+[data-theme="dark"] .users-registration-form .ue-wizard-step.is-locked .ue-wizard-step-number {
+    color: #c7c7c7 !important;
+    background: #242424 !important;
+    background-image: none !important;
+    border-color: #484848 !important;
+}
+
+[data-theme="dark"] .users-registration-form .ue-wizard-step.is-active .ue-wizard-step-number,
+[data-theme="dark"] .users-registration-form .ue-wizard-step.is-complete .ue-wizard-step-number {
+    color: #fff !important;
+    background: #0f766e !important;
+    border-color: #2dd4bf !important;
+}
+
+@media (max-width: 768px) {
+    .users-registration-form .ue-wizard-stepper-3,
+    .users-registration-form .ue-wizard-stepper-4 {
+        grid-template-columns: 1fr;
+    }
+}

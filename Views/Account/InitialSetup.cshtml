@@ -729,7 +729,14 @@
             <div class="setup-topbar-actions">
                 <button class="setup-theme-toggle theme-toggle-btn" type="button"
                         title="تبديل الوضع ليلي/نهاري" aria-label="تبديل الوضع ليلي/نهاري">
-                    <span class="theme-toggle-icon" aria-hidden="true">☀</span>
+                    <span class="theme-toggle-icon" aria-hidden="true">
+                        <svg class="shell-action-icon theme-toggle-sun">
+                            <use href="@Url.Content("~/icons/shell-actions.svg#sun")"></use>
+                        </svg>
+                        <svg class="shell-action-icon theme-toggle-moon">
+                            <use href="@Url.Content("~/icons/shell-actions.svg#moon")"></use>
+                        </svg>
+                    </span>
                 </button>
                 <nav class="setup-breadcrumb" aria-label="breadcrumb">
                     <a asp-controller="Account" asp-action="Login">الرئيسية</a>

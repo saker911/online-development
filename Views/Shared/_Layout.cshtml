@@ -365,6 +365,7 @@
     @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/visual-refresh.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/shell-actions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sidebar-actions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/public-marketing.css" asp-append-version="true" />
 </head>
 
@@ -636,14 +637,14 @@
                                             <nav class="app-sidebar-nav" aria-label="القائمة الرئيسية">
                                                 <a class="app-sidebar-link @(isActive("Home", "Index") ? "active" : string.Empty)"
                                                        asp-controller="Home" asp-action="Index">
-                                                    <img src="~/icons/home.svg" alt="" class="app-sidebar-icon" />
+                                                    <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#home")"></use></svg>
                                                     <span>الرئيسة</span>
                                                 </a>
                                                 @if (canViewPermits)
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Permits") ? "active" : string.Empty)"
                                                            asp-controller="Permits" asp-action="Index">
-                                                        <img src="~/icons/permit.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#permit")"></use></svg>
                                                         <span>التصاريح</span>
                                                     </a>
                                                 }
@@ -651,7 +652,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Visits") ? "active" : string.Empty)"
                                                            asp-controller="Visits" asp-action="Index">
-                                                        <img src="~/icons/visit.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#visit")"></use></svg>
                                                         <span>الزيارات</span>
                                                     </a>
                                                 }
@@ -670,7 +671,7 @@
                                                         );
                                                     <a class="app-sidebar-link @(displayLinkActive ? "active" : string.Empty)"
                                                            asp-controller="@displayLinkController" asp-action="@displayLinkAction">
-                                                        <img src="~/icons/display.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#display")"></use></svg>
                                                         <span>شاشات العرض</span>
                                                         @if (pendingDisplayDeviceCount > 0)
                                                         {
@@ -682,7 +683,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("ScanConsole") ? "active" : string.Empty)"
                                                            asp-controller="ScanConsole" asp-action="Index">
-                                                        <img src="~/icons/scan.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#scan")"></use></svg>
                                                         <span>مسح باركود</span>
                                                     </a>
                                                 }
@@ -690,7 +691,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Reports") ? "active" : string.Empty)"
                                                            asp-controller="Reports" asp-action="Index">
-                                                        <img src="~/icons/reports.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#reports")"></use></svg>
                                                         <span>التقارير</span>
                                                     </a>
                                                 }
@@ -698,7 +699,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Monitoring") ? "active" : string.Empty)"
                                                            asp-controller="Monitoring" asp-action="Index">
-                                                        <img src="~/icons/monitoring.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#monitoring")"></use></svg>
                                                         <span>المراقبة</span>
                                                     </a>
                                                 }
@@ -706,7 +707,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Users") ? "active" : string.Empty)"
                                                            asp-controller="Users" asp-action="Index">
-                                                        <img src="~/icons/users.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#users")"></use></svg>
                                                         <span>فريق التشغيل</span>
                                                     </a>
                                                 }
@@ -714,7 +715,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Tenants") ? "active" : string.Empty)"
                                                            asp-controller="Tenants" asp-action="Index">
-                                                        <img src="~/icons/administration-data.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#tenant")"></use></svg>
                                                         <span>الجهات والشركات</span>
                                                     </a>
                                                 }
@@ -722,7 +723,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Delegations") ? "active" : string.Empty)"
                                                            asp-controller="Delegations" asp-action="Index">
-                                                        <img src="~/icons/delegations.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#delegation")"></use></svg>
                                                         <span>التفويضات</span>
                                                     </a>
                                                 }
@@ -730,12 +731,12 @@
                                                 {
                                                     <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Edit", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
                                                            asp-controller="Administration" asp-action="Edit">
-                                                        <img src="~/icons/administration-data.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#administration")"></use></svg>
                                                         <span>بيانات الإدارة</span>
                                                     </a>
                                                     <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Backup", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
                                                            asp-controller="Administration" asp-action="Backup">
-                                                        <img src="~/icons/backup.svg" alt="" class="app-sidebar-icon" />
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#backup")"></use></svg>
                                                         <span>النسخ الاحتياطي</span>
                                                     </a>
                                                 }

@@ -266,6 +266,21 @@
             </table>
             <div class="tenant-empty-state" id="tenantEmptyState" hidden>لا توجد جهات مطابقة.</div>
         </div>
+
+        <div class="tenant-pagination-shell" id="tenantPaginationShell" hidden>
+            <span class="tenant-pagination-info" id="tenantPageInfo"></span>
+            <div class="tenant-pagination" id="tenantPagination" aria-label="صفحات الجهات"></div>
+            <div class="tenant-pagination-nav">
+                <button type="button" class="tenant-page-button tenant-page-nav" id="tenantPagePrev"
+                        aria-label="الصفحة السابقة" title="الصفحة السابقة">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+                </button>
+                <button type="button" class="tenant-page-button tenant-page-nav" id="tenantPageNext"
+                        aria-label="الصفحة التالية" title="الصفحة التالية">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                </button>
+            </div>
+        </div>
     </section>
 </div>
 
@@ -306,21 +321,115 @@
             const rows = Array.from(document.querySelectorAll('[data-tenant-row]'));
             const visibleCount = document.getElementById('tenantVisibleCount');
             const emptyState = document.getElementById('tenantEmptyState');
-            const applyFilters = () => {
+            const paginationShell = document.getElementById('tenantPaginationShell');
+            const pagination = document.getElementById('tenantPagination');
+            const pageInfo = document.getElementById('tenantPageInfo');
+            const previousPage = document.getElementById('tenantPagePrev');
+            const nextPage = document.getElementById('tenantPageNext');
+            const pageSize = 10;
+            let currentPage = 1;
+            let currentTotalPages = 1;
+
+            const createPageButton = (pageNumber) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `tenant-page-button${pageNumber === currentPage ? ' is-active' : ''}`;
+                button.textContent = String(pageNumber);
+                button.setAttribute('aria-label', `الانتقال إلى الصفحة ${pageNumber}`);
+                if (pageNumber === currentPage) button.setAttribute('aria-current', 'page');
+                button.addEventListener('click', () => {
+                    currentPage = pageNumber;
+                    applyFilters(false);
+                });
+                return button;
+            };
+
+            const createEllipsis = () => {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'tenant-pagination-ellipsis';
+                ellipsis.textContent = '...';
+                return ellipsis;
+            };
+
+            const renderPagination = (totalPages, totalMatches, startIndex, endIndex) => {
+                if (!pagination || !paginationShell) return;
+                pagination.innerHTML = '';
+
+                if (pageInfo) {
+                    pageInfo.textContent = totalMatches === 0
+                        ? 'لا توجد نتائج مطابقة'
+                        : `عرض ${startIndex + 1}-${Math.min(endIndex, totalMatches)} من ${totalMatches} • صفحة ${currentPage} من ${totalPages}`;
+                }
+
+                if (previousPage) previousPage.disabled = currentPage <= 1 || totalMatches === 0;
+                if (nextPage) nextPage.disabled = currentPage >= totalPages || totalMatches === 0;
+
+                if (totalPages <= 1) {
+                    paginationShell.hidden = true;
+                    return;
+                }
+
+                paginationShell.hidden = false;
+                let firstPage = Math.max(1, currentPage - 2);
+                let lastPage = Math.min(totalPages, firstPage + 4);
+                firstPage = Math.max(1, lastPage - 4);
+
+                if (firstPage > 1) {
+                    pagination.appendChild(createPageButton(1));
+                    if (firstPage > 2) pagination.appendChild(createEllipsis());
+                }
+
+                for (let pageNumber = firstPage; pageNumber <= lastPage; pageNumber += 1) {
+                    pagination.appendChild(createPageButton(pageNumber));
+                }
+
+                if (lastPage < totalPages) {
+                    if (lastPage < totalPages - 1) pagination.appendChild(createEllipsis());
+                    pagination.appendChild(createPageButton(totalPages));
+                }
+            };
+
+            const applyFilters = (resetPage = false) => {
                 const query = (search?.value || '').trim().toLowerCase();
                 const state = stateFilter?.value || 'all';
-                let count = 0;
-                rows.forEach((row) => {
+                const matchingRows = rows.filter((row) => {
                     const matchesSearch = !query || (row.dataset.search || '').includes(query);
                     const matchesState = state === 'all' || row.dataset.state === state;
-                    row.hidden = !(matchesSearch && matchesState);
-                    if (!row.hidden) count += 1;
+                    return matchesSearch && matchesState;
                 });
-                if (visibleCount) visibleCount.textContent = String(count);
-                if (emptyState) emptyState.hidden = count !== 0;
+                const totalMatches = matchingRows.length;
+                const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
+                currentTotalPages = totalPages;
+
+                if (resetPage) currentPage = 1;
+                currentPage = Math.min(currentPage, totalPages);
+
+                const startIndex = (currentPage - 1) * pageSize;
+                const endIndex = startIndex + pageSize;
+                rows.forEach((row) => {
+                    row.hidden = true;
+                });
+                matchingRows.forEach((row, index) => {
+                    row.hidden = index < startIndex || index >= endIndex;
+                });
+
+                if (visibleCount) visibleCount.textContent = String(totalMatches);
+                if (emptyState) emptyState.hidden = totalMatches !== 0;
+                renderPagination(totalPages, totalMatches, startIndex, endIndex);
             };
-            search?.addEventListener('input', applyFilters);
-            stateFilter?.addEventListener('change', applyFilters);
+            search?.addEventListener('input', () => applyFilters(true));
+            stateFilter?.addEventListener('change', () => applyFilters(true));
+            previousPage?.addEventListener('click', () => {
+                if (currentPage <= 1) return;
+                currentPage -= 1;
+                applyFilters(false);
+            });
+            nextPage?.addEventListener('click', () => {
+                if (currentPage >= currentTotalPages) return;
+                currentPage += 1;
+                applyFilters(false);
+            });
+            applyFilters(true);
 
             const dialog = document.getElementById('tenantDeleteDialog');
             const deleteId = document.getElementById('deleteTenantId');

@@ -2936,6 +2936,68 @@ body.login-page-body .login-page-card-light {
 }
 
 /* Landing proof cards. */
+
+/* Public header actions share the same clear theme control as the signed-in shell. */
+.public-theme-toggle {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    flex: 0 0 42px;
+    border-radius: 9px !important;
+}
+
+.public-theme-toggle .theme-toggle-icon {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+}
+
+.public-theme-toggle .theme-toggle-icon .shell-action-icon {
+    width: 22px;
+    height: 22px;
+    grid-area: 1 / 1;
+}
+
+.login-page-topbar-actions,
+.subscription-topbar-actions,
+.public-landing-nav-actions {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+}
+
+body.login-page-body .login-back-link {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    margin: 0;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    white-space: nowrap;
+}
+
+body.login-page-body .login-back-link:hover,
+body.login-page-body .login-back-link:focus-visible {
+    border-color: var(--public-border);
+    background: color-mix(in srgb, var(--public-surface) 88%, var(--public-border));
+    outline: none;
+}
+
+@media (max-width: 420px) {
+    .login-page-topbar-actions,
+    .subscription-topbar-actions {
+        gap: 5px;
+    }
+
+    body.login-page-body .login-back-link {
+        padding-inline: 8px;
+        font-size: .78rem;
+    }
+}
 .public-proof-strip {
     gap: 10px;
     padding-block: 18px;

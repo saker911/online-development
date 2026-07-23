@@ -116,7 +116,7 @@
     <div asp-validation-summary="ModelOnly" class="visually-hidden ue-form-summary"></div>
 
     <div class="ue-wizard-shell" data-users-wizard-shell>
-        <div class="ue-wizard-stepper" role="tablist" aria-label="معالج المستخدم">
+        <div class="ue-wizard-stepper ue-wizard-stepper-@wizardSteps.Length" role="tablist" aria-label="معالج المستخدم">
             @foreach (var step in wizardSteps)
             {
                 <button type="button"

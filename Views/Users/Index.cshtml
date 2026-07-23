@@ -196,11 +196,11 @@ User.IsInRole(AppRoles.SystemAdmin);
                 else
                 {
                     <div class="users-filter-summary">
-                        <span>النتائج المعروضة</span>
+                        <span>النتائج المطابقة</span>
                         <strong id="users-visible-count">@totalUsers</strong>
                         <span>من أصل</span>
                         <strong>@totalUsers</strong>
-                        <span class="users-page-size-pill">@(canViewTenantScope ? "10 مستخدمين لكل صفحة" : "5 مستخدمين لكل صفحة")</span>
+                        <span class="users-page-size-pill">10 مستخدمين لكل صفحة</span>
                     </div>
 
                     <div class="table-responsive users-table-responsive">
@@ -473,7 +473,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                     const pageInfo = document.getElementById("users-page-info");
                     const prevButton = document.getElementById("users-page-prev");
                     const nextButton = document.getElementById("users-page-next");
-                    const pageSize = @(canViewTenantScope ? 10 : 5);
+                    const pageSize = 10;
                     let currentPage = 1;
 
                     if (window.bootstrap?.Tooltip) {
@@ -507,7 +507,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                         return ellipsis;
                     }
 
-                    function renderPagination(totalPages, totalMatches, currentVisible) {
+                    function renderPagination(totalPages, totalMatches, visibleStart, visibleEnd) {
                         if (!pagination || !paginationShell) {
                             return;
                         }
@@ -517,7 +517,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                         if (pageInfo) {
                             pageInfo.textContent = totalMatches === 0
                                 ? "لا توجد نتائج مطابقة"
-                                : `صفحة ${currentPage} من ${totalPages} • ${currentVisible} من ${totalMatches}`;
+                                : `عرض ${visibleStart}-${visibleEnd} من ${totalMatches} • صفحة ${currentPage} من ${totalPages}`;
                         }
 
                         if (prevButton) {
@@ -582,7 +582,8 @@ User.IsInRole(AppRoles.SystemAdmin);
 
                         const startIndex = (currentPage - 1) * pageSize;
                         const endIndex = startIndex + pageSize;
-                        const currentVisible = Math.max(0, Math.min(pageSize, totalMatches - startIndex));
+                        const visibleStart = totalMatches === 0 ? 0 : startIndex + 1;
+                        const visibleEnd = Math.min(endIndex, totalMatches);
 
                         rows.forEach(function (row) {
                             row.hidden = true;
@@ -603,7 +604,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                             visibleCount.textContent = totalMatches;
                         }
 
-                        renderPagination(totalPages, totalMatches, currentVisible);
+                        renderPagination(totalPages, totalMatches, visibleStart, visibleEnd);
                     }
 
                     [searchInput, tenantFilter, roleFilter, statusFilter].forEach(function (element) {

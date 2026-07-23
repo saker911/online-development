@@ -60,3 +60,52 @@ test("tenant registry remains orderly on mobile", async ({ page }) => {
   expect(metrics.rowDisplay).toBe("block");
   expect(metrics.cellDisplay).toBe("grid");
 });
+
+test("tenant registry paginates large result sets and preserves filtering", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  await page.goto("/Tenants");
+
+  const token = await page
+    .locator('form[action$="/Tenants/Create"] input[name="__RequestVerificationToken"]')
+    .inputValue();
+  const suffix = uniqueSuffix();
+  const tenantIds = Array.from({ length: 11 }, (_, index) => `page-${suffix}-${index + 1}`);
+
+  for (const [index, tenantId] of tenantIds.entries()) {
+    const response = await page.request.post("/Tenants/Create", {
+      form: {
+        __RequestVerificationToken: token,
+        TenantId: tenantId,
+        Name: `جهة ترقيم ${index + 1} ${suffix}`,
+        Slug: tenantId,
+        DepartmentName: "الإدارة العامة",
+        SubscriptionStatus: "Active",
+        PlanName: "أساسية",
+      },
+    });
+    expect(response.ok()).toBeTruthy();
+  }
+
+  await page.goto("/Tenants");
+  await expect(page.locator("#tenantPaginationShell")).toBeVisible();
+  await expect(page.locator("#tenantPageInfo")).toContainText("صفحة 1 من 2");
+  await expect(page.getByRole("button", { name: "الانتقال إلى الصفحة 2" })).toBeVisible();
+
+  let visibleRows = await page.locator("[data-tenant-row]").evaluateAll((rows) =>
+    rows.filter((row) => !row.hidden).length
+  );
+  expect(visibleRows).toBe(10);
+
+  await page.getByRole("button", { name: "الانتقال إلى الصفحة 2" }).click();
+  await expect(page.locator("#tenantPageInfo")).toContainText("صفحة 2 من 2");
+  visibleRows = await page.locator("[data-tenant-row]").evaluateAll((rows) =>
+    rows.filter((row) => !row.hidden).length
+  );
+  expect(visibleRows).toBe(2);
+
+  const uniquelyMatchingTenantId = tenantIds[5];
+  await page.locator("#tenantSearch").fill(uniquelyMatchingTenantId);
+  await expect(page.locator("#tenantVisibleCount")).toHaveText("1");
+  await expect(page.locator("#tenantPaginationShell")).toBeHidden();
+  await expect(page.getByRole("row", { name: new RegExp(uniquelyMatchingTenantId) })).toBeVisible();
+});
