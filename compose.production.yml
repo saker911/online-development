@@ -1,0 +1,72 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      App__Urls: http://0.0.0.0:10000
+      Data__Provider: PostgreSql
+      ConnectionStrings__PostgreSqlConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Security__CookieSecurePolicy: Always
+      AllowedHosts: ${APP_ALLOWED_HOSTS}
+      ForwardedHeaders__TrustPlatformProxy: "true"
+      OnlineEdition__PrivacyMinimized: "true"
+      OnlineEdition__CollectNationalId: "false"
+      OnlineEdition__SimplifiedVisits: "true"
+      VehiclePermitSystemWeb__StorageRoot: /data
+    volumes:
+      - app_storage:/data
+    ports:
+      - "127.0.0.1:10000:10000"
+    networks:
+      - backend
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+volumes:
+  app_storage:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  backend:
+    internal: true
+  web:

@@ -1,0 +1,106 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - online-development
+  workflow_dispatch:
+
+concurrency:
+  group: production-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create deployment archive
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=node_modules \
+            --exclude=.online-storage \
+            --exclude=.env \
+            --exclude=output \
+            --exclude=test-results \
+            -czf /tmp/tasareehapp.tar.gz .
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/tasareehapp
+          chmod 600 ~/.ssh/tasareehapp
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          scp \
+            -i ~/.ssh/tasareehapp \
+            /tmp/tasareehapp.tar.gz \
+            "$VPS_USER@$VPS_HOST:/tmp/tasareehapp.tar.gz"
+
+      - name: Deploy containers
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/tasareehapp "$VPS_USER@$VPS_HOST" <<'REMOTE'
+            set -euo pipefail
+
+            install -d -m 755 /opt/tasareehapp/app
+            find /opt/tasareehapp/app -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+            tar -xzf /tmp/tasareehapp.tar.gz -C /opt/tasareehapp/app
+            rm -f /tmp/tasareehapp.tar.gz
+
+            cd /opt/tasareehapp/app
+            test -f /opt/tasareehapp/.env
+
+            docker compose \
+              --env-file /opt/tasareehapp/.env \
+              -f compose.production.yml \
+              up -d --build --remove-orphans
+
+            docker image prune -f
+          REMOTE
+
+      - name: Verify deployment
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/tasareehapp "$VPS_USER@$VPS_HOST" <<'REMOTE'
+            set -euo pipefail
+
+            for attempt in {1..24}; do
+              if curl --fail --silent --show-error \
+                -H 'Host: tasareehapp.com' \
+                http://127.0.0.1:10000/healthz >/dev/null; then
+                exit 0
+              fi
+              sleep 5
+            done
+
+            cd /opt/tasareehapp/app
+            docker compose \
+              --env-file /opt/tasareehapp/.env \
+              -f compose.production.yml \
+              ps
+            docker compose \
+              --env-file /opt/tasareehapp/.env \
+              -f compose.production.yml \
+              logs --tail=100
+            exit 1
+          REMOTE

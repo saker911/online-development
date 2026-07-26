@@ -16,11 +16,12 @@ WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://0.0.0.0:10000 \
     DOTNET_EnableDiagnostics=0 \
-    VehiclePermitSystemWeb__StorageRoot=/tmp/vehicle-permit-storage
+    VehiclePermitSystemWeb__StorageRoot=/data
 
 EXPOSE 10000
 
 COPY --from=build /app/publish .
+RUN mkdir -p /data && chown -R $APP_UID:$APP_UID /data
 USER $APP_UID
 
 ENTRYPOINT ["dotnet", "VehiclePermitSystemWeb.dll"]
