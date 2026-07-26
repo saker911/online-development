@@ -87,6 +87,7 @@ jobs:
             for attempt in {1..24}; do
               if curl --fail --silent --show-error \
                 -H 'Host: tasareehapp.com' \
+                -H 'X-Forwarded-Proto: https' \
                 http://127.0.0.1:10000/healthz >/dev/null; then
                 exit 0
               fi
