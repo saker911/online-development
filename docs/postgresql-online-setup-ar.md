@@ -55,11 +55,19 @@ Authentication__Microsoft__ClientSecret=<microsoft-client-secret>
 أضف روابط العودة التالية في إعدادات المزود، مع استبدال الدومين:
 
 ```text
-https://app.example.com/signin-google
-https://app.example.com/signin-microsoft
+https://tasareehapp.com/signin-google
+https://tasareehapp.com/signin-microsoft
 ```
 
 مزود Microsoft مضبوط على `common` حتى يدعم حسابات Microsoft الشخصية مثل Hotmail وOutlook، إضافة إلى حسابات العمل أو الدراسة. عند عدم وجود المفاتيح يخفي النظام الأزرار في الإنتاج، ويعرضها في التطوير بحالة إعداد آمنة دون محاولة اتصال خارجية.
+
+في Google استخدم عميلًا من نوع **Web application** واجعل الجمهور **External**.
+وفي Microsoft استخدم منصة **Web** واختر نوع الحسابات الذي يدعم حسابات الجهات
+وحسابات Microsoft الشخصية. بعد إنشاء الأسرار أعد تشغيل حاوية التطبيق:
+
+```bash
+docker compose -f compose.production.yml --env-file /opt/tasareehapp/.env up -d --build app
+```
 
 ## ملاحظة التوقيت
 

@@ -32,6 +32,10 @@ services:
       Security__CookieSecurePolicy: Always
       AllowedHosts: ${APP_ALLOWED_HOSTS}
       ForwardedHeaders__TrustPlatformProxy: "true"
+      Authentication__Google__ClientId: ${Authentication__Google__ClientId:-}
+      Authentication__Google__ClientSecret: ${Authentication__Google__ClientSecret:-}
+      Authentication__Microsoft__ClientId: ${Authentication__Microsoft__ClientId:-}
+      Authentication__Microsoft__ClientSecret: ${Authentication__Microsoft__ClientSecret:-}
       OnlineEdition__PrivacyMinimized: "true"
       OnlineEdition__CollectNationalId: "false"
       OnlineEdition__SimplifiedVisits: "true"
