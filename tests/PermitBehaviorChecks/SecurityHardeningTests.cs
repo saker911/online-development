@@ -201,7 +201,7 @@ public sealed class SecurityHardeningTests
     }
 
     [Fact]
-    public void SignupOwnerStaysInactiveUntilPaymentActivation()
+    public void SignupOwnerCanEnterWithoutOperationalPermissionsUntilPaymentActivation()
     {
         var services = new ServiceCollection();
         services.AddSingleton<ITenantContext, DefaultTenantContext>();
@@ -230,10 +230,11 @@ public sealed class SecurityHardeningTests
         Assert.True(result.Succeeded, result.Message);
         using (var db = factory.CreateDbContext())
         {
-            Assert.False(db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
+            Assert.True(db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
             var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
             var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup");
-            Assert.False(owner.IsActive);
+            Assert.True(owner.IsActive);
+            Assert.Empty(AppPermissions.GetGrantedPermissions(owner));
             Assert.Equal(owner.Username, settings.GeneralManagerUsername);
             Assert.Equal(owner.DisplayName, settings.ManagerName);
             Assert.Equal("مالك الحساب", settings.ManagerTitle);
@@ -246,7 +247,9 @@ public sealed class SecurityHardeningTests
         Assert.True(service.ActivatePaidSubscription("secure-signup").Succeeded);
         using var verifiedDb = factory.CreateDbContext();
         Assert.True(verifiedDb.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
-        Assert.True(verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789").IsActive);
+        var activatedOwner = verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
+        Assert.True(activatedOwner.IsActive);
+        Assert.NotEmpty(AppPermissions.GetGrantedPermissions(activatedOwner));
     }
 
     [Fact]

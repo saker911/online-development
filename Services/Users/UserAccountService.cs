@@ -400,8 +400,7 @@ namespace VehiclePermitSystemWeb.Services.Users
 
             var status = TenantSubscriptionStatuses.Normalize(tenant.SubscriptionStatus);
             if (
-                string.Equals(status, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal)
-                || string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
+                string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
                 || string.Equals(status, TenantSubscriptionStatuses.Expired, StringComparison.Ordinal)
             )
             {

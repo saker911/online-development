@@ -370,6 +370,15 @@
                             </dl>
                             @if (canRenderArtifacts && !string.IsNullOrWhiteSpace(digitalPassUrl))
                             {
+                                <div class="permit-digital-pass__link">
+                                    <label for="permitShareUrl">رابط المستفيد</label>
+                                    <div>
+                                        <input id="permitShareUrl" type="text" value="@digitalPassUrl"
+                                               readonly dir="ltr" aria-label="رابط بطاقة المستفيد" />
+                                        <button type="button" class="btn btn-light" data-copy-permit-link
+                                                data-share-url="@digitalPassUrl">نسخ</button>
+                                    </div>
+                                </div>
                                 <div class="permit-digital-pass__actions">
                                     <a href="@digitalPassUrl" class="btn btn-light" target="_blank" rel="noopener">
                                         فتح بطاقة المستفيد

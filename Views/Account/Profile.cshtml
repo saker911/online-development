@@ -25,8 +25,26 @@ Model.ManagerDisplayName;
 
 <div class="account-profile-shell">
     <div class="account-profile-toolbar">
-        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm">العودة إلى القائمة</a>
+        @if (Model.IsSubscriptionPending)
+        {
+            <a asp-controller="Subscription" asp-action="Plans" class="btn btn-primary btn-sm">عرض الباقات</a>
+        }
+        else
+        {
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm">العودة إلى القائمة</a>
+        }
     </div>
+
+    @if (Model.IsSubscriptionPending)
+    {
+        <section class="account-profile-subscription-notice" role="status">
+            <div>
+                <strong>حسابك جاهز والدخول مفعل</strong>
+                <span>حالة الاشتراك: @Model.SubscriptionStatusDisplayName. خدمات التشغيل ستظهر تلقائياً بعد تأكيد الدفع.</span>
+            </div>
+            <a asp-controller="Subscription" asp-action="Plans" class="btn btn-dark btn-sm">اختيار الباقة</a>
+        </section>
+    }
 
     <section class="account-profile-overview card-permit app-card-surface app-form-surface compact-form-card">
         <div class="account-profile-overview-main">

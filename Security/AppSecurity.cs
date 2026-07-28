@@ -233,28 +233,7 @@ namespace VehiclePermitSystemWeb.Security
 
         public static void ApplyRoleDefaults(UserAccount user)
         {
-            user.CanViewDashboard = false;
-            user.CanViewPermits = false;
-            user.CanViewVisitorPermits = false;
-            user.CanCreatePermit = false;
-            user.CanCreateVisitorPermit = false;
-            user.CanEditPermit = false;
-            user.CanEditVisitorPermit = false;
-            user.CanApprovePermit = false;
-            user.CanApproveLeaveRequest = false;
-            user.CanStopPermit = false;
-            user.CanReviewUnauthorizedExit = false;
-            user.CanViewVisits = false;
-            user.CanCreateVisit = false;
-            user.CanEditVisit = false;
-            user.CanApproveDetainedVisit = false;
-            user.CanApproveVisits = false;
-            user.CanScanOperations = false;
-            user.CanViewDisplays = false;
-            user.CanManageUsers = false;
-            user.CanManageDepartments = false;
-            user.CanManageAdministration = false;
-            user.CanManageDelegations = false;
+            ClearAll(user);
 
             switch (user.Role)
             {
@@ -382,6 +361,32 @@ namespace VehiclePermitSystemWeb.Security
                 user.CanManageAdministration = true;
                 user.CanManageDelegations = true;
             }
+        }
+
+        public static void ClearAll(UserAccount user)
+        {
+            user.CanViewDashboard = false;
+            user.CanViewPermits = false;
+            user.CanViewVisitorPermits = false;
+            user.CanCreatePermit = false;
+            user.CanCreateVisitorPermit = false;
+            user.CanEditPermit = false;
+            user.CanEditVisitorPermit = false;
+            user.CanApprovePermit = false;
+            user.CanApproveLeaveRequest = false;
+            user.CanStopPermit = false;
+            user.CanReviewUnauthorizedExit = false;
+            user.CanViewVisits = false;
+            user.CanCreateVisit = false;
+            user.CanEditVisit = false;
+            user.CanApproveDetainedVisit = false;
+            user.CanApproveVisits = false;
+            user.CanScanOperations = false;
+            user.CanViewDisplays = false;
+            user.CanManageUsers = false;
+            user.CanManageDepartments = false;
+            user.CanManageAdministration = false;
+            user.CanManageDelegations = false;
         }
 
         public static IEnumerable<string> GetGrantedPermissions(UserAccount user)

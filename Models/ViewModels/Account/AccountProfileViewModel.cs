@@ -22,5 +22,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Account
         public string OperatorBadgeCode { get; set; } = string.Empty;
         public HashSet<string> LinkedExternalProviders { get; set; } =
             new(StringComparer.Ordinal);
+        public bool IsSubscriptionPending { get; set; }
+        public string SubscriptionStatusDisplayName { get; set; } = string.Empty;
     }
 }

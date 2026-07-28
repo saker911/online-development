@@ -15,14 +15,17 @@ namespace VehiclePermitSystemWeb.Controllers
     {
         private readonly ITenantManagementService _tenantManagementService;
         private readonly SignupAttemptGuard? _signupAttemptGuard;
+        private readonly IExternalLoginService? _externalLoginService;
 
         public SubscriptionController(
             ITenantManagementService tenantManagementService,
-            SignupAttemptGuard? signupAttemptGuard = null
+            SignupAttemptGuard? signupAttemptGuard = null,
+            IExternalLoginService? externalLoginService = null
         )
         {
             _tenantManagementService = tenantManagementService;
             _signupAttemptGuard = signupAttemptGuard;
+            _externalLoginService = externalLoginService;
         }
 
         [HttpGet]
@@ -46,8 +49,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 {
                     PlanCode = selectedPlan.Code,
                     Plans = TenantPlanCatalog.GetPlans(),
-                    OwnerFullName = TempData["ExternalSignupName"] as string ?? string.Empty,
-                    OwnerEmail = TempData["ExternalSignupEmail"] as string ?? string.Empty,
+                    OwnerFullName = TempData.Peek("ExternalSignupName") as string ?? string.Empty,
+                    OwnerEmail = TempData.Peek("ExternalSignupEmail") as string ?? string.Empty,
                 }
             );
         }
@@ -75,7 +78,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var callbackUrl = Url.Action(
                 nameof(ExternalSignupCallback),
-                new { returnMode, plan }
+                new { provider = normalizedProvider, returnMode, plan }
             );
             var properties = new AuthenticationProperties { RedirectUri = callbackUrl };
             return Challenge(properties, normalizedProvider);
@@ -83,6 +86,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpGet]
         public async Task<IActionResult> ExternalSignupCallback(
+            string provider,
             string? returnMode = null,
             string? plan = null
         )
@@ -98,16 +102,27 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var principal = externalResult.Principal;
+            var identity = _externalLoginService?.ReadIdentity(principal, provider);
             var email = principal.FindFirstValue(ClaimTypes.Email) ?? string.Empty;
             var name = principal.FindFirstValue(ClaimTypes.Name)
                 ?? principal.FindFirstValue("name")
                 ?? string.Empty;
 
             await HttpContext.SignOutAsync(ExternalAuthenticationDefaults.CookieScheme);
+            if (identity == null)
+            {
+                TempData["SubscriptionNotice"] =
+                    "تعذر التحقق من هوية الحساب الخارجي. حاول مرة أخرى أو استخدم التسجيل المعتاد.";
+                return RedirectToAction(nameof(Register), new { plan });
+            }
+
             TempData["ExternalSignupEmail"] = email.Trim();
             TempData["ExternalSignupName"] = name.Trim();
+            TempData["ExternalSignupProvider"] = identity.Provider;
+            TempData["ExternalSignupIssuer"] = identity.Issuer;
+            TempData["ExternalSignupSubject"] = identity.Subject;
             TempData["SubscriptionNotice"] =
-                "تم استيراد بيانات حسابك. أكمل بيانات الجهة واختر الباقة لإتمام التسجيل.";
+                "تم التحقق من حسابك. أكمل بيانات الجهة، ثم يمكنك الدخول مباشرة بحسابك بصلاحيات محدودة حتى تفعيل الباقة.";
 
             return string.Equals(returnMode, "Register", StringComparison.OrdinalIgnoreCase)
                 ? RedirectToAction(nameof(Register), new { plan })
@@ -155,6 +170,18 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View(model);
             }
 
+            var externalIdentity = ReadPendingExternalIdentity();
+            var existingExternalLogin =
+                externalIdentity == null ? null : _externalLoginService?.FindLogin(externalIdentity);
+            if (existingExternalLogin != null)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "هذا الحساب الخارجي مرتبط بحساب مسجل مسبقًا. استخدم صفحة تسجيل الدخول."
+                );
+                return View(model);
+            }
+
             var result = _tenantManagementService.CreateSignup(model);
             if (!result.Succeeded)
             {
@@ -163,18 +190,59 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             _signupAttemptGuard?.RecordSuccess(remoteIp);
+            if (externalIdentity != null && _externalLoginService != null)
+            {
+                var linkResult = _externalLoginService.Link(
+                    externalIdentity,
+                    result.TenantId,
+                    model.OwnerUsername
+                );
+                if (linkResult.Succeeded)
+                {
+                    TempData.Remove("ExternalSignupProvider");
+                    TempData.Remove("ExternalSignupIssuer");
+                    TempData.Remove("ExternalSignupSubject");
+                    TempData.Remove("ExternalSignupEmail");
+                    TempData.Remove("ExternalSignupName");
+                }
+            }
 
             return RedirectToAction(
                 nameof(Checkout),
-                new { tenant = result.TenantId, token = result.CheckoutToken }
+                new
+                {
+                    tenant = result.TenantId,
+                    token = result.CheckoutToken,
+                    provider = externalIdentity?.Provider,
+                }
             );
         }
 
         [HttpGet]
-        public IActionResult Checkout(string tenant, string token)
+        public IActionResult Checkout(string tenant, string token, string? provider = null)
         {
             var model = _tenantManagementService.GetCheckout(tenant, token);
-            return model == null ? NotFound() : View(model);
+            if (model == null)
+            {
+                return NotFound();
+            }
+
+            model.ExternalProvider =
+                ExternalAuthenticationDefaults.NormalizeProvider(provider) ?? string.Empty;
+            return View(model);
+        }
+
+        private ExternalIdentity? ReadPendingExternalIdentity()
+        {
+            var provider = TempData.Peek("ExternalSignupProvider") as string ?? string.Empty;
+            var issuer = TempData.Peek("ExternalSignupIssuer") as string ?? string.Empty;
+            var subject = TempData.Peek("ExternalSignupSubject") as string ?? string.Empty;
+            var email = TempData.Peek("ExternalSignupEmail") as string ?? string.Empty;
+            return string.IsNullOrWhiteSpace(provider)
+                || string.IsNullOrWhiteSpace(issuer)
+                || string.IsNullOrWhiteSpace(subject)
+                ? null
+                : new ExternalIdentity(provider, issuer, subject, email);
         }
     }
 }

@@ -55,7 +55,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                             page.Margin(20);
                             page.PageColor(Colors.White);
                             page.DefaultTextStyle(
-                                TextStyle.Default.FontFamily("Arial").FontSize(8)
+                                TextStyle.Default.FontFamily("Tajawal").FontSize(8)
                             );
 
                             page.Content()
@@ -182,7 +182,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                             page.Margin(20);
                             page.PageColor(Colors.White);
                             page.DefaultTextStyle(
-                                TextStyle.Default.FontFamily("Arial").FontSize(9)
+                                TextStyle.Default.FontFamily("Tajawal").FontSize(9)
                             );
 
                             page.Content()
@@ -237,7 +237,9 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                     AddBodyCell(
                                                         table,
                                                         string.IsNullOrWhiteSpace(item.ActionLabel)
-                                                            ? item.ActionType
+                                                            ? FormatPermitActivityAction(
+                                                                item.ActionType
+                                                            )
                                                             : item.ActionLabel
                                                     );
                                                     AddBodyCell(
@@ -297,7 +299,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                             page.Margin(20);
                             page.PageColor(Colors.White);
                             page.DefaultTextStyle(
-                                TextStyle.Default.FontFamily("Arial").FontSize(9)
+                                TextStyle.Default.FontFamily("Tajawal").FontSize(9)
                             );
 
                             page.Content()
@@ -395,7 +397,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                             page.Margin(20);
                             page.PageColor(Colors.White);
                             page.DefaultTextStyle(
-                                TextStyle.Default.FontFamily("Arial").FontSize(11)
+                                TextStyle.Default.FontFamily("Tajawal").FontSize(11)
                             );
 
                             page.Content()
@@ -507,9 +509,19 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                         table,
                                                         FormatNumericTime(item.OccurredAt)
                                                     );
-                                                    AddBodyCell(table, item.ActionLabel);
+                                                    AddBodyCell(
+                                                        table,
+                                                        string.IsNullOrWhiteSpace(item.ActionLabel)
+                                                            ? FormatPermitActivityAction(
+                                                                item.ActionType
+                                                            )
+                                                            : item.ActionLabel
+                                                    );
                                                     AddBodyCell(table, item.Message);
-                                                    AddBodyCell(table, item.Source);
+                                                    AddBodyCell(
+                                                        table,
+                                                        FormatPermitActivitySource(item)
+                                                    );
                                                 }
                                             });
                                     }
@@ -549,7 +561,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
                             page.Margin(20);
                             page.PageColor(Colors.White);
                             page.DefaultTextStyle(
-                                TextStyle.Default.FontFamily("Arial").FontSize(9)
+                                TextStyle.Default.FontFamily("Tajawal").FontSize(9)
                             );
 
                             page.Content()
@@ -899,11 +911,39 @@ namespace VehiclePermitSystemWeb.Services.Reports
                 return item.GateName;
             }
 
-            return item.Source switch
+            return item.Source?.Trim().ToLowerInvariant() switch
             {
                 "system" => "النظام",
                 "scan" => "شاشة البوابة",
+                "camera" => "كاميرا الجوال",
+                "manual" => "إدخال يدوي",
+                "gate" => "البوابة",
                 _ => string.IsNullOrWhiteSpace(item.Source) ? "-" : item.Source,
+            };
+        }
+
+        private static string FormatPermitActivityAction(string? actionType)
+        {
+            return actionType switch
+            {
+                "Entry" => "دخول",
+                "Return" => "عودة",
+                "LateReturn" => "عودة متأخرة",
+                "LateAttendance" => "حضور متأخر",
+                "WorkEndEntry" => "دخول بعد نهاية الدوام",
+                "ExitAuthorized" => "خروج مصرح",
+                "ExitUnauthorized" => "خروج غير مصرح",
+                "ExitFinal" => "خروج نهائي",
+                "WorkEndExit" => "خروج نهاية الدوام",
+                "LateCheckout" => "انصراف متأخر",
+                "ReturnAfterUnauthorizedExit" => "عودة بعد خروج غير مصرح",
+                "UnauthorizedExitNeedsReview" => "خروج يحتاج مراجعة",
+                "UnauthorizedExitConfirmed" => "تأكيد خروج غير مصرح",
+                "UnauthorizedExitStopped" => "إيقاف بسبب خروج غير مصرح",
+                "DeniedAttemptClosed" => "إغلاق محاولة مرفوضة",
+                "OperatorNote" => "ملاحظة مشغل البوابة",
+                "DelegatedApproval" => "اعتماد بالتفويض",
+                _ => string.IsNullOrWhiteSpace(actionType) ? "-" : actionType,
             };
         }
     }

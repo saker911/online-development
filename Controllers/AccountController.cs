@@ -494,6 +494,11 @@ namespace VehiclePermitSystemWeb.Controllers
             var managerAccount = string.IsNullOrWhiteSpace(user.ManagerUsername)
                 ? null
                 : _userAdminService.GetUserAccount(user.ManagerUsername);
+            var tenant = _userAdminService
+                .GetTenants(includeInactive: true)
+                .FirstOrDefault(item =>
+                    string.Equals(item.TenantId, user.TenantId, StringComparison.OrdinalIgnoreCase)
+                );
 
             var model = new AccountProfileViewModel
             {
@@ -524,6 +529,14 @@ namespace VehiclePermitSystemWeb.Controllers
                     ?.GetLinkedProviders(user.TenantId, user.Username)
                     .ToHashSet(StringComparer.Ordinal)
                     ?? new HashSet<string>(StringComparer.Ordinal),
+                IsSubscriptionPending = string.Equals(
+                    tenant?.SubscriptionStatus,
+                    TenantSubscriptionStatuses.PendingPayment,
+                    StringComparison.Ordinal
+                ),
+                SubscriptionStatusDisplayName = TenantSubscriptionStatuses.GetDisplayName(
+                    tenant?.SubscriptionStatus
+                ),
             };
 
             return View(model);
@@ -899,8 +912,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var status = TenantSubscriptionStatuses.Normalize(tenant.SubscriptionStatus);
             if (
-                string.Equals(status, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal)
-                || string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
+                string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
                 || string.Equals(status, TenantSubscriptionStatuses.Expired, StringComparison.Ordinal)
             )
             {

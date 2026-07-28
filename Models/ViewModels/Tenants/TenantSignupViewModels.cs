@@ -113,5 +113,6 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public decimal TotalPrice { get; set; }
         public string PaymentReference { get; set; } = string.Empty;
         public string LoginUrl { get; set; } = string.Empty;
+        public string ExternalProvider { get; set; } = string.Empty;
     }
 }

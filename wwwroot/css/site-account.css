@@ -285,6 +285,44 @@
     justify-content: flex-start;
 }
 
+.account-profile-subscription-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid #e3b341;
+    border-radius: 8px;
+    background: #fff8df;
+    color: #4b3908;
+}
+
+.account-profile-subscription-notice > div {
+    display: grid;
+    gap: 4px;
+}
+
+.account-profile-subscription-notice span {
+    color: #725814;
+}
+
+[data-theme="dark"] .account-profile-subscription-notice {
+    border-color: #765f20;
+    background: #211d12;
+    color: #ffe49a;
+}
+
+[data-theme="dark"] .account-profile-subscription-notice span {
+    color: #d7c17d;
+}
+
+@media (max-width: 640px) {
+    .account-profile-subscription-notice {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
 .account-profile-overview,
 .account-profile-display-card,
 .account-profile-permissions-panel {

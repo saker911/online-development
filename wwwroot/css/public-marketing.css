@@ -2183,14 +2183,18 @@ html[data-theme="dark"]:has(body.login-page-body) {
 
 [data-theme="dark"] .public-plan-preview-grid article.is-featured,
 [data-theme="dark"] .subscription-plan-card.is-featured {
-    color: #101114 !important;
-    background: #f1f2f4 !important;
-    border-color: #f1f2f4 !important;
+    color: #ffffff !important;
+    background: #1b1e24 !important;
+    border-color: #4a4f5a !important;
 }
 
 [data-theme="dark"] .public-plan-preview-grid article.is-featured :is(p, li),
 [data-theme="dark"] .subscription-plan-card.is-featured :is(p, ul, .subscription-plan-limits) {
-    color: #555960 !important;
+    color: #c4c7ce !important;
+}
+
+[data-theme="dark"] .subscription-plan-card.is-featured :is(h2, strong) {
+    color: #ffffff !important;
 }
 
 [data-theme="dark"] .subscription-heading {

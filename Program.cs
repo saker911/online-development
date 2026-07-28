@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 using VehiclePermitSystemWeb.Data;
 using VehiclePermitSystemWeb.Infrastructure;
@@ -66,6 +67,7 @@ builder.Configuration.AddEnvironmentVariables();
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 QuestPDF.Settings.License = LicenseType.Community;
+RegisterQuestPdfFonts(builder.Environment.WebRootPath);
 var cookieSecurePolicy = ResolveCookieSecurePolicy(builder.Configuration, builder.Environment);
 
 // Add services to the container.
@@ -704,4 +706,28 @@ static bool TryParseIPNetwork(string value, out IPNetwork? network)
 
     network = new IPNetwork(prefix, prefixLength);
     return true;
+}
+
+static void RegisterQuestPdfFonts(string webRootPath)
+{
+    var fontDirectory = Path.Combine(webRootPath, "fonts");
+    foreach (
+        var fileName in new[]
+        {
+            "Tajawal-Regular.ttf",
+            "Tajawal-Medium.ttf",
+            "Tajawal-Bold.ttf",
+            "Tajawal-ExtraBold.ttf",
+        }
+    )
+    {
+        var fontPath = Path.Combine(fontDirectory, fileName);
+        if (!File.Exists(fontPath))
+        {
+            continue;
+        }
+
+        using var fontStream = File.OpenRead(fontPath);
+        FontManager.RegisterFont(fontStream);
+    }
 }

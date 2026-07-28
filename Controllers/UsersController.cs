@@ -338,7 +338,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         page.Size(PageSizes.A4);
                         page.Margin(18);
                         page.PageColor(Colors.White);
-                        page.DefaultTextStyle(TextStyle.Default.FontFamily("Arial").FontSize(10));
+                        page.DefaultTextStyle(TextStyle.Default.FontFamily("Tajawal").FontSize(10));
 
                         page.Content()
                             .ContentFromRightToLeft()

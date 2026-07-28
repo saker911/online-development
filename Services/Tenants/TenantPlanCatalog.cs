@@ -12,7 +12,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 Name = "اشتراك شهري",
                 Summary = "النظام كامل بمرونة شهرية ودون التزام طويل.",
                 DurationMonths = 1,
-                TotalPrice = 99,
+                TotalPrice = 49,
                 Features =
                 [
                     "جميع خدمات النظام",
@@ -27,7 +27,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 Name = "اشتراك 6 أشهر",
                 Summary = "النظام كامل لمدة ستة أشهر بسعر أوفر.",
                 DurationMonths = 6,
-                TotalPrice = 499,
+                TotalPrice = 249,
                 IsFeatured = true,
                 Features =
                 [
@@ -43,7 +43,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 Name = "اشتراك سنوي",
                 Summary = "النظام كامل لمدة سنة بأفضل قيمة.",
                 DurationMonths = 12,
-                TotalPrice = 899,
+                TotalPrice = 449,
                 Features =
                 [
                     "جميع خدمات النظام",

@@ -1226,7 +1226,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         page.Size(PageSizes.A4);
                         page.Margin(18);
                         page.PageColor(Colors.White);
-                        page.DefaultTextStyle(TextStyle.Default.FontFamily("Arial").FontSize(10));
+                        page.DefaultTextStyle(TextStyle.Default.FontFamily("Tajawal").FontSize(10));
 
                         page.Content()
                             .ContentFromRightToLeft()
@@ -1507,7 +1507,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         page.Margin(compactLabel ? 2f : 3f, Unit.Millimetre);
                         page.PageColor(Colors.White);
                         page.DefaultTextStyle(
-                            TextStyle.Default.FontFamily("Arial").FontSize(compactLabel ? 7f : 8.5f)
+                            TextStyle.Default.FontFamily("Tajawal").FontSize(compactLabel ? 7f : 8.5f)
                         );
 
                         page.Content()
@@ -1699,7 +1699,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         page.Size(ZebraLabelWidthMm, ZebraLabelHeightMm, Unit.Millimetre);
                         page.Margin(3f, Unit.Millimetre);
                         page.PageColor(Colors.White);
-                        page.DefaultTextStyle(TextStyle.Default.FontFamily("Arial"));
+                        page.DefaultTextStyle(TextStyle.Default.FontFamily("Tajawal"));
 
                         page.Content()
                             .ContentFromRightToLeft()

@@ -296,7 +296,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     TenantId = tenantId,
                     Name = companyName,
                     Slug = tenantId,
-                    IsActive = false,
+                    IsActive = true,
                     CreatedAtUtc = now,
                     SubscriptionStatus = TenantSubscriptionStatuses.PendingPayment,
                     SignupExpiresAtUtc = now.AddHours(24),
@@ -345,11 +345,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 JobTitle = "مالك الحساب",
                 PhoneNumber = ownerPhone,
                 Email = ownerEmail,
-                IsActive = false,
+                IsActive = true,
                 Role = AppRoles.GeneralManager,
                 ManagerUsername = string.Empty,
             };
-            AppPermissions.ApplyRoleDefaults(owner);
+            AppPermissions.ClearAll(owner);
             UserAccountService.SetPassword(owner, password);
             db.UserAccounts.Add(owner);
 
@@ -658,6 +658,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 if (pendingOwner != null)
                 {
                     pendingOwner.IsActive = true;
+                    AppPermissions.ApplyRoleDefaults(pendingOwner);
                 }
             }
             db.SaveChanges();

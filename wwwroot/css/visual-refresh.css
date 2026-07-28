@@ -1385,6 +1385,34 @@ body.login-page-body:has(.subscription-page-shell) .subscription-page-shell :is(
     justify-content: center;
 }
 
+.permit-digital-pass__link {
+    display: grid;
+    gap: 6px;
+    margin-top: 16px;
+}
+
+.permit-digital-pass__link label {
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.permit-digital-pass__link > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+.permit-digital-pass__link input {
+    min-width: 0;
+    height: 42px;
+    padding: 0 12px;
+    color: #10233c;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: 6px;
+    font-size: 0.78rem;
+}
+
 .permit-digital-pass__share-status {
     min-height: 22px;
     margin-top: 6px;
