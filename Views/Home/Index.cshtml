@@ -18,7 +18,9 @@
 
     var pendingPermits = ViewBag.PendingPermits as List<Permit> ?? new List<Permit>();
     var pendingPermitCount = ViewBag.PendingPermitCount as int? ?? 0;
-    var currentUserName = User.Identity?.Name ?? "المستخدم";
+    var currentUserName = User.FindFirst("DisplayName")?.Value
+        ?? User.Identity?.Name
+        ?? "المستخدم";
     var hijriCulture = new CultureInfo("ar-SA");
     var workflowPendingCount = ViewBag.WorkflowPendingCount as int? ?? 0;
     var workflowUnderReviewCount = ViewBag.WorkflowUnderReviewCount as int? ?? 0;
