@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
@@ -199,16 +200,52 @@ namespace VehiclePermitSystemWeb.Services.Users
                     fromAddress,
                     string.IsNullOrWhiteSpace(fromName) ? "منصة التصاريح" : fromName
                 ),
-                Subject = "تأكيد بريدك في منصة التصاريح",
+                Subject = "مرحباً بك في تصاريح | فعّل حسابك",
+                SubjectEncoding = Encoding.UTF8,
+                BodyEncoding = Encoding.UTF8,
                 IsBodyHtml = true,
                 Body =
                     $"""
-                    <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.8;color:#111827">
-                      <h2>أهلاً {safeName}</h2>
-                      <p>اضغط الزر التالي لتأكيد بريدك وإكمال إنشاء حساب الجهة.</p>
-                      <p><a href="{safeUrl}" style="display:inline-block;padding:12px 20px;background:#111827;color:#fff;text-decoration:none;border-radius:6px">تأكيد البريد الإلكتروني</a></p>
-                      <p style="color:#6b7280">صلاحية الرابط 24 ساعة. إذا لم تطلب إنشاء الحساب فتجاهل الرسالة.</p>
-                    </div>
+                    <!doctype html>
+                    <html lang="ar" dir="rtl">
+                    <body style="margin:0;padding:0;background:#f4f6f8;font-family:Tahoma,Arial,sans-serif;color:#172033">
+                      <div style="display:none;max-height:0;overflow:hidden">
+                        فعّل بريدك وابدأ تجربة تصاريح بخطوة واحدة.
+                      </div>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f6f8">
+                        <tr>
+                          <td align="center" style="padding:32px 16px">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #e2e7ec;border-radius:10px;overflow:hidden">
+                              <tr>
+                                <td style="padding:22px 28px;background:#101820;color:#ffffff;font-size:20px;font-weight:700">
+                                  تصاريح
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style="padding:32px 28px;text-align:right">
+                                  <h1 style="margin:0 0 14px;font-size:25px;line-height:1.5;color:#172033">
+                                    أهلاً {safeName}
+                                  </h1>
+                                  <p style="margin:0 0 10px;font-size:17px;line-height:1.9">
+                                    خطوتك الأولى نحو إدارة دخول أسهل وأكثر أماناً.
+                                  </p>
+                                  <p style="margin:0 0 24px;font-size:15px;line-height:1.8;color:#596579">
+                                    فعّل بريدك الآن لتكمل إعداد حسابك وتبدأ استخدام المنصة.
+                                  </p>
+                                  <a href="{safeUrl}" style="display:inline-block;padding:13px 28px;background:#159a8c;color:#ffffff;text-decoration:none;border-radius:6px;font-size:16px;font-weight:700">
+                                    تفعيل الحساب
+                                  </a>
+                                  <p style="margin:26px 0 0;font-size:13px;line-height:1.8;color:#7b8493">
+                                    رابط التفعيل صالح لمدة 24 ساعة. إذا لم تطلب إنشاء الحساب، يمكنك تجاهل هذه الرسالة.
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </body>
+                    </html>
                     """,
             };
             message.To.Add(new MailAddress(challenge.Email, challenge.DisplayName));
