@@ -890,6 +890,11 @@ namespace VehiclePermitSystemWeb.Controllers
             string role
         )
         {
+            if (!string.IsNullOrWhiteSpace(user?.TenantId))
+            {
+                HttpContext.Items[HttpTenantContext.ResolvedTenantItemKey] = user.TenantId;
+            }
+
             var sessionId = _userAdminService.CreateSession(username);
             var claims = new List<Claim>
             {
