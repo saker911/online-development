@@ -261,8 +261,15 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var tenantKey = (tenant ?? string.Empty).Trim();
+            var isPublicTenantKey =
+                string.IsNullOrWhiteSpace(tenantKey)
+                || string.Equals(
+                    tenantKey,
+                    TenantDefaults.DefaultTenantId,
+                    StringComparison.OrdinalIgnoreCase
+                );
             var tenants = _userAdminService.GetTenants(includeInactive: true).ToList();
-            var matchingTenantIds = string.IsNullOrWhiteSpace(tenantKey)
+            var matchingTenantIds = isPublicTenantKey
                 ? null
                 : tenants
                     .Where(item =>
@@ -278,7 +285,7 @@ namespace VehiclePermitSystemWeb.Controllers
             );
             if (
                 mappedLogin == null
-                && string.IsNullOrWhiteSpace(tenantKey)
+                && isPublicTenantKey
                 && string.Equals(
                     identity.Provider,
                     ExternalAuthenticationDefaults.GoogleScheme,
