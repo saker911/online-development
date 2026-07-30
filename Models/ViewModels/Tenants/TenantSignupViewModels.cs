@@ -114,5 +114,23 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public string PaymentReference { get; set; } = string.Empty;
         public string LoginUrl { get; set; } = string.Empty;
         public string ExternalProvider { get; set; } = string.Empty;
+        public string CheckoutToken { get; set; } = string.Empty;
+        public string OwnerUsername { get; set; } = string.Empty;
+        public string OwnerEmail { get; set; } = string.Empty;
+        public bool IsEmailConfirmed { get; set; }
+        public string MaskedOwnerEmail
+        {
+            get
+            {
+                var parts = OwnerEmail.Split('@', 2);
+                if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]))
+                {
+                    return OwnerEmail;
+                }
+
+                var visible = parts[0].Length <= 2 ? parts[0][..1] : parts[0][..2];
+                return $"{visible}***@{parts[1]}";
+            }
+        }
     }
 }

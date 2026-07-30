@@ -16,16 +16,19 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly ITenantManagementService _tenantManagementService;
         private readonly SignupAttemptGuard? _signupAttemptGuard;
         private readonly IExternalLoginService? _externalLoginService;
+        private readonly IAccountEmailVerificationService? _emailVerificationService;
 
         public SubscriptionController(
             ITenantManagementService tenantManagementService,
             SignupAttemptGuard? signupAttemptGuard = null,
-            IExternalLoginService? externalLoginService = null
+            IExternalLoginService? externalLoginService = null,
+            IAccountEmailVerificationService? emailVerificationService = null
         )
         {
             _tenantManagementService = tenantManagementService;
             _signupAttemptGuard = signupAttemptGuard;
             _externalLoginService = externalLoginService;
+            _emailVerificationService = emailVerificationService;
         }
 
         [HttpGet]
@@ -56,32 +59,27 @@ namespace VehiclePermitSystemWeb.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExternalSignup(
+        public IActionResult ExternalSignup(
             string provider,
             string? returnMode = null,
             string? plan = null
         )
         {
             var normalizedProvider = ExternalAuthenticationDefaults.NormalizeProvider(provider);
-            var schemeProvider = HttpContext.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
-            if (
-                normalizedProvider == null
-                || await schemeProvider.GetSchemeAsync(normalizedProvider) == null
-            )
+            if (normalizedProvider == null)
             {
                 TempData["SubscriptionNotice"] =
-                    "خيار التسجيل المطلوب غير مفعّل بعد. أكمل التسجيل بالبيانات الأساسية أو فعّل مفاتيح مزود الهوية.";
+                    "التسجيل السريع متاح عبر Google فقط.";
                 return string.Equals(returnMode, "Register", StringComparison.OrdinalIgnoreCase)
                     ? RedirectToAction(nameof(Register), new { plan })
                     : RedirectToAction(nameof(Plans), new { plan });
             }
 
-            var callbackUrl = Url.Action(
-                nameof(ExternalSignupCallback),
-                new { provider = normalizedProvider, returnMode, plan }
+            return RedirectToAction(
+                "ExternalLogin",
+                "Account",
+                new { provider = normalizedProvider }
             );
-            var properties = new AuthenticationProperties { RedirectUri = callbackUrl };
-            return Challenge(properties, normalizedProvider);
         }
 
         [HttpGet]
@@ -132,7 +130,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("signup")]
-        public IActionResult Register(TenantSignupViewModel model)
+        public async Task<IActionResult> Register(TenantSignupViewModel model)
         {
             model.PlanCode = (model.PlanCode ?? string.Empty).Trim();
             model.CompanyName = (model.CompanyName ?? string.Empty).Trim();
@@ -171,6 +169,25 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var externalIdentity = ReadPendingExternalIdentity();
+            var emailConfirmedByGoogle =
+                externalIdentity != null
+                && string.Equals(
+                    externalIdentity.Provider,
+                    ExternalAuthenticationDefaults.GoogleScheme,
+                    StringComparison.Ordinal
+                );
+            if (
+                !emailConfirmedByGoogle
+                && _emailVerificationService?.IsDeliveryConfigured != true
+            )
+            {
+                ModelState.AddModelError(
+                    nameof(model.OwnerEmail),
+                    "التسجيل بالبريد متوقف مؤقتاً حتى يكتمل تفعيل بريد الموقع. استخدم Google الآن."
+                );
+                return View(model);
+            }
+
             var existingExternalLogin =
                 externalIdentity == null ? null : _externalLoginService?.FindLogin(externalIdentity);
             if (existingExternalLogin != null)
@@ -182,7 +199,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View(model);
             }
 
-            var result = _tenantManagementService.CreateSignup(model);
+            var result = _tenantManagementService.CreateSignup(model, emailConfirmedByGoogle);
             if (!result.Succeeded)
             {
                 ModelState.AddModelError(string.Empty, result.Message);
@@ -204,6 +221,32 @@ namespace VehiclePermitSystemWeb.Controllers
                     TempData.Remove("ExternalSignupSubject");
                     TempData.Remove("ExternalSignupEmail");
                     TempData.Remove("ExternalSignupName");
+                }
+            }
+
+            if (!emailConfirmedByGoogle && _emailVerificationService != null)
+            {
+                var challenge = _emailVerificationService.CreateChallenge(
+                    result.TenantId,
+                    result.OwnerUsername
+                );
+                if (challenge != null)
+                {
+                    var confirmationUrl = Url.Action(
+                        nameof(ConfirmEmail),
+                        "Subscription",
+                        new { token = challenge.Token },
+                        Request.Scheme
+                    );
+                    if (!string.IsNullOrWhiteSpace(confirmationUrl))
+                    {
+                        var delivery = await _emailVerificationService.SendAsync(
+                            challenge,
+                            confirmationUrl,
+                            HttpContext.RequestAborted
+                        );
+                        TempData["SubscriptionNotice"] = delivery.Message;
+                    }
                 }
             }
 
@@ -230,6 +273,79 @@ namespace VehiclePermitSystemWeb.Controllers
             model.ExternalProvider =
                 ExternalAuthenticationDefaults.NormalizeProvider(provider) ?? string.Empty;
             return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ConfirmEmail(string token)
+        {
+            if (_emailVerificationService == null)
+            {
+                return RedirectToAction(nameof(Plans));
+            }
+
+            var result = _emailVerificationService.Confirm(token);
+            TempData["SubscriptionNotice"] = result.Message;
+            return result.Succeeded
+                ? RedirectToAction(
+                    "Login",
+                    "Account",
+                    new { tenant = result.TenantId }
+                )
+                : RedirectToAction(nameof(Plans));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("signup")]
+        public async Task<IActionResult> ResendEmailConfirmation(string tenant, string token)
+        {
+            var checkout = _tenantManagementService.GetCheckout(tenant, token);
+            if (checkout == null)
+            {
+                return NotFound();
+            }
+
+            if (checkout.IsEmailConfirmed)
+            {
+                TempData["SubscriptionNotice"] = "البريد الإلكتروني مؤكد مسبقاً.";
+                return RedirectToAction(nameof(Checkout), new { tenant, token });
+            }
+
+            if (_emailVerificationService?.IsDeliveryConfigured != true)
+            {
+                TempData["SubscriptionNotice"] = "بريد الموقع غير مهيأ للإرسال بعد.";
+                return RedirectToAction(nameof(Checkout), new { tenant, token });
+            }
+
+            var challenge = _emailVerificationService.CreateChallenge(
+                checkout.TenantId,
+                checkout.OwnerUsername
+            );
+            if (challenge == null)
+            {
+                TempData["SubscriptionNotice"] = "تعذر العثور على حساب البريد المطلوب.";
+                return RedirectToAction(nameof(Checkout), new { tenant, token });
+            }
+
+            var confirmationUrl = Url.Action(
+                nameof(ConfirmEmail),
+                "Subscription",
+                new { token = challenge.Token },
+                Request.Scheme
+            );
+            if (string.IsNullOrWhiteSpace(confirmationUrl))
+            {
+                TempData["SubscriptionNotice"] = "تعذر إنشاء رابط التأكيد.";
+                return RedirectToAction(nameof(Checkout), new { tenant, token });
+            }
+
+            var delivery = await _emailVerificationService.SendAsync(
+                challenge,
+                confirmationUrl,
+                HttpContext.RequestAborted
+            );
+            TempData["SubscriptionNotice"] = delivery.Message;
+            return RedirectToAction(nameof(Checkout), new { tenant, token });
         }
 
         private ExternalIdentity? ReadPendingExternalIdentity()

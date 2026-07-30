@@ -14,9 +14,13 @@
     <section class="subscription-shell subscription-checkout-shell">
         <div class="subscription-heading">
             <div>
-                <div class="login-page-kicker">بانتظار الدفع</div>
+                <div class="login-page-kicker">@(Model.IsEmailConfirmed ? "بانتظار الدفع" : "تأكيد البريد")</div>
                 <h1 class="login-page-title">تم إنشاء حساب @Model.CompanyName</h1>
-                <p class="login-page-subtitle">يمكنك الدخول الآن ومراجعة حسابك، وتظهر خدمات التشغيل تلقائياً بعد تأكيد الدفع.</p>
+                <p class="login-page-subtitle">
+                    @(Model.IsEmailConfirmed
+                        ? "يمكنك الدخول الآن ومراجعة حسابك، وتظهر خدمات التشغيل تلقائياً بعد تأكيد الدفع."
+                        : $"أرسلنا رابط التأكيد إلى {Model.MaskedOwnerEmail}. افتح الرسالة قبل تسجيل الدخول.")
+                </p>
             </div>
             <div class="subscription-heading-actions">
                 <span class="badge bg-warning text-dark">@Model.SubscriptionStatusDisplayName</span>
@@ -38,7 +42,17 @@
                 <h2>سياسة التفعيل</h2>
                 <p>في الربط الحقيقي سيتم تحويل العميل إلى بوابة الدفع، ثم يستقبل النظام تأكيد السداد عبر Webhook ويحوّل الاشتراك إلى نشط تلقائيًا.</p>
                 <p>حاليًا يستطيع مالك المنصة تفعيل الاشتراك يدويًا من لوحة الجهات بعد استلام السداد.</p>
-                @if (!string.IsNullOrWhiteSpace(Model.ExternalProvider))
+                @if (!Model.IsEmailConfirmed)
+                {
+                    <form asp-action="ResendEmailConfirmation" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="tenant" value="@Model.TenantId" />
+                        <input type="hidden" name="token" value="@Model.CheckoutToken" />
+                        <button type="submit" class="btn btn-primary w-100">إعادة إرسال رسالة التأكيد</button>
+                    </form>
+                    <small class="d-block mt-3 text-muted">لن يقبل النظام الدخول بكلمة المرور قبل تأكيد البريد.</small>
+                }
+                else if (!string.IsNullOrWhiteSpace(Model.ExternalProvider))
                 {
                     <a asp-controller="Account" asp-action="ExternalLogin"
                        asp-route-provider="@Model.ExternalProvider"

@@ -6,59 +6,29 @@
     var isLogin = string.Equals(Model.Mode, "Login", StringComparison.OrdinalIgnoreCase);
     var googleConfigured = !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientId"])
         && !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientSecret"]);
-    var microsoftConfigured = !string.IsNullOrWhiteSpace(Configuration["Authentication:Microsoft:ClientId"])
-        && !string.IsNullOrWhiteSpace(Configuration["Authentication:Microsoft:ClientSecret"]);
     var showProviderSetupState = HostEnvironment.IsDevelopment();
 }
 
-@if (googleConfigured || microsoftConfigured || showProviderSetupState)
+@if (googleConfigured || showProviderSetupState)
 {
     <section class="external-auth-panel @(isLogin ? "external-auth-panel-login" : "external-auth-panel-register")"
-             aria-label="خيارات الدخول السريع">
+             aria-label="الدخول السريع عبر Google">
         <div class="external-auth-copy">
-            <strong>@(isLogin ? "دخول أسرع" : "ابدأ بحسابك الحالي")</strong>
-            <span>@(isLogin ? "استخدم الحساب المرتبط بجهتك." : "نملأ بياناتك ونربط دخولك مباشرة، وتبقى خدمات التشغيل مقفلة حتى تفعيل الباقة.")</span>
+            <strong>@(isLogin ? "الدخول بحساب Google" : "جرّب النظام فوراً")</strong>
+            <span>@(isLogin
+                ? "ادخل بحسابك المرتبط دون كلمة مرور إضافية."
+                : "ينشئ Google مساحة تجربة كاملة لمدة يومين ويدخلك مباشرة.")</span>
         </div>
-        <details class="external-auth-menu">
-            <summary>
-                <span class="external-auth-provider-stack" aria-hidden="true">
-                    <img src="~/images/brands/google.svg" alt="" />
-                    <img src="~/images/brands/microsoft.svg" alt="" />
-                </span>
-                <strong>@(isLogin ? "الدخول عبر حساباتك" : "التسجيل عبر حساباتك")</strong>
-                <span class="external-auth-chevron" aria-hidden="true"></span>
-            </summary>
-            <div class="external-auth-popover" role="group" aria-label="اختر مزود الحساب">
-                @if (googleConfigured || showProviderSetupState)
-                {
-                    <a asp-controller="@(isLogin ? "Account" : "Subscription")"
-                       asp-action="@(isLogin ? "ExternalLogin" : "ExternalSignup")"
-                       asp-route-provider="Google"
-                       asp-route-tenant="@Model.Tenant"
-                       asp-route-returnMode="@Model.Mode"
-                       asp-route-plan="@Model.PlanCode"
-                       class="external-auth-icon-button @(googleConfigured ? "" : "is-unavailable")"
-                       aria-label="المتابعة باستخدام Google"
-                       title="@(googleConfigured ? "المتابعة باستخدام Google" : "يتطلب إعداد Google OAuth")">
-                        <img src="~/images/brands/google.svg" alt="" />
-                    </a>
-                }
-                @if (microsoftConfigured || showProviderSetupState)
-                {
-                    <a asp-controller="@(isLogin ? "Account" : "Subscription")"
-                       asp-action="@(isLogin ? "ExternalLogin" : "ExternalSignup")"
-                       asp-route-provider="Microsoft"
-                       asp-route-tenant="@Model.Tenant"
-                       asp-route-returnMode="@Model.Mode"
-                       asp-route-plan="@Model.PlanCode"
-                       class="external-auth-icon-button @(microsoftConfigured ? "" : "is-unavailable")"
-                       aria-label="المتابعة باستخدام Microsoft"
-                       title="@(microsoftConfigured ? "المتابعة باستخدام Microsoft" : "يتطلب إعداد Microsoft OAuth")">
-                        <img src="~/images/brands/microsoft.svg" alt="" />
-                    </a>
-                }
-            </div>
-        </details>
-        <div class="external-auth-divider"><span>أو باستخدام بيانات الحساب</span></div>
+        <a asp-controller="Account"
+           asp-action="ExternalLogin"
+           asp-route-provider="Google"
+           asp-route-tenant="@Model.Tenant"
+           class="external-auth-google-button @(googleConfigured ? "" : "is-unavailable")"
+           aria-label="المتابعة باستخدام Google"
+           title="@(googleConfigured ? "المتابعة باستخدام Google" : "يتطلب إعداد Google OAuth")">
+            <img src="~/images/brands/google.svg" alt="" />
+            <strong>@(isLogin ? "الدخول باستخدام Google" : "ابدأ تجربة يومين باستخدام Google")</strong>
+        </a>
+        <div class="external-auth-divider"><span>أو سجّل بالبريد الإلكتروني</span></div>
     </section>
 }

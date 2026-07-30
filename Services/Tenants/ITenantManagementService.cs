@@ -7,7 +7,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         TenantManagementViewModel GetDashboard();
         TenantEditorViewModel? GetEditor(string tenantId);
         TenantOperationResult CreateTenant(TenantEditorViewModel model);
-        TenantSignupResult CreateSignup(TenantSignupViewModel model);
+        TenantSignupResult CreateSignup(
+            TenantSignupViewModel model,
+            bool emailConfirmed = false
+        );
+        TenantSignupResult CreateGoogleTrial(string fullName, string email);
         TenantCheckoutViewModel? GetCheckout(string tenantId, string checkoutToken);
         TenantOperationResult UpdateTenant(string tenantId, TenantEditorViewModel model);
         TenantOperationResult SetTenantActive(string tenantId, bool isActive);
@@ -22,6 +26,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         string Message,
         string TenantId = "",
         string PaymentReference = "",
-        string CheckoutToken = ""
+        string CheckoutToken = "",
+        string OwnerUsername = ""
     );
 }

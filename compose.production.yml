@@ -34,8 +34,13 @@ services:
       ForwardedHeaders__TrustPlatformProxy: "true"
       Authentication__Google__ClientId: ${Authentication__Google__ClientId:-}
       Authentication__Google__ClientSecret: ${Authentication__Google__ClientSecret:-}
-      Authentication__Microsoft__ClientId: ${Authentication__Microsoft__ClientId:-}
-      Authentication__Microsoft__ClientSecret: ${Authentication__Microsoft__ClientSecret:-}
+      Email__Smtp__Host: ${Email__Smtp__Host:-}
+      Email__Smtp__Port: ${Email__Smtp__Port:-587}
+      Email__Smtp__Username: ${Email__Smtp__Username:-}
+      Email__Smtp__Password: ${Email__Smtp__Password:-}
+      Email__Smtp__FromAddress: ${Email__Smtp__FromAddress:-}
+      Email__Smtp__FromName: ${Email__Smtp__FromName:-منصة التصاريح}
+      Email__Smtp__EnableSsl: ${Email__Smtp__EnableSsl:-true}
       OnlineEdition__PrivacyMinimized: "true"
       OnlineEdition__CollectNationalId: "false"
       OnlineEdition__SimplifiedVisits: "true"

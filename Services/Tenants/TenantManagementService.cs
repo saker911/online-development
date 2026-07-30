@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using VehiclePermitSystemWeb.Data;
@@ -222,7 +223,10 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             return new TenantOperationResult(true, "تمت إضافة الجهة بنجاح.");
         }
 
-        public TenantSignupResult CreateSignup(TenantSignupViewModel model)
+        public TenantSignupResult CreateSignup(
+            TenantSignupViewModel model,
+            bool emailConfirmed = false
+        )
         {
             using var db = _dbContextFactory.CreateDbContext();
             var plan = TenantPlanCatalog.Find(model.PlanCode);
@@ -345,6 +349,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 JobTitle = "مالك الحساب",
                 PhoneNumber = ownerPhone,
                 Email = ownerEmail,
+                IsEmailConfirmed = emailConfirmed,
                 IsActive = true,
                 Role = AppRoles.GeneralManager,
                 ManagerUsername = string.Empty,
@@ -359,7 +364,115 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 "تم إنشاء الحساب وبانتظار إتمام الدفع.",
                 tenantId,
                 BuildPaymentReference(tenantId, now),
-                _checkoutProtector.Protect(tenantId, TimeSpan.FromMinutes(30))
+                _checkoutProtector.Protect(tenantId, TimeSpan.FromMinutes(30)),
+                ownerUsername
+            );
+        }
+
+        public TenantSignupResult CreateGoogleTrial(string fullName, string email)
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var normalizedEmail = NormalizeText(email).ToLowerInvariant();
+            var normalizedName = NormalizeText(fullName);
+            if (string.IsNullOrWhiteSpace(normalizedEmail))
+            {
+                return new TenantSignupResult(
+                    false,
+                    "لم يرسل Google بريدًا إلكترونيًا صالحًا للحساب."
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(normalizedName))
+            {
+                normalizedName = normalizedEmail.Split('@', 2)[0];
+            }
+
+            var now = DateTime.UtcNow;
+            var suffix = Convert.ToHexString(RandomNumberGenerator.GetBytes(6)).ToLowerInvariant();
+            var tenantId = $"trial-{suffix}";
+            while (db.Tenants.Any(tenant => tenant.TenantId == tenantId || tenant.Slug == tenantId))
+            {
+                suffix = Convert
+                    .ToHexString(RandomNumberGenerator.GetBytes(6))
+                    .ToLowerInvariant();
+                tenantId = $"trial-{suffix}";
+            }
+
+            var usernameHash = SHA256.HashData(
+                Encoding.UTF8.GetBytes($"{normalizedEmail}:{suffix}")
+            );
+            var ownerUsername = $"g-{Convert.ToHexString(usernameHash)[..16].ToLowerInvariant()}";
+            var organizationName = $"{normalizedName} - تجربة";
+
+            db.Tenants.Add(
+                new Tenant
+                {
+                    TenantId = tenantId,
+                    Name = organizationName,
+                    Slug = tenantId,
+                    IsActive = true,
+                    CreatedAtUtc = now,
+                    SubscriptionStatus = TenantSubscriptionStatuses.Trial,
+                    TrialEndsAtUtc = now.AddDays(2),
+                    PlanName = "تجربة يومين",
+                    MaxUsers = null,
+                    MaxPermitsPerMonth = null,
+                    MaxVisitsPerMonth = null,
+                }
+            );
+
+            db.AdministrationSettings.Add(
+                new AdministrationSettings
+                {
+                    Id = GetNextAdministrationSettingsId(db),
+                    TenantId = tenantId,
+                    OrganizationName = organizationName,
+                    DepartmentName = "الإدارة العامة",
+                    GeneralManagerUsername = ownerUsername,
+                    ManagerName = normalizedName,
+                    ManagerTitle = "مدير الجهة",
+                    ManagerPhoneNumber = string.Empty,
+                    Email = normalizedEmail,
+                    DisplayAccessKey = DisplayAccessKeyHasher.Hash(
+                        DisplayAccessDefaults.CreateAccessKey()
+                    ),
+                    OfficialWorkDaysCsv = AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv,
+                    IsInitialSetupCompleted = true,
+                }
+            );
+            db.Departments.Add(
+                new Department
+                {
+                    TenantId = tenantId,
+                    Name = "الإدارة العامة",
+                    IsActive = true,
+                }
+            );
+
+            var owner = new UserAccount
+            {
+                TenantId = tenantId,
+                Username = ownerUsername,
+                DisplayName = normalizedName,
+                FullName = normalizedName,
+                Department = "الإدارة العامة",
+                JobTitle = "مدير الجهة",
+                PhoneNumber = string.Empty,
+                Email = normalizedEmail,
+                IsEmailConfirmed = true,
+                IsActive = true,
+                Role = AppRoles.GeneralManager,
+                ManagerUsername = string.Empty,
+            };
+            AppPermissions.ApplyRoleDefaults(owner);
+            db.UserAccounts.Add(owner);
+            db.SaveChanges();
+
+            return new TenantSignupResult(
+                true,
+                "تم إنشاء مساحة التجربة لمدة يومين.",
+                tenantId,
+                OwnerUsername: ownerUsername
             );
         }
 
@@ -386,6 +499,13 @@ namespace VehiclePermitSystemWeb.Services.Tenants
 
             var plan = TenantPlanCatalog.GetPlans()
                 .FirstOrDefault(item => string.Equals(item.Name, tenant.PlanName, StringComparison.Ordinal));
+            var owner = db
+                .UserAccounts.IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(item => item.TenantId == tenant.TenantId)
+                .OrderByDescending(item => item.Role == AppRoles.GeneralManager)
+                .ThenByDescending(item => item.IsSuperAdmin)
+                .FirstOrDefault();
 
             return new TenantCheckoutViewModel
             {
@@ -397,6 +517,10 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 TotalPrice = plan?.TotalPrice ?? 0,
                 PaymentReference = BuildPaymentReference(tenant.TenantId, tenant.CreatedAtUtc),
                 LoginUrl = $"/o/{Uri.EscapeDataString(tenant.Slug)}",
+                CheckoutToken = checkoutToken,
+                OwnerUsername = owner?.Username ?? string.Empty,
+                OwnerEmail = owner?.Email ?? string.Empty,
+                IsEmailConfirmed = owner?.IsEmailConfirmed ?? false,
             };
         }
 

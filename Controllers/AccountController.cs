@@ -40,6 +40,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IUserAdminService _userAdminService;
         private readonly LoginAttemptGuard _loginAttemptGuard;
         private readonly IExternalLoginService? _externalLoginService;
+        private readonly ITenantManagementService? _tenantManagementService;
 
         private IToastNotificationService ToastNotifications =>
             HttpContext.RequestServices.GetRequiredService<IToastNotificationService>();
@@ -52,12 +53,14 @@ namespace VehiclePermitSystemWeb.Controllers
         public AccountController(
             IUserAdminService userAdminService,
             LoginAttemptGuard? loginAttemptGuard = null,
-            IExternalLoginService? externalLoginService = null
+            IExternalLoginService? externalLoginService = null,
+            ITenantManagementService? tenantManagementService = null
         )
         {
             _userAdminService = userAdminService;
             _loginAttemptGuard = loginAttemptGuard ?? new LoginAttemptGuard();
             _externalLoginService = externalLoginService;
+            _tenantManagementService = tenantManagementService;
         }
 
         [HttpGet]
@@ -158,6 +161,15 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 _loginAttemptGuard.Reset(username, tenant, remoteIp);
                 var user = _userAdminService.GetUserAccount(username);
+                if (user?.IsEmailConfirmed == false)
+                {
+                    ViewData["SubmittedUsername"] = username;
+                    ToastNotifications.Warning(
+                        "يجب تأكيد البريد الإلكتروني أولاً. افتح رسالة التأكيد المرسلة إلى بريدك."
+                    );
+                    return View();
+                }
+
                 await SignInUserAsync(user, username, displayName, role);
                 _userAdminService.RecordUserActivity(
                     username,
@@ -264,6 +276,49 @@ namespace VehiclePermitSystemWeb.Controllers
                 identity,
                 matchingTenantIds?.Count == 1 ? matchingTenantIds.Single() : null
             );
+            if (
+                mappedLogin == null
+                && string.IsNullOrWhiteSpace(tenantKey)
+                && string.Equals(
+                    identity.Provider,
+                    ExternalAuthenticationDefaults.GoogleScheme,
+                    StringComparison.Ordinal
+                )
+                && _tenantManagementService != null
+                && _externalLoginService != null
+            )
+            {
+                var email = principal.FindFirstValue(ClaimTypes.Email) ?? identity.Email;
+                var name = principal.FindFirstValue(ClaimTypes.Name)
+                    ?? principal.FindFirstValue("name")
+                    ?? email.Split('@', 2)[0];
+                var trial = _tenantManagementService.CreateGoogleTrial(name, email);
+                if (!trial.Succeeded)
+                {
+                    ToastNotifications.Error(trial.Message);
+                    return RedirectToAction(nameof(Login));
+                }
+
+                var linkResult = _externalLoginService.Link(
+                    identity,
+                    trial.TenantId,
+                    trial.OwnerUsername
+                );
+                if (!linkResult.Succeeded)
+                {
+                    ToastNotifications.Error(
+                        "تم إنشاء مساحة التجربة، لكن تعذر ربط حساب Google بها. تواصل مع الدعم."
+                    );
+                    return RedirectToAction(nameof(Login));
+                }
+
+                mappedLogin = _externalLoginService.FindLogin(identity, trial.TenantId);
+                tenants = _userAdminService.GetTenants(includeInactive: true).ToList();
+                ToastNotifications.Success(
+                    "أهلًا بك. تم تجهيز مساحة تجربة كاملة لمدة يومين."
+                );
+            }
+
             if (mappedLogin == null)
             {
                 ToastNotifications.Error(

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -32,9 +34,9 @@ public sealed class SecurityHardeningTests
 
     [Theory]
     [InlineData("Google", ExternalAuthenticationDefaults.GoogleScheme)]
-    [InlineData("Microsoft", ExternalAuthenticationDefaults.MicrosoftScheme)]
-    [InlineData("Hotmail", ExternalAuthenticationDefaults.MicrosoftScheme)]
-    [InlineData("Outlook", ExternalAuthenticationDefaults.MicrosoftScheme)]
+    [InlineData("Microsoft", null)]
+    [InlineData("Hotmail", null)]
+    [InlineData("Outlook", null)]
     [InlineData("unknown-provider", null)]
     public void ExternalProviderNamesAreNormalizedSafely(string provider, string? expected)
     {
@@ -234,6 +236,7 @@ public sealed class SecurityHardeningTests
             var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
             var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup");
             Assert.True(owner.IsActive);
+            Assert.False(owner.IsEmailConfirmed);
             Assert.Empty(AppPermissions.GetGrantedPermissions(owner));
             Assert.Equal(owner.Username, settings.GeneralManagerUsername);
             Assert.Equal(owner.DisplayName, settings.ManagerName);
@@ -250,6 +253,86 @@ public sealed class SecurityHardeningTests
         var activatedOwner = verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
         Assert.True(activatedOwner.IsActive);
         Assert.NotEmpty(AppPermissions.GetGrantedPermissions(activatedOwner));
+    }
+
+    [Fact]
+    public void GoogleSignupCreatesAnImmediatelyUsableTwoDayTrial()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITenantContext, DefaultTenantContext>();
+        services.AddDbContextFactory<ApplicationDbContext>(options =>
+            options.UseInMemoryDatabase($"google-trial-{Guid.NewGuid():N}")
+        );
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+        var startedAt = DateTime.UtcNow;
+
+        var result = service.CreateGoogleTrial("مستخدم التجربة", "trial@example.com");
+
+        Assert.True(result.Succeeded, result.Message);
+        using var db = factory.CreateDbContext();
+        var tenant = db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
+        var owner = db
+            .UserAccounts.IgnoreQueryFilters()
+            .Single(x => x.Username == result.OwnerUsername);
+        Assert.Equal(TenantSubscriptionStatuses.Trial, tenant.SubscriptionStatus);
+        Assert.InRange(
+            tenant.TrialEndsAtUtc!.Value,
+            startedAt.AddDays(2).AddMinutes(-1),
+            startedAt.AddDays(2).AddMinutes(1)
+        );
+        Assert.True(owner.IsEmailConfirmed);
+        Assert.Equal(AppRoles.GeneralManager, owner.Role);
+        Assert.NotEmpty(AppPermissions.GetGrantedPermissions(owner));
+    }
+
+    [Fact]
+    public void EmailConfirmationTokenConfirmsOnlyTheMatchingAccount()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITenantContext, DefaultTenantContext>();
+        services.AddDbContextFactory<ApplicationDbContext>(options =>
+            options.UseInMemoryDatabase($"email-confirmation-{Guid.NewGuid():N}")
+        );
+        using var provider = services.BuildServiceProvider();
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        using (var db = factory.CreateDbContext())
+        {
+            db.UserAccounts.Add(
+                new UserAccount
+                {
+                    TenantId = "email-tenant",
+                    Username = "1023456789",
+                    DisplayName = "مالك البريد",
+                    Email = "owner@example.com",
+                    IsEmailConfirmed = false,
+                    IsActive = true,
+                }
+            );
+            db.SaveChanges();
+        }
+
+        var dataProtectionProvider = new EphemeralDataProtectionProvider();
+        using var loggerFactory = LoggerFactory.Create(_ => { });
+        var service = new AccountEmailVerificationService(
+            factory,
+            dataProtectionProvider,
+            new ConfigurationBuilder().Build(),
+            loggerFactory.CreateLogger<AccountEmailVerificationService>()
+        );
+        var challenge = service.CreateChallenge("email-tenant", "1023456789");
+
+        Assert.NotNull(challenge);
+        var result = service.Confirm(challenge!.Token);
+        Assert.True(result.Succeeded, result.Message);
+        using var verifiedDb = factory.CreateDbContext();
+        Assert.True(
+            verifiedDb
+                .UserAccounts.IgnoreQueryFilters()
+                .Single(x => x.Username == "1023456789")
+                .IsEmailConfirmed
+        );
     }
 
     [Fact]

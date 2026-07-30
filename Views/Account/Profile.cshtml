@@ -230,16 +230,10 @@ Model.ManagerDisplayName;
                                 </div>
                             </div>
 
-                            @foreach (var provider in new[]
-                            {
-                                ExternalAuthenticationDefaults.GoogleScheme,
-                                ExternalAuthenticationDefaults.MicrosoftScheme,
-                            })
+                            @foreach (var provider in new[] { ExternalAuthenticationDefaults.GoogleScheme })
                             {
                                 var isLinked = Model.LinkedExternalProviders.Contains(provider);
-                                var providerLabel = provider == ExternalAuthenticationDefaults.GoogleScheme
-                                    ? "Google"
-                                    : "Microsoft";
+                                var providerLabel = "Google";
                                 <div class="account-profile-credential-box">
                                     <strong>@providerLabel</strong>
                                     <p>@(isLinked ? "مرتبط بهذا الحساب ويمكن استخدامه للدخول." : "غير مرتبط. يبدأ الربط بعد التحقق من حسابك الحالي.")</p>

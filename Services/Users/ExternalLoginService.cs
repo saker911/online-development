@@ -30,10 +30,6 @@ namespace VehiclePermitSystemWeb.Services.Users
 
     public sealed class ExternalLoginService : IExternalLoginService
     {
-        private const string MicrosoftObjectIdClaim =
-            "http://schemas.microsoft.com/identity/claims/objectidentifier";
-        private const string MicrosoftTenantIdClaim =
-            "http://schemas.microsoft.com/identity/claims/tenantid";
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
 
         public ExternalLoginService(IDbContextFactory<ApplicationDbContext> dbContextFactory)
@@ -63,27 +59,6 @@ namespace VehiclePermitSystemWeb.Services.Users
             )
             {
                 issuer = "https://accounts.google.com";
-            }
-
-            if (
-                string.Equals(
-                    normalizedProvider,
-                    ExternalAuthenticationDefaults.MicrosoftScheme,
-                    StringComparison.Ordinal
-                )
-            )
-            {
-                var tenantId = principal.FindFirstValue("tid")?.Trim()
-                    ?? principal.FindFirstValue(MicrosoftTenantIdClaim)?.Trim()
-                    ?? string.Empty;
-                var objectId = principal.FindFirstValue("oid")?.Trim()
-                    ?? principal.FindFirstValue(MicrosoftObjectIdClaim)?.Trim()
-                    ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(objectId))
-                {
-                    issuer = $"microsoft-tenant:{tenantId}";
-                    subject = objectId;
-                }
             }
 
             if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(subject))

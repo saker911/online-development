@@ -2379,6 +2379,46 @@ body.login-page-body .login-submit-button:hover {
     position: relative;
 }
 
+.external-auth-google-button {
+    width: min(100%, 420px);
+    min-height: 52px;
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 11px 18px;
+    color: var(--public-field-text);
+    background: var(--public-field-bg);
+    border: 1px solid var(--public-field-border);
+    border-radius: 7px;
+    text-decoration: none;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.external-auth-google-button:hover,
+.external-auth-google-button:focus-visible {
+    color: var(--public-field-text);
+    border-color: var(--public-ink);
+    box-shadow: 0 0 0 3px var(--public-focus);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.external-auth-google-button img {
+    width: 22px;
+    height: 22px;
+}
+
+.external-auth-google-button strong {
+    font-size: .94rem;
+    font-weight: 700;
+}
+
+.external-auth-google-button.is-unavailable {
+    opacity: .68;
+}
+
 .external-auth-menu {
     position: relative;
     width: min(100%, 360px);
@@ -3083,5 +3123,9 @@ body.login-page-body .login-back-link:focus-visible {
     .external-auth-panel-register .external-auth-menu {
         width: 100%;
         margin-inline: 0;
+    }
+
+    .external-auth-google-button {
+        width: 100%;
     }
 }

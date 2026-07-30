@@ -41,29 +41,38 @@ ConnectionStrings__PostgreSqlConnection=Host=127.0.0.1;Port=5432;Database=vehicl
 
 تستخدم جميع الجهات دومين المنصة نفسه، ويحصل كل عميل على رابط بالصيغة `/o/{slug}`. لا يحتاج العميل إلى DNS أو شهادة منفصلة، وتبقى روابط OAuth والجلسات مركزية على `app.example.com`.
 
-## Google وMicrosoft
+## Google والبريد الإلكتروني
 
-احفظ المفاتيح كمتغيرات بيئة أو أسرار خدمة، ولا تضعها في GitHub:
+احفظ مفاتيح Google كمتغيرات بيئة أو أسرار خدمة، ولا تضعها في GitHub:
 
 ```text
 Authentication__Google__ClientId=<google-client-id>
 Authentication__Google__ClientSecret=<google-client-secret>
-Authentication__Microsoft__ClientId=<microsoft-client-id>
-Authentication__Microsoft__ClientSecret=<microsoft-client-secret>
 ```
 
 أضف روابط العودة التالية في إعدادات المزود، مع استبدال الدومين:
 
 ```text
 https://tasareehapp.com/signin-google
-https://tasareehapp.com/signin-microsoft
 ```
 
-مزود Microsoft مضبوط على `common` حتى يدعم حسابات Microsoft الشخصية مثل Hotmail وOutlook، إضافة إلى حسابات العمل أو الدراسة. عند عدم وجود المفاتيح يخفي النظام الأزرار في الإنتاج، ويعرضها في التطوير بحالة إعداد آمنة دون محاولة اتصال خارجية.
-
 في Google استخدم عميلًا من نوع **Web application** واجعل الجمهور **External**.
-وفي Microsoft استخدم منصة **Web** واختر نوع الحسابات الذي يدعم حسابات الجهات
-وحسابات Microsoft الشخصية. بعد إنشاء الأسرار أعد تشغيل حاوية التطبيق:
+يدخل مستخدم Google مباشرة، وينشئ النظام له مساحة تجربة كاملة لمدة يومين عند
+أول دخول. أما التسجيل المعتاد بالبريد الإلكتروني فيتطلب تأكيد البريد أولاً.
+
+إعدادات SMTP المستخدمة مع Resend:
+
+```text
+Email__Smtp__Host=smtp.resend.com
+Email__Smtp__Port=587
+Email__Smtp__Username=resend
+Email__Smtp__Password=<resend-api-key>
+Email__Smtp__FromAddress=no-reply@tasareehapp.com
+Email__Smtp__FromName=منصة التصاريح
+Email__Smtp__EnableSsl=true
+```
+
+بعد إنشاء الأسرار أعد تشغيل حاوية التطبيق:
 
 ```bash
 docker compose -f compose.production.yml --env-file /opt/tasareehapp/.env up -d --build app

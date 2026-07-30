@@ -218,6 +218,9 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<UserAccount>().Property(x => x.OperatorPinHash).HasMaxLength(256);
             modelBuilder.Entity<UserAccount>().Property(x => x.OperatorPinSalt).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.PhoneNumber).HasMaxLength(32);
+            modelBuilder.Entity<UserAccount>().Property(x => x.Email).HasMaxLength(256);
+            modelBuilder.Entity<UserAccount>().Property(x => x.IsEmailConfirmed).HasDefaultValue(true);
+            modelBuilder.Entity<UserAccount>().HasIndex(x => new { x.TenantId, x.Email });
             modelBuilder.Entity<UserAccount>().Property(x => x.Email).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.ManagerUsername).HasMaxLength(64);
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.TenantId).HasMaxLength(64);
