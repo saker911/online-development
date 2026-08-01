@@ -65,9 +65,20 @@
                             <span asp-validation-for="NationalId"></span>
                         </div>
                     }
-                    <div class="public-visit-field">
+                    <div class="public-visit-field date-field-shell" data-date-field data-date-display-mode="hijri">
                         <label asp-for="VisitDate"></label>
-                        <input asp-for="VisitDate" type="datetime-local" min="@ViewData["VisitDateMin"]" max="@ViewData["VisitDateMax"]" />
+                        <div class="date-input-shell">
+                            <input asp-for="VisitDate" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local"
+                                   id="VisitDate" class="hijri-source-input date-native-hidden" lang="ar-SA"
+                                   min="@ViewData["VisitDateMin"]" max="@ViewData["VisitDateMax"]" data-hijri-source />
+                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="VisitDate"
+                                 data-empty-text="يوم/شهر/سنة - الوقت">سيظهر الموعد هنا</div>
+                            <label class="date-hijri-toggle" dir="rtl">
+                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                <input type="checkbox" checked data-date-hijri-switch />
+                                <span class="date-hijri-toggle-track"></span>
+                            </label>
+                        </div>
                         <span asp-validation-for="VisitDate"></span>
                     </div>
                     <div class="public-visit-field">

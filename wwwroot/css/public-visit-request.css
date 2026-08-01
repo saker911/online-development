@@ -48,6 +48,10 @@
 .public-visit-field input, .public-visit-field textarea { width: 100%; min-height: 50px; box-sizing: border-box; border: 1px solid var(--visit-line); border-radius: 7px; background: var(--visit-surface); color: var(--visit-ink); padding: 12px 14px; outline: 0; transition: border-color .16s ease, box-shadow .16s ease; }
 .public-visit-field textarea { min-height: 92px; resize: vertical; }
 .public-visit-field input:focus, .public-visit-field textarea:focus { border-color: var(--visit-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--visit-accent) 14%, transparent); }
+.public-visit-field .date-input-shell { width: 100%; }
+.public-visit-field .date-native-hidden { min-height: 50px; }
+.public-visit-field .date-inline-overlay { min-height: 50px; border-color: var(--visit-line); border-radius: 7px; color: var(--visit-ink); background: transparent; }
+.public-visit-field .date-hijri-toggle { margin-top: 7px; }
 .public-visit-field span, .public-visit-consent-error { color: #c2413b; font-size: 12px; }
 .public-visit-consent { margin: 24px 0 8px; display: flex; gap: 10px; align-items: flex-start; color: var(--visit-muted); font-size: 13px; line-height: 1.7; cursor: pointer; }
 .public-visit-consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--visit-accent); }
