@@ -1543,7 +1543,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
         private static string GenerateNextPermitNumber(ApplicationDbContext db)
         {
             var nextNumber =
-                db.Permits.AsEnumerable()
+                db.Permits.IgnoreQueryFilters().AsEnumerable()
                     .Select(p =>
                         TryGetPermitSequenceNumber(p.PermitNumber, out var value) ? value : 0
                     )

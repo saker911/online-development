@@ -883,7 +883,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
         private static string GenerateNextVisitId(ApplicationDbContext db)
         {
             var nextNumber =
-                db.Visits.AsEnumerable()
+                db.Visits.IgnoreQueryFilters().AsEnumerable()
                     .Select(v => int.TryParse(v.VisitId.TrimStart('V'), out var value) ? value : 0)
                     .DefaultIfEmpty(0)
                     .Max() + 1;
