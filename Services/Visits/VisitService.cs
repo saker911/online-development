@@ -1114,6 +1114,11 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     AppRoles.GeneralManager,
                     StringComparison.OrdinalIgnoreCase
                 )
+                || string.Equals(
+                    user.Role,
+                    AppRoles.SecurityManager,
+                    StringComparison.OrdinalIgnoreCase
+                )
             )
             {
                 return true;
