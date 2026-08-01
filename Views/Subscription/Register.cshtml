@@ -60,12 +60,12 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label asp-for="CompanyName" class="form-label"></label>
-                        <input asp-for="CompanyName" class="form-control" />
+                        <input asp-for="CompanyName" class="form-control" autocomplete="organization" />
                         <span asp-validation-for="CompanyName" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="TenantId" class="form-label"></label>
-                        <input asp-for="TenantId" class="form-control" dir="ltr" placeholder="company-name" />
+                        <input asp-for="TenantId" class="form-control" dir="ltr" placeholder="company-name" autocomplete="off" />
                         <div class="form-text">سيكون رابط الدخول بهذا الشكل: /o/company-name</div>
                         <span asp-validation-for="TenantId" class="field-validation-error"></span>
                     </div>
@@ -77,32 +77,32 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label asp-for="OwnerFullName" class="form-label"></label>
-                        <input asp-for="OwnerFullName" class="form-control" />
+                        <input asp-for="OwnerFullName" class="form-control" autocomplete="name" />
                         <span asp-validation-for="OwnerFullName" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="OwnerUsername" class="form-label"></label>
-                        <input asp-for="OwnerUsername" class="form-control" inputmode="numeric" maxlength="10" />
+                        <input asp-for="OwnerUsername" class="form-control" inputmode="numeric" maxlength="10" autocomplete="username" />
                         <span asp-validation-for="OwnerUsername" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="OwnerPhoneNumber" class="form-label"></label>
-                        <input asp-for="OwnerPhoneNumber" class="form-control" inputmode="tel" />
+                        <input asp-for="OwnerPhoneNumber" class="form-control" inputmode="tel" autocomplete="tel" />
                         <span asp-validation-for="OwnerPhoneNumber" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="OwnerEmail" class="form-label"></label>
-                        <input asp-for="OwnerEmail" class="form-control" dir="ltr" />
+                        <input asp-for="OwnerEmail" class="form-control" dir="ltr" autocomplete="email" />
                         <span asp-validation-for="OwnerEmail" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="Password" class="form-label"></label>
-                        <input asp-for="Password" class="form-control" />
+                        <input asp-for="Password" class="form-control" autocomplete="new-password" />
                         <span asp-validation-for="Password" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="ConfirmPassword" class="form-label"></label>
-                        <input asp-for="ConfirmPassword" class="form-control" />
+                        <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
                         <span asp-validation-for="ConfirmPassword" class="field-validation-error"></span>
                     </div>
                 </div>

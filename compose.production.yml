@@ -39,7 +39,7 @@ services:
       Email__Smtp__Username: ${Email__Smtp__Username:-}
       Email__Smtp__Password: ${Email__Smtp__Password:-}
       Email__Smtp__FromAddress: ${Email__Smtp__FromAddress:-}
-      Email__Smtp__FromName: ${Email__Smtp__FromName:-منصة التصاريح}
+      Email__Smtp__FromName: ${Email__Smtp__FromName:-منصة تصاريح}
       Email__Smtp__EnableSsl: ${Email__Smtp__EnableSsl:-true}
       OnlineEdition__PrivacyMinimized: "true"
       OnlineEdition__CollectNationalId: "false"

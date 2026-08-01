@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
+using VehiclePermitSystemWeb.Infrastructure;
 using VehiclePermitSystemWeb.Models.DTOs;
 using VehiclePermitSystemWeb.Models.Entities;
 using VehiclePermitSystemWeb.Models.ViewModels.Account;
@@ -591,11 +592,8 @@ namespace VehiclePermitSystemWeb.Controllers
                     ?.GetLinkedProviders(user.TenantId, user.Username)
                     .ToHashSet(StringComparer.Ordinal)
                     ?? new HashSet<string>(StringComparer.Ordinal),
-                IsSubscriptionPending = string.Equals(
-                    tenant?.SubscriptionStatus,
-                    TenantSubscriptionStatuses.PendingPayment,
-                    StringComparison.Ordinal
-                ),
+                IsSubscriptionRestricted = tenant != null
+                    && SubscriptionAccessMiddleware.IsSubscriptionRestricted(tenant, DateTime.UtcNow),
                 SubscriptionStatusDisplayName = TenantSubscriptionStatuses.GetDisplayName(
                     tenant?.SubscriptionStatus
                 ),

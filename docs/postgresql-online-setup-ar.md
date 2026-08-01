@@ -68,7 +68,7 @@ Email__Smtp__Port=587
 Email__Smtp__Username=resend
 Email__Smtp__Password=<resend-api-key>
 Email__Smtp__FromAddress=no-reply@tasareehapp.com
-Email__Smtp__FromName=منصة التصاريح
+Email__Smtp__FromName=منصة تصاريح
 Email__Smtp__EnableSsl=true
 ```
 

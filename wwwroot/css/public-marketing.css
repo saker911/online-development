@@ -526,6 +526,12 @@ body.subscription-page-body :is(.btn-outline-primary, .btn-outline-secondary):ho
     font-weight: 800;
 }
 
+[data-theme="dark"] body.subscription-page-body .subscription-notice {
+    color: #d9f7ed !important;
+    background: #10251f !important;
+    border-color: #287663 !important;
+}
+
 .subscription-social-signup {
     display: grid;
     grid-template-columns: minmax(220px, .75fr) minmax(480px, 1.25fr);

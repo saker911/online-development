@@ -564,6 +564,8 @@ app.Use(
     }
 );
 
+app.UseMiddleware<SubscriptionAccessMiddleware>();
+
 app.UseAuthorization();
 
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();

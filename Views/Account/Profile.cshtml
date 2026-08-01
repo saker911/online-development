@@ -25,7 +25,7 @@ Model.ManagerDisplayName;
 
 <div class="account-profile-shell">
     <div class="account-profile-toolbar">
-        @if (Model.IsSubscriptionPending)
+        @if (Model.IsSubscriptionRestricted)
         {
             <a asp-controller="Subscription" asp-action="Plans" class="btn btn-primary btn-sm">عرض الباقات</a>
         }
@@ -35,12 +35,12 @@ Model.ManagerDisplayName;
         }
     </div>
 
-    @if (Model.IsSubscriptionPending)
+    @if (Model.IsSubscriptionRestricted)
     {
         <section class="account-profile-subscription-notice" role="status">
             <div>
-                <strong>حسابك جاهز والدخول مفعل</strong>
-                <span>حالة الاشتراك: @Model.SubscriptionStatusDisplayName. خدمات التشغيل ستظهر تلقائياً بعد تأكيد الدفع.</span>
+                <strong>حسابك جاهز ويحتاج تفعيل الاشتراك</strong>
+                <span>حالة الاشتراك: @Model.SubscriptionStatusDisplayName. فعّل الاشتراك أو جدّده لاستعادة خدمات التشغيل.</span>
             </div>
             <a asp-controller="Subscription" asp-action="Plans" class="btn btn-dark btn-sm">اختيار الباقة</a>
         </section>

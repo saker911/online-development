@@ -284,7 +284,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var result = _emailVerificationService.Confirm(token);
-            TempData["SubscriptionNotice"] = result.Message;
+            TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
             return result.Succeeded
                 ? RedirectToAction(
                     "Login",

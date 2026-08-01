@@ -1,6 +1,9 @@
 const { test, expect } = require("@playwright/test");
+const { completeInitialSetup } = require("./helpers/e2e-helpers");
 
 test("public authentication offers Google trial and no Microsoft option", async ({ page }) => {
+  await completeInitialSetup(page);
+  await page.context().clearCookies();
   await page.goto("/Account/Login");
 
   await expect(
@@ -13,4 +16,7 @@ test("public authentication offers Google trial and no Microsoft option", async 
     page.getByRole("link", { name: "المتابعة باستخدام Google" })
   ).toContainText("ابدأ تجربة يومين باستخدام Google");
   await expect(page.getByText("Microsoft", { exact: true })).toHaveCount(0);
+  await expect(page.locator('[name="OwnerEmail"]')).toHaveAttribute("autocomplete", "email");
+  await expect(page.locator('[name="Password"]')).toHaveAttribute("autocomplete", "new-password");
+  await expect(page.locator('[name="ConfirmPassword"]')).toHaveAttribute("autocomplete", "new-password");
 });

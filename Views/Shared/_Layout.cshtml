@@ -13,6 +13,7 @@
 @using VehiclePermitSystemWeb.Models.ViewModels.Scan
 @using VehiclePermitSystemWeb.Models.ViewModels.Users
 @using VehiclePermitSystemWeb.Models.ViewModels.Visits
+@using VehiclePermitSystemWeb.Infrastructure
 @using VehiclePermitSystemWeb.Security
 @using VehiclePermitSystemWeb.Services.Permits
 @using VehiclePermitSystemWeb.Services.Visits
@@ -141,20 +142,32 @@
     var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
     var currentUsername = User.Identity?.Name ?? string.Empty;
     var currentUser = isAuthenticated ? UserAdminService.GetUserAccount(currentUsername) : null;
+    var currentTenant = currentUser == null
+        ? null
+        : UserAdminService
+            .GetTenants(includeInactive: true)
+            .FirstOrDefault(tenant => string.Equals(
+                tenant.TenantId,
+                currentUser.TenantId,
+                StringComparison.OrdinalIgnoreCase
+            ));
+    var isSubscriptionRestricted = currentUser != null
+        && !User.IsSuperAdmin()
+        && (currentTenant == null || SubscriptionAccessMiddleware.IsSubscriptionRestricted(currentTenant, DateTime.UtcNow));
     var administrationSettings = UserAdminService.GetAdministrationSettings();
     var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
     var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
     var requiresPasswordChange = isAuthenticated && (currentUser?.MustChangePassword ?? false);
     var pageToastMessage = ViewData["PageToastMessage"] as string;
     var pageToastType = ViewData["PageToastType"] as string;
-    var canApprovePermits = User.HasPermission(AppPermissions.ApprovePermit);
-    var canReviewUnauthorizedExit = User.HasPermission(AppPermissions.ReviewUnauthorizedExit);
-    var canStopPermit = User.HasPermission(AppPermissions.StopPermit);
-    var canViewVisits = AccessControlService.CanViewVisits(currentUser);
-    var canViewPermits = AccessControlService.CanViewPermits(currentUser);
-    var canApproveDetainedVisits = User.HasPermission(AppPermissions.ApproveDetainedVisit);
-    var canManageDepartments = User.HasPermission(AppPermissions.ManageDepartments);
-    var canManageAdministration = User.HasPermission(AppPermissions.ManageAdministration);
+    var canApprovePermits = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ApprovePermit);
+    var canReviewUnauthorizedExit = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ReviewUnauthorizedExit);
+    var canStopPermit = !isSubscriptionRestricted && User.HasPermission(AppPermissions.StopPermit);
+    var canViewVisits = !isSubscriptionRestricted && AccessControlService.CanViewVisits(currentUser);
+    var canViewPermits = !isSubscriptionRestricted && AccessControlService.CanViewPermits(currentUser);
+    var canApproveDetainedVisits = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ApproveDetainedVisit);
+    var canManageDepartments = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDepartments);
+    var canManageAdministration = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageAdministration);
     var pendingDisplayDeviceCount = canManageAdministration ? DisplayDeviceService.GetPendingCount() : 0;
     var canViewSecurityAlerts = canApprovePermits || canReviewUnauthorizedExit || canStopPermit;
     var canViewNotificationCenter = isAuthenticated
@@ -635,11 +648,27 @@
                                             </div>
 
                                             <nav class="app-sidebar-nav" aria-label="القائمة الرئيسية">
-                                                <a class="app-sidebar-link @(isActive("Home", "Index") ? "active" : string.Empty)"
-                                                       asp-controller="Home" asp-action="Index">
-                                                    <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#home")"></use></svg>
-                                                    <span>الرئيسة</span>
-                                                </a>
+                                                @if (isSubscriptionRestricted)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Account") ? "active" : string.Empty)"
+                                                           asp-controller="Account" asp-action="Profile">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#users")"></use></svg>
+                                                        <span>حسابي</span>
+                                                    </a>
+                                                    <a class="app-sidebar-link @(isControllerActive("Subscription") ? "active" : string.Empty)"
+                                                           asp-controller="Subscription" asp-action="Plans">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#permit")"></use></svg>
+                                                        <span>إكمال الاشتراك</span>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="app-sidebar-link @(isActive("Home", "Index") ? "active" : string.Empty)"
+                                                           asp-controller="Home" asp-action="Index">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#home")"></use></svg>
+                                                        <span>الرئيسة</span>
+                                                    </a>
+                                                }
                                                 @if (canViewPermits)
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Permits") ? "active" : string.Empty)"
@@ -656,7 +685,7 @@
                                                         <span>الزيارات</span>
                                                     </a>
                                                 }
-                                                @if (User.HasPermission(AppPermissions.ViewDisplays) || canManageAdministration)
+                                                @if (!isSubscriptionRestricted && (User.HasPermission(AppPermissions.ViewDisplays) || canManageAdministration))
                                                 {
                                                     var displayLinkController = canManageAdministration ? "Administration" : "Display";
                                                     var displayLinkAction = canManageAdministration ? "DisplaySettings" : "Access";
@@ -679,7 +708,7 @@
                                                         }
                                                     </a>
                                                 }
-                                                @if (User.HasPermission(AppPermissions.ScanOperations))
+                                                @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ScanOperations))
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("ScanConsole") ? "active" : string.Empty)"
                                                            asp-controller="ScanConsole" asp-action="Index">
@@ -695,7 +724,7 @@
                                                         <span>التقارير</span>
                                                     </a>
                                                 }
-                                                @if (User.HasPermission(AppPermissions.ViewDashboard))
+                                                @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ViewDashboard))
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Monitoring") ? "active" : string.Empty)"
                                                            asp-controller="Monitoring" asp-action="Index">
@@ -703,7 +732,7 @@
                                                         <span>المراقبة</span>
                                                     </a>
                                                 }
-                                                @if (User.HasPermission(AppPermissions.ManageUsers))
+                                                @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageUsers))
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Users") ? "active" : string.Empty)"
                                                            asp-controller="Users" asp-action="Index">
@@ -711,7 +740,7 @@
                                                         <span>فريق التشغيل</span>
                                                     </a>
                                                 }
-                                                @if (User.IsSuperAdmin())
+                                                @if (!isSubscriptionRestricted && User.IsSuperAdmin())
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Tenants") ? "active" : string.Empty)"
                                                            asp-controller="Tenants" asp-action="Index">
@@ -719,7 +748,7 @@
                                                         <span>الجهات والشركات</span>
                                                     </a>
                                                 }
-                                                @if (User.HasPermission(AppPermissions.ManageDelegations))
+                                                @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDelegations))
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Delegations") ? "active" : string.Empty)"
                                                            asp-controller="Delegations" asp-action="Index">
