@@ -30,6 +30,8 @@ services:
       Data__Provider: PostgreSql
       ConnectionStrings__PostgreSqlConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Security__CookieSecurePolicy: Always
+      Security__DataProtectionCertificatePath: /run/secrets/tasareehapp/data-protection.pfx
+      Security__DataProtectionCertificatePassword: ${Security__DataProtectionCertificatePassword}
       AllowedHosts: ${APP_ALLOWED_HOSTS}
       ForwardedHeaders__TrustPlatformProxy: "true"
       Authentication__Google__ClientId: ${Authentication__Google__ClientId:-}
@@ -47,6 +49,7 @@ services:
       VehiclePermitSystemWeb__StorageRoot: /data
     volumes:
       - app_storage:/data
+      - /opt/tasareehapp/secrets:/run/secrets/tasareehapp:ro
     ports:
       - "127.0.0.1:10000:10000"
     networks:

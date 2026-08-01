@@ -72,7 +72,7 @@ namespace VehiclePermitSystemWeb.Controllers
             if (string.IsNullOrWhiteSpace(identifier))
                 return Ok(new { allowed = false, reason = "invalid_request" });
 
-            var scannerUserId = ResolveScannerUserId(requestBody);
+            var scannerUserId = ResolveEffectiveScannerUserId(requestBody);
             var auditContext = BuildPermitAuditContext(requestBody, "نقطة مسح التصاريح", "scan");
             var overrideEntry = ResolveOverrideEntry(
                 requestBody,
@@ -156,7 +156,7 @@ namespace VehiclePermitSystemWeb.Controllers
             if (string.IsNullOrWhiteSpace(identifier))
                 return Ok(new { allowed = false, reason = "invalid_request" });
 
-            var requestedScannerUserId = ResolveScannerUserId(requestBody);
+            var requestedScannerUserId = ResolveEffectiveScannerUserId(requestBody);
             var auditContext = BuildPermitAuditContext(requestBody, "البوابة", "scan");
             var displayOperator = ResolveActiveDisplayOperatorForScan(auditContext.DeviceId);
             if (displayOperator?.MustChangePin == true)
@@ -300,7 +300,7 @@ namespace VehiclePermitSystemWeb.Controllers
             if (string.IsNullOrWhiteSpace(identifier))
                 return Ok(new { allowed = false, reason = "invalid_request" });
 
-            var scannerUserId = ResolveScannerUserId(requestBody);
+            var scannerUserId = ResolveEffectiveScannerUserId(requestBody);
             var (allowed, reason) = _visitService.RecordVisitScan(identifier, scannerUserId);
             var visit = _visitService.GetVisitById(identifier);
             return Ok(
@@ -411,6 +411,16 @@ namespace VehiclePermitSystemWeb.Controllers
             );
         }
 
+        private string? ResolveEffectiveScannerUserId(JsonElement requestBody)
+        {
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return User.Identity.Name;
+            }
+
+            return ResolveScannerUserId(requestBody);
+        }
+
         private PermitScanAuditContext BuildPermitAuditContext(
             JsonElement requestBody,
             string defaultGateName,
@@ -424,8 +434,8 @@ namespace VehiclePermitSystemWeb.Controllers
             var displayOperator = _userAdminService.GetDisplayOperatorSession(deviceId);
             var operatorAccount =
                 displayOperator?.Username
-                ?? ResolveScannerUserId(requestBody)
                 ?? User.Identity?.Name
+                ?? ResolveScannerUserId(requestBody)
                 ?? string.Empty;
             var operatorName =
                 displayOperator?.DisplayName

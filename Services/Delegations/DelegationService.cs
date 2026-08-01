@@ -21,9 +21,20 @@ namespace VehiclePermitSystemWeb.Services.Delegations
     public sealed class DelegationService : IDelegationService
     {
         private static readonly StringComparer PermissionComparer = StringComparer.Ordinal;
+        private static readonly IReadOnlySet<string> NonDelegateablePermissions = new HashSet<string>(
+            new[]
+            {
+                AppPermissions.ManageUsers,
+                AppPermissions.ManageDepartments,
+                AppPermissions.ManageAdministration,
+                AppPermissions.ManageDelegations,
+            },
+            PermissionComparer
+        );
         private static readonly IReadOnlySet<string> DelegateablePermissions = AppPermissions
             .EditorGroups.SelectMany(group => group.Permissions)
             .Select(item => item.Key)
+            .Where(permission => !NonDelegateablePermissions.Contains(permission))
             .ToHashSet(PermissionComparer);
 
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
@@ -669,6 +680,14 @@ namespace VehiclePermitSystemWeb.Services.Delegations
                 );
             }
 
+            if (delegator.IsSuperAdmin || delegatee.IsSuperAdmin)
+            {
+                return DelegationOperationResult.Failure(
+                    "delegation_protected_user_not_allowed",
+                    "لا يمكن إنشاء تفويض من حساب مالك النظام أو إليه."
+                );
+            }
+
             var reverseOverlapExists = db
                 .Delegations.AsNoTracking()
                 .Any(item =>
@@ -693,6 +712,18 @@ namespace VehiclePermitSystemWeb.Services.Delegations
                 .ToHashSet(PermissionComparer);
             if (normalizedScopeType == DelegationScopeTypes.Custom)
             {
+                var requestedPermissions = (input.PermissionKeys ?? Array.Empty<string>())
+                    .Where(permission => !string.IsNullOrWhiteSpace(permission))
+                    .Select(permission => permission.Trim())
+                    .ToHashSet(PermissionComparer);
+                if (requestedPermissions.Any(NonDelegateablePermissions.Contains))
+                {
+                    return DelegationOperationResult.Failure(
+                        "delegation_permission_not_delegateable",
+                        "صلاحيات إدارة النظام والحسابات لا تقبل التفويض."
+                    );
+                }
+
                 var selectedPermissions = NormalizePermissionKeys(input.PermissionKeys);
                 if (selectedPermissions.Count == 0)
                 {

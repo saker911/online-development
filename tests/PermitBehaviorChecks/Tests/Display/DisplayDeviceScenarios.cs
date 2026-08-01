@@ -87,6 +87,12 @@ internal static partial class ScenarioCatalog
                 .Contains(displayDeviceService.DeviceCookieName, StringComparison.Ordinal),
             "re-linked display device should receive a fresh device token cookie"
         );
+        Require(
+            !displayDeviceService.TryActivateApprovedRequest(
+                BuildDisplayHttpContext(requestCode: pending.RequestCode)
+            ),
+            "a consumed display request cookie must not mint another device token"
+        );
         using (var db = dbFactory.CreateDbContext())
         {
             Require(

@@ -652,6 +652,10 @@ internal static partial class ScenarioCatalog
                     )
             ),
             Scenario(
+                "Authenticated scan identity cannot be spoofed",
+                ScenarioAuthenticatedScanIdentityCannotBeSpoofed
+            ),
+            Scenario(
                 "Disabled leave requests use automatic employee movement",
                 fixture =>
                     ScenarioDisabledLeaveRequestsUseAutomaticMovement(

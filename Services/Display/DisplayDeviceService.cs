@@ -309,6 +309,7 @@ namespace VehiclePermitSystemWeb.Services.Display
 
             var token = SecureTokenGenerator.GenerateSecureToken();
             device.DeviceTokenHash = HashSecret(token);
+            device.RequestCode = SecureTokenGenerator.GenerateSecureToken(12);
             RecordDeviceAudit(
                 db,
                 device,
@@ -363,6 +364,7 @@ namespace VehiclePermitSystemWeb.Services.Display
 
             var token = SecureTokenGenerator.GenerateSecureToken();
             device.DeviceTokenHash = HashSecret(token);
+            device.RequestCode = SecureTokenGenerator.GenerateSecureToken(12);
             device.LastIpAddress = ResolveIp(context);
             device.LastSeenUtc = _systemClock.UtcNow;
             RecordDeviceAudit(

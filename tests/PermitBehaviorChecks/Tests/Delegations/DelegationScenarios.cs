@@ -423,6 +423,7 @@ internal static partial class ScenarioCatalog
             $"delegate-owner-{Guid.NewGuid():N}",
             "مفوّض لا يملك الصلاحية"
         );
+        weakDelegator.CanManageUsers = true;
         var delegatee = CreateEmployeeAccount($"delegate-target-{Guid.NewGuid():N}", "هدف التفويض");
         using (var db = dbFactory.CreateDbContext())
         {
@@ -447,10 +448,39 @@ internal static partial class ScenarioCatalog
             !createResult.Succeeded
                 && string.Equals(
                     createResult.ErrorCode,
-                    "delegation_permission_not_owned",
+                    "delegation_permission_not_delegateable",
                     StringComparison.OrdinalIgnoreCase
                 ),
-            "delegation should be rejected when the delegator does not own the selected permission"
+            "administrative permissions should remain non-delegateable even when the delegator owns them"
+        );
+
+        weakDelegator.IsSuperAdmin = true;
+        using (var db = dbFactory.CreateDbContext())
+        {
+            var stored = db.UserAccounts.Single(user => user.Username == weakDelegator.Username);
+            stored.IsSuperAdmin = true;
+            db.SaveChanges();
+        }
+
+        var protectedResult = delegationService.CreateDelegation(
+            new DelegationDefinitionInput
+            {
+                DelegatorUsername = weakDelegator.Username,
+                DelegateeUsername = delegatee.Username,
+                ScopeType = DelegationScopeTypes.Full,
+                StartAt = AppClock.LocalNow.AddMinutes(-5),
+                EndAt = AppClock.LocalNow.AddDays(1),
+            },
+            weakDelegator.Username
+        );
+        Require(
+            !protectedResult.Succeeded
+                && string.Equals(
+                    protectedResult.ErrorCode,
+                    "delegation_protected_user_not_allowed",
+                    StringComparison.OrdinalIgnoreCase
+                ),
+            "system-owner accounts should never participate in delegation definitions"
         );
 
         return Task.CompletedTask;
