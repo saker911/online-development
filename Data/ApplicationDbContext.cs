@@ -131,6 +131,11 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Visit>().Property(x => x.VisitedPersonName).HasMaxLength(128);
             modelBuilder.Entity<Visit>().Property(x => x.VisitedPersonType).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.ApprovalStatus).HasMaxLength(32);
+            modelBuilder
+                .Entity<Visit>()
+                .Property(x => x.RequestSource)
+                .HasMaxLength(32)
+                .HasDefaultValue(Visit.RequestSourceInternal);
             modelBuilder.Entity<Visit>().Property(x => x.VisitApproverUsername).HasMaxLength(64);
             modelBuilder.Entity<VisitCompanion>().Property(x => x.VisitId).HasMaxLength(32);
             modelBuilder.Entity<VisitCompanion>().Property(x => x.FullName).HasMaxLength(128);

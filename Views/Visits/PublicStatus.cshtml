@@ -1,0 +1,64 @@
+@using VehiclePermitSystemWeb.Utilities.Dates
+@model VehiclePermitSystemWeb.Models.ViewModels.Visits.PublicVisitStatusViewModel
+@{
+    ViewData["Title"] = "متابعة طلب الزيارة";
+    ViewData["Description"] = $"متابعة طلب الزيارة لدى {Model.OrganizationName}.";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "public-visit-body";
+    ViewData["Robots"] = "noindex,nofollow,noarchive";
+    var stateClass = Model.IsApproved ? "is-approved" : Model.IsRejected ? "is-rejected" : "is-pending";
+    var stateTitle = Model.IsApproved ? "تم اعتماد زيارتك" : Model.IsRejected ? "تعذر اعتماد الزيارة" : "طلبك قيد المراجعة";
+    var stateMessage = Model.IsApproved
+        ? "أبرز رمز الدخول عند البوابة في موعد الزيارة."
+        : Model.IsRejected
+            ? "يمكنك التواصل مع الجهة لمعرفة التفاصيل أو إرسال طلب جديد."
+            : "احتفظ بهذه الصفحة وعد إليها لاحقًا؛ ستتحدث النتيجة بعد مراجعة الجهة.";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/public-visit-request.css" asp-append-version="true" />
+}
+
+<main class="public-visit-shell public-visit-status-shell">
+    <header class="public-visit-header">
+        <a asp-controller="Home" asp-action="Index" class="public-visit-brand">
+            <span class="public-visit-brand-mark" aria-hidden="true">T</span>
+            <span><strong>@Model.OrganizationName</strong><small>بوابة الزيارات</small></span>
+        </a>
+        @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+    </header>
+
+    <section class="public-visit-status-card @stateClass">
+        <div class="public-visit-status-icon" aria-hidden="true">
+            @if (Model.IsApproved) { <span>✓</span> }
+            else if (Model.IsRejected) { <span>×</span> }
+            else { <span class="public-visit-pending-dot"></span> }
+        </div>
+        <span class="public-visit-status-kicker">طلب رقم @Model.VisitId</span>
+        <h1>@stateTitle</h1>
+        <p>@stateMessage</p>
+
+        @if (Model.IsApproved)
+        {
+            <div class="public-visit-qr-frame">
+                <img src="@Url.Action("PublicStatusQr", "Visits", new { tenant = Model.TenantSlug, token = Model.Token })" alt="رمز دخول الزيارة @Model.VisitId" />
+            </div>
+            <strong class="public-visit-qr-caption">امسح الرمز عند البوابة</strong>
+        }
+
+        <dl class="public-visit-summary">
+            <div><dt>الزائر</dt><dd>@Model.VisitorName</dd></div>
+            <div><dt>الجوال</dt><dd dir="ltr">@Model.MaskedPhoneNumber</dd></div>
+            <div><dt>الموعد</dt><dd>@HijriDateFormatter.Format(Model.VisitDate, includeTime: true)</dd></div>
+            <div><dt>المضيف</dt><dd>@Model.VisitedPersonName</dd></div>
+            <div><dt>الموقع</dt><dd>@Model.VisitLocation</dd></div>
+            <div><dt>الغرض</dt><dd>@Model.Purpose</dd></div>
+        </dl>
+
+        <div class="public-visit-status-actions">
+            <button type="button" class="public-visit-secondary-button" onclick="window.location.reload()">تحديث الحالة</button>
+            <a asp-action="PublicRequest" asp-route-tenant="@Model.TenantSlug" class="public-visit-text-link">طلب زيارة أخرى</a>
+        </div>
+        <p class="public-visit-private-note">هذا الرابط خاص بطلبك. لا تشاركه إلا عند الحاجة.</p>
+    </section>
+</main>

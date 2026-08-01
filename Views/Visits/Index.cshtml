@@ -175,6 +175,21 @@
             </div>
         </section>
 
+        @if (!Model.SuspendedOnly && !string.IsNullOrWhiteSpace(Model.PublicRequestUrl))
+        {
+            <section class="visitor-request-share card-permit app-card-surface" aria-labelledby="visitor-request-title">
+                <div class="visitor-request-share-copy">
+                    <strong id="visitor-request-title">رابط طلب الزيارة للزوار</strong>
+                    <span>أرسله للزائر ليملأ بياناته ويتابع الاعتماد ورمز الدخول بنفسه.</span>
+                </div>
+                <div class="visitor-request-share-controls">
+                    <input id="publicVisitRequestUrl" class="form-control" value="@Model.PublicRequestUrl" readonly aria-label="رابط طلب الزيارة" />
+                    <button type="button" class="btn btn-outline-secondary" data-copy-public-visit>نسخ</button>
+                    <a href="@Model.PublicRequestUrl" class="btn btn-primary" target="_blank" rel="noopener">فتح</a>
+                </div>
+            </section>
+        }
+
         <section class="records-page-toolbar-card card-permit app-card-surface">
             <div class="records-page-toolbar-main">
                 <form method="get" asp-action="@(Model.SuspendedOnly ? "Suspended" : "Index")"
@@ -339,6 +354,10 @@
                                                     </span>
                                                     <div class="permit-holder-copy">
                                                         <div class="permit-primary-text">@item.VisitorName</div>
+                                                        @if (string.Equals(item.RequestSource, Visit.RequestSourcePublicSelfService, StringComparison.OrdinalIgnoreCase))
+                                                        {
+                                                            <span class="visitor-request-source-badge">طلب ذاتي</span>
+                                                        }
                                                         @if (!hideSensitiveIdentityFields)
                                                         {
                                                             <div class="permit-secondary-text national-id-field">@item.NationalId</div>
@@ -545,3 +564,25 @@
                                 }
                             </section>
                         </div>
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/public-visit-request.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        document.querySelector('[data-copy-public-visit]')?.addEventListener('click', async function () {
+            const input = document.getElementById('publicVisitRequestUrl');
+            if (!input) return;
+            try {
+                await navigator.clipboard.writeText(input.value);
+                this.textContent = 'تم النسخ';
+            } catch {
+                input.select();
+                document.execCommand('copy');
+                this.textContent = 'تم النسخ';
+            }
+            window.setTimeout(() => { this.textContent = 'نسخ'; }, 1800);
+        });
+    </script>
+}

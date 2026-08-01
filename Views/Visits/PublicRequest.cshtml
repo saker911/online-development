@@ -1,0 +1,108 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Visits.PublicVisitRequestViewModel
+@{
+    ViewData["Title"] = "طلب زيارة";
+    ViewData["Description"] = $"إرسال طلب زيارة إلى {Model.OrganizationName}.";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "public-visit-body";
+    ViewData["Robots"] = "noindex,nofollow,noarchive";
+    var hideIdentity = ViewData["HideSensitiveIdentityFields"] as bool? ?? false;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/public-visit-request.css" asp-append-version="true" />
+}
+
+<main class="public-visit-shell">
+    <header class="public-visit-header">
+        <a asp-controller="Home" asp-action="Index" class="public-visit-brand" aria-label="العودة إلى منصة التصاريح">
+            <span class="public-visit-brand-mark" aria-hidden="true">T</span>
+            <span><strong>@Model.OrganizationName</strong><small>بوابة الزيارات</small></span>
+        </a>
+        @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+    </header>
+
+    <section class="public-visit-layout">
+        <div class="public-visit-intro">
+            <span class="public-visit-eyebrow">طلب زيارة إلكتروني</span>
+            <h1>أرسل طلبك قبل الوصول</h1>
+            <p>أدخل بيانات الزيارة وسيصل الطلب مباشرة إلى فريق @Model.OrganizationName للمراجعة.</p>
+            <ol class="public-visit-steps" aria-label="خطوات الطلب">
+                <li><span>1</span><div><strong>أرسل البيانات</strong><small>حدد الموعد والمضيف وسبب الزيارة.</small></div></li>
+                <li><span>2</span><div><strong>احتفظ برابط المتابعة</strong><small>ستظهر عليه نتيجة المراجعة تلقائيًا.</small></div></li>
+                <li><span>3</span><div><strong>أبرز رمز الدخول</strong><small>يظهر QR بعد اعتماد الطلب فقط.</small></div></li>
+            </ol>
+        </div>
+
+        <section class="public-visit-form-card" aria-labelledby="request-form-title">
+            <div class="public-visit-card-heading">
+                <span>بيانات الزائر</span>
+                <h2 id="request-form-title">طلب جديد</h2>
+            </div>
+            <form asp-action="PublicRequest" asp-route-tenant="@Model.TenantSlug" method="post" class="public-visit-form">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="public-visit-validation" role="alert"></div>
+                <div class="public-visit-honeypot" aria-hidden="true">
+                    <label asp-for="Website">الموقع</label>
+                    <input asp-for="Website" tabindex="-1" autocomplete="off" />
+                </div>
+
+                <div class="public-visit-fields">
+                    <div class="public-visit-field">
+                        <label asp-for="VisitorName"></label>
+                        <input asp-for="VisitorName" autocomplete="name" placeholder="الاسم كما في الهوية" />
+                        <span asp-validation-for="VisitorName"></span>
+                    </div>
+                    <div class="public-visit-field">
+                        <label asp-for="PhoneNumber"></label>
+                        <input asp-for="PhoneNumber" inputmode="numeric" autocomplete="tel" dir="ltr" placeholder="05xxxxxxxx" />
+                        <span asp-validation-for="PhoneNumber"></span>
+                    </div>
+                    @if (!hideIdentity)
+                    {
+                        <div class="public-visit-field">
+                            <label asp-for="NationalId"></label>
+                            <input asp-for="NationalId" inputmode="numeric" dir="ltr" maxlength="10" placeholder="اختياري" />
+                            <span asp-validation-for="NationalId"></span>
+                        </div>
+                    }
+                    <div class="public-visit-field">
+                        <label asp-for="VisitDate"></label>
+                        <input asp-for="VisitDate" type="datetime-local" min="@ViewData["VisitDateMin"]" max="@ViewData["VisitDateMax"]" />
+                        <span asp-validation-for="VisitDate"></span>
+                    </div>
+                    <div class="public-visit-field">
+                        <label asp-for="VisitedPersonName"></label>
+                        <input asp-for="VisitedPersonName" placeholder="اسم المضيف أو الموظف" />
+                        <span asp-validation-for="VisitedPersonName"></span>
+                    </div>
+                    <div class="public-visit-field">
+                        <label asp-for="VisitLocation"></label>
+                        <input asp-for="VisitLocation" placeholder="المبنى أو الموقع" />
+                        <span asp-validation-for="VisitLocation"></span>
+                    </div>
+                    <div class="public-visit-field public-visit-field-wide">
+                        <label asp-for="Purpose"></label>
+                        <textarea asp-for="Purpose" rows="3" placeholder="اكتب سبب الزيارة باختصار"></textarea>
+                        <span asp-validation-for="Purpose"></span>
+                    </div>
+                </div>
+
+                <label class="public-visit-consent">
+                    <input asp-for="AcceptPrivacy" />
+                    <span>أوافق على استخدام البيانات لمعالجة طلب الزيارة وفق <a asp-controller="Home" asp-action="Privacy" target="_blank">سياسة الخصوصية</a>.</span>
+                </label>
+                <span asp-validation-for="AcceptPrivacy" class="public-visit-consent-error"></span>
+
+                <button type="submit" class="public-visit-submit">
+                    <span>إرسال الطلب</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </button>
+                <p class="public-visit-security-note">لن يصدر رمز دخول حتى تعتمد الجهة الطلب.</p>
+            </form>
+        </section>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

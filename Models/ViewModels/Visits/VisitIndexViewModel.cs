@@ -12,5 +12,6 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
         public int CurrentPage { get; set; } = 1;
         public int TotalPages { get; set; } = 1;
         public int PageSize { get; set; } = 10;
+        public string PublicRequestUrl { get; set; } = string.Empty;
     }
 }

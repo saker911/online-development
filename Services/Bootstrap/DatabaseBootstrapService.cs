@@ -431,6 +431,8 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Visits", "VisitedPersonName", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "Visits", "VisitedPersonType", "TEXT NOT NULL DEFAULT 'Host'");
             EnsureSqliteColumn(db, "Visits", "ArchivedAt", "TEXT NULL");
+            EnsureSqliteColumn(db, "Visits", "RequestSource", "TEXT NOT NULL DEFAULT 'Internal'");
+            EnsureSqliteColumn(db, "Visits", "RequestedAtUtc", "TEXT NULL");
             EnsureSqliteColumn(
                 db,
                 "UserAccounts",

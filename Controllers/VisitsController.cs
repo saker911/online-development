@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Cryptography;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -16,6 +19,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
 using VehiclePermitSystemWeb.Security;
+using VehiclePermitSystemWeb.Infrastructure;
 using VehiclePermitSystemWeb.Services.Administration;
 using VehiclePermitSystemWeb.Services.Audit;
 using VehiclePermitSystemWeb.Services.Backup;
@@ -27,9 +31,11 @@ using VehiclePermitSystemWeb.Services.Management;
 using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
+using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 using VehiclePermitSystemWeb.Utilities.Online;
+using VehiclePermitSystemWeb.Utilities.Barcodes;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -41,6 +47,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IAccessControlService _accessControl;
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
+        private readonly ITimeLimitedDataProtector _publicVisitProtector;
 
         public VisitsController(
             IVisitService visitService,
@@ -48,7 +55,8 @@ namespace VehiclePermitSystemWeb.Controllers
             ISystemClock systemClock,
             IAccessControlService accessControl,
             IWebHostEnvironment environment,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IDataProtectionProvider dataProtectionProvider
         )
         {
             _visitService = visitService;
@@ -57,6 +65,155 @@ namespace VehiclePermitSystemWeb.Controllers
             _accessControl = accessControl;
             _environment = environment;
             _configuration = configuration;
+            _publicVisitProtector = dataProtectionProvider
+                .CreateProtector("VehiclePermitSystem.PublicVisitStatus.v1")
+                .ToTimeLimitedDataProtector();
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/o/{tenant}/visit-request")]
+        public IActionResult PublicRequest(string tenant)
+        {
+            ApplyPublicVisitResponseHeaders();
+            if (!TryResolvePublicTenant(tenant, requireAvailableSubscription: true, out var resolvedTenant))
+            {
+                return NotFound();
+            }
+
+            var now = _systemClock.LocalNow;
+            ConfigurePublicRequestView(now);
+            return View(
+                new PublicVisitRequestViewModel
+                {
+                    TenantSlug = resolvedTenant.Slug,
+                    OrganizationName = ResolvePublicOrganizationName(resolvedTenant),
+                    VisitDate = now.AddMinutes(30),
+                }
+            );
+        }
+
+        [AllowAnonymous]
+        [HttpPost("/o/{tenant}/visit-request")]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("public-visit-request")]
+        public IActionResult PublicRequest(string tenant, PublicVisitRequestViewModel model)
+        {
+            ApplyPublicVisitResponseHeaders();
+            if (!TryResolvePublicTenant(tenant, requireAvailableSubscription: true, out var resolvedTenant))
+            {
+                return NotFound();
+            }
+
+            var now = _systemClock.LocalNow;
+            model.TenantSlug = resolvedTenant.Slug;
+            model.OrganizationName = ResolvePublicOrganizationName(resolvedTenant);
+            NormalizePublicRequestInput(model);
+            ModelState.Clear();
+            TryValidateModel(model);
+            ValidatePublicRequestSchedule(model, now);
+
+            if (!string.IsNullOrWhiteSpace(model.Website))
+            {
+                ModelState.AddModelError(string.Empty, "تعذر إرسال الطلب. حاول مرة أخرى.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ConfigurePublicRequestView(now);
+                return View(model);
+            }
+
+            var nationalId = string.IsNullOrWhiteSpace(model.NationalId)
+                || OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                    ? OnlineEditionSettings.BuildSyntheticNationalId(
+                        model.VisitorName,
+                        model.PhoneNumber,
+                        model.VisitLocation,
+                        model.VisitDate.ToString("O")
+                    )
+                    : model.NationalId;
+            var visit = new Visit
+            {
+                TenantId = resolvedTenant.TenantId,
+                VisitorName = model.VisitorName,
+                PhoneNumber = model.PhoneNumber,
+                NationalId = nationalId,
+                VisitDate = model.VisitDate,
+                VisitedPersonName = model.VisitedPersonName,
+                HostName = model.VisitedPersonName,
+                VisitedPersonType = Visit.VisitedPersonTypeHost,
+                VisitLocation = model.VisitLocation,
+                Purpose = model.Purpose,
+                RequestSource = Visit.RequestSourcePublicSelfService,
+                RequestedAtUtc = _systemClock.UtcNow,
+                Status = "Active",
+                ApprovalStatus = "Pending",
+            };
+
+            _visitService.AddVisit(visit, "public-visitor");
+            var token = _publicVisitProtector.Protect(
+                $"{resolvedTenant.TenantId}|{visit.VisitId}",
+                TimeSpan.FromDays(30)
+            );
+            return RedirectToAction(nameof(PublicStatus), new { tenant = resolvedTenant.Slug, token });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/o/{tenant}/visit-request/status")]
+        public IActionResult PublicStatus(string tenant, string token)
+        {
+            ApplyPublicVisitResponseHeaders();
+            if (!TryResolvePublicTenant(tenant, requireAvailableSubscription: false, out var resolvedTenant)
+                || !TryReadPublicVisitToken(token, resolvedTenant.TenantId, out var visitId))
+            {
+                return NotFound();
+            }
+
+            var visit = _visitService.GetVisitById(visitId);
+            if (visit == null)
+            {
+                return NotFound();
+            }
+
+            return View(
+                new PublicVisitStatusViewModel
+                {
+                    TenantSlug = resolvedTenant.Slug,
+                    OrganizationName = ResolvePublicOrganizationName(resolvedTenant),
+                    Token = token,
+                    VisitId = visit.VisitId,
+                    VisitorName = visit.VisitorName,
+                    MaskedPhoneNumber = MaskPhoneNumber(visit.PhoneNumber),
+                    VisitLocation = visit.VisitLocation,
+                    VisitedPersonName = visit.SubjectDisplay,
+                    Purpose = visit.Purpose,
+                    VisitDate = visit.VisitDate,
+                    ApprovalStatus = visit.ApprovalStatus,
+                    Status = visit.Status,
+                }
+            );
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/o/{tenant}/visit-request/qr")]
+        public IActionResult PublicStatusQr(string tenant, string token)
+        {
+            ApplyPublicVisitResponseHeaders();
+            if (!TryResolvePublicTenant(tenant, requireAvailableSubscription: false, out var resolvedTenant)
+                || !TryReadPublicVisitToken(token, resolvedTenant.TenantId, out var visitId))
+            {
+                return NotFound();
+            }
+
+            var visit = _visitService.GetVisitById(visitId);
+            if (visit == null
+                || !string.Equals(visit.ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(visit.Status, "Suspended", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound();
+            }
+
+            return Content(BarcodeSvgRenderer.RenderQr(visit.VisitId), "image/svg+xml");
         }
 
         [Authorize(Policy = AppPolicies.ViewVisits)]
@@ -638,6 +795,24 @@ namespace VehiclePermitSystemWeb.Controllers
                 )
                 .Select(v => v.VisitId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var currentTenant = currentUser == null
+                ? null
+                : _userAdminService
+                    .GetTenants(includeInactive: true)
+                    .FirstOrDefault(item => string.Equals(
+                        item.TenantId,
+                        currentUser.TenantId,
+                        StringComparison.OrdinalIgnoreCase
+                    ));
+            var publicRequestUrl = currentTenant == null
+                || SubscriptionAccessMiddleware.IsSubscriptionRestricted(currentTenant, DateTime.UtcNow)
+                    ? string.Empty
+                    : Url.Action(
+                        nameof(PublicRequest),
+                        "Visits",
+                        new { tenant = currentTenant.Slug },
+                        Request.Scheme
+                    ) ?? string.Empty;
 
             return new VisitIndexViewModel
             {
@@ -650,7 +825,115 @@ namespace VehiclePermitSystemWeb.Controllers
                 CurrentPage = currentPage,
                 TotalPages = totalPages,
                 PageSize = normalizedPageSize,
+                PublicRequestUrl = publicRequestUrl,
             };
+        }
+
+        private bool TryResolvePublicTenant(
+            string? tenantReference,
+            bool requireAvailableSubscription,
+            out Tenant tenant
+        )
+        {
+            tenant = _userAdminService
+                .GetTenants(includeInactive: true)
+                .FirstOrDefault(item =>
+                    string.Equals(item.TenantId, tenantReference, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(item.Slug, tenantReference, StringComparison.OrdinalIgnoreCase)
+                )!;
+            if (tenant == null || !tenant.IsActive)
+            {
+                return false;
+            }
+
+            if (requireAvailableSubscription
+                && SubscriptionAccessMiddleware.IsSubscriptionRestricted(tenant, DateTime.UtcNow))
+            {
+                return false;
+            }
+
+            HttpContext.Items[HttpTenantContext.ResolvedTenantItemKey] = tenant.TenantId;
+            return true;
+        }
+
+        private string ResolvePublicOrganizationName(Tenant tenant)
+        {
+            var administration = _userAdminService.GetAdministrationSettings();
+            return string.IsNullOrWhiteSpace(administration.OrganizationName)
+                ? tenant.Name
+                : administration.OrganizationName.Trim();
+        }
+
+        private void ConfigurePublicRequestView(DateTime now)
+        {
+            ViewData["HideSensitiveIdentityFields"] = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration);
+            ViewData["VisitDateMin"] = now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
+            ViewData["VisitDateMax"] = now.AddDays(30).ToString("yyyy-MM-ddTHH:mm");
+        }
+
+        private static void NormalizePublicRequestInput(PublicVisitRequestViewModel model)
+        {
+            model.VisitorName = (model.VisitorName ?? string.Empty).Trim();
+            model.PhoneNumber = new string((model.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+            model.NationalId = new string((model.NationalId ?? string.Empty).Where(char.IsDigit).ToArray());
+            model.VisitedPersonName = (model.VisitedPersonName ?? string.Empty).Trim();
+            model.VisitLocation = (model.VisitLocation ?? string.Empty).Trim();
+            model.Purpose = (model.Purpose ?? string.Empty).Trim();
+        }
+
+        private void ValidatePublicRequestSchedule(PublicVisitRequestViewModel model, DateTime now)
+        {
+            if (TruncateToMinute(model.VisitDate) < TruncateToMinute(now.AddMinutes(5)))
+            {
+                ModelState.AddModelError(nameof(model.VisitDate), "اختر موعدًا بعد الوقت الحالي بخمس دقائق على الأقل.");
+            }
+
+            if (model.VisitDate > now.AddDays(30))
+            {
+                ModelState.AddModelError(nameof(model.VisitDate), "يمكن طلب موعد خلال الثلاثين يومًا القادمة فقط.");
+            }
+        }
+
+        private bool TryReadPublicVisitToken(string? token, string tenantId, out string visitId)
+        {
+            visitId = string.Empty;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
+
+            try
+            {
+                var payload = _publicVisitProtector.Unprotect(token);
+                var parts = payload.Split('|', 2, StringSplitOptions.TrimEntries);
+                if (parts.Length != 2
+                    || !string.Equals(parts[0], tenantId, StringComparison.OrdinalIgnoreCase)
+                    || string.IsNullOrWhiteSpace(parts[1]))
+                {
+                    return false;
+                }
+
+                visitId = parts[1];
+                return true;
+            }
+            catch (CryptographicException)
+            {
+                return false;
+            }
+        }
+
+        private void ApplyPublicVisitResponseHeaders()
+        {
+            Response.Headers.CacheControl = "no-store, private";
+            Response.Headers.Pragma = "no-cache";
+            Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive";
+            Response.Headers["Referrer-Policy"] = "no-referrer";
+        }
+
+        private static string MaskPhoneNumber(string phoneNumber)
+        {
+            var digits = new string((phoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+            return digits.Length < 4 ? "••••" : $"••••••{digits[^4..]}";
         }
 
         private static string NormalizeStatusFilter(string? statusFilter)

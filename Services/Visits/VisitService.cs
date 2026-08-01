@@ -114,16 +114,25 @@ namespace VehiclePermitSystemWeb.Services.Visits
 
                     if (!string.IsNullOrWhiteSpace(performedBy))
                     {
+                        var isPublicRequest = string.Equals(
+                            visit.RequestSource,
+                            Visit.RequestSourcePublicSelfService,
+                            StringComparison.OrdinalIgnoreCase
+                        );
                         RecordUserActivity(
                             db,
                             visit.VisitId,
                             visit.VisitorName,
-                            "Create",
-                            visit.IsDetainedVisit ? "إضافة زيارة موقوف" : "إضافة زيارة",
-                            visit.IsDetainedVisit
+                            isPublicRequest ? "PublicVisitRequest" : "Create",
+                            isPublicRequest
+                                ? "طلب زيارة ذاتي"
+                                : visit.IsDetainedVisit ? "إضافة زيارة موقوف" : "إضافة زيارة",
+                            isPublicRequest
+                                ? $"أرسل الزائر {visit.VisitorName} طلب الزيارة رقم {visit.VisitId}."
+                                : visit.IsDetainedVisit
                                 ? $"تمت إضافة زيارة موقوف رقم {visit.VisitId} باسم {visit.VisitorName}."
                                 : $"تمت إضافة الزيارة رقم {visit.VisitId} باسم {visit.VisitorName}.",
-                            "VisitsController",
+                            isPublicRequest ? "PublicVisitRequest" : "VisitsController",
                             performedBy,
                             _systemClock.LocalNow
                         );
@@ -682,6 +691,13 @@ namespace VehiclePermitSystemWeb.Services.Visits
             );
             visit.HostName = visit.VisitedPersonName;
             visit.Status = string.IsNullOrWhiteSpace(visit.Status) ? "Active" : visit.Status.Trim();
+            visit.RequestSource = string.Equals(
+                visit.RequestSource,
+                Visit.RequestSourcePublicSelfService,
+                StringComparison.OrdinalIgnoreCase
+            )
+                ? Visit.RequestSourcePublicSelfService
+                : Visit.RequestSourceInternal;
             visit.ApprovalStatus = "Pending";
             visit.Companions = SanitizeCompanions(visit.Companions);
         }

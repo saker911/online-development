@@ -179,6 +179,24 @@ builder.Services.AddRateLimiter(options =>
         }
     );
     options.AddPolicy<string>(
+        "public-visit-request",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var path = context.Request.Path.Value?.ToLowerInvariant() ?? "/visit-request";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: $"{path}:{remoteIp}",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 3,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+    options.AddPolicy<string>(
         "display-operator",
         context =>
         {

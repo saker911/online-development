@@ -5,6 +5,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
 {
     public class Visit : ITenantScopedEntity
     {
+        public const string RequestSourceInternal = "Internal";
+        public const string RequestSourcePublicSelfService = "PublicSelfService";
         public const string VisitedPersonTypeHost = "Host";
         public const string VisitedPersonTypeDetained = "Detained";
         public const string VisitedPersonTypePrisoner = "Prisoner";
@@ -66,6 +68,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public DateTime? ExpiresAt { get; set; }
         public string Status { get; set; } = "Active"; // Active, Inside, Completed, Suspended
         public string ApprovalStatus { get; set; } = "Pending"; // Pending, Approved, Rejected
+        public string RequestSource { get; set; } = RequestSourceInternal;
+        public DateTime? RequestedAtUtc { get; set; }
 
         public List<VisitCompanion> Companions { get; set; } = new();
 
