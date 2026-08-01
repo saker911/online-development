@@ -546,7 +546,14 @@ namespace VehiclePermitSystemWeb.Services.Permits
                 ? GetLateMinutes(occurredAt - expectedReturnTime!.Value)
                 : (int?)null;
 
-            if (permit.ApprovalStatus == "Out" || permit.CurrentState == PermitCurrentStateOutside)
+            var isReturningFromExit =
+                string.Equals(permit.ApprovalStatus, "Out", StringComparison.OrdinalIgnoreCase)
+                || (
+                    permit.CurrentState == PermitCurrentStateOutside
+                    && permit.OutTime.HasValue
+                );
+
+            if (isReturningFromExit)
             {
                 if (HasPendingUnauthorizedExit(permit))
                 {

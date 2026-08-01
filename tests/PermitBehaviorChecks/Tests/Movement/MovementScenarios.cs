@@ -533,6 +533,10 @@ internal static partial class ScenarioCatalog
 
         var firstScan = permitService.RecordPermitScan(permitNumber, "display");
         Require(firstScan.allowed, "first scan should be accepted");
+        Require(
+            string.Equals(firstScan.reason, "Entry recorded", StringComparison.OrdinalIgnoreCase),
+            "the first scan of a newly approved permit should be reported as an entry"
+        );
 
         var duplicateScan = permitService.RecordPermitScan(permitNumber, "display");
         Require(!duplicateScan.allowed, "duplicate scan within the window should be rejected");
