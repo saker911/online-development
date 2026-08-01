@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "مركز الأمان";
+    ViewData["Description"] = "مركز أمان منصة التصاريح وشرح حماية الحسابات والبيانات والبوابات والمسؤولية المشتركة.";
+    ViewData["CanonicalPath"] = "/security";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "public-content-body";
+}
+<main class="public-content-shell">
+    @await Html.PartialAsync("~/Views/Shared/_PublicContentHeader.cshtml")
+    <section class="public-content-hero"><span class="public-content-eyebrow">مركز الثقة</span><h1>أمان عملي يناسب نقاط الدخول والبيانات التشغيلية</h1><p>نوضح الضوابط الموجودة بصدق، وما تتحمله المنصة وما يجب على الجهة إدارته داخل فريقها.</p></section>
+    <section class="public-content-grid three-columns security-controls">
+        <article><strong>عزل الجهات</strong><p>كل سجل تشغيلي مرتبط بمعرف جهة، وتطبق مرشحات العزل على الاستعلام والحفظ.</p></article>
+        <article><strong>الهوية والصلاحيات</strong><p>جلسات خادمة، أدوار دقيقة، حسابات قابلة للإيقاف وتفويضات مؤقتة محدودة.</p></article>
+        <article><strong>حماية التطبيق</strong><p>HTTPS وHSTS وCSP وCSRF وكوكيز آمنة ومنع التضمين داخل الإطارات.</p></article>
+        <article><strong>بيانات الاعتماد</strong><p>تجزئة حديثة لكلمات المرور وPIN، وتحديد لمحاولات الدخول والتسجيل.</p></article>
+        <article><strong>البوابات</strong><p>اعتماد الجهاز وربطه بملف آمن، دخول مشغل مستقل، وإبطال الرموز القديمة.</p></article>
+        <article><strong>التدقيق</strong><p>تسجيل العمليات الحساسة وهوية المنفذ والمفوّض عنه ووقت الحركة.</p></article>
+    </section>
+    <section class="public-content-section split-section">
+        <div><span class="public-content-eyebrow">مسؤولية مشتركة</span><h2>ما تديره الجهة المشتركة</h2><ul class="check-list"><li>إنشاء حساب مستقل لكل مستخدم.</li><li>مراجعة الصلاحيات والأجهزة دوريًا.</li><li>إيقاف الحساب فور انتهاء العلاقة الوظيفية.</li><li>تحديد مسوغ جمع بيانات الموظفين والزوار.</li><li>توفير إجراء بديل للبوابة عند انقطاع الاتصال.</li></ul></div>
+        <div><span class="public-content-eyebrow">الاستجابة</span><h2>الإبلاغ عن ملاحظة أمنية</h2><p>لا تُجر اختبارات على الإنتاج دون موافقة مكتوبة. أرسل وصفًا قابلًا لإعادة الإنتاج عبر قناة الدعم في العقد، وتجنب تضمين بيانات شخصية حقيقية. تُصنف البلاغات حسب الأثر ويبلغ العميل المتأثر وفق الالتزامات النظامية.</p></div>
+    </section>
+    <section class="public-content-callout"><div><span>قبل التشغيل</span><h2>راجع قائمة الإطلاق الأمني مع فريقك.</h2></div><a asp-action="Guide" asp-fragment="security-checklist" class="btn btn-light">قائمة الإطلاق</a></section>
+    @await Html.PartialAsync("~/Views/Shared/_PublicContentFooter.cshtml")
+</main>

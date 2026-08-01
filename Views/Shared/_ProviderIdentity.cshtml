@@ -1,0 +1,38 @@
+@inject IConfiguration Configuration
+@{
+    var providerName = Configuration["Legal:ProviderName"];
+    var commercialRegistration = Configuration["Legal:CommercialRegistration"];
+    var vatNumber = Configuration["Legal:VatNumber"];
+    var address = Configuration["Legal:Address"];
+    var supportEmail = Configuration["Legal:SupportEmail"];
+    var hasLegalIdentity = !string.IsNullOrWhiteSpace(providerName)
+        && !string.IsNullOrWhiteSpace(commercialRegistration)
+        && !string.IsNullOrWhiteSpace(address)
+        && !string.IsNullOrWhiteSpace(supportEmail);
+}
+<section class="provider-identity @(hasLegalIdentity ? "" : "is-incomplete")" aria-labelledby="provider-identity-title">
+    <div>
+        <span class="public-content-eyebrow">مقدم الخدمة</span>
+        <h2 id="provider-identity-title">بيانات المشغّل النظامية</h2>
+    </div>
+    @if (hasLegalIdentity)
+    {
+        <dl>
+            <div><dt>الاسم النظامي</dt><dd>@providerName</dd></div>
+            <div><dt>السجل التجاري</dt><dd dir="ltr">@commercialRegistration</dd></div>
+            @if (!string.IsNullOrWhiteSpace(vatNumber))
+            {
+                <div><dt>الرقم الضريبي</dt><dd dir="ltr">@vatNumber</dd></div>
+            }
+            <div><dt>العنوان</dt><dd>@address</dd></div>
+            <div><dt>التواصل</dt><dd><a href="mailto:@supportEmail">@supportEmail</a></dd></div>
+        </dl>
+    }
+    else
+    {
+        <p>
+            منصة التصاريح هي الاسم التجاري للمنتج. تُعرض بيانات مقدم الخدمة النظامية ووسيلة التواصل
+            في عرض السعر والعقد والفاتورة قبل إتمام أي اشتراك مدفوع.
+        </p>
+    }
+</section>

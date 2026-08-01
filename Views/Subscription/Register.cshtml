@@ -110,7 +110,12 @@
 
             <label class="subscription-policy-check">
                 <input asp-for="AcceptPolicy" />
-                <span>أوافق على أن الحساب لن يتم تفعيله إلا بعد تأكيد الدفع، وأن الاشتراك قابل للإيقاف عند انتهاء المدة أو فشل السداد.</span>
+                <span>
+                    قرأت وأوافق على
+                    <a asp-controller="Home" asp-action="Terms" target="_blank" rel="noopener">شروط الاستخدام</a>
+                    و<a asp-controller="Home" asp-action="SubscriptionPolicy" target="_blank" rel="noopener">سياسة الاشتراك والاسترداد</a>
+                    و<a asp-controller="Home" asp-action="Privacy" target="_blank" rel="noopener">سياسة الخصوصية</a>.
+                </span>
             </label>
             <span asp-validation-for="AcceptPolicy" class="field-validation-error"></span>
 

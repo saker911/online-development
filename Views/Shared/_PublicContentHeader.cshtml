@@ -1,0 +1,16 @@
+<header class="public-content-header">
+    <a asp-controller="Home" asp-action="Index" class="public-content-brand" aria-label="العودة إلى منصة التصاريح">
+        <img src="~/icons/app-icon-192.png" alt="" />
+        <span><strong>منصة التصاريح</strong><small>TasareehGate</small></span>
+    </a>
+    <nav aria-label="صفحات المعلومات">
+        <a asp-controller="Home" asp-action="About">المنتج</a>
+        <a asp-controller="Home" asp-action="Guide">الدليل</a>
+        <a asp-controller="Home" asp-action="Security">الأمان</a>
+        <a asp-controller="Subscription" asp-action="Plans">الباقات</a>
+    </nav>
+    <div class="public-content-actions">
+        @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+        <a asp-controller="Account" asp-action="Login" class="btn btn-outline-secondary">تسجيل الدخول</a>
+    </div>
+</header>

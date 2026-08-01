@@ -4,6 +4,8 @@
 
 @{
     ViewData["Title"] = "منصة التصاريح والزيارات";
+    ViewData["Description"] = "شغّل التصاريح والزيارات والبوابات في منصة عربية موحدة، مع صلاحيات واضحة والتحقق الفوري عبر QR.";
+    ViewData["CanonicalPath"] = "/";
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "public-landing-body";
     var administrationSettings = UserAdminService.GetAdministrationSettings();
@@ -22,6 +24,7 @@
             <a href="#how-it-works">كيف تعمل</a>
             <a href="#plans">الباقات</a>
             <a href="#security">الأمان</a>
+            <a asp-controller="Home" asp-action="Guide">الدليل</a>
         </div>
         <div class="public-landing-nav-actions">
             @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
@@ -52,7 +55,7 @@
     </section>
 
     <section class="public-proof-strip" aria-label="مزايا التشغيل الأساسية">
-        <div><strong>24/7</strong><span>تشغيل ومتابعة</span></div>
+        <div><strong>Web</strong><span>وصول آمن عبر الويب</span></div>
         <div><strong>دقائق</strong><span>لإطلاق حساب الجهة</span></div>
         <div><strong>SSL</strong><span>جاهز للنشر الآمن</span></div>
         <div><strong>RTL</strong><span>تجربة عربية كاملة</span></div>
@@ -173,8 +176,13 @@
         </a>
         <div>
             <a href="#platform">المنصة</a>
-            <a href="#plans">الباقات</a>
-            <a asp-controller="Account" asp-action="Login">تسجيل الدخول</a>
+             <a href="#plans">الباقات</a>
+             <a asp-controller="Home" asp-action="About">عن المنصة</a>
+             <a asp-controller="Home" asp-action="Guide">الدليل</a>
+             <a asp-controller="Home" asp-action="Security">مركز الأمان</a>
+             <a asp-controller="Home" asp-action="Privacy">الخصوصية</a>
+             <a asp-controller="Home" asp-action="Terms">الشروط</a>
+             <a asp-controller="Account" asp-action="Login">تسجيل الدخول</a>
         </div>
         <span>© 2026 جميع الحقوق محفوظة</span>
     </footer>

@@ -327,6 +327,15 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    @{
+        var pageTitle = $"{ViewData["Title"]} - نظام التصاريح";
+        var pageDescription = ViewData["Description"] as string
+            ?? "منصة عربية لإدارة التصاريح والزيارات والبوابات والتحقق عبر QR.";
+        var canonicalPath = ViewData["CanonicalPath"] as string;
+        var canonicalUrl = string.IsNullOrWhiteSpace(canonicalPath)
+            ? null
+            : $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}{canonicalPath}";
+    }
     @if (ViewData["Robots"] is string robots && !string.IsNullOrWhiteSpace(robots))
     {
         <meta name="robots" content="@robots" />
@@ -336,7 +345,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="التصاريح" />
-    <title>@ViewData["Title"] - نظام التصاريح</title>
+    <meta name="description" content="@pageDescription" />
+    <meta property="og:locale" content="ar_SA" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="@pageTitle" />
+    <meta property="og:description" content="@pageDescription" />
+    @if (canonicalUrl != null)
+    {
+        <link rel="canonical" href="@canonicalUrl" />
+        <meta property="og:url" content="@canonicalUrl" />
+    }
+    <title>@pageTitle</title>
     <script nonce="@(Context.Items["CspScriptNonce"])">
             (function () {
                 var key = 'vps_theme';
@@ -380,6 +399,7 @@
     <link rel="stylesheet" href="~/css/shell-actions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/sidebar-actions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/public-marketing.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/public-content.css" asp-append-version="true" />
 </head>
 
 <body class="@bodyClass">
@@ -791,9 +811,12 @@
                                     <footer class="app-footer border-top footer text-muted">
                                         <div class="container-fluid app-shell-container">
                                             <span>&copy; 2026 - نظام إدارة تصاريح المركبات</span>
-                                            <div class="app-footer-meta">
-                                                <span>الإصدار @appVersion</span>
-                                            </div>
+                                             <div class="app-footer-meta">
+                                                 <a asp-controller="Home" asp-action="Guide">الدليل</a>
+                                                 <a asp-controller="Home" asp-action="Privacy">الخصوصية</a>
+                                                 <a asp-controller="Home" asp-action="Terms">الشروط</a>
+                                                 <span>الإصدار @appVersion</span>
+                                             </div>
                                         </div>
                                     </footer>
                                 </div>

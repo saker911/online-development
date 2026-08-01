@@ -43,6 +43,11 @@ services:
       Email__Smtp__FromAddress: ${Email__Smtp__FromAddress:-}
       Email__Smtp__FromName: ${Email__Smtp__FromName:-منصة تصاريح}
       Email__Smtp__EnableSsl: ${Email__Smtp__EnableSsl:-true}
+      Legal__ProviderName: ${Legal__ProviderName:-}
+      Legal__CommercialRegistration: ${Legal__CommercialRegistration:-}
+      Legal__VatNumber: ${Legal__VatNumber:-}
+      Legal__Address: ${Legal__Address:-}
+      Legal__SupportEmail: ${Legal__SupportEmail:-}
       OnlineEdition__PrivacyMinimized: "true"
       OnlineEdition__CollectNationalId: "false"
       OnlineEdition__SimplifiedVisits: "true"

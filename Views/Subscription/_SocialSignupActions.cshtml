@@ -29,6 +29,13 @@
             <img src="~/images/brands/google.svg" alt="" />
             <strong>@(isLogin ? "الدخول باستخدام Google" : "ابدأ تجربة يومين باستخدام Google")</strong>
         </a>
+        @if (!isLogin)
+        {
+            <p class="external-auth-legal-note">
+                بالمتابعة أنت توافق على <a asp-controller="Home" asp-action="Terms" target="_blank" rel="noopener">الشروط</a>
+                و<a asp-controller="Home" asp-action="Privacy" target="_blank" rel="noopener">الخصوصية</a>.
+            </p>
+        }
         <div class="external-auth-divider"><span>أو سجّل بالبريد الإلكتروني</span></div>
     </section>
 }

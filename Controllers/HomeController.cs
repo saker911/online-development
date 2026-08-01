@@ -166,6 +166,61 @@ namespace VehiclePermitSystemWeb.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet("/about")]
+        public IActionResult About() => View();
+
+        [AllowAnonymous]
+        [HttpGet("/privacy")]
+        public IActionResult Privacy() => View();
+
+        [AllowAnonymous]
+        [HttpGet("/terms")]
+        public IActionResult Terms() => View();
+
+        [AllowAnonymous]
+        [HttpGet("/subscription-policy")]
+        public IActionResult SubscriptionPolicy() => View();
+
+        [AllowAnonymous]
+        [HttpGet("/guide")]
+        public IActionResult Guide() => View();
+
+        [AllowAnonymous]
+        [HttpGet("/security")]
+        public IActionResult Security() => View();
+
+        [AllowAnonymous]
+        [HttpGet("/robots.txt")]
+        public IActionResult Robots()
+        {
+            var sitemapUrl = Url.Action(nameof(Sitemap), "Home", null, Request.Scheme);
+            var content = $"User-agent: *\nAllow: /\nDisallow: /Account/\nDisallow: /Administration\nDisallow: /Users\nDisallow: /Tenants\nDisallow: /Permits\nDisallow: /Visits\nDisallow: /Reports\nDisallow: /ScanConsole\nSitemap: {sitemapUrl}\n";
+            return Content(content, "text/plain; charset=utf-8");
+        }
+
+        [AllowAnonymous]
+        [HttpGet("/sitemap.xml")]
+        public IActionResult Sitemap()
+        {
+            var publicActions = new[]
+            {
+                nameof(Index),
+                nameof(About),
+                nameof(Guide),
+                nameof(Security),
+                nameof(Privacy),
+                nameof(Terms),
+                nameof(SubscriptionPolicy),
+            };
+            var urls = publicActions
+                .Select(action => Url.Action(action, "Home", null, Request.Scheme))
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .Select(url => $"  <url><loc>{System.Net.WebUtility.HtmlEncode(url)}</loc></url>");
+            var content = $"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n{string.Join("\n", urls)}\n</urlset>";
+            return Content(content, "application/xml; charset=utf-8");
+        }
+
+        [AllowAnonymous]
         [Route("/Error")]
         public IActionResult Error()
         {

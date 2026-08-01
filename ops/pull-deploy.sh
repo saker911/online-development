@@ -38,6 +38,15 @@ docker compose \
   -f "${COMPOSE_FILE}" \
   up -d --build --remove-orphans
 
+install -m 0644 \
+  "${REPOSITORY_DIR}/ops/tasareehapp-backup.service" \
+  /etc/systemd/system/tasareehapp-backup.service
+install -m 0644 \
+  "${REPOSITORY_DIR}/ops/tasareehapp-backup.timer" \
+  /etc/systemd/system/tasareehapp-backup.timer
+systemctl daemon-reload
+systemctl enable --now tasareehapp-backup.timer
+
 docker image prune -f
 
 printf '%s\n' "${TARGET_REVISION}" > "${APP_ROOT}/deployed-revision"

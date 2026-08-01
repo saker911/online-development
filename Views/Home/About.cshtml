@@ -1,0 +1,37 @@
+@{
+    ViewData["Title"] = "عن منصة التصاريح";
+    ViewData["Description"] = "تعرف على منصة التصاريح ونطاق المنتج وأدوات إدارة التصاريح والزيارات والبوابات.";
+    ViewData["CanonicalPath"] = "/about";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "public-content-body";
+}
+<main class="public-content-shell">
+    @await Html.PartialAsync("~/Views/Shared/_PublicContentHeader.cshtml")
+    <section class="public-content-hero">
+        <span class="public-content-eyebrow">عن المنتج</span>
+        <h1>تشغيل الدخول والزيارات بوضوح من الطلب إلى البوابة</h1>
+        <p>منصة سحابية عربية لإدارة تصاريح الموظفين والمركبات، الزيارات، الموافقات، قراءة QR، ومتابعة الحركة من مساحة مستقلة لكل جهة.</p>
+    </section>
+    <section class="public-content-grid three-columns">
+        <article><strong>للإدارة</strong><p>هيكلة الفريق والصلاحيات، متابعة الطلبات، وضبط إعدادات التشغيل.</p></article>
+        <article><strong>للاستقبال</strong><p>تسجيل الزائر ومرافقيه ومتابعة الوصول والخروج دون قوائم ورقية.</p></article>
+        <article><strong>للبوابة</strong><p>قراءة QR بالكاميرا أو القارئ وإظهار قرار واضح مع هوية المشغل وسجل العملية.</p></article>
+    </section>
+    <section class="public-content-section">
+        <div class="public-content-heading"><span>ما الذي يقدمه</span><h2>نطاق المنتج الحالي</h2></div>
+        <div class="public-feature-list">
+            <div><strong>التصاريح</strong><span>إنشاء وتدقيق واعتماد وإيقاف وإعادة تفعيل وطباعة بطاقة رقمية.</span></div>
+            <div><strong>الزيارات</strong><span>تسجيل الموعد والمضيف والمرافقين وحالات الوصول والمغادرة.</span></div>
+            <div><strong>البوابات</strong><span>شاشات معتمدة، دخول مشغل PIN، كاميرا جوال وقارئ باركود.</span></div>
+            <div><strong>التقارير</strong><span>الحركة اليومية، الحالات الموقوفة، النشاط، والمتابعة القابلة للطباعة.</span></div>
+            <div><strong>الجهات</strong><span>رابط مستقل وعزل منطقي للبيانات وصلاحيات خاصة بكل فريق.</span></div>
+            <div><strong>الجوال</strong><span>واجهة متجاوبة وتطبيق ويب قابل للتثبيت دون تخزين بيانات التشغيل دون اتصال.</span></div>
+        </div>
+    </section>
+    <section class="public-content-callout">
+        <div><span>شاهد المسار كاملًا</span><h2>ابدأ بالدليل ثم جرّب حساب جهة لمدة يومين.</h2></div>
+        <div><a asp-action="Guide" class="btn btn-light">فتح الدليل</a><a asp-controller="Subscription" asp-action="Plans" class="btn btn-outline-light">عرض الباقات</a></div>
+    </section>
+    @await Html.PartialAsync("~/Views/Shared/_ProviderIdentity.cshtml")
+    @await Html.PartialAsync("~/Views/Shared/_PublicContentFooter.cshtml")
+</main>
