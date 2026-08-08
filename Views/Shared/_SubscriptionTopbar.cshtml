@@ -1,9 +1,5 @@
 @using VehiclePermitSystemWeb.Services.Administration
-@inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
-
 @{
-    var administrationSettings = UserAdminService.GetAdministrationSettings();
-    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
     var actionLabel = ViewData["PublicHeaderActionLabel"] as string;
     var actionController = ViewData["PublicHeaderActionController"] as string;
     var actionName = ViewData["PublicHeaderActionName"] as string;
@@ -11,7 +7,7 @@
 
 <header class="subscription-topbar">
     <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
-        <img src="~/@organizationLogoPath" alt="" />
+        <img src="~/@ProductIdentity.MarkPath" alt="" />
         <span>
             <strong>@ProductIdentity.DisplayName</strong>
             <small>@ProductIdentity.Description</small>

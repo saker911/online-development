@@ -47,6 +47,7 @@ for (const viewport of [
     await expect(page.getByRole("heading", { name: "بيانات المنشأة والتواصل" })).toBeVisible();
     await expect(page.locator(".establishment-page-shell")).toBeVisible();
     await expect(page.locator(".public-content-header")).toHaveClass(/public-landing-nav/);
+    await expect(page.locator(".public-content-brand img")).toHaveAttribute("src", /\/icons\/app-icon\.svg$/);
     await expect(page.locator(".app-system-meta-kiosk, .app-system-meta-public")).toBeHidden();
     await expectNoHorizontalOverflow(page);
     await expectNaturalVerticalScrolling(page);
@@ -66,6 +67,11 @@ for (const viewport of [
     expect(headerStyle.borderRadius).toBe("0px");
     expect(headerStyle.left).toBeCloseTo(0, 0);
     expect(headerStyle.width).toBeCloseTo(headerStyle.viewportWidth, 0);
+
+    const brandFilter = await page.locator(".public-content-brand img").evaluate(
+      (element) => getComputedStyle(element).filter
+    );
+    expect(brandFilter).toBe("none");
 
     const shellHeight = await page.locator(".establishment-page-shell").evaluate(
       (element) => element.getBoundingClientRect().height

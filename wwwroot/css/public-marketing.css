@@ -2776,6 +2776,14 @@ body.login-page-body .display-kiosk-main {
     padding: 0 !important;
 }
 
+/* Keep the product mark consistent across public surfaces. */
+.public-landing-brand img,
+.login-page-topbar-brand img {
+    padding: 0;
+    background: #0d0f10 !important;
+    filter: none !important;
+}
+
 .subscription-page-shell {
     width: 100%;
     min-height: 100dvh;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "permit-platform-static-v1";
+const CACHE_NAME = "permit-platform-static-v2";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,

@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="تصاريح | Tasareeh">
-  <rect width="512" height="512" rx="96" fill="#0f172a"/>
-  <path fill="#fff" d="M112 210 256 120l144 90v34H112v-34Zm28 66h48v106h-48V276Zm92 0h48v106h-48V276Zm92 0h48v106h-48V276ZM96 406h320v42H96v-42Z"/>
-  <circle cx="256" cy="198" r="22" fill="#34d399"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="tasareeh-logo-title">
+  <title id="tasareeh-logo-title">تصاريح | Tasareeh</title>
+  <rect width="512" height="512" fill="#0d0f10"/>
+  <path fill="#f7f7f5" d="M88 78 226 151v82l-48-25v211L88 468V78Zm336 0-138 73v82l48-25v211l90 49V78Z"/>
+  <path fill="#1aa37a" d="m143 323 35-35 51 51 109-116 36 34-144 154-87-88Z"/>
 </svg>

@@ -1,22 +1,18 @@
 @using VehiclePermitSystemWeb.Services.Administration
 @using VehiclePermitSystemWeb.Services.Tenants
-@inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
-
 @{
     ViewData["Title"] = ProductIdentity.DisplayName;
     ViewData["Description"] = ProductIdentity.Description;
     ViewData["CanonicalPath"] = "/";
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "public-landing-body";
-    var administrationSettings = UserAdminService.GetAdministrationSettings();
-    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
     var plans = TenantPlanCatalog.GetPlans();
 }
 
 <main class="public-landing-shell">
     <nav class="public-landing-nav" aria-label="التنقل الرئيسي">
         <a asp-controller="Home" asp-action="Index" class="public-landing-brand">
-            <img src="~/@organizationLogoPath" alt="" />
+            <img src="~/@ProductIdentity.MarkPath" alt="" />
             <span>@ProductIdentity.DisplayName</span>
         </a>
         <div class="public-landing-nav-links">
@@ -171,7 +167,7 @@
 
     <footer class="public-landing-footer">
         <a asp-controller="Home" asp-action="Index" class="public-landing-brand">
-            <img src="~/@organizationLogoPath" alt="" />
+            <img src="~/@ProductIdentity.MarkPath" alt="" />
             <span>@ProductIdentity.DisplayName</span>
         </a>
         <div>
