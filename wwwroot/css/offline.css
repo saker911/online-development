@@ -33,7 +33,7 @@ a {
   padding: 10px 24px;
   border: 0;
   border-radius: 6px;
-  background: #0f172a;
+  background: #171717;
   color: #fff;
   font: inherit;
   font-weight: 700;
@@ -42,7 +42,7 @@ a {
 }
 
 @media (prefers-color-scheme: dark) {
-  body { background: #080b12; color: #f8fafc; }
+  body { background: #0d0d0d; color: #f8fafc; }
   p { color: #cbd5e1; }
-  a { background: #f8fafc; color: #0f172a; }
+  a { background: #f8fafc; color: #171717; }
 }

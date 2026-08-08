@@ -529,8 +529,8 @@
 }
 
 [data-theme="dark"] .monitoring-wrap {
-    --surface: var(--t-surface, #0f1726);
-    --surface-muted: var(--t-surface-soft, #152033);
+    --surface: var(--t-surface, #171717);
+    --surface-muted: var(--t-surface-soft, #1f1f1f);
     --border-color: rgba(56, 78, 112, 0.58);
     --body-color: var(--t-text, #e5e7eb);
     --muted-text: var(--t-text-muted, #9ca3af);
@@ -540,7 +540,7 @@
 [data-theme="dark"] main:has(.monitoring-wrap) {
     background:
         radial-gradient(circle at top right, rgba(34, 211, 238, 0.08), transparent 24%),
-        linear-gradient(180deg, #050914 0%, #09101d 48%, #050914 100%);
+        linear-gradient(180deg, #0d0d0d 0%, #141414 48%, #0d0d0d 100%);
 }
 
 [data-theme="dark"] .monitoring-title h1,

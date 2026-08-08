@@ -492,7 +492,7 @@
 }
 
 [data-theme="dark"] .administration-work-card {
-    background: linear-gradient(180deg, rgba(24, 31, 48, 0.98), rgba(15, 23, 42, 0.98));
+    background: linear-gradient(180deg, rgba(31, 31, 31, 0.98), rgba(23, 23, 23, 0.98));
 }
 
 [data-theme="dark"] .administration-media-preview.is-empty {

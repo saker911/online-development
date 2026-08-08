@@ -222,19 +222,18 @@
 
 [data-theme="dark"] .login-page-body {
     background:
-        linear-gradient(135deg, rgba(3, 7, 17, 0.82), rgba(8, 17, 31, 0.58)),
+        linear-gradient(135deg, rgba(13, 13, 13, 0.86), rgba(13, 13, 13, 0.68)),
         url('/images/login-gate-background.png') center center / cover no-repeat fixed;
 }
 
 [data-theme="dark"] .login-page-overlay {
     background:
-        radial-gradient(circle at top left, rgba(125, 211, 252, 0.1), transparent 24%),
-        linear-gradient(180deg, rgba(3, 7, 17, 0.16), rgba(8, 17, 31, 0.54));
+        linear-gradient(180deg, rgba(13, 13, 13, 0.2), rgba(13, 13, 13, 0.6));
 }
 
 [data-theme="dark"] .login-page-card {
-    background: linear-gradient(180deg, rgba(13, 22, 38, 0.94) 0%, rgba(8, 15, 28, 0.94) 100%);
-    border-color: rgba(91, 125, 161, 0.24);
+    background: rgba(23, 23, 23, 0.96);
+    border-color: rgba(82, 82, 82, 0.72);
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
 }
 
@@ -474,7 +473,7 @@ body.login-page-body:has(.subscription-page-shell) {
     width: 24px;
     height: 24px;
     border-radius: 999px;
-    background: #111827;
+    background: #171717;
     color: #fff;
     font-size: 0.78rem;
 }
@@ -570,7 +569,7 @@ body.login-page-body:has(.subscription-page-shell) {
 .subscription-plan-badge {
     justify-self: start;
     border-radius: 999px;
-    background: #111827;
+    background: #171717;
     color: #fff;
     padding: 6px 12px;
     font-weight: 800;
@@ -709,8 +708,8 @@ body.login-page-body:has(.subscription-page-shell) {
 [data-theme="dark"] .subscription-form,
 [data-theme="dark"] .subscription-checkout-summary,
 [data-theme="dark"] .subscription-payment-box {
-    background: rgba(15, 23, 42, 0.88);
-    border-color: rgba(148, 163, 184, 0.24);
+    background: rgba(23, 23, 23, 0.92);
+    border-color: rgba(82, 82, 82, 0.62);
 }
 
 [data-theme="dark"] .subscription-plan-card h2,
@@ -853,7 +852,7 @@ body.login-page-body:has(.subscription-page-shell) {
 
 .public-landing-shell .btn-primary {
     border-color: #0f172a;
-    background: #0f172a;
+    background: #171717;
     color: #fff;
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
 }
@@ -861,7 +860,7 @@ body.login-page-body:has(.subscription-page-shell) {
 .public-landing-body .public-landing-shell .btn-primary,
 [data-theme="dark"] .public-landing-body .public-landing-shell .btn-primary {
     border-color: #0f172a !important;
-    background: #0f172a !important;
+    background: #171717 !important;
     color: #fff !important;
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18) !important;
 }
@@ -898,7 +897,7 @@ body.login-page-body:has(.subscription-page-shell) {
 .public-landing-shell .btn-outline-primary:hover,
 .public-landing-shell .btn-outline-primary:focus {
     border-color: #0f172a;
-    background: #0f172a;
+    background: #171717;
     color: #fff;
 }
 
@@ -907,7 +906,7 @@ body.login-page-body:has(.subscription-page-shell) {
 [data-theme="dark"] .public-landing-body .public-landing-shell .btn-outline-primary:hover,
 [data-theme="dark"] .public-landing-body .public-landing-shell .btn-outline-primary:focus {
     border-color: #0f172a !important;
-    background: #0f172a !important;
+    background: #171717 !important;
     color: #fff !important;
 }
 
@@ -1033,7 +1032,7 @@ body.login-page-body:has(.subscription-page-shell) {
 
 .public-preview-top strong {
     border-radius: 999px;
-    background: #0f172a;
+    background: #171717;
     color: #fff;
     padding: 4px 10px;
     font-size: 0.78rem;
@@ -1053,7 +1052,7 @@ body.login-page-body:has(.subscription-page-shell) {
     width: 10px;
     height: 10px;
     border-radius: 999px;
-    background: #111827;
+    background: #171717;
     box-shadow: 0 0 0 6px rgba(15, 23, 42, 0.08);
     flex: 0 0 auto;
 }
@@ -1113,7 +1112,7 @@ body.login-page-body:has(.subscription-page-shell) {
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: #111827;
+    background: #171717;
     margin-inline-end: 8px;
 }
 
@@ -1165,7 +1164,7 @@ body.login-page-body:has(.subscription-page-shell) {
     justify-content: space-between;
     gap: 16px;
     border-radius: 18px;
-    background: linear-gradient(135deg, #0f172a, #111827);
+    background: linear-gradient(135deg, #171717, #171717);
     color: #fff;
     padding: 22px;
     box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
@@ -1180,14 +1179,14 @@ body.login-page-body:has(.subscription-page-shell) {
     background:
         radial-gradient(circle at 15% 12%, rgba(255, 255, 255, 0.06), transparent 34%),
         radial-gradient(circle at 85% 20%, rgba(148, 163, 184, 0.10), transparent 32%),
-        linear-gradient(135deg, #020617 0%, #101827 52%, #0f172a 100%);
+        linear-gradient(135deg, #0d0d0d 0%, #171717 52%, #0d0d0d 100%);
 }
 
 [data-theme="dark"] .public-landing-nav,
 [data-theme="dark"] .public-landing-preview,
 [data-theme="dark"] .public-landing-trust span {
-    background: rgba(15, 23, 42, 0.88);
-    border-color: rgba(148, 163, 184, 0.22);
+    background: rgba(23, 23, 23, 0.92);
+    border-color: rgba(82, 82, 82, 0.62);
 }
 
 [data-theme="dark"] .public-landing-brand,
@@ -1216,8 +1215,8 @@ body.login-page-body:has(.subscription-page-shell) {
 [data-theme="dark"] .public-preview-flow span,
 [data-theme="dark"] .public-feature-grid article,
 [data-theme="dark"] .public-preview-status {
-    background: rgba(15, 23, 42, 0.66);
-    border-color: rgba(148, 163, 184, 0.2);
+    background: rgba(31, 31, 31, 0.88);
+    border-color: rgba(82, 82, 82, 0.58);
 }
 
 @media (max-width: 960px) {
@@ -1292,7 +1291,7 @@ body.login-page-body:has(.subscription-page-shell) {
     width: 34px;
     height: 34px;
     border-radius: 10px;
-    background: #111827;
+    background: #171717;
     padding: 4px;
 }
 
@@ -1420,7 +1419,7 @@ body.login-page-body:has(.subscription-page-shell) {
 }
 
 .public-preview-top strong {
-    background: #111827;
+    background: #171717;
     box-shadow: 0 10px 24px rgba(17, 24, 39, 0.18);
 }
 

@@ -891,7 +891,7 @@
 
 [data-theme="dark"] .report-table th,
 [data-theme="dark"] .report-scroll-table .table thead th {
-    background: #101b2d;
+    background: #1f1f1f;
     color: #e1eefc;
 }
 
@@ -1183,25 +1183,25 @@
 
 [data-theme="dark"] .report-scroll-table {
     border-color: rgba(71, 95, 132, 0.5);
-    background: #0f1c31;
+    background: #171717;
 }
 
 [data-theme="dark"] .report-table th,
 [data-theme="dark"] .report-scroll-table .table thead th {
     border-bottom-color: rgba(71, 95, 132, 0.62);
-    background: #111f35;
+    background: #1f1f1f;
     color: #a9bdd7;
 }
 
 [data-theme="dark"] .report-table td,
 [data-theme="dark"] .report-scroll-table .table td {
     border-bottom-color: rgba(61, 86, 124, 0.5);
-    background: #0f1c31;
+    background: #171717;
     color: var(--t-text-secondary);
 }
 
 [data-theme="dark"] .report-table tbody tr:hover td {
-    background: #142641;
+    background: #262626;
 }
 
 [data-theme="dark"] .report-table .permit-primary-text,

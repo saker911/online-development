@@ -1307,7 +1307,7 @@ body.app-sidebar-open .app-sidebar-backdrop {
 [data-theme="dark"] .app-data-table thead th,
 [data-theme="dark"] .permit-list-table thead th,
 [data-theme="dark"] .report-table th {
-    background: #101b2d;
+    background: #1f1f1f;
     color: #e1eefc;
     font-weight: 500;
 }

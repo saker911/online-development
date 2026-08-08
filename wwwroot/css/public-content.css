@@ -197,7 +197,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 28px;
-    background: #0b1220;
+    background: #141414;
     color: #fff;
 }
 
@@ -462,18 +462,18 @@
 [data-theme="dark"] .guide-toc a,
 [data-theme="dark"] .guide-document > section,
 [data-theme="dark"] .guide-faq > div {
-    border-color: #2b3038;
+    border-color: #303030;
 }
 
 [data-theme="dark"] .public-content-grid,
 [data-theme="dark"] .guide-role-grid {
-    border-color: #2b3038;
-    background: #2b3038;
+    border-color: #303030;
+    background: #303030;
 }
 
 [data-theme="dark"] .public-content-grid article,
 [data-theme="dark"] .guide-role-grid > div {
-    background: #15191f;
+    background: #1f1f1f;
 }
 
 [data-theme="dark"] .public-content-hero p,

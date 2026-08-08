@@ -43,7 +43,7 @@
     width: 100%;
     aspect-ratio: 16 / 10;
     border-radius: 6px;
-    background: #101827;
+    background: #171717;
     overflow: hidden;
 }
 
@@ -105,7 +105,7 @@
     border: 0;
     border-radius: 0;
     padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-    background: #050914;
+    background: #0d0d0d;
     grid-template-rows: minmax(0, 1fr) auto auto;
 }
 

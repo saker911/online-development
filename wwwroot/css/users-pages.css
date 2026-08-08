@@ -2960,7 +2960,7 @@ main:has(.users-registration-shell) {
 }
 
 [data-theme="dark"] .users-action-dropdown {
-    background: #0f172a;
+    background: #171717;
     border-color: rgba(71, 85, 105, 0.58);
     box-shadow: 0 22px 44px rgba(0, 0, 0, 0.34);
 }

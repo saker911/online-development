@@ -11,11 +11,11 @@
 [data-theme="dark"] {
   --visit-accent: #2dd4bf;
   --visit-accent-strong: #5eead4;
-  --visit-ink: #edf7f7;
-  --visit-muted: #a9bbc8;
-  --visit-line: #263743;
-  --visit-surface: #111b24;
-  --visit-bg: #081019;
+  --visit-ink: #f2f2f2;
+  --visit-muted: #a3a3a3;
+  --visit-line: #353535;
+  --visit-surface: #171717;
+  --visit-bg: #0d0d0d;
 }
 
 .public-visit-body { height: auto; margin: 0; min-height: 100vh; overflow-x: hidden; background: var(--t-page-bg, var(--visit-bg)); color: var(--visit-ink); }
