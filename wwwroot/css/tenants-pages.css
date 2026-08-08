@@ -304,7 +304,32 @@
 .tenant-table {
     width: 100%;
     min-width: 1050px;
+    table-layout: fixed;
     border-collapse: collapse;
+}
+
+.tenant-table .tenant-col-identity {
+    width: 24%;
+}
+
+.tenant-table .tenant-col-subscription {
+    width: 12%;
+}
+
+.tenant-table .tenant-col-usage {
+    width: 17%;
+}
+
+.tenant-table .tenant-col-access {
+    width: 17%;
+}
+
+.tenant-table .tenant-col-state {
+    width: 12%;
+}
+
+.tenant-table .tenant-col-actions {
+    width: 18%;
 }
 
 .tenant-table th {
@@ -317,6 +342,8 @@
 }
 
 .tenant-table td {
+    display: table-cell;
+    box-sizing: border-box;
     padding: 15px 16px;
     border-top: 1px solid var(--app-border, #e4eaf0);
     vertical-align: middle;
@@ -331,11 +358,12 @@
 }
 
 .tenant-identity,
-.tenant-table td:nth-child(2),
-.tenant-table td:nth-child(4),
-.tenant-table td:nth-child(5) {
+.tenant-cell-stack {
     display: grid;
     gap: 5px;
+    min-width: 0;
+    align-content: center;
+    justify-items: start;
 }
 
 .tenant-identity strong {
@@ -348,7 +376,7 @@
 
 .tenant-identity span,
 .tenant-date,
-.tenant-table td:nth-child(5) small {
+.tenant-cell-stack small {
     color: var(--app-muted, #65778d);
     font-size: 0.72rem;
 }
@@ -616,6 +644,11 @@
     .tenant-table {
         display: block;
         min-width: 0;
+        table-layout: auto;
+    }
+
+    .tenant-table colgroup {
+        display: none;
     }
 
     .tenant-table thead {

@@ -61,6 +61,37 @@ test("tenant registry remains orderly on mobile", async ({ page }) => {
   expect(metrics.cellDisplay).toBe("grid");
 });
 
+test("tenant registry keeps every desktop row on one table line", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/Tenants");
+
+  const metrics = await page.locator("[data-tenant-row]").first().evaluate((row) => {
+    const cells = Array.from(row.cells);
+    const headers = Array.from(row.closest("table").tHead.rows[0].cells);
+    const rect = (element) => {
+      const bounds = element.getBoundingClientRect();
+      return {
+        left: Math.round(bounds.left),
+        right: Math.round(bounds.right),
+      };
+    };
+
+    return {
+      displays: cells.map((cell) => getComputedStyle(cell).display),
+      tops: cells.map((cell) => Math.round(cell.getBoundingClientRect().top)),
+      heights: cells.map((cell) => Math.round(cell.getBoundingClientRect().height)),
+      headerColumns: headers.map(rect),
+      rowColumns: cells.map(rect),
+    };
+  });
+
+  expect(new Set(metrics.displays)).toEqual(new Set(["table-cell"]));
+  expect(new Set(metrics.tops).size).toBe(1);
+  expect(new Set(metrics.heights).size).toBe(1);
+  expect(metrics.rowColumns).toEqual(metrics.headerColumns);
+});
+
 test("tenant registry paginates large result sets and preserves filtering", async ({ page }) => {
   await ensureOwnerSignedIn(page);
   await page.goto("/Tenants");

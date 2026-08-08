@@ -176,6 +176,14 @@
 
         <div class="tenant-table-wrap">
             <table class="tenant-table">
+                <colgroup>
+                    <col class="tenant-col-identity" />
+                    <col class="tenant-col-subscription" />
+                    <col class="tenant-col-usage" />
+                    <col class="tenant-col-access" />
+                    <col class="tenant-col-state" />
+                    <col class="tenant-col-actions" />
+                </colgroup>
                 <thead>
                     <tr>
                         <th>الجهة</th>
@@ -200,12 +208,14 @@
                                 </div>
                             </td>
                             <td data-label="الاشتراك">
-                                <span class="tenant-subscription @GetSubscriptionClass(tenant.SubscriptionStatus)">@tenant.SubscriptionStatusDisplayName</span>
-                                <strong class="tenant-plan">@tenant.PlanName</strong>
-                                @if (tenant.SubscriptionEndsAtUtc.HasValue)
-                                {
-                                    <span class="tenant-date">حتى @tenant.SubscriptionEndsAtUtc.Value.ToString("yyyy-MM-dd")</span>
-                                }
+                                <div class="tenant-cell-stack">
+                                    <span class="tenant-subscription @GetSubscriptionClass(tenant.SubscriptionStatus)">@tenant.SubscriptionStatusDisplayName</span>
+                                    <strong class="tenant-plan">@tenant.PlanName</strong>
+                                    @if (tenant.SubscriptionEndsAtUtc.HasValue)
+                                    {
+                                        <span class="tenant-date">حتى @tenant.SubscriptionEndsAtUtc.Value.ToString("yyyy-MM-dd")</span>
+                                    }
+                                </div>
                             </td>
                             <td data-label="الاستخدام">
                                 <div class="tenant-usage">
@@ -215,19 +225,23 @@
                                 </div>
                             </td>
                             <td data-label="الوصول">
-                                <a asp-controller="Account"
-                                   asp-action="TenantEntry"
-                                   asp-route-tenant="@tenant.Slug"
-                                   class="tenant-entry-link"
-                                   target="_blank"
-                                   rel="noopener">فتح صفحة الدخول</a>
-                                <code>/o/@tenant.Slug</code>
+                                <div class="tenant-cell-stack">
+                                    <a asp-controller="Account"
+                                       asp-action="TenantEntry"
+                                       asp-route-tenant="@tenant.Slug"
+                                       class="tenant-entry-link"
+                                       target="_blank"
+                                       rel="noopener">فتح صفحة الدخول</a>
+                                    <code>/o/@tenant.Slug</code>
+                                </div>
                             </td>
                             <td data-label="الحالة">
-                                <span class="tenant-state @(tenant.IsActive ? "is-active" : "is-inactive")">
-                                    @(tenant.IsActive ? "نشطة" : "موقوفة")
-                                </span>
-                                <small>@(tenant.IsActive ? "الحسابات متاحة" : "الحسابات محجوبة")</small>
+                                <div class="tenant-cell-stack">
+                                    <span class="tenant-state @(tenant.IsActive ? "is-active" : "is-inactive")">
+                                        @(tenant.IsActive ? "نشطة" : "موقوفة")
+                                    </span>
+                                    <small>@(tenant.IsActive ? "الحسابات متاحة" : "الحسابات محجوبة")</small>
+                                </div>
                             </td>
                             <td data-label="الإجراءات">
                                 <div class="tenant-actions">
