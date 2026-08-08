@@ -62,7 +62,7 @@
     height: 42px;
     padding: 0;
     object-fit: contain;
-    background: #0d0f10 !important;
+    background: transparent !important;
     filter: none !important;
 }
 

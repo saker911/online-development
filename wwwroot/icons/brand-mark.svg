@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="tasareeh-brand-title">
+  <title id="tasareeh-brand-title">تصاريح | Tasareeh</title>
+  <defs>
+    <linearGradient id="seal" x1="88" y1="72" x2="430" y2="438" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74e0b5"/>
+      <stop offset=".48" stop-color="#1aad80"/>
+      <stop offset="1" stop-color="#08745c"/>
+    </linearGradient>
+    <linearGradient id="ribbonLeft" x1="130" y1="126" x2="250" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#08745c"/>
+      <stop offset=".52" stop-color="#18a97e"/>
+      <stop offset="1" stop-color="#65d9ad"/>
+    </linearGradient>
+    <linearGradient id="ribbonRight" x1="370" y1="144" x2="270" y2="406" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6ce0b1"/>
+      <stop offset=".52" stop-color="#20b789"/>
+      <stop offset="1" stop-color="#08745c"/>
+    </linearGradient>
+  </defs>
+  <path d="M256 48c55 0 69 50 116 34 50-18 83 25 58 70-23 41 24 62 29 108 6 52-44 72-82 91-42 22-19 76-63 99-46 24-79-19-122-12-52 9-82-39-57-85 22-41-30-60-33-109-4-52 46-69 84-89 41-22 21-75 62-98 14-8 26-9 38-9Z"
+        fill="none" stroke="url(#seal)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path fill="url(#ribbonLeft)" d="m256 116-102 66c-17 11-27 29-27 49v111c0 20 10 39 27 50l76 49v-83l-47-31V226l73-47v-63Z"/>
+  <path fill="url(#ribbonRight)" d="m256 116 102 66c17 11 27 29 27 49v111c0 20-10 39-27 50l-76 49v-83l47-31V226l-73-47v-63Z"/>
+</svg>

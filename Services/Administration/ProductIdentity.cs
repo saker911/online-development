@@ -6,6 +6,6 @@ namespace VehiclePermitSystemWeb.Services.Administration
         public const string EnglishName = "Tasareeh";
         public const string DisplayName = "تصاريح | Tasareeh";
         public const string Description = "منصة تشغيل التصاريح والبوابات";
-        public const string MarkPath = "icons/app-icon.svg";
+        public const string MarkPath = "icons/brand-mark.svg";
     }
 }
