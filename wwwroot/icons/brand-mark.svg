@@ -7,9 +7,9 @@
       <stop offset="1" stop-color="#08745c"/>
     </linearGradient>
     <linearGradient id="ribbonLeft" x1="130" y1="126" x2="250" y2="410" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#08745c"/>
-      <stop offset=".52" stop-color="#18a97e"/>
-      <stop offset="1" stop-color="#65d9ad"/>
+      <stop stop-color="#a92f3a"/>
+      <stop offset=".52" stop-color="#d94b4b"/>
+      <stop offset="1" stop-color="#ef7b76"/>
     </linearGradient>
     <linearGradient id="ribbonRight" x1="370" y1="144" x2="270" y2="406" gradientUnits="userSpaceOnUse">
       <stop stop-color="#6ce0b1"/>
