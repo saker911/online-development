@@ -1,7 +1,7 @@
 <header class="public-content-header">
-    <a asp-controller="Home" asp-action="Index" class="public-content-brand" aria-label="العودة إلى منصة التصاريح">
+    <a asp-controller="Home" asp-action="Index" class="public-content-brand" aria-label="العودة إلى @ProductIdentity.DisplayName">
         <img src="~/icons/app-icon-192.png" alt="" />
-        <span><strong>منصة التصاريح</strong><small>TasareehGate</small></span>
+        <span><strong>@ProductIdentity.DisplayName</strong><small>@ProductIdentity.Description</small></span>
     </a>
     <nav aria-label="صفحات المعلومات">
         <a asp-controller="Home" asp-action="About">المنتج</a>

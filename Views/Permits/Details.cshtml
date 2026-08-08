@@ -38,7 +38,7 @@
     var returnUrl = ViewBag.ReturnUrl as string;
     var focusActions = ViewBag.FocusActions as bool? ?? false;
     var isStopped = string.Equals(Model.ApprovalStatus, "Stopped", StringComparison.OrdinalIgnoreCase);
-    var organizationName = ViewData["OrganizationName"] as string ?? "منصة التصاريح";
+    var organizationName = ViewData["OrganizationName"] as string ?? ProductIdentity.DisplayName;
     var departmentName = ViewData["DepartmentName"] as string ?? string.Empty;
     var permitExpiryText = Model.IsVisitorPermit && !Model.ExpiresAt.HasValue
         ? "حتى نهاية الزيارة"

@@ -7,7 +7,7 @@
         ? HijriDateFormatter.Format(Model.ExpiresAt)
         : "حسب مدة الزيارة";
     var organizationName = string.IsNullOrWhiteSpace(Model.OrganizationName)
-        ? "منصة التصاريح"
+        ? ProductIdentity.DisplayName
         : Model.OrganizationName;
 }
 

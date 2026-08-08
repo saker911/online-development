@@ -328,9 +328,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     @{
-        var pageTitle = $"{ViewData["Title"]} - نظام التصاريح";
+        var viewTitle = ViewData["Title"]?.ToString() ?? string.Empty;
+        var pageTitle = string.Equals(viewTitle, ProductIdentity.DisplayName, StringComparison.Ordinal)
+            ? ProductIdentity.DisplayName
+            : $"{viewTitle} - {ProductIdentity.DisplayName}";
         var pageDescription = ViewData["Description"] as string
-            ?? "منصة عربية لإدارة التصاريح والزيارات والبوابات والتحقق عبر QR.";
+            ?? ProductIdentity.Description;
         var canonicalPath = ViewData["CanonicalPath"] as string;
         var canonicalUrl = string.IsNullOrWhiteSpace(canonicalPath)
             ? null
@@ -344,7 +347,7 @@
     <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="التصاريح" />
+    <meta name="apple-mobile-web-app-title" content="@ProductIdentity.ArabicName" />
     <meta name="description" content="@pageDescription" />
     <meta property="og:locale" content="ar_SA" />
     <meta property="og:type" content="website" />
@@ -441,7 +444,7 @@
                         <img src="~/@organizationLogoPath" alt="شعار @organizationName" />
                     </span>
                     <span class="app-brand-copy">
-                        <strong>نظام التصاريح</strong>
+                        <strong>@ProductIdentity.DisplayName</strong>
                         <span>@organizationName</span>
                     </span>
                 </a>

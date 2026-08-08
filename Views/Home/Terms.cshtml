@@ -1,13 +1,13 @@
 @{
     ViewData["Title"] = "شروط الاستخدام";
-    ViewData["Description"] = "شروط استخدام منصة التصاريح والحسابات والاشتراكات وبيانات العملاء والاستخدام المقبول.";
+    ViewData["Description"] = $"شروط استخدام {ProductIdentity.DisplayName} والحسابات والاشتراكات وبيانات العملاء والاستخدام المقبول.";
     ViewData["CanonicalPath"] = "/terms";
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "public-content-body";
 }
 <main class="public-content-shell legal-page">
     @await Html.PartialAsync("~/Views/Shared/_PublicContentHeader.cshtml")
-    <section class="public-content-hero compact"><span class="public-content-eyebrow">آخر تحديث: 1 أغسطس 2026</span><h1>شروط الاستخدام</h1><p>تحكم هذه الشروط استخدام الموقع وحسابات تجربة منصة التصاريح، وتكملها شروط عرض السعر والعقد عند الاشتراك المدفوع.</p></section>
+    <section class="public-content-hero compact"><span class="public-content-eyebrow">آخر تحديث: 1 أغسطس 2026</span><h1>شروط الاستخدام</h1><p>تحكم هذه الشروط استخدام الموقع وحسابات تجربة @ProductIdentity.DisplayName، وتكملها شروط عرض السعر والعقد عند الاشتراك المدفوع.</p></section>
     <article class="legal-document standalone">
         <h2>1. أهلية الاستخدام</h2><p>المنتج موجه للجهات والأعمال. يؤكد منشئ الحساب أن لديه صلاحية تمثيل الجهة وإدخال بياناتها وقبول هذه الشروط.</p>
         <h2>2. الحساب والمسؤولية</h2><p>تلتزم الجهة بصحة بياناتها، حماية الحسابات وPIN، مراجعة الصلاحيات والأجهزة المعتمدة، وتعطيل المستخدم الذي تنتهي علاقته. لا يجوز مشاركة حساب فردي أو التحايل على ضوابط الوصول.</p>

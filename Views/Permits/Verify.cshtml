@@ -13,7 +13,7 @@
         <header class="permit-verification-brand">
             <span class="permit-verification-mark" aria-hidden="true">@((Model.OrganizationName.FirstOrDefault() == default) ? "ت" : Model.OrganizationName.First())</span>
             <div>
-                <span>منصة التصاريح</span>
+                <span>@ProductIdentity.DisplayName</span>
                 <strong>@(string.IsNullOrWhiteSpace(Model.OrganizationName) ? "التحقق الرقمي" : Model.OrganizationName)</strong>
             </div>
         </header>

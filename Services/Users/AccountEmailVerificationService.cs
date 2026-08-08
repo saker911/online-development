@@ -7,6 +7,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using VehiclePermitSystemWeb.Data;
+using VehiclePermitSystemWeb.Services.Administration;
 
 namespace VehiclePermitSystemWeb.Services.Users
 {
@@ -198,9 +199,9 @@ namespace VehiclePermitSystemWeb.Services.Users
             {
                 From = new MailAddress(
                     fromAddress,
-                    string.IsNullOrWhiteSpace(fromName) ? "منصة التصاريح" : fromName
+                    string.IsNullOrWhiteSpace(fromName) ? ProductIdentity.DisplayName : fromName
                 ),
-                Subject = "مرحباً بك في تصاريح | فعّل حسابك",
+                Subject = $"مرحباً بك في {ProductIdentity.DisplayName} | فعّل حسابك",
                 SubjectEncoding = Encoding.UTF8,
                 BodyEncoding = Encoding.UTF8,
                 IsBodyHtml = true,
@@ -218,7 +219,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border:1px solid #e2e7ec;border-radius:10px;overflow:hidden">
                               <tr>
                                 <td style="padding:22px 28px;background:#101820;color:#ffffff;font-size:20px;font-weight:700">
-                                  تصاريح
+                                  {ProductIdentity.DisplayName}
                                 </td>
                               </tr>
                               <tr>

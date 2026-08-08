@@ -3,8 +3,8 @@
 @inject VehiclePermitSystemWeb.Services.Users.IUserAdminService UserAdminService
 
 @{
-    ViewData["Title"] = "منصة التصاريح والزيارات";
-    ViewData["Description"] = "شغّل التصاريح والزيارات والبوابات في منصة عربية موحدة، مع صلاحيات واضحة والتحقق الفوري عبر QR.";
+    ViewData["Title"] = ProductIdentity.DisplayName;
+    ViewData["Description"] = ProductIdentity.Description;
     ViewData["CanonicalPath"] = "/";
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "public-landing-body";
@@ -17,7 +17,7 @@
     <nav class="public-landing-nav" aria-label="التنقل الرئيسي">
         <a asp-controller="Home" asp-action="Index" class="public-landing-brand">
             <img src="~/@organizationLogoPath" alt="" />
-            <span>منصة التصاريح</span>
+            <span>@ProductIdentity.DisplayName</span>
         </a>
         <div class="public-landing-nav-links">
             <a href="#platform">المنصة</a>
@@ -172,7 +172,7 @@
     <footer class="public-landing-footer">
         <a asp-controller="Home" asp-action="Index" class="public-landing-brand">
             <img src="~/@organizationLogoPath" alt="" />
-            <span>منصة التصاريح</span>
+            <span>@ProductIdentity.DisplayName</span>
         </a>
         <div>
             <a href="#platform">المنصة</a>
