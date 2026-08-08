@@ -46,9 +46,17 @@ for (const viewport of [
 
     await expect(page.getByRole("heading", { name: "بيانات المنشأة والتواصل" })).toBeVisible();
     await expect(page.locator(".establishment-page-shell")).toBeVisible();
+    await expect(page.locator(".public-content-header")).toHaveClass(/public-landing-nav/);
     await expect(page.locator(".app-system-meta-kiosk, .app-system-meta-public")).toBeHidden();
     await expectNoHorizontalOverflow(page);
     await expectNaturalVerticalScrolling(page);
+
+    const headerStyle = await page.locator(".public-content-header").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { fontFamily: style.fontFamily, borderRadius: style.borderRadius };
+    });
+    expect(headerStyle.fontFamily).toContain("Tajawal");
+    expect(headerStyle.borderRadius).toBe("8px");
 
     const shellHeight = await page.locator(".establishment-page-shell").evaluate(
       (element) => element.getBoundingClientRect().height
