@@ -2055,11 +2055,11 @@ body.subscription-page-body .form-text {
 html[data-theme="dark"] {
     --public-ink: #f3f4f6;
     --public-ink-soft: #24262b;
-    --public-paper: #0d0e10;
-    --public-surface: #17181b;
+    --public-paper: #0d0d0d;
+    --public-surface: #171717;
     --public-muted: #a7abb3;
-    --public-border: #34363c;
-    --public-border-dark: #40434a;
+    --public-border: #353535;
+    --public-border-dark: #404040;
     --public-success: #64d4a4;
     --public-field-bg: #121316;
     --public-field-text: #f3f4f6;
@@ -2083,7 +2083,7 @@ html[data-theme="dark"]:has(body.login-page-body) {
 }
 
 [data-theme="dark"] .public-landing-nav {
-    background: rgba(13, 14, 16, .94);
+    background: rgba(13, 13, 13, .94);
     border-color: var(--public-border);
     box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
 }
@@ -2254,7 +2254,7 @@ html[data-theme="dark"]:has(body.login-page-body) {
 
 [data-theme="dark"] .public-security-section,
 [data-theme="dark"] .public-landing-band {
-    background: #17181b !important;
+    background: #171717 !important;
     border: 1px solid var(--public-border);
 }
 
@@ -2330,7 +2330,7 @@ html[data-theme="dark"]:has(body.login-page-body) {
 [data-theme="dark"] .login-password-toggle:hover,
 [data-theme="dark"] .login-password-toggle:focus-visible {
     color: var(--public-ink);
-    background: #27292e;
+    background: #272727;
 }
 
 @media (max-width: 680px) {
@@ -2884,7 +2884,7 @@ body.login-page-body .login-page-card-light {
 }
 
 [data-theme="dark"] .subscription-topbar {
-    background: rgba(13, 14, 16, .94);
+    background: rgba(13, 13, 13, .94);
     border-color: var(--public-border);
 }
 
