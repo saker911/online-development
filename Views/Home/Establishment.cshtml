@@ -12,15 +12,27 @@
     <link rel="stylesheet" href="~/css/platform-settings.css" asp-append-version="true" />
 }
 
-<main class="public-content-shell">
+<main class="public-content-shell establishment-page-shell">
     @await Html.PartialAsync("~/Views/Shared/_PublicContentHeader.cshtml")
     <section class="public-content-hero compact">
         <span class="public-content-eyebrow">الثقة والشفافية</span>
         <h1>بيانات المنشأة والتواصل</h1>
         <p>الهوية النظامية وقنوات الدعم ومعلومات تشغيل الخدمة المنشورة رسميًا.</p>
     </section>
-    <div class="establishment-public-content">
-        @await Html.PartialAsync("~/Views/Shared/_ProviderIdentity.cshtml")
-    </div>
+    <section class="establishment-public-content @(Model.HasPublishedData ? string.Empty : "is-empty")"
+             aria-label="بيانات مقدم الخدمة">
+        @if (Model.HasPublishedData)
+        {
+            @await Html.PartialAsync("~/Views/Shared/_ProviderIdentity.cshtml")
+        }
+        else
+        {
+            <div class="establishment-empty-state">
+                <span class="public-content-eyebrow">مقدم الخدمة</span>
+                <h2>البيانات النظامية قيد الاستكمال</h2>
+                <p>ستظهر هنا هوية مقدم الخدمة وقنوات الدعم بعد اعتمادها من مالك المنصة.</p>
+            </div>
+        }
+    </section>
     @await Html.PartialAsync("~/Views/Shared/_PublicContentFooter.cshtml")
 </main>
