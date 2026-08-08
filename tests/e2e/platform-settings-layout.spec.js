@@ -53,10 +53,19 @@ for (const viewport of [
 
     const headerStyle = await page.locator(".public-content-header").evaluate((element) => {
       const style = getComputedStyle(element);
-      return { fontFamily: style.fontFamily, borderRadius: style.borderRadius };
+      const rect = element.getBoundingClientRect();
+      return {
+        fontFamily: style.fontFamily,
+        borderRadius: style.borderRadius,
+        left: rect.left,
+        width: rect.width,
+        viewportWidth: document.documentElement.clientWidth,
+      };
     });
     expect(headerStyle.fontFamily).toContain("Tajawal");
-    expect(headerStyle.borderRadius).toBe("8px");
+    expect(headerStyle.borderRadius).toBe("0px");
+    expect(headerStyle.left).toBeCloseTo(0, 0);
+    expect(headerStyle.width).toBeCloseTo(headerStyle.viewportWidth, 0);
 
     const shellHeight = await page.locator(".establishment-page-shell").evaluate(
       (element) => element.getBoundingClientRect().height
