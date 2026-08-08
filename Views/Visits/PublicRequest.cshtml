@@ -6,6 +6,7 @@
     ViewData["BodyClass"] = "public-visit-body";
     ViewData["Robots"] = "noindex,nofollow,noarchive";
     var hideIdentity = ViewData["HideSensitiveIdentityFields"] as bool? ?? false;
+    var secondaryFieldClass = hideIdentity ? "public-visit-field-half" : "public-visit-field-third";
 }
 
 @section Styles {
@@ -15,28 +16,30 @@
 <main class="public-visit-shell">
     <header class="public-visit-header">
         <a asp-controller="Home" asp-action="Index" class="public-visit-brand" aria-label="العودة إلى منصة التصاريح">
-            <span class="public-visit-brand-mark" aria-hidden="true">T</span>
+            <span class="public-visit-brand-mark" aria-hidden="true"><img src="~/icons/app-icon-192.png" alt="" /></span>
             <span><strong>@Model.OrganizationName</strong><small>بوابة الزيارات</small></span>
         </a>
         @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
     </header>
 
-    <section class="public-visit-layout">
+    <section class="public-visit-layout" aria-labelledby="public-visit-title">
         <div class="public-visit-intro">
-            <span class="public-visit-eyebrow">طلب زيارة إلكتروني</span>
-            <h1>أرسل طلبك قبل الوصول</h1>
-            <p>أدخل بيانات الزيارة وسيصل الطلب مباشرة إلى فريق @Model.OrganizationName للمراجعة.</p>
-            <ol class="public-visit-steps" aria-label="خطوات الطلب">
-                <li><span>1</span><div><strong>أرسل البيانات</strong><small>حدد الموعد والمضيف وسبب الزيارة.</small></div></li>
-                <li><span>2</span><div><strong>احتفظ برابط المتابعة</strong><small>ستظهر عليه نتيجة المراجعة تلقائيًا.</small></div></li>
-                <li><span>3</span><div><strong>أبرز رمز الدخول</strong><small>يظهر QR بعد اعتماد الطلب فقط.</small></div></li>
-            </ol>
+            <span class="public-visit-eyebrow">بوابة الزوار</span>
+            <h1 id="public-visit-title">طلب زيارة</h1>
+            <p>أدخل بيانات الزيارة، وسيصل الطلب إلى @Model.OrganizationName للمراجعة.</p>
+            <div class="public-visit-flow-note">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm-1 5h2v5h-2V8Zm0 7h2v2h-2v-2Z" fill="currentColor" /></svg>
+                <span>بعد الإرسال احتفظ برابط المتابعة؛ يظهر رمز الدخول بعد اعتماد الطلب.</span>
+            </div>
         </div>
 
         <section class="public-visit-form-card" aria-labelledby="request-form-title">
             <div class="public-visit-card-heading">
-                <span>بيانات الزائر</span>
-                <h2 id="request-form-title">طلب جديد</h2>
+                <div>
+                    <span>طلب جديد</span>
+                    <h2 id="request-form-title">بيانات الزيارة</h2>
+                </div>
+                <small>أدخل البيانات المطلوبة بدقة</small>
             </div>
             <form asp-action="PublicRequest" asp-route-tenant="@Model.TenantSlug" method="post" class="public-visit-form">
                 @Html.AntiForgeryToken()
@@ -47,29 +50,29 @@
                 </div>
 
                 <div class="public-visit-fields">
-                    <div class="public-visit-field">
+                    <div class="public-visit-field public-visit-field-third">
                         <label asp-for="VisitorName"></label>
-                        <input asp-for="VisitorName" autocomplete="name" placeholder="الاسم كما في الهوية" />
+                        <input asp-for="VisitorName" class="form-control" autocomplete="name" placeholder="الاسم كما في الهوية" />
                         <span asp-validation-for="VisitorName"></span>
                     </div>
-                    <div class="public-visit-field">
+                    <div class="public-visit-field public-visit-field-third">
                         <label asp-for="PhoneNumber"></label>
-                        <input asp-for="PhoneNumber" inputmode="numeric" autocomplete="tel" dir="ltr" placeholder="05xxxxxxxx" />
+                        <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" autocomplete="tel" dir="ltr" placeholder="05xxxxxxxx" />
                         <span asp-validation-for="PhoneNumber"></span>
                     </div>
                     @if (!hideIdentity)
                     {
-                        <div class="public-visit-field">
+                        <div class="public-visit-field public-visit-field-third">
                             <label asp-for="NationalId"></label>
-                            <input asp-for="NationalId" inputmode="numeric" dir="ltr" maxlength="10" placeholder="اختياري" />
+                            <input asp-for="NationalId" class="form-control ltr-field" inputmode="numeric" dir="ltr" maxlength="10" placeholder="اختياري" />
                             <span asp-validation-for="NationalId"></span>
                         </div>
                     }
-                    <div class="public-visit-field date-field-shell" data-date-field data-date-display-mode="hijri">
+                    <div class="public-visit-field public-visit-field-third date-field-shell" data-date-field data-date-display-mode="hijri">
                         <label asp-for="VisitDate"></label>
                         <div class="date-input-shell">
                             <input asp-for="VisitDate" asp-format="{0:yyyy-MM-ddTHH:mm}" type="datetime-local"
-                                   id="VisitDate" class="hijri-source-input date-native-hidden" lang="ar-SA"
+                                   id="VisitDate" class="form-control ltr-field hijri-source-input date-native-hidden" lang="ar-SA"
                                    min="@ViewData["VisitDateMin"]" max="@ViewData["VisitDateMax"]" data-hijri-source />
                             <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="VisitDate"
                                  data-empty-text="يوم/شهر/سنة - الوقت">سيظهر الموعد هنا</div>
@@ -81,34 +84,36 @@
                         </div>
                         <span asp-validation-for="VisitDate"></span>
                     </div>
-                    <div class="public-visit-field">
+                    <div class="public-visit-field @secondaryFieldClass">
                         <label asp-for="VisitedPersonName"></label>
-                        <input asp-for="VisitedPersonName" placeholder="اسم المضيف أو الموظف" />
+                        <input asp-for="VisitedPersonName" class="form-control" placeholder="اسم المضيف أو الموظف" />
                         <span asp-validation-for="VisitedPersonName"></span>
                     </div>
-                    <div class="public-visit-field">
+                    <div class="public-visit-field @secondaryFieldClass">
                         <label asp-for="VisitLocation"></label>
-                        <input asp-for="VisitLocation" placeholder="المبنى أو الموقع" />
+                        <input asp-for="VisitLocation" class="form-control" placeholder="المبنى أو الموقع" />
                         <span asp-validation-for="VisitLocation"></span>
                     </div>
                     <div class="public-visit-field public-visit-field-wide">
                         <label asp-for="Purpose"></label>
-                        <textarea asp-for="Purpose" rows="3" placeholder="اكتب سبب الزيارة باختصار"></textarea>
+                        <input asp-for="Purpose" class="form-control" placeholder="اكتب سبب الزيارة باختصار" />
                         <span asp-validation-for="Purpose"></span>
                     </div>
                 </div>
 
-                <label class="public-visit-consent">
-                    <input asp-for="AcceptPrivacy" />
-                    <span>أوافق على استخدام البيانات لمعالجة طلب الزيارة وفق <a asp-controller="Home" asp-action="Privacy" target="_blank">سياسة الخصوصية</a>.</span>
-                </label>
-                <span asp-validation-for="AcceptPrivacy" class="public-visit-consent-error"></span>
-
-                <button type="submit" class="public-visit-submit">
-                    <span>إرسال الطلب</span>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                </button>
-                <p class="public-visit-security-note">لن يصدر رمز دخول حتى تعتمد الجهة الطلب.</p>
+                <div class="public-visit-form-footer">
+                    <div>
+                        <label class="public-visit-consent">
+                            <input asp-for="AcceptPrivacy" />
+                            <span>أوافق على استخدام البيانات لمعالجة الطلب وفق <a asp-controller="Home" asp-action="Privacy" target="_blank">سياسة الخصوصية</a>.</span>
+                        </label>
+                        <span asp-validation-for="AcceptPrivacy" class="public-visit-consent-error"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary public-visit-submit">
+                        <span>إرسال الطلب</span>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                    </button>
+                </div>
             </form>
         </section>
     </section>

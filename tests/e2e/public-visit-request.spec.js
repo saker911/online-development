@@ -20,7 +20,7 @@ test("visitor submits a public request, follows status, and receives QR only aft
 
   await page.context().clearCookies();
   await page.goto(publicUrl);
-  await expect(page.getByRole("heading", { name: "أرسل طلبك قبل الوصول" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "طلب زيارة", exact: true })).toBeVisible();
 
   const visitorName = `زائر ذاتي ${uniqueSuffix()}`;
   await page.locator('[name="VisitorName"]').fill(visitorName);
@@ -61,10 +61,45 @@ test("visitor submits a public request, follows status, and receives QR only aft
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(publicUrl);
-  const mobileLayout = await page.evaluate(() => ({
-    fitsViewport: document.documentElement.scrollWidth <= window.innerWidth + 1,
-    submitWidth: document.querySelector(".public-visit-submit")?.getBoundingClientRect().width ?? 0,
-  }));
+  const mobileLayout = await page.evaluate(() => {
+    const card = document.querySelector(".public-visit-form-card")?.getBoundingClientRect();
+    const versionBar = document.querySelector(".app-system-meta-kiosk");
+    return {
+      fitsViewport: document.documentElement.scrollWidth <= window.innerWidth + 1,
+      reachesFullForm: document.documentElement.scrollHeight >= (card?.bottom ?? 0),
+      versionBarHidden: !versionBar || getComputedStyle(versionBar).display === "none",
+      submitWidth: document.querySelector(".public-visit-submit")?.getBoundingClientRect().width ?? 0,
+    };
+  });
   expect(mobileLayout.fitsViewport).toBeTruthy();
+  expect(mobileLayout.reachesFullForm).toBeTruthy();
+  expect(mobileLayout.versionBarHidden).toBeTruthy();
   expect(mobileLayout.submitWidth).toBeGreaterThan(250);
+});
+
+test("public visit request stays compact and aligned with application forms on desktop", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  await page.goto("/Visits");
+  const publicUrl = await page.locator("#publicVisitRequestUrl").inputValue();
+  await page.context().clearCookies();
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await page.goto(publicUrl);
+
+  const layout = await page.evaluate(() => {
+    const card = document.querySelector(".public-visit-form-card")?.getBoundingClientRect();
+    const controls = [...document.querySelectorAll(".public-visit-fields input")]
+      .filter((input) => input.getBoundingClientRect().height > 0)
+      .map((input) => input.getBoundingClientRect().height);
+    return {
+      fitsViewport: document.documentElement.scrollWidth <= window.innerWidth + 1,
+      cardWidth: card?.width ?? 0,
+      cardHeight: card?.height ?? 0,
+      controls,
+    };
+  });
+
+  expect(layout.fitsViewport).toBeTruthy();
+  expect(layout.cardWidth).toBeLessThanOrEqual(980);
+  expect(layout.cardHeight).toBeLessThan(600);
+  expect(layout.controls.every((height) => height <= 42)).toBeTruthy();
 });
