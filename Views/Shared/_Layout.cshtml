@@ -298,7 +298,8 @@
 
     var isPublicSurface = string.Equals(pageBodyClass, "login-page-body", StringComparison.Ordinal)
         || string.Equals(pageBodyClass, "public-landing-body", StringComparison.Ordinal)
-        || string.Equals(pageBodyClass, "subscription-page-body", StringComparison.Ordinal);
+        || string.Equals(pageBodyClass, "subscription-page-body", StringComparison.Ordinal)
+        || string.Equals(pageBodyClass, "public-content-body", StringComparison.Ordinal);
     var notificationContainerClass = isPublicSurface
         ? "app-notify-container app-notify-container-login"
         : "app-notify-container";

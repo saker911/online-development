@@ -9,6 +9,29 @@ async function expectNoHorizontalOverflow(page) {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 }
 
+async function expectNaturalVerticalScrolling(page) {
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.dataset.scrollTest = "true";
+    spacer.style.height = "1000px";
+    document.querySelector("main")?.appendChild(spacer);
+  });
+
+  const getScrollPosition = () => page.evaluate(() => Math.max(
+    window.scrollY,
+    document.documentElement.scrollTop,
+    document.body.scrollTop,
+    document.querySelector(".display-kiosk-main")?.scrollTop || 0
+  ));
+
+  await page.mouse.wheel(0, 1200);
+  await expect.poll(getScrollPosition).toBeGreaterThan(0);
+
+  await page.mouse.wheel(0, -1200);
+  await expect.poll(getScrollPosition).toBe(0);
+  await page.evaluate(() => document.querySelector('[data-scroll-test="true"]')?.remove());
+}
+
 test.beforeEach(async ({ page }) => {
   await ensureOwnerSignedIn(page);
 });
@@ -23,7 +46,9 @@ for (const viewport of [
 
     await expect(page.getByRole("heading", { name: "بيانات المنشأة والتواصل" })).toBeVisible();
     await expect(page.locator(".establishment-page-shell")).toBeVisible();
+    await expect(page.locator(".app-system-meta-kiosk, .app-system-meta-public")).toBeHidden();
     await expectNoHorizontalOverflow(page);
+    await expectNaturalVerticalScrolling(page);
 
     const shellHeight = await page.locator(".establishment-page-shell").evaluate(
       (element) => element.getBoundingClientRect().height

@@ -1,7 +1,22 @@
 .public-content-body {
     margin: 0;
+    min-height: 100vh;
+    overflow-x: clip;
+    overflow-y: visible;
     background: #f7f8fa;
     color: #111827;
+}
+
+.public-content-body .display-kiosk-main {
+    width: 100%;
+    height: auto !important;
+    min-height: 100dvh;
+    overflow: visible !important;
+    background: transparent !important;
+}
+
+.public-content-body .app-system-meta-public {
+    display: none !important;
 }
 
 .public-content-shell {
