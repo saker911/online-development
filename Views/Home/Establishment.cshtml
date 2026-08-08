@@ -1,0 +1,26 @@
+@model PlatformSettingsViewModel
+
+@{
+    ViewData["Title"] = "بيانات المنشأة والتواصل";
+    ViewData["Description"] = $"البيانات النظامية ووسائل التواصل الرسمية لمقدم خدمة {ProductIdentity.DisplayName}.";
+    ViewData["CanonicalPath"] = "/establishment";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "public-content-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/platform-settings.css" asp-append-version="true" />
+}
+
+<main class="public-content-shell">
+    @await Html.PartialAsync("~/Views/Shared/_PublicContentHeader.cshtml")
+    <section class="public-content-hero compact">
+        <span class="public-content-eyebrow">الثقة والشفافية</span>
+        <h1>بيانات المنشأة والتواصل</h1>
+        <p>الهوية النظامية وقنوات الدعم ومعلومات تشغيل الخدمة المنشورة رسميًا.</p>
+    </section>
+    <div class="establishment-public-content">
+        @await Html.PartialAsync("~/Views/Shared/_ProviderIdentity.cshtml")
+    </div>
+    @await Html.PartialAsync("~/Views/Shared/_PublicContentFooter.cshtml")
+</main>

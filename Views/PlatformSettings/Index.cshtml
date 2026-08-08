@@ -1,0 +1,74 @@
+@model PlatformSettingsViewModel
+
+@{
+    ViewData["Title"] = "بيانات مالك المنصة";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/platform-settings.css" asp-append-version="true" />
+}
+
+<main class="platform-settings-shell">
+    <header class="platform-settings-heading">
+        <div>
+            <span>إعدادات مالك النظام</span>
+            <h1>بيانات المنشأة والتواصل</h1>
+            <p>هذه البيانات تخص مقدم خدمة @ProductIdentity.DisplayName وتظهر في الصفحات العامة والسياسات. لا ترتبط ببيانات أي جهة مشتركة.</p>
+        </div>
+        <a asp-controller="Home" asp-action="Establishment" class="btn btn-outline-secondary" target="_blank" rel="noopener">معاينة الصفحة العامة</a>
+    </header>
+
+    <form asp-action="Index" method="post" class="platform-settings-form" data-confirm-message="هل تريد حفظ بيانات مالك المنصة؟">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <div asp-validation-summary="ModelOnly" class="field-validation-error"></div>
+
+        <section class="platform-settings-section" aria-labelledby="legal-data-title">
+            <div class="platform-settings-section-head">
+                <span>01</span>
+                <div><h2 id="legal-data-title">البيانات النظامية</h2><p>اترك الحقل فارغًا حتى لا يظهر للعامة.</p></div>
+            </div>
+            <div class="platform-settings-grid">
+                <div class="field-group span-2"><label asp-for="ProviderName" class="form-label">اسم المنشأة</label><input asp-for="ProviderName" class="form-control" autocomplete="organization" /><span asp-validation-for="ProviderName" class="field-validation-error"></span></div>
+                <div class="field-group"><label asp-for="CommercialRegistration" class="form-label">السجل التجاري</label><input asp-for="CommercialRegistration" class="form-control" dir="ltr" inputmode="numeric" /><span asp-validation-for="CommercialRegistration" class="field-validation-error"></span></div>
+                <div class="field-group"><label asp-for="VatNumber" class="form-label">الرقم الضريبي</label><input asp-for="VatNumber" class="form-control" dir="ltr" inputmode="numeric" /><span asp-validation-for="VatNumber" class="field-validation-error"></span></div>
+                <div class="field-group span-2"><label asp-for="RegisteredAddress" class="form-label">العنوان النظامي</label><input asp-for="RegisteredAddress" class="form-control" autocomplete="street-address" /><span asp-validation-for="RegisteredAddress" class="field-validation-error"></span></div>
+                <div class="field-group"><label asp-for="City" class="form-label">المدينة</label><input asp-for="City" class="form-control" autocomplete="address-level2" /><span asp-validation-for="City" class="field-validation-error"></span></div>
+                <div class="field-group"><label asp-for="Country" class="form-label">الدولة</label><input asp-for="Country" class="form-control" autocomplete="country-name" /><span asp-validation-for="Country" class="field-validation-error"></span></div>
+            </div>
+        </section>
+
+        <section class="platform-settings-section" aria-labelledby="contact-data-title">
+            <div class="platform-settings-section-head">
+                <span>02</span>
+                <div><h2 id="contact-data-title">التواصل والدعم</h2><p>القنوات الرسمية التي يستطيع العميل الاعتماد عليها.</p></div>
+            </div>
+            <div class="platform-settings-grid">
+                <div class="field-group span-2"><label asp-for="OfficialEmail" class="form-label">البريد الرسمي</label><input asp-for="OfficialEmail" type="email" class="form-control" dir="ltr" autocomplete="email" /><span asp-validation-for="OfficialEmail" class="field-validation-error"></span></div>
+                <div class="field-group"><label asp-for="SupportPhone" class="form-label">رقم الدعم</label><input asp-for="SupportPhone" class="form-control" dir="ltr" autocomplete="tel" /><span asp-validation-for="SupportPhone" class="field-validation-error"></span></div>
+                <div class="field-group"><label asp-for="WhatsAppNumber" class="form-label">رقم واتساب بصيغة دولية</label><input asp-for="WhatsAppNumber" class="form-control" dir="ltr" placeholder="9665XXXXXXXX" inputmode="tel" /><span asp-validation-for="WhatsAppNumber" class="field-validation-error"></span></div>
+                <div class="field-group span-2"><label asp-for="WorkingHours" class="form-label">ساعات العمل</label><input asp-for="WorkingHours" class="form-control" placeholder="مثال: الأحد إلى الخميس، 8 صباحًا - 5 مساءً" /><span asp-validation-for="WorkingHours" class="field-validation-error"></span></div>
+            </div>
+        </section>
+
+        <section class="platform-settings-section" aria-labelledby="operations-data-title">
+            <div class="platform-settings-section-head">
+                <span>03</span>
+                <div><h2 id="operations-data-title">الاستضافة واستمرارية العمل</h2><p>اكتب الواقع التشغيلي فقط، دون وعود أو مواقع غير مؤكدة.</p></div>
+            </div>
+            <div class="platform-settings-grid">
+                <div class="field-group span-2"><label asp-for="DataHostingLocation" class="form-label">موقع استضافة البيانات</label><input asp-for="DataHostingLocation" class="form-control" /><span asp-validation-for="DataHostingLocation" class="field-validation-error"></span></div>
+                <div class="field-group span-2"><label asp-for="BackupPolicy" class="form-label">سياسة النسخ الاحتياطي</label><textarea asp-for="BackupPolicy" class="form-control" rows="4"></textarea><span asp-validation-for="BackupPolicy" class="field-validation-error"></span></div>
+            </div>
+        </section>
+
+        <footer class="platform-settings-actions">
+            <span>@(Model.UpdatedAtUtc.HasValue ? $"آخر تحديث: {Model.UpdatedAtUtc.Value.ToLocalTime():yyyy/MM/dd HH:mm}" : "لم تُحفظ بيانات مخصصة بعد")</span>
+            <button type="submit" class="btn btn-primary">حفظ البيانات</button>
+        </footer>
+    </form>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

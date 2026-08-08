@@ -1,38 +1,66 @@
-@inject IConfiguration Configuration
+@inject IPlatformSettingsService PlatformSettingsService
 @{
-    var providerName = Configuration["Legal:ProviderName"];
-    var commercialRegistration = Configuration["Legal:CommercialRegistration"];
-    var vatNumber = Configuration["Legal:VatNumber"];
-    var address = Configuration["Legal:Address"];
-    var supportEmail = Configuration["Legal:SupportEmail"];
-    var hasLegalIdentity = !string.IsNullOrWhiteSpace(providerName)
-        && !string.IsNullOrWhiteSpace(commercialRegistration)
-        && !string.IsNullOrWhiteSpace(address)
-        && !string.IsNullOrWhiteSpace(supportEmail);
+    var provider = PlatformSettingsService.Get();
+    var whatsappDigits = new string(
+        (provider.WhatsAppNumber ?? string.Empty).Where(char.IsDigit).ToArray()
+    );
 }
-<section class="provider-identity @(hasLegalIdentity ? "" : "is-incomplete")" aria-labelledby="provider-identity-title">
+<section class="provider-identity @(provider.HasPublishedData ? "" : "is-incomplete")" aria-labelledby="provider-identity-title">
     <div>
         <span class="public-content-eyebrow">مقدم الخدمة</span>
-        <h2 id="provider-identity-title">بيانات المشغّل النظامية</h2>
+        <h2 id="provider-identity-title">بيانات المنشأة والتواصل</h2>
     </div>
-    @if (hasLegalIdentity)
+    @if (provider.HasPublishedData)
     {
         <dl>
-            <div><dt>الاسم النظامي</dt><dd>@providerName</dd></div>
-            <div><dt>السجل التجاري</dt><dd dir="ltr">@commercialRegistration</dd></div>
-            @if (!string.IsNullOrWhiteSpace(vatNumber))
+            @if (!string.IsNullOrWhiteSpace(provider.ProviderName))
             {
-                <div><dt>الرقم الضريبي</dt><dd dir="ltr">@vatNumber</dd></div>
+                <div><dt>اسم المنشأة</dt><dd>@provider.ProviderName</dd></div>
             }
-            <div><dt>العنوان</dt><dd>@address</dd></div>
-            <div><dt>التواصل</dt><dd><a href="mailto:@supportEmail">@supportEmail</a></dd></div>
+            @if (!string.IsNullOrWhiteSpace(provider.CommercialRegistration))
+            {
+                <div><dt>السجل التجاري</dt><dd dir="ltr">@provider.CommercialRegistration</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.VatNumber))
+            {
+                <div><dt>الرقم الضريبي</dt><dd dir="ltr">@provider.VatNumber</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.RegisteredAddress))
+            {
+                <div><dt>العنوان</dt><dd>@provider.RegisteredAddress</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.City) || !string.IsNullOrWhiteSpace(provider.Country))
+            {
+                <div><dt>المدينة والدولة</dt><dd>@string.Join("، ", new[] { provider.City, provider.Country }.Where(value => !string.IsNullOrWhiteSpace(value)))</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.OfficialEmail))
+            {
+                <div><dt>البريد الرسمي</dt><dd><a href="mailto:@provider.OfficialEmail">@provider.OfficialEmail</a></dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.SupportPhone))
+            {
+                <div><dt>رقم الدعم</dt><dd dir="ltr"><a href="tel:@provider.SupportPhone">@provider.SupportPhone</a></dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.WhatsAppNumber) && whatsappDigits.Length > 0)
+            {
+                <div><dt>واتساب</dt><dd dir="ltr"><a href="https://wa.me/@whatsappDigits" rel="noopener noreferrer">@provider.WhatsAppNumber</a></dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.WorkingHours))
+            {
+                <div><dt>ساعات العمل</dt><dd>@provider.WorkingHours</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.DataHostingLocation))
+            {
+                <div><dt>استضافة البيانات</dt><dd>@provider.DataHostingLocation</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(provider.BackupPolicy))
+            {
+                <div><dt>سياسة النسخ الاحتياطي</dt><dd>@provider.BackupPolicy</dd></div>
+            }
         </dl>
     }
     else
     {
-        <p>
-            @ProductIdentity.DisplayName هو الاسم التجاري للمنتج. تُعرض بيانات مقدم الخدمة النظامية ووسيلة التواصل
-            في عرض السعر والعقد والفاتورة قبل إتمام أي اشتراك مدفوع.
-        </p>
+        <p>لم تُنشر بيانات مقدم الخدمة بعد. تُعرض البيانات النظامية ووسائل التواصل عند اعتمادها من مالك المنصة.</p>
     }
 </section>

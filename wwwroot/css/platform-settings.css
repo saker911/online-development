@@ -1,0 +1,127 @@
+.platform-settings-shell {
+    width: min(1120px, 100%);
+    margin-inline: auto;
+    padding: 24px 20px 48px;
+}
+
+.platform-settings-heading,
+.platform-settings-section-head,
+.platform-settings-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.platform-settings-heading {
+    padding-block: 16px 28px;
+    border-bottom: 1px solid var(--t-border);
+}
+
+.platform-settings-heading h1,
+.platform-settings-section h2 {
+    margin: 4px 0 0;
+}
+
+.platform-settings-heading p,
+.platform-settings-section-head p,
+.platform-settings-actions span {
+    margin: 6px 0 0;
+    color: var(--t-text-muted);
+}
+
+.platform-settings-heading > div > span {
+    color: var(--t-primary);
+    font-weight: 700;
+}
+
+.platform-settings-form {
+    display: grid;
+    gap: 0;
+}
+
+.platform-settings-section {
+    padding-block: 30px;
+    border-bottom: 1px solid var(--t-border);
+}
+
+.platform-settings-section-head {
+    justify-content: flex-start;
+    margin-bottom: 22px;
+}
+
+.platform-settings-section-head > span {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    flex: 0 0 42px;
+    border: 1px solid var(--t-border);
+    border-radius: 6px;
+    color: var(--t-primary);
+    font-weight: 800;
+}
+
+.platform-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.platform-settings-grid .span-2 {
+    grid-column: 1 / -1;
+}
+
+.platform-settings-actions {
+    padding-top: 24px;
+}
+
+.platform-settings-actions .btn {
+    min-width: 160px;
+}
+
+.establishment-public-content {
+    padding-block: 8px 48px;
+}
+
+.establishment-public-content .provider-identity {
+    margin: 0;
+}
+
+.establishment-public-content .provider-identity.is-incomplete {
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.establishment-public-content .provider-identity.is-incomplete h2 {
+    margin-bottom: 8px;
+}
+
+[data-theme="dark"] .platform-settings-section-head > span {
+    background: #171717;
+    border-color: #3a3a3a;
+}
+
+@media (max-width: 720px) {
+    .platform-settings-shell {
+        padding-inline: 14px;
+    }
+
+    .platform-settings-heading,
+    .platform-settings-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .platform-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .platform-settings-grid .span-2 {
+        grid-column: auto;
+    }
+
+    .platform-settings-actions .btn {
+        width: 100%;
+    }
+}

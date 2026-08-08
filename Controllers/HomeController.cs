@@ -190,11 +190,17 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult Security() => View();
 
         [AllowAnonymous]
+        [HttpGet("/establishment")]
+        public IActionResult Establishment(
+            [FromServices] IPlatformSettingsService platformSettingsService
+        ) => View(platformSettingsService.Get());
+
+        [AllowAnonymous]
         [HttpGet("/robots.txt")]
         public IActionResult Robots()
         {
             var sitemapUrl = Url.Action(nameof(Sitemap), "Home", null, Request.Scheme);
-            var content = $"User-agent: *\nAllow: /\nDisallow: /Account/\nDisallow: /Administration\nDisallow: /Users\nDisallow: /Tenants\nDisallow: /Permits\nDisallow: /Visits\nDisallow: /Reports\nDisallow: /ScanConsole\nSitemap: {sitemapUrl}\n";
+            var content = $"User-agent: *\nAllow: /\nDisallow: /Account/\nDisallow: /Administration\nDisallow: /PlatformSettings\nDisallow: /Users\nDisallow: /Tenants\nDisallow: /Permits\nDisallow: /Visits\nDisallow: /Reports\nDisallow: /ScanConsole\nSitemap: {sitemapUrl}\n";
             return Content(content, "text/plain; charset=utf-8");
         }
 
@@ -211,6 +217,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 nameof(Privacy),
                 nameof(Terms),
                 nameof(SubscriptionPolicy),
+                nameof(Establishment),
             };
             var urls = publicActions
                 .Select(action => Url.Action(action, "Home", null, Request.Scheme))

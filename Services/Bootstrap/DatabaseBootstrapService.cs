@@ -490,6 +490,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteAuditLogsTable(db);
             EnsureSqliteDelegationsTables(db);
             EnsureSqliteDisplayDeviceTables(db);
+            EnsureSqlitePlatformSettingsTable(db);
             EnsureSqliteTenancySchema(db);
         }
 
@@ -605,6 +606,28 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             db.Database.ExecuteSqlRaw("DROP INDEX IF EXISTS IX_Departments_Name;");
             db.Database.ExecuteSqlRaw(
                 "CREATE UNIQUE INDEX IF NOT EXISTS IX_Departments_TenantId_Name ON Departments (TenantId, Name);"
+            );
+        }
+
+        private static void EnsureSqlitePlatformSettingsTable(ApplicationDbContext db)
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS ""PlatformSettings"" (
+                    ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_PlatformSettings"" PRIMARY KEY AUTOINCREMENT,
+                    ""ProviderName"" TEXT NOT NULL DEFAULT '',
+                    ""CommercialRegistration"" TEXT NOT NULL DEFAULT '',
+                    ""VatNumber"" TEXT NOT NULL DEFAULT '',
+                    ""RegisteredAddress"" TEXT NOT NULL DEFAULT '',
+                    ""City"" TEXT NOT NULL DEFAULT '',
+                    ""Country"" TEXT NOT NULL DEFAULT '',
+                    ""OfficialEmail"" TEXT NOT NULL DEFAULT '',
+                    ""SupportPhone"" TEXT NOT NULL DEFAULT '',
+                    ""WhatsAppNumber"" TEXT NOT NULL DEFAULT '',
+                    ""WorkingHours"" TEXT NOT NULL DEFAULT '',
+                    ""DataHostingLocation"" TEXT NOT NULL DEFAULT '',
+                    ""BackupPolicy"" TEXT NOT NULL DEFAULT '',
+                    ""UpdatedAtUtc"" TEXT NULL
+                );"
             );
         }
 

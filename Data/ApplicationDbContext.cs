@@ -53,6 +53,7 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<DelegationPermission> DelegationPermissions => Set<DelegationPermission>();
         public DbSet<AdministrationSettings> AdministrationSettings =>
             Set<AdministrationSettings>();
+        public DbSet<PlatformSettings> PlatformSettings => Set<PlatformSettings>();
         public DbSet<DisplayDevice> DisplayDevices => Set<DisplayDevice>();
         public DbSet<DisplaySecuritySettings> DisplaySecuritySettings =>
             Set<DisplaySecuritySettings>();
@@ -79,6 +80,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Delegation>().HasKey(x => x.Id);
             modelBuilder.Entity<DelegationPermission>().HasKey(x => x.Id);
             modelBuilder.Entity<AdministrationSettings>().HasKey(x => x.Id);
+            modelBuilder.Entity<PlatformSettings>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplayDevice>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplaySecuritySettings>().HasKey(x => x.Id);
             modelBuilder.Entity<ExternalUserLogin>().HasKey(x => x.Id);
@@ -91,6 +93,33 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Tenant>().Property(x => x.SubscriptionStatus).HasMaxLength(32);
             modelBuilder.Entity<Tenant>().Property(x => x.PlanName).HasMaxLength(128);
             modelBuilder.Entity<Tenant>().HasIndex(x => x.Slug).IsUnique();
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.ProviderName).HasMaxLength(256);
+            modelBuilder
+                .Entity<PlatformSettings>()
+                .Property(x => x.CommercialRegistration)
+                .HasMaxLength(64);
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.VatNumber).HasMaxLength(64);
+            modelBuilder
+                .Entity<PlatformSettings>()
+                .Property(x => x.RegisteredAddress)
+                .HasMaxLength(512);
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.City).HasMaxLength(128);
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.Country).HasMaxLength(128);
+            modelBuilder
+                .Entity<PlatformSettings>()
+                .Property(x => x.OfficialEmail)
+                .HasMaxLength(256);
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.SupportPhone).HasMaxLength(32);
+            modelBuilder
+                .Entity<PlatformSettings>()
+                .Property(x => x.WhatsAppNumber)
+                .HasMaxLength(32);
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.WorkingHours).HasMaxLength(256);
+            modelBuilder
+                .Entity<PlatformSettings>()
+                .Property(x => x.DataHostingLocation)
+                .HasMaxLength(256);
+            modelBuilder.Entity<PlatformSettings>().Property(x => x.BackupPolicy).HasMaxLength(1000);
             ConfigureTenantScopedEntity<Permit>(modelBuilder);
             ConfigureTenantScopedEntity<Visit>(modelBuilder);
             ConfigureTenantScopedEntity<VisitCompanion>(modelBuilder);
