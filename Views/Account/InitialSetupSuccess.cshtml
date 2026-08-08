@@ -7,7 +7,6 @@
     ViewData["BodyClass"] = "login-page-body";
     var administrationSettings = UserAdminService.GetAdministrationSettings();
     var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
-    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
 }
 
 <style nonce="@(Context.Items["CspStyleNonce"])">
@@ -77,7 +76,8 @@
     <div class="login-page-overlay"></div>
 
     <section class="login-page-card setup-success-card">
-        <img src="~/@organizationLogoPath" alt="شعار @organizationName" class="login-page-watermark" />
+        <img src="~/@ProductIdentity.MarkPath" asp-append-version="true"
+             alt="شعار @ProductIdentity.DisplayName" class="login-page-watermark" data-product-mark />
         <div class="setup-success-badge">✓</div>
         <div class="login-page-kicker">تهيئة النظام</div>
         <h1 class="setup-success-title">تم إعداد النظام بنجاح</h1>

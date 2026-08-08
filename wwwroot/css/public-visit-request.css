@@ -25,7 +25,7 @@ body.public-visit-body .app-system-meta-kiosk { display: none !important; }
 .public-visit-header { min-height: 58px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--visit-line); }
 .public-visit-brand { color: var(--visit-ink); display: inline-flex; align-items: center; gap: 12px; text-decoration: none; }
 .public-visit-brand-mark { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--visit-line); background: var(--visit-surface); border-radius: 8px; }
-.public-visit-brand-mark img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.public-visit-brand-mark img { display: block; width: 100%; height: 100%; padding: 3px; object-fit: contain; }
 .public-visit-brand span:last-child { display: grid; gap: 1px; }
 .public-visit-brand strong { font-size: 15px; }
 .public-visit-brand small { color: var(--visit-muted); font-size: 12px; }

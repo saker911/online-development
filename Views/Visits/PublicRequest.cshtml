@@ -16,7 +16,9 @@
 <main class="public-visit-shell">
     <header class="public-visit-header">
         <a asp-controller="Home" asp-action="Index" class="public-visit-brand" aria-label="العودة إلى @ProductIdentity.DisplayName">
-            <span class="public-visit-brand-mark" aria-hidden="true"><img src="~/@ProductIdentity.MarkPath" alt="" /></span>
+            <span class="public-visit-brand-mark" aria-hidden="true">
+                <img src="~/@ProductIdentity.MarkPath" asp-append-version="true" alt="" data-product-mark />
+            </span>
             <span><strong>@Model.OrganizationName</strong><small>بوابة الزيارات</small></span>
         </a>
         @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")

@@ -146,7 +146,7 @@ async function completeInitialSetup(page) {
   await expect(page.getByRole("heading", { name: /تم إعداد النظام بنجاح/ })).toBeVisible();
   await expect(page.locator(".login-page-watermark")).toHaveAttribute(
     "src",
-    /\/uploads\/administration\/logo-.*\.png/i
+    /\/icons\/brand-mark\.svg\?v=/i
   );
   await page.getByRole("link", { name: "الدخول الآن" }).click();
   await expectHomePage(page);

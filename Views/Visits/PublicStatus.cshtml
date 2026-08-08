@@ -22,7 +22,9 @@
 <main class="public-visit-shell public-visit-status-shell">
     <header class="public-visit-header">
         <a asp-controller="Home" asp-action="Index" class="public-visit-brand">
-            <span class="public-visit-brand-mark" aria-hidden="true">T</span>
+            <span class="public-visit-brand-mark" aria-hidden="true">
+                <img src="~/@ProductIdentity.MarkPath" asp-append-version="true" alt="" data-product-mark />
+            </span>
             <span><strong>@Model.OrganizationName</strong><small>بوابة الزيارات</small></span>
         </a>
         @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")

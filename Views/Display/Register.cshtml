@@ -6,7 +6,6 @@
     ViewData["Title"] = "تسجيل شاشة عرض";
     var administrationSettings = UserAdminService.GetAdministrationSettings();
     var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
-    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
 }
 
 <div class="login-page-shell display-register-shell">
@@ -14,7 +13,8 @@
 
     <section class="login-page-card login-card-wide display-register-card">
         <div class="login-page-brand-row">
-            <img src="~/@organizationLogoPath" alt="شعار @organizationName" class="login-page-logo" />
+            <img src="~/@ProductIdentity.MarkPath" asp-append-version="true"
+                 alt="شعار @ProductIdentity.DisplayName" class="login-page-logo" data-product-mark />
             <div>
                 <div class="login-page-kicker">شاشات العرض</div>
                 <div class="login-page-brand-name">@organizationName</div>

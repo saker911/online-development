@@ -57,7 +57,7 @@ test("backup page creates and downloads backup, restore rejects invalid upload",
   await expect(page.getByRole("alert").or(page.locator(".validation-summary-errors")).getByText(/رفض|غير صالح|تعذر|فشل|آمن/).first()).toBeVisible();
 });
 
-test("selected organization name and logo appear across the application shell", async ({ page }) => {
+test("organization name remains contextual while the product mark stays consistent", async ({ page }) => {
   await ensureOwnerSignedIn(page);
   const organizationName = `شركة تشغيل ${uniqueSuffix()}`;
 
@@ -74,6 +74,12 @@ test("selected organization name and logo appear across the application shell", 
   await expect(page.locator(".app-brand-copy").getByText(organizationName)).toBeVisible();
   await expect(page.locator(".app-brand-mark img")).toHaveAttribute(
     "src",
+    /\/icons\/brand-mark\.svg\?v=/i
+  );
+  await expect(page.locator(".app-brand-mark img")).toHaveCSS("filter", "none");
+  await expect(page.locator(".app-brand-mark img")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.locator(".administration-media-preview img")).toHaveAttribute(
+    "src",
     /\/uploads\/administration\/logo-.*\.png/i
   );
 
@@ -82,8 +88,9 @@ test("selected organization name and logo appear across the application shell", 
   await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
   await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",
-    /\/uploads\/administration\/logo-.*\.png/i
+    /\/icons\/brand-mark\.svg\?v=/i
   );
+  await expect(page.locator(".login-page-topbar-brand img")).toHaveCSS("filter", "none");
 
   await signIn(page);
   await page.goto("/Administration/Edit");
@@ -96,6 +103,6 @@ test("selected organization name and logo appear across the application shell", 
   await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
   await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",
-    /\/images\/tasreehgate-logo\.png/i
+    /\/icons\/brand-mark\.svg\?v=/i
   );
 });

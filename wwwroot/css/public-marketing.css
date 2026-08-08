@@ -2784,6 +2784,20 @@ body.login-page-body .display-kiosk-main {
     filter: none !important;
 }
 
+/* The product mark keeps its official red/green colors on every surface. */
+img[data-product-mark],
+body.login-page-body img[data-product-mark],
+[data-theme="dark"] img[data-product-mark] {
+    background: transparent !important;
+    filter: none !important;
+}
+
+.app-brand-mark.product-brand-frame,
+[data-theme="dark"] .app-brand-mark.product-brand-frame {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
 .subscription-page-shell {
     width: 100%;
     min-height: 100dvh;

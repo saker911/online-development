@@ -12,13 +12,12 @@
         ? UserAdminService.GetAdministrationSettings()
         : UserAdminService.GetAdministrationSettings(tenant, ignoreTenantFilters: true);
     var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
-    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
 }
 
 <div class="login-page-shell login-page-shell-light">
     <header class="login-page-topbar">
         <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
-            <img src="~/@organizationLogoPath" alt="" />
+            <img src="~/@ProductIdentity.MarkPath" asp-append-version="true" alt="" data-product-mark />
             <span>
                 <strong>@ProductIdentity.DisplayName</strong>
                 <small>@organizationName</small>

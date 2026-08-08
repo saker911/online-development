@@ -19,4 +19,15 @@ test("public authentication offers Google trial and no Microsoft option", async 
   await expect(page.locator('[name="OwnerEmail"]')).toHaveAttribute("autocomplete", "email");
   await expect(page.locator('[name="Password"]')).toHaveAttribute("autocomplete", "new-password");
   await expect(page.locator('[name="ConfirmPassword"]')).toHaveAttribute("autocomplete", "new-password");
+
+  await page.goto("/Display/Register");
+  const themeToggle = page.getByRole("button", { name: /الوضع النهاري مفعّل/ });
+  if (await themeToggle.isVisible()) {
+    await themeToggle.click();
+  }
+  await expect(page.locator(".login-page-logo[data-product-mark]")).toHaveAttribute(
+    "src",
+    /\/icons\/brand-mark\.svg\?v=/i
+  );
+  await expect(page.locator(".login-page-logo[data-product-mark]")).toHaveCSS("filter", "none");
 });

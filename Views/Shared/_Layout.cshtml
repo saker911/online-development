@@ -156,7 +156,6 @@
         && (currentTenant == null || SubscriptionAccessMiddleware.IsSubscriptionRestricted(currentTenant, DateTime.UtcNow));
     var administrationSettings = UserAdminService.GetAdministrationSettings();
     var organizationName = OrganizationBranding.GetOrganizationName(administrationSettings);
-    var organizationLogoPath = OrganizationBranding.GetLogoPath(administrationSettings);
     var requiresPasswordChange = isAuthenticated && (currentUser?.MustChangePassword ?? false);
     var pageToastMessage = ViewData["PageToastMessage"] as string;
     var pageToastType = ViewData["PageToastType"] as string;
@@ -441,8 +440,9 @@
         <div class="app-shell">
             <header class="app-topbar">
                 <a class="app-brand" asp-controller="Home" asp-action="Index">
-                    <span class="app-brand-mark" data-brand-logo-frame>
-                        <img src="~/@organizationLogoPath" alt="شعار @organizationName" />
+                    <span class="app-brand-mark product-brand-frame">
+                        <img src="~/@ProductIdentity.MarkPath" asp-append-version="true"
+                             alt="شعار @ProductIdentity.DisplayName" data-product-mark />
                     </span>
                     <span class="app-brand-copy">
                         <strong>@ProductIdentity.DisplayName</strong>

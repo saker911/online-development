@@ -21,6 +21,11 @@ test("visitor submits a public request, follows status, and receives QR only aft
   await page.context().clearCookies();
   await page.goto(publicUrl);
   await expect(page.getByRole("heading", { name: "طلب زيارة", exact: true })).toBeVisible();
+  await expect(page.locator(".public-visit-brand-mark img[data-product-mark]")).toHaveAttribute(
+    "src",
+    /\/icons\/brand-mark\.svg\?v=/i
+  );
+  await expect(page.locator(".public-visit-brand-mark img[data-product-mark]")).toHaveCSS("filter", "none");
 
   const visitorName = `زائر ذاتي ${uniqueSuffix()}`;
   await page.locator('[name="VisitorName"]').fill(visitorName);
@@ -52,6 +57,7 @@ test("visitor submits a public request, follows status, and receives QR only aft
   await page.context().clearCookies();
   await page.goto(statusUrl);
   await expect(page.getByRole("heading", { name: "تم اعتماد زيارتك" })).toBeVisible();
+  await expect(page.locator(".public-visit-brand-mark img[data-product-mark]")).toBeVisible();
   const qr = page.locator(".public-visit-qr-frame img");
   await expect(qr).toBeVisible();
   const qrResponse = await page.request.get(await qr.getAttribute("src"));
