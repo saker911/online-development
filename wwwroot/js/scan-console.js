@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const shiftDeniedCount = document.getElementById("shiftDeniedCount");
     const resetShiftSummaryButton = document.getElementById("resetShiftSummaryButton");
     const cameraButton = document.getElementById("scanConsoleCameraButton");
+    const submitButton = document.getElementById("scanConsoleSubmitButton");
     const cameraPanel = document.getElementById("scanConsoleCameraPanel");
     const cameraPreview = document.getElementById("scanConsoleCameraPreview");
     const cameraStatus = document.getElementById("scanConsoleCameraStatus");
@@ -220,6 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function updateOperatorUi(session) {
         activeOperator = session || null;
+        const scannerReady = !requiresOperator || (!!activeOperator && !activeOperator.mustChangePin);
         if (activeOperatorName) {
             activeOperatorName.textContent = activeOperator?.displayName || "لا يوجد مشغل نشط";
         }
@@ -228,6 +230,15 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         if (openOperatorModalButton) {
             openOperatorModalButton.textContent = activeOperator ? "تبديل المشغل" : "دخول المشغل";
+        }
+        if (input) {
+            input.disabled = !scannerReady;
+        }
+        if (submitButton) {
+            submitButton.disabled = !scannerReady;
+        }
+        if (cameraButton) {
+            cameraButton.disabled = !scannerReady;
         }
     }
 
@@ -1238,6 +1249,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (requiresOperator) {
+        updateOperatorUi(activeOperator);
         refreshOperatorStatus();
         const heartbeatEndpoint = unifiedGateRoot?.dataset.heartbeatEndpoint;
         if (heartbeatEndpoint) {

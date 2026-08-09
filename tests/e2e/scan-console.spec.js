@@ -496,6 +496,8 @@ test("display gate refreshes stale security token and retries operator login aft
 
   await page.goto("/Display/Gate?operatorMode=true");
   await expect(page.locator("#unifiedGateRoot")).toBeVisible();
+  await expect(page.locator("#scanConsoleSubmitButton")).toBeDisabled();
+  await expect(page.locator("#scanConsoleCameraButton")).toBeDisabled();
 
   let refreshedPageRequests = 0;
   await page.route("**/Display/Gate*", (route) => {
@@ -547,6 +549,8 @@ test("display gate refreshes stale security token and retries operator login aft
   await page.locator("#submitOperatorLoginButton").click();
 
   await expect(page.locator("#activeOperatorName")).toHaveText("مشغل التعافي");
+  await expect(page.locator("#scanConsoleSubmitButton")).toBeEnabled();
+  await expect(page.locator("#scanConsoleCameraButton")).toBeEnabled();
   expect(refreshedPageRequests).toBe(1);
   expect(switchTokens).toHaveLength(2);
   expect(switchTokens[1]).toBe("RECOVERED-TOKEN");
