@@ -15,6 +15,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
 using VehiclePermitSystemWeb.Utilities.Online;
+using VehiclePermitSystemWeb.Utilities.Reports;
 
 namespace VehiclePermitSystemWeb.Services.Reports
 {
@@ -880,16 +881,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
 
         private static string FormatPermitActivityClassification(string? status)
         {
-            return status switch
-            {
-                "Pending" => "معلّقة",
-                "ClosedWithoutViolation" => "أغلقت دون مخالفة",
-                "ConfirmedViolation" => "مخالفة مؤكدة",
-                "NeedsAdministrativeReview" => "تحت المراجعة",
-                "Completed" => "مغلقة",
-                "Stopped" => "موقوفة",
-                _ => string.IsNullOrWhiteSpace(status) ? "-" : status,
-            };
+            return PermitActivityDisplayFormatter.Classification(status);
         }
 
         private static string FormatPermitActivityOperator(PermitActivity item)
@@ -906,45 +898,12 @@ namespace VehiclePermitSystemWeb.Services.Reports
 
         private static string FormatPermitActivitySource(PermitActivity item)
         {
-            if (!string.IsNullOrWhiteSpace(item.GateName))
-            {
-                return item.GateName;
-            }
-
-            return item.Source?.Trim().ToLowerInvariant() switch
-            {
-                "system" => "النظام",
-                "scan" => "شاشة البوابة",
-                "camera" => "كاميرا الجوال",
-                "manual" => "إدخال يدوي",
-                "gate" => "البوابة",
-                _ => string.IsNullOrWhiteSpace(item.Source) ? "-" : item.Source,
-            };
+            return PermitActivityDisplayFormatter.Source(item.GateName, item.Source);
         }
 
         private static string FormatPermitActivityAction(string? actionType)
         {
-            return actionType switch
-            {
-                "Entry" => "دخول",
-                "Return" => "عودة",
-                "LateReturn" => "عودة متأخرة",
-                "LateAttendance" => "حضور متأخر",
-                "WorkEndEntry" => "دخول بعد نهاية الدوام",
-                "ExitAuthorized" => "خروج مصرح",
-                "ExitUnauthorized" => "خروج غير مصرح",
-                "ExitFinal" => "خروج نهائي",
-                "WorkEndExit" => "خروج نهاية الدوام",
-                "LateCheckout" => "انصراف متأخر",
-                "ReturnAfterUnauthorizedExit" => "عودة بعد خروج غير مصرح",
-                "UnauthorizedExitNeedsReview" => "خروج يحتاج مراجعة",
-                "UnauthorizedExitConfirmed" => "تأكيد خروج غير مصرح",
-                "UnauthorizedExitStopped" => "إيقاف بسبب خروج غير مصرح",
-                "DeniedAttemptClosed" => "إغلاق محاولة مرفوضة",
-                "OperatorNote" => "ملاحظة مشغل البوابة",
-                "DelegatedApproval" => "اعتماد بالتفويض",
-                _ => string.IsNullOrWhiteSpace(actionType) ? "-" : actionType,
-            };
+            return PermitActivityDisplayFormatter.Action(actionType);
         }
     }
 }

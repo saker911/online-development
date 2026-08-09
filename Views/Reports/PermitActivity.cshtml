@@ -1,4 +1,5 @@
 @using VehiclePermitSystemWeb.Security
+@using VehiclePermitSystemWeb.Utilities.Reports
 @model VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportsDashboardViewModel
 
 @functions {
@@ -10,40 +11,9 @@
         ? $"{value.Value.ToString("hh:mm", System.Globalization.CultureInfo.InvariantCulture)} {(value.Value.Hour < 12 ? "صباحًا" : "مساءً")}"
         : "-";
 
-    private static string FormatReasonCode(string? reasonCode) => reasonCode switch
-    {
-        "SecurityViolation" => "مخالفة أمنية",
-        "NoReturnViolation" => "عدم العودة",
-        "LateReturn" => "عودة متأخرة",
-        "LateAttendance" => "تأخر حضور",
-        "LateCheckout" => "تأخر انصراف",
-        "OverrideEntry" => "دخول استثنائي",
-        "ExitAuthorized" => "خروج بإذن",
-        "ExitFinal" => "خروج نهائي",
-        "ExitUnauthorized" => "خروج بدون إذن",
-        "PendingUnauthorizedExit" => "محاولة معلقة",
-        "DeniedAttemptClosed" => "أغلقت دون مخالفة",
-        "UnauthorizedExitConfirmed" => "مخالفة مؤكدة",
-        "ReturnAfterUnauthorizedExit" => "عودة بعد خروج غير مصرح",
-        "UnauthorizedExitNeedsReview" => "مراجعة إدارية",
-        "AdministrativeReviewConfirmed" => "اعتماد إداري للمخالفة",
-        "AdministrativeReviewDismissed" => "إغلاق إداري دون مخالفة",
-        "NoReturnWarning" => "تنبيه تأخر العودة",
-        "DuplicateIgnored" => "تجاهل تكرار",
-        _ => string.IsNullOrWhiteSpace(reasonCode) ? "-" : reasonCode,
-    };
+    private static string FormatReasonCode(string? reasonCode) => PermitActivityDisplayFormatter.ReasonCode(reasonCode);
 
-    private static string FormatClassificationStatus(string? status) => status switch
-    {
-        "Pending" => "معلّق",
-        "ClosedWithoutViolation" => "أغلقت دون مخالفة",
-        "ConfirmedViolation" => "مخالفة مؤكدة",
-        "NeedsAdministrativeReview" => "تحتاج مراجعة",
-        "Completed" => "مكتمل",
-        "Stopped" => "أوقف التصريح",
-        "System" => "نظامي",
-        _ => string.IsNullOrWhiteSpace(status) ? "-" : status,
-    };
+    private static string FormatClassificationStatus(string? status) => PermitActivityDisplayFormatter.Classification(status);
 
     private static string FormatOperator(VehiclePermitSystemWeb.Models.Entities.PermitActivity item)
     {
@@ -295,7 +265,7 @@
                                                 <td>@FormatClassificationStatus(item.ClassificationStatus)<div class="small text-muted">@FormatReasonCode(item.ReasonCode)</div></td>
                                                 <td>@FormatOperator(item)</td>
                                                 <td>@item.Message</td>
-                                                <td>@(string.IsNullOrWhiteSpace(item.GateName) ? item.Source : item.GateName)<div class="small text-muted">@(string.IsNullOrWhiteSpace(item.ExecutionMethod) ? "-" : item.ExecutionMethod)</div></td>
+                                                <td>@PermitActivityDisplayFormatter.Source(item.GateName, item.Source)<div class="small text-muted">@PermitActivityDisplayFormatter.ExecutionMethod(item.ExecutionMethod)</div></td>
                                             </tr>
                                         }
                                     </tbody>
@@ -334,7 +304,7 @@
                                                 <td>@FormatOperator(item)</td>
                                                 <td class="date-text">@FormatReportTime(item.OccurredAt)</td>
                                                 <td>@item.Message</td>
-                                                <td>@(string.IsNullOrWhiteSpace(item.GateName) ? item.Source : item.GateName)<div class="small text-muted">@(string.IsNullOrWhiteSpace(item.ExecutionMethod) ? "-" : item.ExecutionMethod)</div></td>
+                                                <td>@PermitActivityDisplayFormatter.Source(item.GateName, item.Source)<div class="small text-muted">@PermitActivityDisplayFormatter.ExecutionMethod(item.ExecutionMethod)</div></td>
                                             </tr>
                                         }
                                     </tbody>

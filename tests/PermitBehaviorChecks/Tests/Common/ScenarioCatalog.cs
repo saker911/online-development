@@ -467,6 +467,10 @@ internal static partial class ScenarioCatalog
                 fixture => ScenarioOperationalTablesUseHybridIconActions()
             ),
             Scenario(
+                "Permit activity report hides internal English codes",
+                fixture => ScenarioPermitActivityReportHidesInternalEnglishCodes()
+            ),
+            Scenario(
                 "Administration tables use compact icon actions",
                 fixture => ScenarioAdministrationTablesUseCompactIconActions()
             ),

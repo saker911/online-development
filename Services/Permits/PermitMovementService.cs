@@ -938,11 +938,18 @@ namespace VehiclePermitSystemWeb.Services.Permits
             }
 
             var settings = GetAdministrationSettings(db);
+            DateTime workEndTime;
             if (
-                !AdministrationWorkSchedule.TryGetMostRecentWorkEnd(
-                    occurredAt,
+                !AdministrationWorkSchedule.TryGetShiftWindow(
+                    lastInsideAt.Value,
                     settings,
-                    out var workEndTime
+                    out _,
+                    out workEndTime
+                )
+                && !AdministrationWorkSchedule.TryGetMostRecentWorkEnd(
+                    lastInsideAt.Value,
+                    settings,
+                    out workEndTime
                 )
             )
             {

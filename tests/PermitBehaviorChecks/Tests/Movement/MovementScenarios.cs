@@ -1166,7 +1166,15 @@ internal static partial class ScenarioCatalog
         IPermitService permitService
     )
     {
-        ResetStandardAdministrationSchedule(dbFactory);
+        SetAdministrationWorkHours(
+            dbFactory,
+            new TimeOnly(8, 0),
+            new TimeOnly(16, 0),
+            5,
+            "Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday",
+            15,
+            30
+        );
         clock.SetLocalNow(new DateTime(2026, 4, 23, 10, 45, 0));
 
         var permitNumber = CreateApprovedEmployeePermit(
@@ -1209,11 +1217,19 @@ internal static partial class ScenarioCatalog
             "blocked exit should keep the permit inside before next-day recovery"
         );
 
-        clock.SetLocalNow(new DateTime(2026, 4, 24, 9, 0, 0));
+        clock.SetLocalNow(new DateTime(2026, 4, 24, 16, 25, 0));
         var nextDayScan = permitService.RecordPermitScan(permitNumber, "tester");
         Require(
             nextDayScan.allowed,
             $"next-day scan should promote the stale pending exit, close yesterday, and allow a fresh entry, but returned '{nextDayScan.reason}'"
+        );
+        Require(
+            string.Equals(
+                nextDayScan.reason,
+                "WorkEndEntry recorded",
+                StringComparison.OrdinalIgnoreCase
+            ),
+            "next-day recovery during the current work-end grace should record a fresh entry"
         );
 
         var permitAfterRecovery =
@@ -1236,7 +1252,7 @@ internal static partial class ScenarioCatalog
             "next-day recovery should keep the permit approved when escalation does not stop it"
         );
         Require(
-            permitAfterRecovery.ReturnTime == new DateTime(2026, 4, 24, 9, 0, 0),
+            permitAfterRecovery.ReturnTime == new DateTime(2026, 4, 24, 16, 25, 0),
             "next-day recovery should record a fresh current-day entry time"
         );
         Require(
@@ -1287,7 +1303,7 @@ internal static partial class ScenarioCatalog
         Require(
             activities.Any(activity =>
                 string.Equals(activity.ActionType, "Entry", StringComparison.OrdinalIgnoreCase)
-                && activity.OccurredAt == new DateTime(2026, 4, 24, 9, 0, 0)
+                && activity.OccurredAt == new DateTime(2026, 4, 24, 16, 25, 0)
             ),
             "the current scan should record a new current-day entry"
         );

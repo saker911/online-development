@@ -1,7 +1,28 @@
 namespace PermitBehaviorChecks;
 
+using VehiclePermitSystemWeb.Utilities.Reports;
+
 internal static partial class ScenarioCatalog
 {
+    private static Task ScenarioPermitActivityReportHidesInternalEnglishCodes()
+    {
+        Require(
+            PermitActivityDisplayFormatter.Classification("System") == "نظامي"
+                && PermitActivityDisplayFormatter.ReasonCode("Entry") == "دخول"
+                && PermitActivityDisplayFormatter.ReasonCode("SubmitForSecurityApproval") == "رفع لاعتماد الأمن"
+                && PermitActivityDisplayFormatter.Source(null, "PermitsController") == "إدارة التصاريح"
+                && PermitActivityDisplayFormatter.ExecutionMethod("manual") == "إدخال يدوي",
+            "permit activity reports should translate internal workflow, source, and execution codes"
+        );
+        Require(
+            PermitActivityDisplayFormatter.ReasonCode("UnknownInternalCode") == "إجراء مسجل"
+                && PermitActivityDisplayFormatter.Source(null, "UnknownController") == "النظام",
+            "unknown internal codes should not leak English implementation names into Arabic reports"
+        );
+
+        return Task.CompletedTask;
+    }
+
     private static Task ScenarioOperationalTablesUseHybridIconActions()
     {
         var repositoryRoot = Path.GetFullPath(
