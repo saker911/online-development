@@ -1,9 +1,8 @@
 name: Deploy to Hostinger VPS
 
+# Production automatically pulls this branch through tasareehapp-deploy.timer.
+# Keep this workflow as an explicit fallback when GitHub Actions is available.
 on:
-  push:
-    branches:
-      - online-development
   workflow_dispatch:
 
 concurrency:
