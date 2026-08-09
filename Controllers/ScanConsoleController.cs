@@ -44,7 +44,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet]
         public IActionResult Index(string? id = null)
         {
-            return View(BuildViewModel(id: id));
+            return RedirectToAction("Gate", "Display", new { id });
         }
 
         [HttpPost]

@@ -4,6 +4,9 @@
 
 @{
     ViewData["Title"] = "مركز البوابة";
+    var isUnifiedDisplayMode = ViewBag.IsUnifiedDisplayMode as bool? ?? false;
+    var requiresOperator = ViewBag.RequiresOperator as bool? ?? false;
+    var scannerDisplayName = (ViewBag.ScannerDisplayName as string ?? Model.ScannerUserName).Trim();
     var permitNotFoundMessage = Model.ScannedPermit != null
         ? "هذا التصريح موجود لكنه غير نشط حاليًا أو منتهي."
         : "رقم التصريح غير موجود.";
@@ -43,7 +46,15 @@
     <link rel="stylesheet" href="~/css/scan-console.css" asp-append-version="true" />
 }
 
-<div class="gate-mobile-page">
+<div class="gate-mobile-page @(isUnifiedDisplayMode ? "is-unified-display" : string.Empty)"
+     id="unifiedGateRoot"
+     data-unified-display="@isUnifiedDisplayMode.ToString().ToLowerInvariant()"
+     data-requires-operator="@requiresOperator.ToString().ToLowerInvariant()"
+     data-heartbeat-endpoint="@(ViewBag.HeartbeatEndpoint ?? string.Empty)"
+     data-operator-status-endpoint="@(ViewBag.OperatorStatusEndpoint ?? string.Empty)"
+     data-switch-operator-endpoint="@(ViewBag.SwitchOperatorEndpoint ?? string.Empty)"
+     data-signout-operator-endpoint="@(ViewBag.SignOutOperatorEndpoint ?? string.Empty)"
+     data-change-pin-endpoint="@(ViewBag.ChangeOperatorPinEndpoint ?? string.Empty)">
     <header class="gate-mobile-header">
         <div>
             <span class="gate-mobile-eyebrow">تشغيل البوابة</span>
@@ -55,7 +66,16 @@
                 <span aria-hidden="true"></span>
                 متصل
             </span>
-            <span class="gate-mobile-operator">@Model.ScannerUserName</span>
+            <span class="gate-mobile-operator" id="activeOperatorName">@(requiresOperator ? "لا يوجد مشغل نشط" : scannerDisplayName)</span>
+            @if (isUnifiedDisplayMode)
+            {
+                <button type="button" class="gate-mobile-header-button" id="unifiedGateFullscreenButton" title="ملء الشاشة">ملء الشاشة</button>
+                @if (requiresOperator)
+                {
+                    <button type="button" class="gate-mobile-header-button" id="openOperatorModalButton">دخول المشغل</button>
+                    <button type="button" class="gate-mobile-header-button is-danger" id="signOutOperatorButton" disabled>خروج المشغل</button>
+                }
+            }
         </div>
     </header>
 
@@ -77,6 +97,8 @@
                       id="scanConsoleForm"
                       data-scan-endpoint="@Url.Content("~/api/scan/auto")"
                       data-scanner-user="@Model.ScannerUserName"
+                      data-scanner-display-name="@scannerDisplayName"
+                      data-requires-operator="@requiresOperator.ToString().ToLowerInvariant()"
                       data-permit-not-found-message="@permitNotFoundMessage">
                     @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
@@ -201,6 +223,46 @@
         </aside>
     </div>
 </div>
+
+@if (requiresOperator)
+{
+    <div class="gate-unified-modal is-hidden" id="operatorModal" aria-hidden="true">
+        <div class="gate-unified-dialog" role="dialog" aria-modal="true" aria-labelledby="operatorModalTitle">
+            <div class="gate-mobile-section-head">
+                <div>
+                    <span>تشغيل آمن</span>
+                    <h2 id="operatorModalTitle">دخول مأمور البوابة</h2>
+                </div>
+                <button type="button" class="gate-mobile-reset" id="closeOperatorModalButton">إغلاق</button>
+            </div>
+
+            <p class="gate-unified-operator-copy" id="operatorModalHint">امسح بطاقة المشغل أو أدخل الرمز والرقم السري.</p>
+
+            <div class="gate-unified-operator-fields" id="operatorLoginSection">
+                <label for="operatorBadgeInput">رمز المشغل</label>
+                <input id="operatorBadgeInput" class="form-control ltr-field" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="GATE-000000" />
+                <label for="operatorPinInput">الرقم السري</label>
+                <input id="operatorPinInput" class="form-control ltr-field" type="password" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 أرقام" />
+            </div>
+
+            <div class="gate-unified-operator-fields" id="operatorPinChangeSection" hidden>
+                <label for="operatorCurrentPinInput">الرقم الحالي</label>
+                <input id="operatorCurrentPinInput" class="form-control ltr-field" type="password" inputmode="numeric" maxlength="6" autocomplete="off" />
+                <label for="operatorNewPinInput">الرقم الجديد</label>
+                <input id="operatorNewPinInput" class="form-control ltr-field" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+                <label for="operatorConfirmPinInput">تأكيد الرقم الجديد</label>
+                <input id="operatorConfirmPinInput" class="form-control ltr-field" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+            </div>
+
+            <div class="gate-unified-operator-message" id="operatorModalMessage" role="status"></div>
+            <div class="gate-unified-dialog-actions">
+                <button type="button" class="gate-mobile-camera-button" id="submitOperatorLoginButton">تسجيل الدخول</button>
+                <button type="button" class="gate-mobile-camera-button" id="submitOperatorPinChangeButton" hidden>حفظ الرقم الجديد</button>
+                <button type="button" class="gate-mobile-header-button" id="cancelOperatorModalButton">إلغاء</button>
+            </div>
+        </div>
+    </div>
+}
 
 <script type="application/json" id="scanConsoleInitialPermit" nonce="@(Context.Items["CspScriptNonce"])">@Html.Raw(initialPermitJson)</script>
 

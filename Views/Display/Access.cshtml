@@ -3,40 +3,19 @@
 }
 
 <div class="card-permit">
-    <h1 class="mb-3">الوصول إلى شاشات العرض</h1>
-    <p class="text-muted-ar">اختر شاشة البوابة أو شاشة الزيارات مباشرة. الروابط أدناه تتضمن مفتاح شاشة العرض حتى تعمل
-        على جهاز الكشك بدون تسجيل دخول الموقع.</p>
+    <h1 class="mb-3">مركز تشغيل البوابة</h1>
+    <p class="text-muted-ar">واجهة واحدة للتصاريح والزيارات، وتعمل على الجوال والكمبيوتر وجهاز البوابة.</p>
 
-        <div class="row g-3">
-            <div class="col-md-6">
-                <a href="@ViewBag.GateUrl" target="_blank" class="btn btn-primary w-100 py-3">فتح شاشة البوابة</a>
-            </div>
-            <div class="col-md-6">
-                <a href="@ViewBag.VisitsUrl" target="_blank" class="btn btn-outline-primary w-100 py-3">فتح شاشة
-                    الزيارات</a>
-                </div>
-            </div>
-
-            <hr class="my-4" />
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="border rounded p-3 h-100">
-                        <div class="fw-bold mb-2">رابط شاشة البوابة</div>
-                        <a href="@ViewBag.GateUrl" target="_blank" class="text-break ltr-field"> @ViewBag.GateUrl</a>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="border rounded p-3 h-100">
-                        <div class="fw-bold mb-2">رابط شاشة الزيارات</div>
-                        <a href="@ViewBag.VisitsUrl" target="_blank" class="text-break ltr-field"> @ViewBag.VisitsUrl</a>
-                    </div>
-                </div>
-                <div class="col-12">
-                    <div class="app-inline-note app-inline-note-muted mb-0">
-                        هذه الشاشات مصممة للعرض المباشر على جهاز الكشك أو الشاشة الجانبية، ويستطيع المشغل تسجيل دخوله من داخل
-                        الشاشة نفسها.
-                    </div>
-                </div>
-            </div>
+    <div class="row g-3">
+        <div class="col-12">
+            <a href="@ViewBag.GateUrl" target="_blank" class="btn btn-primary w-100 py-3">فتح مركز البوابة</a>
         </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <div class="border rounded p-3">
+        <div class="fw-bold mb-2">رابط مركز البوابة</div>
+        <a href="@ViewBag.GateUrl" target="_blank" class="text-break ltr-field">@ViewBag.GateUrl</a>
+    </div>
+</div>

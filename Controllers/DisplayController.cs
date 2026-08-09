@@ -178,22 +178,12 @@ namespace VehiclePermitSystemWeb.Controllers
                 return authorizationResult;
             }
 
-            var normalizedTarget = string.Equals(
-                target,
-                nameof(Visits),
-                StringComparison.OrdinalIgnoreCase
-            )
-                ? nameof(Visits)
-                : nameof(Gate);
-
-            ViewBag.Target = normalizedTarget;
             ViewBag.GateUrl = BuildDisplayUrl(nameof(Gate));
-            ViewBag.VisitsUrl = BuildDisplayUrl(nameof(Visits));
             return View();
         }
 
         [AllowAnonymous]
-        public IActionResult Gate()
+        public IActionResult Gate(string? id = null, bool operatorMode = false)
         {
             var authorizationResult = EnsureDisplayPageAccess();
             if (authorizationResult != null)
@@ -201,21 +191,76 @@ namespace VehiclePermitSystemWeb.Controllers
                 return authorizationResult;
             }
 
-            var model = new DisplayGateViewModel
+            var isAccountScanner =
+                User.Identity?.IsAuthenticated == true
+                && User.HasPermission(AppPermissions.ScanOperations)
+                && !operatorMode;
+            var username = isAccountScanner ? User.Identity?.Name ?? string.Empty : string.Empty;
+            var model = new ScanTestViewModel
             {
-                ActiveOperator = null,
-                ApprovedEmployees = _permitService.GetApprovedPermitsForDisplay().Take(4).ToList(),
-                VisitorsAwaitingArrival = _visitService
-                    .GetVisitorsAwaitingArrival()
-                    .Take(4)
+                ScannerUserName = username,
+                RecentActivities = _permitService
+                    .GetRecentPermitActivities(50, username)
+                    .Where(activity =>
+                        !isAccountScanner
+                        || string.Equals(
+                            activity.GateOperatorAccount,
+                            username,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                        || string.Equals(
+                            activity.RecordedBy,
+                            username,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    .Take(6)
                     .ToList(),
-                EmployeesOut = _permitService.GetEmployeesOutForDisplay().Take(4).ToList(),
-                VisitorsInside = _visitService.GetVisitorsInside().Take(4).ToList(),
-                RecentPermitActivities = _permitService.GetRecentPermitActivities(10).ToList(),
-                LatestPermitActivity = _permitService.GetLatestPermitActivity(),
             };
 
-            return View(model);
+            if (!string.IsNullOrWhiteSpace(id))
+            {
+                var requestedPermit = _permitService.GetPermitByNumber(id, User.Identity?.Name);
+                if (requestedPermit == null)
+                {
+                    model.SamplePermitNotice =
+                        "تعذر العثور على التصريح المطلوب أو لا تملك صلاحية عرضه.";
+                }
+                else if (
+                    !string.Equals(
+                        requestedPermit.ApprovalStatus,
+                        "Approved",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                {
+                    model.SamplePermitNotice = "لا يمكن عرض باركود البوابة إلا بعد اعتماد التصريح.";
+                }
+                else
+                {
+                    model.SamplePermitNumber = requestedPermit.PermitNumber;
+                    model.SamplePermitPublicCode = requestedPermit.PublicPermitCode;
+                    model.SamplePermitDisplayName = requestedPermit.DriverName;
+                    model.IsSpecificPermitBarcode = true;
+                }
+            }
+
+            ViewBag.IsUnifiedDisplayMode = true;
+            ViewBag.RequiresOperator = !isAccountScanner;
+            ViewBag.ScannerDisplayName =
+                User.Claims.FirstOrDefault(claim => claim.Type == "DisplayName")?.Value
+                ?? username;
+            ViewBag.HeartbeatEndpoint = Url.Action(nameof(Heartbeat));
+            ViewBag.OperatorStatusEndpoint = Url.Action(nameof(GateOperatorStatus));
+            ViewBag.SwitchOperatorEndpoint = Url.Action(nameof(SwitchOperator));
+            ViewBag.SignOutOperatorEndpoint = Url.Action(nameof(SignOutOperator));
+            ViewBag.ChangeOperatorPinEndpoint = Url.Action(nameof(ChangeOperatorPin));
+            ViewData["HideShell"] = !isAccountScanner;
+            ViewData["BodyClass"] = isAccountScanner
+                ? "unified-gate-account-body"
+                : "unified-gate-kiosk-body";
+
+            return View("~/Views/ScanConsole/Index.cshtml", model);
         }
 
         [HttpGet]
@@ -494,17 +539,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return authorizationResult;
             }
 
-            var model = new DisplayVisitsViewModel
-            {
-                VisitorsAwaitingArrival = _visitService
-                    .GetVisitorsAwaitingArrival()
-                    .Take(5)
-                    .ToList(),
-                VisitorsInside = _visitService.GetVisitorsInside().Take(5).ToList(),
-                VisitorsCompleted = _visitService.GetVisitorsCompleted().Take(5).ToList(),
-            };
-
-            return View("DisplayVisits", model);
+            return RedirectToAction(nameof(Gate));
         }
 
         [HttpGet]
@@ -552,7 +587,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             _visitService.MarkVisitorArrived(visitId, operatorSession!.Username);
-            return RedirectToAction(nameof(Visits));
+            return RedirectToAction(nameof(Gate));
         }
 
         [HttpPost]
@@ -569,7 +604,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             _visitService.MarkVisitorExited(visitId, operatorSession!.Username);
-            return RedirectToAction(nameof(Visits));
+            return RedirectToAction(nameof(Gate));
         }
 
         private string BuildDisplayUrl(string actionName)
@@ -693,7 +728,10 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             if (
                 User.Identity?.IsAuthenticated == true
-                && User.HasPermission(AppPermissions.ViewDisplays)
+                && (
+                    User.HasPermission(AppPermissions.ViewDisplays)
+                    || User.HasPermission(AppPermissions.ScanOperations)
+                )
             )
             {
                 return $"user:{User.Identity.Name}:{clientDeviceId}";
@@ -734,7 +772,10 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             if (
                 User.Identity?.IsAuthenticated == true
-                && User.HasPermission(AppPermissions.ViewDisplays)
+                && (
+                    User.HasPermission(AppPermissions.ViewDisplays)
+                    || User.HasPermission(AppPermissions.ScanOperations)
+                )
             )
             {
                 return true;

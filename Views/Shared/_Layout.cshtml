@@ -734,10 +734,10 @@
                                                 }
                                                 @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ScanOperations))
                                                 {
-                                                    <a class="app-sidebar-link @(isControllerActive("ScanConsole") ? "active" : string.Empty)"
-                                                           asp-controller="ScanConsole" asp-action="Index">
+                                                    <a class="app-sidebar-link @(isControllerActive("ScanConsole") || (isControllerActive("Display") && string.Equals(currentAction, "Gate", StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty)"
+                                                           asp-controller="Display" asp-action="Gate">
                                                         <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#scan")"></use></svg>
-                                                        <span>مسح باركود</span>
+                                                        <span>مركز البوابة</span>
                                                     </a>
                                                 }
                                                 @if (canViewPermits || canViewVisits)

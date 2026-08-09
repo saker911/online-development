@@ -35,7 +35,7 @@
     {
       "name": "قراءة الباركود",
       "short_name": "الباركود",
-      "url": "/ScanConsole"
+      "url": "/Display/Gate"
     },
     {
       "name": "تسجيل زيارة",

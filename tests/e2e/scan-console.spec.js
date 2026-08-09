@@ -110,13 +110,25 @@ function runStateTool(command, ...args) {
 test("GateSecurity can open scan console and invalid scan shows denial", async ({ page }) => {
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);
-  await expect(page).toHaveURL(/\/ScanConsole/i);
+  await expect(page).toHaveURL(/\/Display\/Gate/i);
   await expect(page.getByRole("heading", { name: "مركز البوابة" })).toBeVisible();
 
   await page.getByLabel("رمز التصريح أو الزيارة").fill("NOT-A-REAL-CODE");
   await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
   await expect(page.locator("#scanDecisionCard")).toHaveClass(/state-danger/);
   await expect(page.locator("#scanDecisionMessage")).toContainText(/غير موجود|تعذر|غير صالح/);
+});
+
+test("legacy gate routes converge on the unified gate workspace", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+
+  await page.goto("/ScanConsole");
+  await expect(page).toHaveURL(/\/Display\/Gate$/i);
+  await expect(page.locator("#unifiedGateRoot")).toBeVisible();
+
+  await page.goto("/Display/Visits");
+  await expect(page).toHaveURL(/\/Display\/Gate$/i);
+  await expect(page.locator("#unifiedGateRoot")).toBeVisible();
 });
 
 test("mobile gate console records a visit entry and exit without horizontal overflow", async ({ page }) => {
@@ -130,7 +142,7 @@ test("mobile gate console records a visit entry and exit without horizontal over
 
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);
-  await expect(page).toHaveURL(/\/ScanConsole/i);
+  await expect(page).toHaveURL(/\/Display\/Gate/i);
   await expect(page.getByRole("heading", { name: "مركز البوابة" })).toBeVisible();
   await expect(page.getByRole("button", { name: "تشغيل كاميرا الجوال" })).toBeVisible();
 
@@ -332,7 +344,7 @@ test("repeated approved permit scans do not stretch scan console layout", async 
   expect(metrics.inputFocused).toBeTruthy();
 });
 
-test("display gate keeps latest result and recent operations inside fixed panels", async ({ page }) => {
+test("unified gate keeps results and recent operations responsive on desktop", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   const permit = await createEmployeePermit(page, {
     driverName: "وليد يوسف صاحب اسم طويل جدًا لاختبار عدم تمدد بطاقة آخر نتيجة في شاشة العرض",
@@ -342,150 +354,72 @@ test("display gate keeps latest result and recent operations inside fixed panels
   await approvePermitForScan(page, permit.permitNumber);
 
   await ensureOwnerSignedIn(page);
-  const recentActivities = Array.from({ length: 28 }, (_, index) => ({
-    id: 9000 + index,
-    permitNumber: permit.permitNumber,
-    driverName: permit.driverName,
-    departmentName: permit.departmentName,
-    actionLabel: index % 2 ? "خروج مسموح" : "تم السماح بالدخول",
-    message: "رسالة عملية طويلة لاختبار عدم تمدد القائمة الجانبية عند تكرار التصريح نفسه.",
-    occurredAtText: `2026/05/03 11:48:${String(index).padStart(2, "0")} ص`,
-    source: "شاشة البوابة",
-    operatorDisplay: "مشغل البوابة التجريبي",
-    statusText: index % 2 ? "خروج مسموح" : "تم السماح بالدخول",
-    theme: index % 2 ? "success" : "warning",
-  }));
-  await page.route("**/Display/GateStatus**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        approvedEmployeesCount: 0,
-        employeesOutCount: 0,
-        recentActivitiesCount: recentActivities.length,
-        latestActivityId: recentActivities[0].id,
-        activeOperator: null,
-        approvedEmployees: [],
-        employeesOut: [],
-        recentActivities,
-        activity: recentActivities[0],
-      }),
-    })
-  );
   await page.goto("/Display/Gate");
-  await expect(page.locator("#permitDisplayRoot")).toBeVisible();
+  await expect(page.locator("#unifiedGateRoot")).toBeVisible();
 
   await page.evaluate((permitData) => {
-    const resultCard = document.querySelector("#permitResultCard");
-    const emptyState = document.querySelector("#permitEmptyState");
-    const detailsState = document.querySelector("#permitDetailsState");
-    resultCard?.classList.remove("state-empty", "state-danger");
-    resultCard?.classList.add("state-success");
-    if (emptyState) emptyState.hidden = true;
-    if (detailsState) detailsState.hidden = false;
+    const decision = document.querySelector("#scanDecisionCard");
+    decision?.classList.remove("state-idle", "state-danger");
+    decision?.classList.add("state-success");
+    document.querySelector("#scanDecisionTitle").textContent = "دخول مسموح";
+    document.querySelector("#scanDecisionMessage").textContent = "تمت عودة وليد يوسف ثم تسجيل دخول جديد بنجاح مع رسالة طويلة لاختبار الالتفاف.";
+    document.querySelector("#scanDecisionCode").textContent = permitData.permitNumber;
 
-    const setText = (selector, value) => {
-      const element = document.querySelector(selector);
-      if (element) element.textContent = value;
-    };
-    setText("#permitAccessChip", "تم السماح بالدخول");
-    setText("#permitStateChip", "دخول مسموح");
-    setText("#permitDriverName", permitData.driverName);
-    setText("#permitMovementLabel", "تمت عودة وليد يوسف ثم تسجيل دخول جديد بنجاح مع رسالة طويلة لاختبار الالتفاف.");
-    setText("#permitNumber", permitData.permitNumber);
-    setText("#permitType", "تم السماح بالدخول");
-    setText("#permitDepartment", permitData.departmentName);
-    setText("#permitTimestamp", "11:48:34 ص");
-    setText("#permitApprovalStatus", "2026-05-03");
-    setText("#permitPlateNumber", permitData.plateNumber);
-    setText("#permitSubject", "تصريح ماكينة دائم مع نص طويل يجب ألا يمدد بطاقة النتيجة أو يخفي المنطقة السفلية.");
-    setText("#permitReason", "تمت عودة وليد يوسف. ".repeat(8));
-    setText("#permitNationalId", "1044563325");
-    setText("#permitPhone", "0236666666");
-    setText("#permitScanSource", "بواسطة: مشغل البوابة التجريبي");
+    const detailsCard = document.querySelector("#scannedPermitCard");
+    detailsCard?.classList.remove("d-none");
+    const details = document.querySelector("#scannedPermitDetails");
+    details?.classList.remove("d-none");
+    if (details) {
+      details.innerHTML = Array.from({ length: 12 }, (_, index) => `
+        <div class="gate-mobile-detail">
+          <span>بيان ${index + 1}</span>
+          <strong>${permitData.driverName} ${permitData.departmentName}</strong>
+        </div>
+      `).join("");
+    }
 
-    const list = document.querySelector("#recentActivityList");
+    const list = document.querySelector("#scanRecentActivityList");
     if (list) {
       list.innerHTML = Array.from({ length: 28 }, (_, index) => `
-        <article class="gate-activity-item ${index % 2 ? "success" : "warning"}">
-          <div class="gate-activity-head">
-            <span>2026/05/03 11:48:${String(index).padStart(2, "0")} ص</span>
-            <span class="gate-activity-badge ${index % 2 ? "success" : "warning"}">${index % 2 ? "خروج مسموح" : "تم السماح بالدخول"}</span>
-          </div>
-          <div class="gate-activity-title">${permitData.driverName}</div>
-          <div class="gate-activity-meta">رسالة عملية طويلة لاختبار عدم تمدد القائمة الجانبية عند تكرار التصريح نفسه.</div>
-          <div class="gate-activity-meta">بواسطة: مشغل البوابة التجريبي</div>
+        <article class="gate-mobile-activity ${index % 2 ? "is-allowed" : "is-denied"}">
+          <div><strong>${permitData.driverName}</strong><span>${index % 2 ? "خروج مسموح" : "تم السماح بالدخول"}</span></div>
+          <time>11:48 ص</time>
         </article>
       `).join("");
     }
-    document.querySelector("#barcodeScanner")?.focus({ preventScroll: true });
+    document.querySelector(".scan-input")?.focus({ preventScroll: true });
   }, permit);
 
   const metrics = await page.evaluate(() => {
-    const result = document.querySelector("#permitResultCard");
-    const details = document.querySelector("#permitDetailsState");
-    const recent = document.querySelector("#recentActivityList");
-    const alert = document.querySelector(".gate-alert-strip");
-    const input = document.querySelector("#barcodeScanner");
+    const result = document.querySelector("#scanDecisionCard");
+    const details = document.querySelector("#scannedPermitDetails");
+    const recent = document.querySelector("#scanRecentActivityList");
+    const input = document.querySelector(".scan-input");
     const resultRect = result?.getBoundingClientRect();
-    const alertRect = alert?.getBoundingClientRect();
     return {
-      documentHeight: document.documentElement.scrollHeight,
-      viewportHeight: window.innerHeight,
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
       resultHeight: resultRect?.height ?? 0,
-      resultVisible: !!resultRect && resultRect.top >= 0 && resultRect.bottom <= window.innerHeight,
-      detailsScrollsInternally: !!details && details.scrollHeight > details.clientHeight,
+      resultVisible: !!resultRect && resultRect.top >= 0,
+      detailsContained: !!details && details.scrollWidth <= details.clientWidth + 1,
       recentScrollsInternally: !!recent && recent.scrollHeight > recent.clientHeight,
-      alertVisible: !!alertRect && alertRect.bottom <= window.innerHeight && alertRect.top >= 0,
       inputFocused: document.activeElement === input,
     };
   });
 
-  expect(metrics.documentHeight).toBeLessThanOrEqual(metrics.viewportHeight + 8);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
   expect(metrics.resultHeight).toBeLessThanOrEqual(360);
   expect(metrics.resultVisible).toBeTruthy();
-  expect(metrics.detailsScrollsInternally).toBeTruthy();
+  expect(metrics.detailsContained).toBeTruthy();
   expect(metrics.recentScrollsInternally).toBeTruthy();
-  expect(metrics.alertVisible).toBeTruthy();
   expect(metrics.inputFocused).toBeTruthy();
 });
 
 test("display gate preserves QR verification URL punctuation when scanning", async ({ page }) => {
   await ensureOwnerSignedIn(page);
 
-  const activeDisplayOperator = {
-    username: "gate-url-scanner",
-    displayName: "مشغل رابط QR",
-    signedInAtText: "10:30:00",
-    mustChangePin: false,
-  };
   const scannedUrl = "http://127.0.0.1:5001/Permits/VerifyByNumber/PERMIT-00003?source=gate&mode=qr";
   let submittedBody = null;
-
-  await page.route("**/Display/GateStatus**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        approvedEmployeesCount: 0,
-        employeesOutCount: 0,
-        recentActivitiesCount: 0,
-        latestActivityId: 0,
-        activeOperator: activeDisplayOperator,
-        approvedEmployees: [],
-        employeesOut: [],
-        recentActivities: [],
-        activity: null,
-      }),
-    })
-  );
-  await page.route("**/Display/GateOperatorStatus**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ operatorSession: activeDisplayOperator }),
-    })
-  );
   await page.route("**/api/scan/auto", async (route) => {
     submittedBody = route.request().postDataJSON();
     return route.fulfill({
@@ -522,12 +456,10 @@ test("display gate preserves QR verification URL punctuation when scanning", asy
   });
 
   await page.goto("/Display/Gate");
-  await expect(page.locator("#permitDisplayRoot")).toBeVisible();
-  await expect(page.locator("#activeOperatorName")).toHaveText(activeDisplayOperator.displayName);
+  await expect(page.locator("#unifiedGateRoot")).toBeVisible();
 
-  await page.locator("#barcodeScanner").focus();
-  await page.keyboard.type(scannedUrl);
-  await page.keyboard.press("Enter");
+  await page.locator(".scan-input").fill(scannedUrl);
+  await page.locator(".scan-input").press("Enter");
 
   await expect.poll(() => submittedBody?.identifier).toBe(scannedUrl);
 });
@@ -562,11 +494,11 @@ test("display gate refreshes stale security token and retries operator login aft
     })
   );
 
-  await page.goto("/Display/Gate");
-  await expect(page.locator("#permitDisplayRoot")).toBeVisible();
+  await page.goto("/Display/Gate?operatorMode=true");
+  await expect(page.locator("#unifiedGateRoot")).toBeVisible();
 
   let refreshedPageRequests = 0;
-  await page.route("**/Display/Gate", (route) => {
+  await page.route("**/Display/Gate*", (route) => {
     refreshedPageRequests += 1;
     return route.fulfill({
       status: 200,
@@ -607,7 +539,7 @@ test("display gate refreshes stale security token and retries operator login aft
     });
   });
 
-  await page.locator("#openOperatorModalButton").click();
+  await expect(page.locator("#operatorModal")).toBeVisible();
   await page.evaluate(() => {
     document.querySelector("#operatorBadgeInput").value = "GATE-RECOVERY";
     document.querySelector("#operatorPinInput").value = "123456";

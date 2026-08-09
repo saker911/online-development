@@ -38,6 +38,27 @@ document.addEventListener("DOMContentLoaded", function () {
     const stopCameraButton = document.getElementById("scanConsoleStopCameraButton");
     const fullscreenButton = document.getElementById("scanConsoleFullscreenButton");
     const antiforgeryTokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+    const unifiedGateRoot = document.getElementById("unifiedGateRoot");
+    const unifiedGateFullscreenButton = document.getElementById("unifiedGateFullscreenButton");
+    const activeOperatorName = document.getElementById("activeOperatorName");
+    const openOperatorModalButton = document.getElementById("openOperatorModalButton");
+    const signOutOperatorButton = document.getElementById("signOutOperatorButton");
+    const operatorModal = document.getElementById("operatorModal");
+    const operatorModalTitle = document.getElementById("operatorModalTitle");
+    const operatorModalHint = document.getElementById("operatorModalHint");
+    const operatorModalMessage = document.getElementById("operatorModalMessage");
+    const operatorLoginSection = document.getElementById("operatorLoginSection");
+    const operatorPinChangeSection = document.getElementById("operatorPinChangeSection");
+    const operatorBadgeInput = document.getElementById("operatorBadgeInput");
+    const operatorPinInput = document.getElementById("operatorPinInput");
+    const operatorCurrentPinInput = document.getElementById("operatorCurrentPinInput");
+    const operatorNewPinInput = document.getElementById("operatorNewPinInput");
+    const operatorConfirmPinInput = document.getElementById("operatorConfirmPinInput");
+    const submitOperatorLoginButton = document.getElementById("submitOperatorLoginButton");
+    const submitOperatorPinChangeButton = document.getElementById("submitOperatorPinChangeButton");
+    const closeOperatorModalButton = document.getElementById("closeOperatorModalButton");
+    const cancelOperatorModalButton = document.getElementById("cancelOperatorModalButton");
+    const requiresOperator = form?.dataset.requiresOperator === "true";
     const scannerBuffer = [];
     let scannerTimer = null;
     let autoSubmitTimer = null;
@@ -47,6 +68,14 @@ document.addEventListener("DOMContentLoaded", function () {
     let cameraDetector = null;
     let cameraRunning = false;
     let cameraScanLocked = false;
+    let operatorBusy = false;
+    let activeOperator = requiresOperator
+        ? null
+        : {
+            username: form?.dataset.scannerUser || "",
+            displayName: form?.dataset.scannerDisplayName || form?.dataset.scannerUser || "",
+            mustChangePin: false
+        };
     let pendingExecutionMethod = "manual";
     const scannerDeviceId = resolveScannerDeviceId();
     const shiftStorageKey = `gate_shift_summary:${form?.dataset.scannerUser || "anonymous"}`;
@@ -132,6 +161,9 @@ document.addEventListener("DOMContentLoaded", function () {
         "visit_not_approved": "الزيارة ما زالت بانتظار الاعتماد أو تم رفضها.",
         "entry_recorded": "تم تسجيل دخول الزيارة بنجاح.",
         "exit_recorded": "تم تسجيل خروج الزيارة بنجاح.",
+        "operator_not_signed_in": "سجّل دخول مأمور البوابة أولاً.",
+        "operator_pin_change_required": "يجب تغيير الرقم السري المؤقت قبل بدء المسح.",
+        "forbidden": "لا تملك صلاحية تنفيذ المسح من هذا الجهاز.",
         "invalid_request": "تعذر تنفيذ القراءة. تأكد من القيمة المقروءة ثم أعد المحاولة."
     };
 
@@ -182,6 +214,245 @@ document.addEventListener("DOMContentLoaded", function () {
         if (cameraButton) cameraButton.disabled = !isOnline;
     }
 
+    function isOperatorModalOpen() {
+        return !!operatorModal && !operatorModal.classList.contains("is-hidden");
+    }
+
+    function updateOperatorUi(session) {
+        activeOperator = session || null;
+        if (activeOperatorName) {
+            activeOperatorName.textContent = activeOperator?.displayName || "لا يوجد مشغل نشط";
+        }
+        if (signOutOperatorButton) {
+            signOutOperatorButton.disabled = !activeOperator;
+        }
+        if (openOperatorModalButton) {
+            openOperatorModalButton.textContent = activeOperator ? "تبديل المشغل" : "دخول المشغل";
+        }
+    }
+
+    function setOperatorMessage(message, mode) {
+        if (!operatorModalMessage) {
+            return;
+        }
+        operatorModalMessage.textContent = message || "";
+        operatorModalMessage.className = `gate-unified-operator-message${mode ? ` is-${mode}` : ""}`;
+    }
+
+    function openOperatorModal(mode, badgeCode) {
+        if (!operatorModal) {
+            return;
+        }
+
+        const changePin = mode === "pin-change";
+        operatorModal.classList.remove("is-hidden");
+        operatorModal.setAttribute("aria-hidden", "false");
+        operatorModal.dataset.mode = changePin ? "pin-change" : "login";
+        operatorLoginSection.hidden = changePin;
+        operatorPinChangeSection.hidden = !changePin;
+        submitOperatorLoginButton.hidden = changePin;
+        submitOperatorPinChangeButton.hidden = !changePin;
+        operatorModalTitle.textContent = changePin ? "تغيير الرقم السري" : "دخول مأمور البوابة";
+        operatorModalHint.textContent = changePin
+            ? "اختر رقمًا جديدًا من 6 أرقام قبل بدء العمل."
+            : "امسح بطاقة المشغل أو أدخل الرمز والرقم السري.";
+        operatorBadgeInput.value = changePin ? operatorBadgeInput.value : (badgeCode || "");
+        operatorPinInput.value = "";
+        operatorCurrentPinInput.value = changePin ? operatorPinInput.dataset.currentPin || "" : "";
+        operatorNewPinInput.value = "";
+        operatorConfirmPinInput.value = "";
+        setOperatorMessage("", null);
+        window.setTimeout(function () {
+            (changePin ? operatorCurrentPinInput : operatorBadgeInput)?.focus();
+        }, 0);
+    }
+
+    function closeOperatorModal() {
+        if (!operatorModal || activeOperator?.mustChangePin) {
+            return;
+        }
+        operatorModal.classList.add("is-hidden");
+        operatorModal.setAttribute("aria-hidden", "true");
+        armScannerFocus();
+    }
+
+    async function refreshAntiforgeryToken() {
+        if (!antiforgeryTokenInput) {
+            return false;
+        }
+        try {
+            const response = await fetch(window.location.href, {
+                headers: { "Accept": "text/html" },
+                cache: "no-store"
+            });
+            if (!response.ok) {
+                return false;
+            }
+            const html = await response.text();
+            const snapshot = new DOMParser().parseFromString(html, "text/html");
+            const nextToken = snapshot.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+            if (!nextToken) {
+                return false;
+            }
+            antiforgeryTokenInput.value = nextToken;
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }
+
+    async function postOperatorRequest(url, body, allowRetry) {
+        if (!url) {
+            return { response: null, payload: null };
+        }
+        const send = async function () {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": antiforgeryTokenInput?.value || ""
+                },
+                body: JSON.stringify(body),
+                cache: "no-store"
+            });
+            return { response, payload: await readJsonResponse(response) };
+        };
+
+        let result = await send();
+        if (
+            allowRetry !== false
+            && !result.payload
+            && [400, 401, 403, 419].includes(result.response?.status)
+            && await refreshAntiforgeryToken()
+        ) {
+            result = await send();
+        }
+        return result;
+    }
+
+    async function refreshOperatorStatus() {
+        const endpoint = unifiedGateRoot?.dataset.operatorStatusEndpoint;
+        if (!requiresOperator || !endpoint) {
+            return;
+        }
+        try {
+            const url = new URL(endpoint, window.location.origin);
+            url.searchParams.set("deviceId", scannerDeviceId);
+            const response = await fetch(url, { headers: { "Accept": "application/json" }, cache: "no-store" });
+            const payload = await readJsonResponse(response);
+            updateOperatorUi(payload?.operatorSession || null);
+            if (!activeOperator) {
+                openOperatorModal("login");
+            }
+            else if (activeOperator.mustChangePin) {
+                openOperatorModal("pin-change");
+            }
+        }
+        catch {
+            setOperatorMessage("تعذر التحقق من جلسة المشغل.", "error");
+        }
+    }
+
+    async function submitOperatorLogin() {
+        if (operatorBusy) {
+            return;
+        }
+        const badgeCode = (operatorBadgeInput?.value || "").trim().toUpperCase();
+        const pin = (operatorPinInput?.value || "").trim();
+        if (!badgeCode || !/^\d{6}$/.test(pin)) {
+            setOperatorMessage("أدخل رمز المشغل ورقمًا سريًا من 6 أرقام.", "error");
+            return;
+        }
+
+        operatorBusy = true;
+        submitOperatorLoginButton.disabled = true;
+        try {
+            const result = await postOperatorRequest(
+                unifiedGateRoot?.dataset.switchOperatorEndpoint,
+                { badgeCode, pin, deviceId: scannerDeviceId }
+            );
+            if (!result.response?.ok || !result.payload?.success) {
+                setOperatorMessage(result.payload?.message || "تعذر تسجيل دخول المشغل.", "error");
+                return;
+            }
+
+            updateOperatorUi(result.payload.currentOperator);
+            if (result.payload.requiresPinChange || activeOperator?.mustChangePin) {
+                operatorPinInput.dataset.currentPin = pin;
+                openOperatorModal("pin-change");
+                return;
+            }
+
+            setOperatorMessage("تم تسجيل دخول المشغل.", "success");
+            operatorModal.classList.add("is-hidden");
+            operatorModal.setAttribute("aria-hidden", "true");
+            armScannerFocus();
+        }
+        finally {
+            operatorBusy = false;
+            submitOperatorLoginButton.disabled = false;
+        }
+    }
+
+    async function submitOperatorPinChange() {
+        if (operatorBusy) {
+            return;
+        }
+        const currentPin = (operatorCurrentPinInput?.value || "").trim();
+        const newPin = (operatorNewPinInput?.value || "").trim();
+        const confirmPin = (operatorConfirmPinInput?.value || "").trim();
+        if (!/^\d{6}$/.test(currentPin) || !/^\d{6}$/.test(newPin) || newPin !== confirmPin) {
+            setOperatorMessage("تحقق من الرقم الحالي وتطابق الرقم الجديد المكوّن من 6 أرقام.", "error");
+            return;
+        }
+
+        operatorBusy = true;
+        submitOperatorPinChangeButton.disabled = true;
+        try {
+            const result = await postOperatorRequest(
+                unifiedGateRoot?.dataset.changePinEndpoint,
+                { currentPin, newPin, deviceId: scannerDeviceId }
+            );
+            if (!result.response?.ok || !result.payload?.success) {
+                setOperatorMessage(result.payload?.message || "تعذر تغيير الرقم السري.", "error");
+                return;
+            }
+            updateOperatorUi(result.payload.operatorSession);
+            setOperatorMessage("تم تحديث الرقم السري وأصبحت الشاشة جاهزة.", "success");
+            operatorModal.classList.add("is-hidden");
+            operatorModal.setAttribute("aria-hidden", "true");
+            armScannerFocus();
+        }
+        finally {
+            operatorBusy = false;
+            submitOperatorPinChangeButton.disabled = false;
+        }
+    }
+
+    async function signOutOperator() {
+        if (!activeOperator || operatorBusy) {
+            return;
+        }
+        operatorBusy = true;
+        signOutOperatorButton.disabled = true;
+        try {
+            const result = await postOperatorRequest(
+                unifiedGateRoot?.dataset.signoutOperatorEndpoint,
+                { deviceId: scannerDeviceId }
+            );
+            if (result.response?.ok && result.payload?.success) {
+                updateOperatorUi(null);
+                openOperatorModal("login");
+            }
+        }
+        finally {
+            operatorBusy = false;
+            signOutOperatorButton.disabled = !activeOperator;
+        }
+    }
+
     function resetScannerBuffer() {
         scannerBuffer.length = 0;
         if (scannerTimer) {
@@ -195,7 +466,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function armScannerFocus() {
-        if (!input || cameraRunning) {
+        if (!input || cameraRunning || isOperatorModalOpen()) {
             return;
         }
 
@@ -516,8 +787,18 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         const rawIdentifier = (input.value || "").trim();
+        if (requiresOperator && rawIdentifier.toUpperCase().startsWith("GATE-")) {
+            input.value = "";
+            openOperatorModal("login", rawIdentifier.toUpperCase());
+            return;
+        }
+        if (requiresOperator && (!activeOperator || activeOperator.mustChangePin)) {
+            openOperatorModal(activeOperator?.mustChangePin ? "pin-change" : "login");
+            return;
+        }
         const currentMode = detectScanMode(rawIdentifier);
-        const identifier = currentMode === "permit"
+        const isVerificationUrl = /^https?:\/\//i.test(rawIdentifier);
+        const identifier = currentMode === "permit" && !isVerificationUrl
             ? rawIdentifier.toUpperCase()
             : rawIdentifier;
 
@@ -544,7 +825,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 body: JSON.stringify({
                     identifier: identifier,
-                    scannerUserId: form.dataset.scannerUser || "",
+                    scannerUserId: activeOperator?.username || form.dataset.scannerUser || "",
                     overrideEntry: !!forceOverride,
                     gateName: window.matchMedia("(max-width: 767.98px)").matches
                         ? "ماسح الجوال"
@@ -793,6 +1074,14 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+        if (isOperatorModalOpen()) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                closeOperatorModal();
+            }
+            return;
+        }
+
         if (event.key === "Enter") {
             event.preventDefault();
             event.stopPropagation();
@@ -890,6 +1179,74 @@ document.addEventListener("DOMContentLoaded", function () {
             persistShiftSummary();
             renderShiftSummary();
         });
+    }
+
+    if (openOperatorModalButton) {
+        openOperatorModalButton.addEventListener("click", function () {
+            openOperatorModal("login");
+        });
+    }
+
+    if (signOutOperatorButton) {
+        signOutOperatorButton.addEventListener("click", signOutOperator);
+    }
+
+    if (submitOperatorLoginButton) {
+        submitOperatorLoginButton.addEventListener("click", submitOperatorLogin);
+    }
+
+    if (submitOperatorPinChangeButton) {
+        submitOperatorPinChangeButton.addEventListener("click", submitOperatorPinChange);
+    }
+
+    [closeOperatorModalButton, cancelOperatorModalButton].filter(Boolean).forEach(function (button) {
+        button.addEventListener("click", closeOperatorModal);
+    });
+
+    if (operatorPinInput) {
+        operatorPinInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                submitOperatorLogin();
+            }
+        });
+    }
+
+    if (operatorConfirmPinInput) {
+        operatorConfirmPinInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                submitOperatorPinChange();
+            }
+        });
+    }
+
+    if (unifiedGateFullscreenButton) {
+        unifiedGateFullscreenButton.addEventListener("click", function () {
+            if (document.fullscreenElement) {
+                Promise.resolve(document.exitFullscreen?.()).catch(function () { });
+            }
+            else {
+                Promise.resolve(document.documentElement.requestFullscreen?.()).catch(function () { });
+            }
+        });
+        document.addEventListener("fullscreenchange", function () {
+            unifiedGateFullscreenButton.textContent = document.fullscreenElement
+                ? "إنهاء ملء الشاشة"
+                : "ملء الشاشة";
+        });
+    }
+
+    if (requiresOperator) {
+        refreshOperatorStatus();
+        const heartbeatEndpoint = unifiedGateRoot?.dataset.heartbeatEndpoint;
+        if (heartbeatEndpoint) {
+            const sendHeartbeat = function () {
+                fetch(heartbeatEndpoint, { method: "POST", credentials: "same-origin" }).catch(function () { });
+            };
+            sendHeartbeat();
+            window.setInterval(sendHeartbeat, 30000);
+        }
     }
 
     window.addEventListener("pagehide", function () {

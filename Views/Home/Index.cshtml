@@ -265,11 +265,11 @@
         }
         @if (User.HasPermission(AppPermissions.ScanOperations))
         {
-            <a asp-controller="ScanConsole" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-dark">
+            <a asp-controller="Display" asp-action="Gate" class="dashboard-shortcut-card dashboard-shortcut-dark">
                 <span class="dashboard-shortcut-icon"><img src="~/icons/permit.svg" alt="" /></span>
-                <span class="dashboard-shortcut-label">مسح باركود</span>
-                <strong>فحص</strong>
-                <small>واجهة تجربة القراءة المباشرة</small>
+                <span class="dashboard-shortcut-label">مركز البوابة</span>
+                <strong>تشغيل</strong>
+                <small>التصاريح والزيارات من شاشة واحدة</small>
             </a>
         }
     </div>

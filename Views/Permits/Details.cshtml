@@ -239,7 +239,7 @@
                                     PDF</a>
                                                 <a asp-action="PrintZebraLabel" asp-route-id="@Model.PermitNumber"
                                                     class="btn btn-outline-info" target="_blank">طباعة ملصق Zebra</a>
-                                                <a asp-controller="ScanConsole" asp-action="Index" asp-route-id="@Model.PermitNumber"
+                                                <a asp-controller="Display" asp-action="Gate" asp-route-id="@Model.PermitNumber"
                                                     class="btn btn-outline-primary">عرض باركود التصريح</a>
                                     <a asp-action="PrintLabel" asp-route-id="@Model.PermitNumber" asp-route-widthMm="80"
                                        asp-route-heightMm="50" class="btn btn-outline-info" target="_blank">ملصق 80×50</a>

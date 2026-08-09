@@ -853,7 +853,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 && user.CanScanOperations
             )
             {
-                return RedirectToAction("Index", "ScanConsole");
+                return RedirectToAction("Gate", "Display");
             }
 
             if (user?.CanViewDashboard == true)
@@ -873,7 +873,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (user?.CanScanOperations == true)
             {
-                return RedirectToAction("Index", "ScanConsole");
+                return RedirectToAction("Gate", "Display");
             }
 
             if (user?.CanViewDisplays == true)
