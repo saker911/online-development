@@ -90,5 +90,42 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public int? MaxUsers { get; set; }
         public int? MaxPermitsPerMonth { get; set; }
         public int? MaxVisitsPerMonth { get; set; }
+
+        public bool PermitsServiceEnabled { get; set; } = true;
+        public bool VisitsServiceEnabled { get; set; } = true;
+        public bool SelfServiceEnabled { get; set; } = true;
+        public bool QueueServiceEnabled { get; set; }
+        public bool GateServiceEnabled { get; set; } = true;
+    }
+
+    public static class TenantServiceKeys
+    {
+        public const string Permits = "Permits";
+        public const string Visits = "Visits";
+        public const string SelfService = "SelfService";
+        public const string Queue = "Queue";
+        public const string Gate = "Gate";
+
+        public static IReadOnlyList<string> All { get; } =
+            [Permits, Visits, SelfService, Queue, Gate];
+
+        public static string GetDisplayName(string? key) => key switch
+        {
+            Permits => "التصاريح",
+            Visits => "الزيارات",
+            SelfService => "الخدمة الذاتية",
+            Queue => "تنظيم الطابور",
+            Gate => "البوابات والشاشات",
+            _ => "الخدمة المطلوبة",
+        };
+
+        public static string Normalize(string? key)
+        {
+            var value = (key ?? string.Empty).Trim();
+            return All.FirstOrDefault(item =>
+                    string.Equals(item, value, StringComparison.OrdinalIgnoreCase)
+                )
+                ?? string.Empty;
+        }
     }
 }

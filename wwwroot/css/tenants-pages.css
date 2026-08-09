@@ -694,3 +694,99 @@
         min-width: 0;
     }
 }
+.tenant-services-editor {
+    margin: 22px 0 0;
+    padding: 20px;
+    border: 1px solid var(--t-border);
+    border-radius: 8px;
+}
+
+.tenant-services-editor legend {
+    display: grid;
+    gap: 3px;
+    width: auto;
+    margin: 0;
+    padding-inline: 8px;
+    color: var(--t-text);
+}
+
+.tenant-services-editor legend span {
+    font-size: .92rem;
+    font-weight: 800;
+}
+
+.tenant-services-editor legend small,
+.tenant-service-option small {
+    color: var(--t-text-muted);
+    font-size: .72rem;
+}
+
+.tenant-services-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.tenant-service-option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--t-border);
+    border-radius: 7px;
+    background: var(--t-surface-soft);
+    cursor: pointer;
+}
+
+.tenant-service-option input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--t-success, #16866a);
+}
+
+.tenant-service-option > span {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.tenant-service-option strong {
+    color: var(--t-text);
+    font-size: .82rem;
+}
+
+.tenant-service-option em {
+    color: var(--t-success, #16866a);
+    font-size: .62rem;
+    font-style: normal;
+}
+
+.tenant-service-option.is-disabled {
+    cursor: not-allowed;
+    opacity: .5;
+}
+
+.tenant-services-count {
+    color: var(--t-success, #16866a);
+    font-size: .7rem;
+    font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+    .tenant-services-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .tenant-services-editor {
+        padding: 16px 12px;
+    }
+
+    .tenant-services-grid {
+        grid-template-columns: 1fr;
+    }
+}

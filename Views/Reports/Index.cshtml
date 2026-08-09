@@ -1,10 +1,13 @@
 @using VehiclePermitSystemWeb.Security
+@using VehiclePermitSystemWeb.Services.Tenants
+@inject ITenantFeatureService TenantFeatureService
 @model VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportsDashboardViewModel
 
 @{
     ViewData["Title"] = "التقارير";
-    var canViewPermits = User.HasPermission(AppPermissions.ViewPermits);
-    var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+    var tenantServices = TenantFeatureService.GetCurrent();
+    var canViewPermits = tenantServices.Permits && User.HasPermission(AppPermissions.ViewPermits);
+    var canViewVisits = tenantServices.Visits && User.HasPermission(AppPermissions.ViewVisits);
 }
 
 <div class="reports-page-shell">

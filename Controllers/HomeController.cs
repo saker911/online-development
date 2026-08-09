@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Services.Management;
 using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
+using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 
@@ -162,6 +163,14 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult AccessDenied()
         {
             this.ToastError("ليس لديك صلاحية لتنفيذ هذا الإجراء.");
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult FeatureUnavailable(string? feature)
+        {
+            var normalizedFeature = TenantServiceKeys.Normalize(feature);
+            ViewBag.FeatureName = TenantServiceKeys.GetDisplayName(normalizedFeature);
             return View();
         }
 

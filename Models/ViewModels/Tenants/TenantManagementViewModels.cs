@@ -35,6 +35,19 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public int? MaxPermitsPerMonth { get; set; }
         public int? MaxVisitsPerMonth { get; set; }
         public bool IsBlockedBySubscription { get; set; }
+        public bool PermitsServiceEnabled { get; set; }
+        public bool VisitsServiceEnabled { get; set; }
+        public bool SelfServiceEnabled { get; set; }
+        public bool QueueServiceEnabled { get; set; }
+        public bool GateServiceEnabled { get; set; }
+        public int EnabledServiceCount => new[]
+        {
+            PermitsServiceEnabled,
+            VisitsServiceEnabled,
+            SelfServiceEnabled,
+            QueueServiceEnabled,
+            GateServiceEnabled,
+        }.Count(enabled => enabled);
     }
 
     public sealed class TenantEditorViewModel
@@ -90,6 +103,21 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         [Display(Name = "حد الزيارات شهريًا")]
         [Range(1, int.MaxValue, ErrorMessage = "حد الزيارات يجب أن يكون رقمًا موجبًا.")]
         public int? MaxVisitsPerMonth { get; set; }
+
+        [Display(Name = "خدمة التصاريح")]
+        public bool PermitsServiceEnabled { get; set; } = true;
+
+        [Display(Name = "خدمة الزيارات")]
+        public bool VisitsServiceEnabled { get; set; } = true;
+
+        [Display(Name = "الخدمة الذاتية")]
+        public bool SelfServiceEnabled { get; set; } = true;
+
+        [Display(Name = "تنظيم الطابور")]
+        public bool QueueServiceEnabled { get; set; }
+
+        [Display(Name = "البوابات والشاشات")]
+        public bool GateServiceEnabled { get; set; } = true;
 
         public IReadOnlyList<string> SubscriptionStatusOptions =>
             TenantSubscriptionStatuses.All;

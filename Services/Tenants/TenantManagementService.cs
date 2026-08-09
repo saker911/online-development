@@ -73,6 +73,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                         MaxUsers = tenant.MaxUsers,
                         MaxPermitsPerMonth = tenant.MaxPermitsPerMonth,
                         MaxVisitsPerMonth = tenant.MaxVisitsPerMonth,
+                        PermitsServiceEnabled = tenant.PermitsServiceEnabled,
+                        VisitsServiceEnabled = tenant.VisitsServiceEnabled,
+                        SelfServiceEnabled = tenant.SelfServiceEnabled,
+                        QueueServiceEnabled = tenant.QueueServiceEnabled,
+                        GateServiceEnabled = tenant.GateServiceEnabled,
                         IsBlockedBySubscription = IsBlockedBySubscription(tenant),
                         UserCount = GetCount(userCounts, tenant.TenantId),
                         PermitCount = GetCount(permitCounts, tenant.TenantId),
@@ -125,6 +130,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 MaxUsers = tenant.MaxUsers,
                 MaxPermitsPerMonth = tenant.MaxPermitsPerMonth,
                 MaxVisitsPerMonth = tenant.MaxVisitsPerMonth,
+                PermitsServiceEnabled = tenant.PermitsServiceEnabled,
+                VisitsServiceEnabled = tenant.VisitsServiceEnabled,
+                SelfServiceEnabled = tenant.SelfServiceEnabled,
+                QueueServiceEnabled = tenant.QueueServiceEnabled,
+                GateServiceEnabled = tenant.GateServiceEnabled,
             };
         }
 
@@ -141,6 +151,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             }
             var subscriptionStatus = TenantSubscriptionStatuses.Normalize(model.SubscriptionStatus);
             var planName = NormalizeText(model.PlanName);
+            NormalizeServiceDependencies(model);
 
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -197,6 +208,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     MaxUsers = NormalizeLimit(model.MaxUsers),
                     MaxPermitsPerMonth = NormalizeLimit(model.MaxPermitsPerMonth),
                     MaxVisitsPerMonth = NormalizeLimit(model.MaxVisitsPerMonth),
+                    PermitsServiceEnabled = model.PermitsServiceEnabled,
+                    VisitsServiceEnabled = model.VisitsServiceEnabled,
+                    SelfServiceEnabled = model.SelfServiceEnabled,
+                    QueueServiceEnabled = model.QueueServiceEnabled,
+                    GateServiceEnabled = model.GateServiceEnabled,
                 }
             );
 
@@ -573,6 +589,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             var departmentName = NormalizeText(model.DepartmentName);
             var subscriptionStatus = TenantSubscriptionStatuses.Normalize(model.SubscriptionStatus);
             var planName = NormalizeText(model.PlanName);
+            NormalizeServiceDependencies(model);
 
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -604,6 +621,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             tenant.MaxUsers = NormalizeLimit(model.MaxUsers);
             tenant.MaxPermitsPerMonth = NormalizeLimit(model.MaxPermitsPerMonth);
             tenant.MaxVisitsPerMonth = NormalizeLimit(model.MaxVisitsPerMonth);
+            tenant.PermitsServiceEnabled = model.PermitsServiceEnabled;
+            tenant.VisitsServiceEnabled = model.VisitsServiceEnabled;
+            tenant.SelfServiceEnabled = model.SelfServiceEnabled;
+            tenant.QueueServiceEnabled = model.QueueServiceEnabled;
+            tenant.GateServiceEnabled = model.GateServiceEnabled;
 
             var settings = db
                 .AdministrationSettings.IgnoreQueryFilters()
@@ -907,6 +929,21 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         private static int? NormalizeLimit(int? value)
         {
             return value is > 0 ? value : null;
+        }
+
+        private static void NormalizeServiceDependencies(TenantEditorViewModel model)
+        {
+            if (!model.VisitsServiceEnabled)
+            {
+                model.SelfServiceEnabled = false;
+                model.QueueServiceEnabled = false;
+                return;
+            }
+
+            if (!model.SelfServiceEnabled)
+            {
+                model.QueueServiceEnabled = false;
+            }
         }
 
         private static string BuildPaymentReference(string tenantId, DateTime createdAtUtc)

@@ -140,3 +140,53 @@ test("tenant registry paginates large result sets and preserves filtering", asyn
   await expect(page.locator("#tenantPaginationShell")).toBeHidden();
   await expect(page.getByRole("row", { name: new RegExp(uniquelyMatchingTenantId) })).toBeVisible();
 });
+
+test("owner controls tenant services and disabled public routes stay closed", async ({
+  page,
+  request,
+}) => {
+  await ensureOwnerSignedIn(page);
+  await page.goto("/Tenants");
+
+  const suffix = uniqueSuffix();
+  const tenantId = `features-${suffix}`;
+  const tenantName = `جهة خدمات ${suffix}`;
+  await page.getByRole("button", { name: "إضافة جهة" }).click();
+  await page.locator('[name="Name"]').fill(tenantName);
+  await page.locator('[name="TenantId"]').fill(tenantId);
+  await page.locator('[name="Slug"]').fill(tenantId);
+  await page.locator('[name="DepartmentName"]').fill("الإدارة العامة");
+  await page.locator('input[type="checkbox"][name="VisitsServiceEnabled"]').uncheck();
+
+  await expect(
+    page.locator('input[type="checkbox"][name="SelfServiceEnabled"]')
+  ).toBeDisabled();
+  await expect(
+    page.locator('input[type="checkbox"][name="QueueServiceEnabled"]')
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "إضافة الجهة" }).click();
+
+  await page.locator("#tenantSearch").fill(tenantId);
+  let row = page.getByRole("row", { name: new RegExp(tenantId) });
+  await expect(row.getByText("2 من 5 خدمات مفعلة")).toBeVisible();
+  expect((await request.get(`/o/${tenantId}/visit-request`)).status()).toBe(404);
+
+  await row.getByRole("link", { name: "تعديل" }).click();
+  await page.locator('input[type="checkbox"][name="VisitsServiceEnabled"]').check();
+  await page.locator('input[type="checkbox"][name="SelfServiceEnabled"]').check();
+  await page.getByRole("button", { name: "حفظ التعديل" }).click();
+
+  await page.locator("#tenantSearch").fill(tenantId);
+  row = page.getByRole("row", { name: new RegExp(tenantId) });
+  await expect(row.getByText("4 من 5 خدمات مفعلة")).toBeVisible();
+  expect((await request.get(`/o/${tenantId}/visit-request`)).status()).toBe(200);
+
+  await row.getByRole("button", { name: "إيقاف" }).click();
+  await page.locator("#tenantSearch").fill(tenantId);
+  row = page.getByRole("row", { name: new RegExp(tenantId) });
+  await row.getByRole("button", { name: "حذف" }).click();
+  const dialog = page.locator("#tenantDeleteDialog");
+  await dialog.getByLabel("اكتب اسم الجهة للتأكيد").fill(tenantName);
+  await dialog.getByRole("button", { name: "حذف نهائي" }).click();
+  await expect(page.getByRole("row", { name: new RegExp(tenantId) })).toHaveCount(0);
+});

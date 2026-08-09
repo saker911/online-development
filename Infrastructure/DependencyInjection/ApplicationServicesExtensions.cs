@@ -59,6 +59,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
                 AccountEmailVerificationService
             >();
             services.AddSingleton<ITenantContext, HttpTenantContext>();
+            services.AddScoped<ITenantFeatureService, TenantFeatureService>();
             services.AddSingleton<ITenantManagementService, TenantManagementService>();
             services.AddSingleton<UserSessionService>();
             services.AddScoped<IToastNotificationService, ToastNotificationService>();

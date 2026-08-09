@@ -621,6 +621,8 @@ app.Use(
 
 app.UseMiddleware<SubscriptionAccessMiddleware>();
 
+app.UseMiddleware<TenantFeatureAccessMiddleware>();
+
 app.UseAuthorization();
 
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();

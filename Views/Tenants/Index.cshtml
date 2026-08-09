@@ -141,6 +141,40 @@
                 </div>
             </div>
 
+            <fieldset class="tenant-services-editor" id="tenantServices">
+                <legend>
+                    <span>الخدمات المتاحة للجهة</span>
+                    <small>تتحكم هذه الإعدادات في القوائم والمسارات والوصول المباشر.</small>
+                </legend>
+                <div class="tenant-services-grid">
+                    <label class="tenant-service-option">
+                        <input name="PermitsServiceEnabled" type="checkbox" value="true" checked="@Model.Editor.PermitsServiceEnabled" />
+                        <input name="PermitsServiceEnabled" type="hidden" value="false" />
+                        <span><strong>التصاريح</strong><small>طلبات واعتمادات وتصاريح الموظفين والمركبات.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="VisitsServiceEnabled" type="checkbox" value="true" checked="@Model.Editor.VisitsServiceEnabled" data-tenant-service="visits" />
+                        <input name="VisitsServiceEnabled" type="hidden" value="false" />
+                        <span><strong>الزيارات</strong><small>تسجيل الزوار والموافقات وسجل الدخول والخروج.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="SelfServiceEnabled" type="checkbox" value="true" checked="@Model.Editor.SelfServiceEnabled" data-tenant-service="self-service" />
+                        <input name="SelfServiceEnabled" type="hidden" value="false" />
+                        <span><strong>الخدمة الذاتية</strong><small>رابط عام يتيح للزائر إرسال طلبه ومتابعته.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="QueueServiceEnabled" type="checkbox" value="true" checked="@Model.Editor.QueueServiceEnabled" data-tenant-service="queue" />
+                        <input name="QueueServiceEnabled" type="hidden" value="false" />
+                        <span><strong>تنظيم الطابور <em>تجريبي</em></strong><small>أرقام انتظار ولوحات استدعاء ومتابعة الدور.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="GateServiceEnabled" type="checkbox" value="true" checked="@Model.Editor.GateServiceEnabled" />
+                        <input name="GateServiceEnabled" type="hidden" value="false" />
+                        <span><strong>البوابات والشاشات</strong><small>مسح QR ومركز البوابة وشاشات العرض المعتمدة.</small></span>
+                    </label>
+                </div>
+            </fieldset>
+
             <div class="tenant-form-actions">
                 @if (isEditMode)
                 {
@@ -211,6 +245,7 @@
                                 <div class="tenant-cell-stack">
                                     <span class="tenant-subscription @GetSubscriptionClass(tenant.SubscriptionStatus)">@tenant.SubscriptionStatusDisplayName</span>
                                     <strong class="tenant-plan">@tenant.PlanName</strong>
+                                    <span class="tenant-services-count">@tenant.EnabledServiceCount من 5 خدمات مفعلة</span>
                                     @if (tenant.SubscriptionEndsAtUtc.HasValue)
                                     {
                                         <span class="tenant-date">حتى @tenant.SubscriptionEndsAtUtc.Value.ToString("yyyy-MM-dd")</span>
@@ -329,6 +364,24 @@
                 editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 window.setTimeout(() => editor.querySelector('input:not([readonly])')?.focus(), 350);
             });
+
+            const visitsService = document.querySelector('[data-tenant-service="visits"]');
+            const selfService = document.querySelector('[data-tenant-service="self-service"]');
+            const queueService = document.querySelector('[data-tenant-service="queue"]');
+            const syncServiceDependencies = () => {
+                if (!visitsService?.checked) {
+                    if (selfService) selfService.checked = false;
+                    if (queueService) queueService.checked = false;
+                }
+                if (!selfService?.checked && queueService) queueService.checked = false;
+                if (selfService) selfService.disabled = !visitsService?.checked;
+                if (queueService) queueService.disabled = !visitsService?.checked || !selfService?.checked;
+                selfService?.closest('.tenant-service-option')?.classList.toggle('is-disabled', selfService.disabled);
+                queueService?.closest('.tenant-service-option')?.classList.toggle('is-disabled', queueService.disabled);
+            };
+            visitsService?.addEventListener('change', syncServiceDependencies);
+            selfService?.addEventListener('change', syncServiceDependencies);
+            syncServiceDependencies();
 
             const search = document.getElementById('tenantSearch');
             const stateFilter = document.getElementById('tenantStateFilter');

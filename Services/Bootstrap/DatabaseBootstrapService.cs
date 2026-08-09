@@ -191,6 +191,36 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteDropPasswordColumnIfExists(db);
             EnsureSqliteColumn(
                 db,
+                "Tenants",
+                "PermitsServiceEnabled",
+                "INTEGER NOT NULL DEFAULT 1"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Tenants",
+                "VisitsServiceEnabled",
+                "INTEGER NOT NULL DEFAULT 1"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Tenants",
+                "SelfServiceEnabled",
+                "INTEGER NOT NULL DEFAULT 1"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Tenants",
+                "QueueServiceEnabled",
+                "INTEGER NOT NULL DEFAULT 0"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Tenants",
+                "GateServiceEnabled",
+                "INTEGER NOT NULL DEFAULT 1"
+            );
+            EnsureSqliteColumn(
+                db,
                 "AdministrationSettings",
                 "DisplayBaseUrl",
                 "TEXT NOT NULL DEFAULT ''"

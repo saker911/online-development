@@ -1,0 +1,46 @@
+@{
+    ViewData["Title"] = "الخدمة غير مفعلة";
+    var featureName = ViewBag.FeatureName as string ?? "الخدمة المطلوبة";
+}
+
+<section class="feature-unavailable" aria-labelledby="featureUnavailableTitle">
+    <span class="feature-unavailable-kicker">خدمات الجهة</span>
+    <h1 id="featureUnavailableTitle">@featureName غير مفعلة</h1>
+    <p>هذه الخدمة غير متاحة ضمن إعدادات الجهة الحالية. يمكن لمالك المنصة تفعيلها من لوحة إدارة الجهات.</p>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">العودة إلى الرئيسية</a>
+</section>
+
+<style nonce="@(Context.Items["CspStyleNonce"])">
+    .feature-unavailable {
+        min-height: min(62vh, 620px);
+        display: grid;
+        align-content: center;
+        justify-items: start;
+        gap: 14px;
+        max-width: 760px;
+        margin-inline: auto;
+        padding: clamp(36px, 8vw, 100px) 20px;
+    }
+
+    .feature-unavailable-kicker {
+        color: var(--t-success, #16866a);
+        font-size: .8rem;
+        font-weight: 800;
+    }
+
+    .feature-unavailable h1,
+    .feature-unavailable p {
+        margin: 0;
+    }
+
+    .feature-unavailable h1 {
+        color: var(--t-text);
+        font-size: clamp(1.8rem, 4vw, 3.2rem);
+    }
+
+    .feature-unavailable p {
+        max-width: 620px;
+        color: var(--t-text-muted);
+        line-height: 1.9;
+    }
+</style>

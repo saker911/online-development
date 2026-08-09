@@ -102,6 +102,11 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Tenant>().Property(x => x.PlanName).HasMaxLength(128);
             modelBuilder.Entity<Tenant>().Property(x => x.SignupPlanCode).HasMaxLength(64);
             modelBuilder.Entity<Tenant>().Property(x => x.SignupPlanPrice).HasPrecision(18, 2);
+            modelBuilder.Entity<Tenant>().Property(x => x.PermitsServiceEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.VisitsServiceEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.SelfServiceEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.QueueServiceEnabled).HasDefaultValue(false);
+            modelBuilder.Entity<Tenant>().Property(x => x.GateServiceEnabled).HasDefaultValue(true);
             modelBuilder.Entity<Tenant>().HasIndex(x => x.Slug).IsUnique();
             modelBuilder.Entity<PlatformSettings>().Property(x => x.ProviderName).HasMaxLength(256);
             modelBuilder
