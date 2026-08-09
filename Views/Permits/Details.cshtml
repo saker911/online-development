@@ -187,6 +187,13 @@
                             <strong>رقم الجوال</strong>
                             <div>@Model.EmployeePhone</div>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.HolderEmail))
+                        {
+                            <div class="col-md-6">
+                                <strong>بريد استلام النتيجة</strong>
+                                <div class="ltr-field">@Model.HolderEmail</div>
+                            </div>
+                        }
                         <div class="col-md-6">
                             <strong>نوع المركبة</strong>
                             <div>@Model.VehicleType</div>

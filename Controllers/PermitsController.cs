@@ -642,6 +642,8 @@ namespace VehiclePermitSystemWeb.Controllers
             permit.VisitLocation = (permit.VisitLocation ?? string.Empty).Trim();
             permit.ManagerName = (permit.ManagerName ?? string.Empty).Trim();
             permit.EmployeePhone = (permit.EmployeePhone ?? string.Empty).Trim();
+            var holderEmail = (permit.HolderEmail ?? string.Empty).Trim().ToLowerInvariant();
+            permit.HolderEmail = string.IsNullOrWhiteSpace(holderEmail) ? null : holderEmail;
             permit.VehicleType = (permit.VehicleType ?? string.Empty).Trim();
             permit.PlateNumber = PermitInputNormalizer.NormalizePlateNumber(permit.PlateNumber);
             permit.PermitType = PermitInputNormalizer.NormalizePermitType(permit.PermitType);

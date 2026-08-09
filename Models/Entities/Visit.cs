@@ -42,6 +42,11 @@ namespace VehiclePermitSystemWeb.Models.Entities
         )]
         public string PhoneNumber { get; set; } = string.Empty;
 
+        [Display(Name = "البريد الإلكتروني للزائر")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة.")]
+        [StringLength(256, ErrorMessage = "البريد الإلكتروني يجب ألا يتجاوز 256 حرفًا.")]
+        public string? VisitorEmail { get; set; }
+
         [Display(Name = "الغرض")]
         [Required(ErrorMessage = "يرجى إدخال الغرض من الزيارة.")]
         [StringLength(256, ErrorMessage = "الغرض من الزيارة يجب ألا يتجاوز 256 حرفًا.")]

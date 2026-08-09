@@ -64,6 +64,8 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<ExternalUserLogin> ExternalUserLogins => Set<ExternalUserLogin>();
         public DbSet<LoginAttemptRecord> LoginAttemptRecords => Set<LoginAttemptRecord>();
         public DbSet<SignupAttemptRecord> SignupAttemptRecords => Set<SignupAttemptRecord>();
+        public DbSet<EmailNotificationOutbox> EmailNotificationOutbox =>
+            Set<EmailNotificationOutbox>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -91,6 +93,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<ExternalUserLogin>().HasKey(x => x.Id);
             modelBuilder.Entity<LoginAttemptRecord>().HasKey(x => x.KeyHash);
             modelBuilder.Entity<SignupAttemptRecord>().HasKey(x => x.KeyHash);
+            modelBuilder.Entity<EmailNotificationOutbox>().HasKey(x => x.Id);
 
             modelBuilder.Entity<Tenant>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<Tenant>().Property(x => x.Name).HasMaxLength(256);
@@ -165,6 +168,7 @@ namespace VehiclePermitSystemWeb.Data
             ConfigureTenantScopedEntity<DisplayDevice>(modelBuilder);
             ConfigureTenantScopedEntity<DisplaySecuritySettings>(modelBuilder);
             ConfigureTenantScopedEntity<ExternalUserLogin>(modelBuilder);
+            ConfigureTenantScopedEntity<EmailNotificationOutbox>(modelBuilder);
 
             modelBuilder.Entity<Permit>().Property(x => x.PermitNumber).HasMaxLength(32);
             modelBuilder.Entity<Permit>().Property(x => x.PermitType).HasMaxLength(24);
@@ -185,6 +189,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Visit>().Property(x => x.VisitLocation).HasMaxLength(256);
             modelBuilder.Entity<Visit>().Property(x => x.NationalId).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.PhoneNumber).HasMaxLength(32);
+            modelBuilder.Entity<Visit>().Property(x => x.VisitorEmail).HasMaxLength(256);
             modelBuilder.Entity<Visit>().Property(x => x.Purpose).HasMaxLength(256);
             modelBuilder.Entity<Visit>().Property(x => x.HostName).HasMaxLength(128);
             modelBuilder.Entity<Visit>().Property(x => x.VisitedPersonName).HasMaxLength(128);
@@ -287,6 +292,54 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<UserAccount>().HasIndex(x => new { x.TenantId, x.Email });
             modelBuilder.Entity<UserAccount>().Property(x => x.Email).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.ManagerUsername).HasMaxLength(64);
+            modelBuilder.Entity<Permit>().Property(x => x.HolderEmail).HasMaxLength(256);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.NotificationType)
+                .HasMaxLength(64);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.ReferenceType)
+                .HasMaxLength(32);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.ReferenceId)
+                .HasMaxLength(64);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.DeduplicationKey)
+                .HasMaxLength(256);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.RecipientEmail)
+                .HasMaxLength(256);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.RecipientName)
+                .HasMaxLength(128);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.Subject)
+                .HasMaxLength(256);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.Status)
+                .HasMaxLength(24);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.LockToken)
+                .HasMaxLength(64);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .Property(x => x.LastError)
+                .HasMaxLength(1000);
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .HasIndex(x => new { x.TenantId, x.DeduplicationKey })
+                .IsUnique();
+            modelBuilder
+                .Entity<EmailNotificationOutbox>()
+                .HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Username).HasMaxLength(64);
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Provider).HasMaxLength(32);

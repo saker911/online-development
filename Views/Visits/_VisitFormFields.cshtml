@@ -41,6 +41,12 @@
         <span asp-validation-for="PhoneNumber" class="field-validation-error small"></span>
     </div>
     <div class="col-md-4">
+        <label asp-for="VisitorEmail" class="form-label">البريد لاستلام نتيجة الطلب</label>
+        <input asp-for="VisitorEmail" type="email" class="form-control ltr-field" autocomplete="email"
+               placeholder="name@example.com" />
+        <span asp-validation-for="VisitorEmail" class="field-validation-error small"></span>
+    </div>
+    <div class="col-md-4">
         <label asp-for="Purpose" class="form-label">الغرض من الزيارة</label>
         <input asp-for="Purpose" class="form-control" required />
         <span asp-validation-for="Purpose" class="field-validation-error small"></span>

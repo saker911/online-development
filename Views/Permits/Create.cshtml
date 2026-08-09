@@ -156,6 +156,12 @@
                               pattern="05[0-9]{8}" placeholder="0501234567" title="رقم الجوال يجب أن يكون 10 أرقام ويبدأ بـ 05" required />
                     <span asp-validation-for="EmployeePhone" class="field-validation-error small"></span>
                 </div>
+                <div class="col-md-4">
+                    <label asp-for="HolderEmail" class="form-label">البريد لاستلام نتيجة التصريح</label>
+                    <input asp-for="HolderEmail" type="email" class="form-control ltr-field" autocomplete="email"
+                           placeholder="name@example.com" />
+                    <span asp-validation-for="HolderEmail" class="field-validation-error small"></span>
+                </div>
 
                 <div class="col-md-4 date-field-shell" id="expiresAtGroup" data-date-field data-date-display-mode="hijri">
                     <div class="date-field-head">

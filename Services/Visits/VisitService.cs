@@ -13,6 +13,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
 using VehiclePermitSystemWeb.Security;
+using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Services.Visits
@@ -24,6 +25,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
         private readonly IAccessControlService _accessControl;
         private readonly IDelegationService _delegationService;
         private readonly IConfiguration _configuration;
+        private readonly IOperationalEmailNotificationQueue? _emailNotificationQueue;
 
         private sealed record WorkHoursSettings(TimeOnly StartTime, TimeOnly EndTime);
 
@@ -32,7 +34,8 @@ namespace VehiclePermitSystemWeb.Services.Visits
             ISystemClock systemClock,
             IAccessControlService accessControl,
             IDelegationService delegationService,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IOperationalEmailNotificationQueue? emailNotificationQueue = null
         )
         {
             _dbContextFactory = dbContextFactory;
@@ -40,6 +43,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
             _accessControl = accessControl;
             _delegationService = delegationService;
             _configuration = configuration;
+            _emailNotificationQueue = emailNotificationQueue;
         }
 
         public IEnumerable<Visit> GetAllVisits()
@@ -175,6 +179,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     existing.VisitLocation = visit.VisitLocation;
                     existing.NationalId = visit.NationalId;
                     existing.PhoneNumber = visit.PhoneNumber;
+                    existing.VisitorEmail = visit.VisitorEmail;
                     existing.Purpose = visit.Purpose;
                     existing.HostName = visit.HostName;
                     existing.VisitedPersonName = visit.VisitedPersonName;
@@ -561,6 +566,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                             );
                         }
 
+                        _emailNotificationQueue?.QueueVisitDecision(db, visit);
                         db.SaveChanges();
                         return 0;
                     }
@@ -599,6 +605,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         visit.Status = "Active";
                     }
 
+                    _emailNotificationQueue?.QueueVisitDecision(db, visit);
                     db.SaveChanges();
                     return 0;
                 }
@@ -679,6 +686,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
             visit.VisitLocation = (visit.VisitLocation ?? string.Empty).Trim();
             visit.NationalId = NormalizeVisitNationalId(visit.NationalId);
             visit.PhoneNumber = NormalizeVisitPhoneNumber(visit.PhoneNumber);
+            visit.VisitorEmail = (visit.VisitorEmail ?? string.Empty).Trim().ToLowerInvariant();
             visit.Purpose = (visit.Purpose ?? string.Empty).Trim();
             visit.HostName = (visit.HostName ?? string.Empty).Trim();
             visit.VisitedPersonName = string.IsNullOrWhiteSpace(visit.VisitedPersonName)

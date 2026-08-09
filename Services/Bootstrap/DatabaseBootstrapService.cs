@@ -426,6 +426,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             );
             EnsureSqliteColumn(db, "Visits", "VisitLocation", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "Visits", "PhoneNumber", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "Visits", "VisitorEmail", "TEXT NULL");
             EnsureSqliteColumn(db, "Visits", "ApprovalStatus", "TEXT NOT NULL DEFAULT 'Approved'");
             EnsureSqliteColumn(db, "Visits", "VisitApproverUsername", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "Visits", "VisitedPersonName", "TEXT NOT NULL DEFAULT ''");
@@ -433,6 +434,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Visits", "ArchivedAt", "TEXT NULL");
             EnsureSqliteColumn(db, "Visits", "RequestSource", "TEXT NOT NULL DEFAULT 'Internal'");
             EnsureSqliteColumn(db, "Visits", "RequestedAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Permits", "HolderEmail", "TEXT NULL");
             EnsureSqliteColumn(
                 db,
                 "UserAccounts",
@@ -493,6 +495,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqlitePlatformSettingsTable(db);
             EnsureSqliteSubscriptionPlansTable(db);
             EnsureSqliteVisitorWorkflowSettingsTable(db);
+            EnsureSqliteEmailNotificationOutboxTable(db);
             EnsureSqliteTenancySchema(db);
         }
 
@@ -594,6 +597,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "DelegationPermissions",
                 "DisplayDevices",
                 "DisplaySecuritySettings",
+                "EmailNotificationOutbox",
             })
             {
                 EnsureSqliteColumn(
@@ -684,6 +688,42 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     ""WelcomeMessage"" TEXT NOT NULL DEFAULT '',
                     ""UpdatedAtUtc"" TEXT NOT NULL
                 );"
+            );
+        }
+
+        private static void EnsureSqliteEmailNotificationOutboxTable(
+            ApplicationDbContext db
+        )
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS ""EmailNotificationOutbox"" (
+                    ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_EmailNotificationOutbox"" PRIMARY KEY AUTOINCREMENT,
+                    ""TenantId"" TEXT NOT NULL DEFAULT 'default',
+                    ""NotificationType"" TEXT NOT NULL DEFAULT '',
+                    ""ReferenceType"" TEXT NOT NULL DEFAULT '',
+                    ""ReferenceId"" TEXT NOT NULL DEFAULT '',
+                    ""DeduplicationKey"" TEXT NOT NULL DEFAULT '',
+                    ""RecipientEmail"" TEXT NOT NULL DEFAULT '',
+                    ""RecipientName"" TEXT NOT NULL DEFAULT '',
+                    ""Subject"" TEXT NOT NULL DEFAULT '',
+                    ""HtmlBody"" TEXT NOT NULL DEFAULT '',
+                    ""TextBody"" TEXT NOT NULL DEFAULT '',
+                    ""Status"" TEXT NOT NULL DEFAULT 'Pending',
+                    ""AttemptCount"" INTEGER NOT NULL DEFAULT 0,
+                    ""CreatedAtUtc"" TEXT NOT NULL,
+                    ""NextAttemptAtUtc"" TEXT NOT NULL,
+                    ""LastAttemptAtUtc"" TEXT NULL,
+                    ""SentAtUtc"" TEXT NULL,
+                    ""LockToken"" TEXT NOT NULL DEFAULT '',
+                    ""LockedAtUtc"" TEXT NULL,
+                    ""LastError"" TEXT NOT NULL DEFAULT ''
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_EmailNotificationOutbox_TenantId_DeduplicationKey ON EmailNotificationOutbox (TenantId, DeduplicationKey);"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_EmailNotificationOutbox_Status_NextAttemptAtUtc ON EmailNotificationOutbox (Status, NextAttemptAtUtc);"
             );
         }
 

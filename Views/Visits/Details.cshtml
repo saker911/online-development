@@ -54,6 +54,13 @@
                 <strong>رقم الجوال</strong>
                 <div class="national-id-field">@Model.PhoneNumber</div>
             </div>
+            @if (!string.IsNullOrWhiteSpace(Model.VisitorEmail))
+            {
+                <div class="col-md-6">
+                    <strong>بريد استلام النتيجة</strong>
+                    <div class="ltr-field">@Model.VisitorEmail</div>
+                </div>
+            }
             <div class="col-md-6">
                 <strong>الغرض</strong>
                 <div>@Model.Purpose</div>

@@ -62,6 +62,12 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddSingleton<ITenantManagementService, TenantManagementService>();
             services.AddSingleton<UserSessionService>();
             services.AddScoped<IToastNotificationService, ToastNotificationService>();
+            services.AddSingleton<ISystemEmailSender, SmtpSystemEmailSender>();
+            services.AddSingleton<
+                IOperationalEmailNotificationQueue,
+                OperationalEmailNotificationQueue
+            >();
+            services.AddSingleton<IEmailNotificationDispatcher, EmailNotificationDispatcher>();
             services.AddTransient<IClaimsTransformation, DelegationClaimsTransformation>();
             services.AddSingleton<BackupService>();
             services.AddSingleton<IUploadThreatScanner, ClamAvUploadThreatScanner>();
@@ -70,6 +76,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             {
                 services.AddHostedService<AutomaticBackupHostedService>();
                 services.AddHostedService<AutomaticWorkEndHostedService>();
+                services.AddHostedService<EmailNotificationHostedService>();
             }
 
             return services;

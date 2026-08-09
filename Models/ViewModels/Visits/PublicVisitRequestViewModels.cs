@@ -26,6 +26,12 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
         [RegularExpression(SaudiMobileNumberValidator.RegularExpressionPattern, ErrorMessage = SaudiMobileNumberValidator.ErrorMessage)]
         public string PhoneNumber { get; set; } = string.Empty;
 
+        [Display(Name = "البريد الإلكتروني")]
+        [Required(ErrorMessage = "يرجى إدخال البريد الإلكتروني لاستلام نتيجة الطلب.")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة.")]
+        [StringLength(256, ErrorMessage = "البريد الإلكتروني يجب ألا يتجاوز 256 حرفًا.")]
+        public string VisitorEmail { get; set; } = string.Empty;
+
         [Display(Name = "رقم الهوية أو الإقامة")]
         [RegularExpression("^$|^[12][0-9]{9}$", ErrorMessage = "رقم الهوية أو الإقامة يجب أن يتكون من 10 أرقام ويبدأ بـ 1 أو 2.")]
         public string NationalId { get; set; } = string.Empty;

@@ -368,6 +368,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
             existing.EmployeeDepartment = permit.EmployeeDepartment;
             existing.JobTitle = permit.JobTitle;
             existing.EmployeePhone = permit.EmployeePhone;
+            existing.HolderEmail = permit.HolderEmail;
             existing.RequiresReturn = permit.RequiresReturn;
             existing.AccessMode = permit.AccessMode;
             existing.NormalizeAccessModeState();

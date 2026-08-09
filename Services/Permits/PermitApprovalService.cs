@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
 using VehiclePermitSystemWeb.Security;
+using VehiclePermitSystemWeb.Services.Notifications;
 
 namespace VehiclePermitSystemWeb.Services.Permits
 {
@@ -24,13 +25,15 @@ namespace VehiclePermitSystemWeb.Services.Permits
         private readonly IPermitAuditService _permitAuditService;
         private readonly IAccessControlService _accessControlService;
         private readonly IDelegationService _delegationService;
+        private readonly IOperationalEmailNotificationQueue? _emailNotificationQueue;
 
         public PermitApprovalService(
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
             ISystemClock systemClock,
             IPermitAuditService permitAuditService,
             IAccessControlService accessControlService,
-            IDelegationService delegationService
+            IDelegationService delegationService,
+            IOperationalEmailNotificationQueue? emailNotificationQueue = null
         )
         {
             _dbContextFactory = dbContextFactory;
@@ -38,6 +41,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
             _permitAuditService = permitAuditService;
             _accessControlService = accessControlService;
             _delegationService = delegationService;
+            _emailNotificationQueue = emailNotificationQueue;
         }
 
         public void UpdatePermitApprovalStatus(
@@ -191,6 +195,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
                             );
                         }
 
+                        _emailNotificationQueue?.QueuePermitDecision(db, permit);
                         db.SaveChanges();
                         return 0;
                     }
@@ -243,6 +248,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
                         ResetExitRequestState(permit);
                     }
 
+                    _emailNotificationQueue?.QueuePermitDecision(db, permit);
                     db.SaveChanges();
                     return 0;
                 }

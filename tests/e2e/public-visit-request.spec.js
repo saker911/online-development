@@ -30,6 +30,7 @@ test("visitor submits a public request, follows status, and receives QR only aft
   const visitorName = `زائر ذاتي ${uniqueSuffix()}`;
   await page.locator('[name="VisitorName"]').fill(visitorName);
   await page.locator('[name="PhoneNumber"]').fill(uniquePhone());
+  await page.locator('[name="VisitorEmail"]').fill(`visitor-${uniqueSuffix()}@example.com`);
   await page.locator('[name="NationalId"]').fill(uniqueNationalId("2"));
   await page.locator('[name="VisitDate"]').fill(dateTimeLocal(25));
   await page.locator('[name="VisitedPersonName"]').fill("موظف الاستقبال");

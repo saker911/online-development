@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -54,6 +55,7 @@ internal sealed class TestFixture : IAsyncDisposable
         services.AddHttpContextAccessor();
         services.AddMemoryCache();
         services.AddSingleton<ISystemClock>(Clock);
+        services.AddSingleton<IDataProtectionProvider>(new EphemeralDataProtectionProvider());
         services.AddSingleton<ITenantContext, DefaultTenantContext>();
         services.AddDbContextFactory<ApplicationDbContext>(options =>
             options.UseSqlite(_connection)
@@ -73,6 +75,10 @@ internal sealed class TestFixture : IAsyncDisposable
         services.AddSingleton<UserSessionService>();
         services.AddSingleton<IUserAdminService, UserAdminService>();
         services.AddSingleton<IVisitService, VisitService>();
+        services.AddSingleton<
+            IOperationalEmailNotificationQueue,
+            OperationalEmailNotificationQueue
+        >();
         services.AddSingleton<IReportsDashboardService, ReportsDashboardService>();
         services.AddSingleton<IMonitoringDashboardService, MonitoringDashboardService>();
 

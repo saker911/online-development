@@ -36,6 +36,7 @@ test("owner publishes the express visitor flow and the public form follows it", 
 
   await page.locator('[name="VisitorName"]').fill(`زائر سريع ${uniqueSuffix()}`);
   await page.locator('[name="PhoneNumber"]').fill(uniquePhone());
+  await page.locator('[name="VisitorEmail"]').fill(`workflow-${uniqueSuffix()}@example.com`);
   await page.locator('[name="VisitDate"]').fill(dateTimeLocal(10));
   await page.locator('[name="VisitedPersonName"]').fill("موظف الاستقبال");
   await page.locator('[name="Purpose"]').fill("زيارة عمل سريعة");

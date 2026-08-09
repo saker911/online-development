@@ -60,6 +60,12 @@
                         <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" autocomplete="tel" dir="ltr" placeholder="05xxxxxxxx" />
                         <span asp-validation-for="PhoneNumber"></span>
                     </div>
+                    <div class="public-visit-field public-visit-field-third">
+                        <label asp-for="VisitorEmail"></label>
+                        <input asp-for="VisitorEmail" class="form-control ltr-field" type="email" autocomplete="email"
+                               dir="ltr" placeholder="name@example.com" />
+                        <span asp-validation-for="VisitorEmail"></span>
+                    </div>
                     @if (Model.ShowNationalId)
                     {
                         <div class="public-visit-field public-visit-field-third">

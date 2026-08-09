@@ -81,6 +81,11 @@ namespace VehiclePermitSystemWeb.Models.Entities
         )]
         public string EmployeePhone { get; set; } = string.Empty;
 
+        [Display(Name = "البريد الإلكتروني لحامل التصريح")]
+        [EmailAddress(ErrorMessage = "صيغة البريد الإلكتروني غير صحيحة.")]
+        [StringLength(256, ErrorMessage = "البريد الإلكتروني يجب ألا يتجاوز 256 حرفًا.")]
+        public string? HolderEmail { get; set; }
+
         [Display(Name = "تاريخ التصريح")]
         public DateTime? PermitDate { get; set; }
 

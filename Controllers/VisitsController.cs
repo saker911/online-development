@@ -152,6 +152,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 TenantId = resolvedTenant.TenantId,
                 VisitorName = model.VisitorName,
                 PhoneNumber = model.PhoneNumber,
+                VisitorEmail = model.VisitorEmail,
                 NationalId = nationalId,
                 VisitDate = model.VisitDate,
                 VisitedPersonName = string.IsNullOrWhiteSpace(model.VisitedPersonName)
@@ -919,6 +920,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             model.VisitorName = (model.VisitorName ?? string.Empty).Trim();
             model.PhoneNumber = new string((model.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+            model.VisitorEmail = (model.VisitorEmail ?? string.Empty).Trim().ToLowerInvariant();
             model.NationalId = new string((model.NationalId ?? string.Empty).Where(char.IsDigit).ToArray());
             model.VisitedPersonName = (model.VisitedPersonName ?? string.Empty).Trim();
             model.VisitLocation = (model.VisitLocation ?? string.Empty).Trim();
@@ -1048,6 +1050,8 @@ namespace VehiclePermitSystemWeb.Controllers
             visit.PhoneNumber = new string(
                 (visit.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray()
             );
+            var visitorEmail = (visit.VisitorEmail ?? string.Empty).Trim().ToLowerInvariant();
+            visit.VisitorEmail = string.IsNullOrWhiteSpace(visitorEmail) ? null : visitorEmail;
             visit.NationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
                 ? OnlineEditionSettings.BuildSyntheticNationalId(
                     visit.VisitorName,

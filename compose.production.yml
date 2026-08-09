@@ -27,6 +27,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       App__Urls: http://0.0.0.0:10000
+      App__PublicBaseUrl: ${App__PublicBaseUrl:-https://tasareehapp.com}
       Data__Provider: PostgreSql
       ConnectionStrings__PostgreSqlConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Security__CookieSecurePolicy: Always
