@@ -10,6 +10,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public string Summary { get; set; } = string.Empty;
         public int DurationMonths { get; set; }
         public decimal TotalPrice { get; set; }
+        public decimal? OriginalPrice { get; set; }
+        public string OfferLabel { get; set; } = string.Empty;
         public bool IsFeatured { get; set; }
         public IReadOnlyList<string> Features { get; set; } = [];
         public string DurationText => DurationMonths switch
@@ -20,6 +22,13 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
             _ => $"{DurationMonths} شهرًا",
         };
         public string PriceText => TotalPrice <= 0 ? "حسب الاتفاق" : $"{TotalPrice:0} ر.س";
+        public string OriginalPriceText =>
+            OriginalPrice.HasValue && OriginalPrice.Value > TotalPrice
+                ? $"{OriginalPrice.Value:0} ر.س"
+                : string.Empty;
+        public string BadgeText => !string.IsNullOrWhiteSpace(OfferLabel)
+            ? OfferLabel
+            : IsFeatured ? "الأكثر استخدامًا" : string.Empty;
     }
 
     public sealed class TenantSignupLandingViewModel

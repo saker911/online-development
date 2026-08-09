@@ -15,13 +15,16 @@ namespace VehiclePermitSystemWeb.Services.Tenants
     {
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
         private readonly ITimeLimitedDataProtector _checkoutProtector;
+        private readonly ISubscriptionPlanService? _subscriptionPlanService;
 
         public TenantManagementService(
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
-            IDataProtectionProvider dataProtectionProvider
+            IDataProtectionProvider dataProtectionProvider,
+            ISubscriptionPlanService? subscriptionPlanService = null
         )
         {
             _dbContextFactory = dbContextFactory;
+            _subscriptionPlanService = subscriptionPlanService;
             _checkoutProtector = dataProtectionProvider
                 .CreateProtector("VehiclePermitSystemWeb.Subscription.Checkout.v1")
                 .ToTimeLimitedDataProtector();
@@ -229,7 +232,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         )
         {
             using var db = _dbContextFactory.CreateDbContext();
-            var plan = TenantPlanCatalog.Find(model.PlanCode);
+            var plan = FindPlan(model.PlanCode);
             if (plan == null)
             {
                 return new TenantSignupResult(false, "اختر باقة صحيحة لإكمال التسجيل.");
@@ -305,6 +308,9 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     SubscriptionStatus = TenantSubscriptionStatuses.PendingPayment,
                     SignupExpiresAtUtc = now.AddHours(24),
                     PlanName = plan.Name,
+                    SignupPlanCode = plan.Code,
+                    SignupPlanPrice = plan.TotalPrice,
+                    SignupPlanDurationMonths = plan.DurationMonths,
                     MaxUsers = null,
                     MaxPermitsPerMonth = null,
                     MaxVisitsPerMonth = null,
@@ -497,8 +503,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return null;
             }
 
-            var plan = TenantPlanCatalog.GetPlans()
-                .FirstOrDefault(item => string.Equals(item.Name, tenant.PlanName, StringComparison.Ordinal));
+            var plan = FindPlan(tenant.SignupPlanCode)
+                ?? GetPlans().FirstOrDefault(item =>
+                    string.Equals(item.Name, tenant.PlanName, StringComparison.Ordinal)
+                );
+            var hasSignupSnapshot = !string.IsNullOrWhiteSpace(tenant.SignupPlanCode);
             var owner = db
                 .UserAccounts.IgnoreQueryFilters()
                 .AsNoTracking()
@@ -513,8 +522,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 CompanyName = tenant.Name,
                 PlanName = tenant.PlanName,
                 SubscriptionStatus = tenant.SubscriptionStatus,
-                DurationMonths = plan?.DurationMonths ?? 0,
-                TotalPrice = plan?.TotalPrice ?? 0,
+                DurationMonths = hasSignupSnapshot
+                    ? tenant.SignupPlanDurationMonths ?? plan?.DurationMonths ?? 0
+                    : plan?.DurationMonths ?? 0,
+                TotalPrice = hasSignupSnapshot
+                    ? tenant.SignupPlanPrice ?? plan?.TotalPrice ?? 0
+                    : plan?.TotalPrice ?? 0,
                 PaymentReference = BuildPaymentReference(tenant.TenantId, tenant.CreatedAtUtc),
                 LoginUrl = $"/o/{Uri.EscapeDataString(tenant.Slug)}",
                 CheckoutToken = checkoutToken,
@@ -772,7 +785,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             tenant.IsActive = true;
             tenant.SubscriptionStatus = TenantSubscriptionStatuses.Active;
             tenant.TrialEndsAtUtc = null;
-            tenant.SubscriptionEndsAtUtc = DateTime.UtcNow.AddMonths(1);
+            var durationMonths = tenant.SignupPlanDurationMonths
+                ?? FindPlan(tenant.SignupPlanCode)?.DurationMonths
+                ?? 1;
+            tenant.SubscriptionEndsAtUtc = DateTime.UtcNow.AddMonths(
+                Math.Clamp(durationMonths, 1, 120)
+            );
             tenant.SignupExpiresAtUtc = null;
             if (activatePendingSignupOwner)
             {
@@ -802,6 +820,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     StringComparer.OrdinalIgnoreCase
                 );
         }
+
+        private IReadOnlyList<TenantPlanViewModel> GetPlans() =>
+            _subscriptionPlanService?.GetPublicPlans() ?? TenantPlanCatalog.GetPlans();
+
+        private TenantPlanViewModel? FindPlan(string? code) =>
+            _subscriptionPlanService?.Find(code) ?? TenantPlanCatalog.Find(code);
 
         private static int GetCount(IReadOnlyDictionary<string, int> counts, string tenantId)
         {

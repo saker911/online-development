@@ -50,5 +50,7 @@ wwwroot/uploads/
 .venv/
 test-results/
 playwright-report/
+.playwright-cli/
+output/
 security-audit/zap-report-*.html
 security-audit/zap-report-*.md

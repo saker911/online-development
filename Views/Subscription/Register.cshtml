@@ -48,6 +48,10 @@
                             <input id="@inputId" type="radio" asp-for="PlanCode" value="@plan.Code" />
                             <span>@plan.Name</span>
                             <strong>@plan.PriceText</strong>
+                            @if (!string.IsNullOrWhiteSpace(plan.BadgeText))
+                            {
+                                <em class="subscription-choice-offer">@plan.BadgeText</em>
+                            }
                             <small>@plan.DurationText، النظام كامل واستخدام مفتوح</small>
                         </label>
                     }

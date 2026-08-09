@@ -186,6 +186,10 @@
                     <input id="publicVisitRequestUrl" class="form-control" value="@Model.PublicRequestUrl" readonly aria-label="رابط طلب الزيارة" />
                     <button type="button" class="btn btn-outline-secondary" data-copy-public-visit>نسخ</button>
                     <a href="@Model.PublicRequestUrl" class="btn btn-primary" target="_blank" rel="noopener">فتح</a>
+                    @if (User.HasPermission(AppPermissions.ManageAdministration))
+                    {
+                        <a asp-controller="VisitorWorkflow" asp-action="Index" class="btn btn-outline-secondary">إعداد المسار</a>
+                    }
                 </div>
             </section>
         }

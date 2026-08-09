@@ -79,6 +79,11 @@ namespace VehiclePermitSystemWeb.Models.Entities
         [StringLength(128)]
         public string PlanName { get; set; } = TenantDefaults.DefaultPlanName;
 
+        [StringLength(64)]
+        public string SignupPlanCode { get; set; } = string.Empty;
+        public decimal? SignupPlanPrice { get; set; }
+        public int? SignupPlanDurationMonths { get; set; }
+
         public DateTime? TrialEndsAtUtc { get; set; }
         public DateTime? SubscriptionEndsAtUtc { get; set; }
         public DateTime? SignupExpiresAtUtc { get; set; }

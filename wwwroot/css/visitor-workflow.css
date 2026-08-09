@@ -1,0 +1,298 @@
+.visitor-workflow-shell {
+    --workflow-accent: #168a6f;
+    --workflow-accent-soft: rgba(22, 138, 111, .12);
+    padding-bottom: 110px;
+}
+
+.visitor-workflow-form,
+.visitor-workflow-section,
+.visitor-workflow-preview {
+    display: grid;
+    gap: 24px;
+}
+
+.visitor-workflow-form {
+    gap: 0;
+}
+
+.visitor-workflow-publish,
+.visitor-workflow-section,
+.visitor-workflow-preview {
+    padding-block: 30px;
+    border-bottom: 1px solid var(--t-border);
+}
+
+.visitor-workflow-publish {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.visitor-workflow-publish h2,
+.visitor-workflow-section-head h2 {
+    margin: 0;
+    color: var(--t-text);
+    font-size: 1.15rem;
+}
+
+.visitor-workflow-publish p,
+.visitor-workflow-section-head p {
+    margin: 5px 0 0;
+    color: var(--t-text-muted);
+    font-size: .9rem;
+}
+
+.visitor-workflow-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.visitor-workflow-switch input {
+    position: absolute;
+    opacity: 0;
+}
+
+.visitor-workflow-switch > span {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--t-border-strong);
+    border-radius: 999px;
+    transition: background .18s ease;
+}
+
+.visitor-workflow-switch > span::after {
+    position: absolute;
+    top: 3px;
+    inset-inline-start: 3px;
+    width: 18px;
+    height: 18px;
+    content: "";
+    background: #fff;
+    border-radius: 50%;
+    transition: transform .18s ease;
+}
+
+.visitor-workflow-switch input:checked + span {
+    background: var(--workflow-accent);
+}
+
+.visitor-workflow-switch input:checked + span::after {
+    transform: translateX(-20px);
+}
+
+.visitor-workflow-switch input:focus-visible + span {
+    outline: 3px solid color-mix(in srgb, var(--workflow-accent) 25%, transparent);
+    outline-offset: 2px;
+}
+
+.visitor-workflow-section-head {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+}
+
+.visitor-workflow-section-head > span {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    color: var(--workflow-accent);
+    border: 1px solid var(--t-border-strong);
+    border-radius: 6px;
+    font-size: .8rem;
+    font-weight: 900;
+}
+
+.visitor-workflow-templates {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.visitor-workflow-templates label {
+    position: relative;
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+    padding: 18px;
+    background: var(--t-surface);
+    border: 1px solid var(--t-border);
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.visitor-workflow-templates label:has(input:checked) {
+    background: var(--workflow-accent-soft);
+    border-color: var(--workflow-accent);
+}
+
+.visitor-workflow-templates input {
+    position: absolute;
+    top: 16px;
+    inset-inline-end: 16px;
+    accent-color: var(--workflow-accent);
+}
+
+.visitor-workflow-templates strong {
+    color: var(--t-text);
+    font-size: 1rem;
+}
+
+.visitor-workflow-templates span,
+.visitor-workflow-fields article div span {
+    color: var(--t-text-muted);
+    font-size: .82rem;
+}
+
+.visitor-workflow-fields {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--t-border);
+}
+
+.visitor-workflow-fields article {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 110px 110px;
+    align-items: center;
+    gap: 14px;
+    padding-block: 17px;
+    border-bottom: 1px solid var(--t-border);
+}
+
+.visitor-workflow-fields article div {
+    display: grid;
+    gap: 3px;
+}
+
+.visitor-workflow-fields article div strong {
+    color: var(--t-text);
+}
+
+.visitor-workflow-fields article > label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--t-text);
+    font-size: .86rem;
+    font-weight: 700;
+}
+
+.visitor-workflow-fields input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--workflow-accent);
+}
+
+.visitor-workflow-fields input:disabled + * {
+    opacity: .45;
+}
+
+.visitor-workflow-schedule {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.visitor-workflow-schedule .span-2 {
+    grid-column: 1 / -1;
+}
+
+.visitor-workflow-preview ol {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.visitor-workflow-preview li {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 3px 9px;
+    padding: 14px;
+    background: var(--t-surface);
+    border: 1px solid var(--t-border);
+    border-radius: 6px;
+}
+
+.visitor-workflow-preview li > span {
+    grid-row: span 2;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    color: #fff;
+    background: var(--workflow-accent);
+    border-radius: 5px;
+    font-size: .75rem;
+    font-weight: 900;
+}
+
+.visitor-workflow-preview li strong {
+    overflow-wrap: anywhere;
+    color: var(--t-text);
+    font-size: .86rem;
+}
+
+.visitor-workflow-preview li small {
+    color: var(--t-text-muted);
+    font-size: .72rem;
+}
+
+.visitor-workflow-preview li[hidden] {
+    display: none;
+}
+
+.visitor-workflow-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: color-mix(in srgb, var(--t-surface) 94%, transparent);
+    backdrop-filter: blur(12px);
+}
+
+@media (max-width: 900px) {
+    .visitor-workflow-templates,
+    .visitor-workflow-preview ol {
+        grid-template-columns: 1fr;
+    }
+
+    .visitor-workflow-fields article {
+        grid-template-columns: minmax(0, 1fr) 90px 90px;
+    }
+}
+
+@media (max-width: 620px) {
+    .visitor-workflow-publish,
+    .visitor-workflow-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .visitor-workflow-switch {
+        justify-content: space-between;
+    }
+
+    .visitor-workflow-fields article {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .visitor-workflow-fields article div {
+        grid-column: 1 / -1;
+    }
+
+    .visitor-workflow-schedule {
+        grid-template-columns: 1fr;
+    }
+
+    .visitor-workflow-schedule .span-2 {
+        grid-column: auto;
+    }
+}

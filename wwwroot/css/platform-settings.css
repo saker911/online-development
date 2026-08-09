@@ -80,6 +80,57 @@
     min-width: 160px;
 }
 
+.pricing-validation-summary:empty {
+    display: none;
+}
+
+.pricing-plan-head {
+    align-items: center;
+}
+
+.pricing-plan-head > div:nth-child(2) {
+    min-width: 190px;
+}
+
+.pricing-plan-toggles {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-inline-start: auto;
+}
+
+.pricing-toggle {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--t-border);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.pricing-toggle input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--t-primary);
+}
+
+.pricing-settings-grid textarea {
+    resize: vertical;
+}
+
+.pricing-settings-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin-inline: -12px;
+    padding: 18px 12px;
+    background: color-mix(in srgb, var(--t-surface) 94%, transparent);
+    border-top: 1px solid var(--t-border);
+    backdrop-filter: blur(10px);
+}
+
 .establishment-page-shell {
     min-height: 100dvh;
     display: grid;
@@ -134,6 +185,21 @@
     .platform-settings-actions {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .pricing-plan-head {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .pricing-plan-toggles {
+        width: 100%;
+        margin-inline-start: 0;
+    }
+
+    .pricing-toggle {
+        flex: 1 1 0;
+        justify-content: center;
     }
 
     .platform-settings-grid {

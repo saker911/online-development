@@ -48,6 +48,7 @@ body.public-visit-body .app-system-meta-kiosk { display: none !important; }
 .public-visit-field-half { grid-column: span 6; }
 .public-visit-field-wide { grid-column: 1 / -1; }
 .public-visit-field label { color: var(--visit-ink); font-size: 12px; font-weight: 700; }
+.public-visit-field label small { margin-inline-start: 5px; color: var(--visit-accent); font-size: 10px; font-weight: 800; }
 .public-visit-field input, .public-visit-field textarea { width: 100%; min-height: 38px; box-sizing: border-box; border: 1px solid var(--visit-line); border-radius: 7px; background: var(--visit-surface); color: var(--visit-ink); padding: 7px 11px; outline: 0; transition: border-color .16s ease, box-shadow .16s ease; }
 .public-visit-field input:focus, .public-visit-field textarea:focus { border-color: var(--visit-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--visit-accent) 14%, transparent); }
 .public-visit-field .date-input-shell { width: 100%; }

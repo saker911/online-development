@@ -1,0 +1,152 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Visits.VisitorWorkflowSettingsViewModel
+@using VehiclePermitSystemWeb.Models.Entities
+
+@{
+    ViewData["Title"] = "مسار الزيارة";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/platform-settings.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/visitor-workflow.css" asp-append-version="true" />
+}
+
+<main class="platform-settings-shell visitor-workflow-shell">
+    <header class="platform-settings-heading visitor-workflow-heading">
+        <div>
+            <span>بوابة الزوار</span>
+            <h1>مسار الزيارة</h1>
+            <p>حدد البيانات المطلوبة قبل وصول الزائر. تبقى المراجعة الأمنية وإصدار الباركود بعد الاعتماد ثابتتين.</p>
+        </div>
+        <a asp-controller="Visits" asp-action="Index" class="btn btn-outline-secondary">الزيارات والرابط</a>
+    </header>
+
+    <form asp-action="Index" method="post" class="visitor-workflow-form" data-visitor-workflow-form data-confirm-message="هل تريد تطبيق مسار الزيارة الجديد؟">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="field-validation-error visitor-workflow-validation"></div>
+
+        <section class="visitor-workflow-publish" aria-labelledby="workflow-publish-title">
+            <div>
+                <h2 id="workflow-publish-title">استقبال الطلبات</h2>
+                <p>إيقافه يعطّل رابط طلب الزيارة العام دون حذف الطلبات السابقة.</p>
+            </div>
+            <label class="visitor-workflow-switch">
+                <input asp-for="IsEnabled" />
+                <span aria-hidden="true"></span>
+                <strong>الرابط مفعّل</strong>
+            </label>
+        </section>
+
+        <section class="visitor-workflow-section" aria-labelledby="workflow-template-title">
+            <div class="visitor-workflow-section-head">
+                <span>01</span>
+                <div>
+                    <h2 id="workflow-template-title">نمط الاستقبال</h2>
+                    <p>اختيار النمط يضبط الحقول والمدة، ويمكن تعديلها بعد ذلك.</p>
+                </div>
+            </div>
+            <div class="visitor-workflow-templates">
+                <label>
+                    <input type="radio" asp-for="TemplateKey" value="@VisitorWorkflowTemplates.Express" data-workflow-template="express" />
+                    <strong>سريع</strong>
+                    <span>بيانات أقل للزيارات اليومية.</span>
+                </label>
+                <label>
+                    <input type="radio" asp-for="TemplateKey" value="@VisitorWorkflowTemplates.Standard" data-workflow-template="standard" />
+                    <strong>قياسي</strong>
+                    <span>المضيف والموقع وسبب الزيارة.</span>
+                </label>
+                <label>
+                    <input type="radio" asp-for="TemplateKey" value="@VisitorWorkflowTemplates.Secure" data-workflow-template="secure" />
+                    <strong>مشدّد</strong>
+                    <span>هوية إلزامية ووقت تحضير أطول.</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="visitor-workflow-section" aria-labelledby="workflow-fields-title">
+            <div class="visitor-workflow-section-head">
+                <span>02</span>
+                <div>
+                    <h2 id="workflow-fields-title">بيانات الطلب</h2>
+                    <p>الاسم والجوال والموعد والموافقة على الخصوصية ثابتة دائمًا.</p>
+                </div>
+            </div>
+            <div class="visitor-workflow-fields">
+                <article data-workflow-field="identity">
+                    <div><strong>رقم الهوية أو الإقامة</strong><span>قد يخفيه إعداد الخصوصية العام.</span></div>
+                    <label><input asp-for="ShowNationalId" data-workflow-show="identity" /> إظهار</label>
+                    <label><input asp-for="RequireNationalId" data-workflow-require="identity" /> إلزامي</label>
+                </article>
+                <article data-workflow-field="host">
+                    <div><strong>المضيف</strong><span>الموظف أو الشخص المراد زيارته.</span></div>
+                    <label><input asp-for="ShowHostName" data-workflow-show="host" /> إظهار</label>
+                    <label><input asp-for="RequireHostName" data-workflow-require="host" /> إلزامي</label>
+                </article>
+                <article data-workflow-field="location">
+                    <div><strong>مكان الزيارة</strong><span>المبنى أو الموقع المطلوب.</span></div>
+                    <label><input asp-for="ShowVisitLocation" data-workflow-show="location" /> إظهار</label>
+                    <label><input asp-for="RequireVisitLocation" data-workflow-require="location" /> إلزامي</label>
+                </article>
+                <article data-workflow-field="purpose">
+                    <div><strong>سبب الزيارة</strong><span>وصف مختصر لغرض الموعد.</span></div>
+                    <label><input asp-for="ShowPurpose" data-workflow-show="purpose" /> إظهار</label>
+                    <label><input asp-for="RequirePurpose" data-workflow-require="purpose" /> إلزامي</label>
+                </article>
+            </div>
+        </section>
+
+        <section class="visitor-workflow-section" aria-labelledby="workflow-schedule-title">
+            <div class="visitor-workflow-section-head">
+                <span>03</span>
+                <div>
+                    <h2 id="workflow-schedule-title">موعد الزيارة</h2>
+                    <p>النافذة الزمنية المسموح بها في رابط الزائر.</p>
+                </div>
+            </div>
+            <div class="visitor-workflow-schedule">
+                <div class="field-group">
+                    <label asp-for="MinimumLeadMinutes" class="form-label">الحجز قبل الموعد بالدقائق</label>
+                    <input asp-for="MinimumLeadMinutes" class="form-control ltr-field" type="number" min="0" max="1440" />
+                    <span asp-validation-for="MinimumLeadMinutes" class="field-validation-error"></span>
+                </div>
+                <div class="field-group">
+                    <label asp-for="MaximumAdvanceDays" class="form-label">الحجز متاح للأيام القادمة</label>
+                    <input asp-for="MaximumAdvanceDays" class="form-control ltr-field" type="number" min="1" max="90" />
+                    <span asp-validation-for="MaximumAdvanceDays" class="field-validation-error"></span>
+                </div>
+                <div class="field-group span-2">
+                    <label asp-for="WelcomeMessage" class="form-label">رسالة بوابة الزوار</label>
+                    <textarea asp-for="WelcomeMessage" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="WelcomeMessage" class="field-validation-error"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="visitor-workflow-preview" aria-labelledby="workflow-preview-title">
+            <div class="visitor-workflow-section-head">
+                <span>04</span>
+                <div>
+                    <h2 id="workflow-preview-title">المسار المنشور</h2>
+                    <p>المراجعة الأمنية ثابتة ولا يمكن تجاوزها من الرابط العام.</p>
+                </div>
+            </div>
+            <ol>
+                <li><span>1</span><strong>بيانات الزائر</strong><small>الاسم والجوال والموعد</small></li>
+                <li data-workflow-preview-step="identity"><span>2</span><strong>التحقق من الهوية</strong><small>بحسب إعداد الحقل</small></li>
+                <li data-workflow-preview-step="details"><span>3</span><strong>تفاصيل الزيارة</strong><small>المضيف والموقع والغرض</small></li>
+                <li><span>4</span><strong>المراجعة الأمنية</strong><small>طلب معلق حتى الاعتماد</small></li>
+                <li><span>5</span><strong>رمز الدخول</strong><small>يصدر بعد الموافقة</small></li>
+            </ol>
+        </section>
+
+        <footer class="platform-settings-actions visitor-workflow-actions">
+            <span>يطبق التغيير على الطلبات الجديدة فقط.</span>
+            <button type="submit" class="btn btn-primary">حفظ وتطبيق المسار</button>
+        </footer>
+    </form>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/visitor-workflow.js" asp-append-version="true"></script>
+}

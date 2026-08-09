@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VehiclePermitSystemWeb.Data;
@@ -11,9 +12,11 @@ using VehiclePermitSystemWeb.Data;
 namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260808233841_AddSubscriptionPricingManagement")]
+    partial class AddSubscriptionPricingManagement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1620,63 +1623,6 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.HasIndex("VisitId");
 
                     b.ToTable("VisitCompanions");
-                });
-
-            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.VisitorWorkflowSettings", b =>
-                {
-                    b.Property<string>("TenantId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<bool>("IsEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MaximumAdvanceDays")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MinimumLeadMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("RequireHostName")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireNationalId")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequirePurpose")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireVisitLocation")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowHostName")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowNationalId")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowPurpose")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowVisitLocation")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("TemplateKey")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("WelcomeMessage")
-                        .IsRequired()
-                        .HasMaxLength(240)
-                        .HasColumnType("character varying(240)");
-
-                    b.HasKey("TenantId");
-
-                    b.ToTable("VisitorWorkflowSettings");
                 });
 
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.DelegationPermission", b =>

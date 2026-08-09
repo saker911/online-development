@@ -17,18 +17,21 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly SignupAttemptGuard? _signupAttemptGuard;
         private readonly IExternalLoginService? _externalLoginService;
         private readonly IAccountEmailVerificationService? _emailVerificationService;
+        private readonly ISubscriptionPlanService? _subscriptionPlanService;
 
         public SubscriptionController(
             ITenantManagementService tenantManagementService,
             SignupAttemptGuard? signupAttemptGuard = null,
             IExternalLoginService? externalLoginService = null,
-            IAccountEmailVerificationService? emailVerificationService = null
+            IAccountEmailVerificationService? emailVerificationService = null,
+            ISubscriptionPlanService? subscriptionPlanService = null
         )
         {
             _tenantManagementService = tenantManagementService;
             _signupAttemptGuard = signupAttemptGuard;
             _externalLoginService = externalLoginService;
             _emailVerificationService = emailVerificationService;
+            _subscriptionPlanService = subscriptionPlanService;
         }
 
         [HttpGet]
@@ -37,7 +40,7 @@ namespace VehiclePermitSystemWeb.Controllers
             return View(
                 new TenantSignupLandingViewModel
                 {
-                    Plans = TenantPlanCatalog.GetPlans(),
+                    Plans = GetPlans(),
                     SelectedPlanCode = (plan ?? string.Empty).Trim(),
                 }
             );
@@ -46,12 +49,13 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet]
         public IActionResult Register(string? plan = null)
         {
-            var selectedPlan = TenantPlanCatalog.Find(plan) ?? TenantPlanCatalog.GetPlans().First();
+            var plans = GetPlans();
+            var selectedPlan = FindPlan(plan) ?? plans.First();
             return View(
                 new TenantSignupViewModel
                 {
                     PlanCode = selectedPlan.Code,
-                    Plans = TenantPlanCatalog.GetPlans(),
+                    Plans = plans,
                     OwnerFullName = TempData.Peek("ExternalSignupName") as string ?? string.Empty,
                     OwnerEmail = TempData.Peek("ExternalSignupEmail") as string ?? string.Empty,
                 }
@@ -140,7 +144,7 @@ namespace VehiclePermitSystemWeb.Controllers
             model.OwnerPhoneNumber = (model.OwnerPhoneNumber ?? string.Empty).Trim();
             model.OwnerEmail = (model.OwnerEmail ?? string.Empty).Trim();
             model.Website = (model.Website ?? string.Empty).Trim();
-            model.Plans = TenantPlanCatalog.GetPlans();
+            model.Plans = GetPlans();
 
             if (!string.IsNullOrWhiteSpace(model.Website))
             {
@@ -360,5 +364,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 ? null
                 : new ExternalIdentity(provider, issuer, subject, email);
         }
+
+        private IReadOnlyList<TenantPlanViewModel> GetPlans() =>
+            _subscriptionPlanService?.GetPublicPlans() ?? TenantPlanCatalog.GetPlans();
+
+        private TenantPlanViewModel? FindPlan(string? code) =>
+            _subscriptionPlanService?.Find(code) ?? TenantPlanCatalog.Find(code);
     }
 }

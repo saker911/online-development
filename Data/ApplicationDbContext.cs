@@ -54,6 +54,9 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<AdministrationSettings> AdministrationSettings =>
             Set<AdministrationSettings>();
         public DbSet<PlatformSettings> PlatformSettings => Set<PlatformSettings>();
+        public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+        public DbSet<VisitorWorkflowSettings> VisitorWorkflowSettings =>
+            Set<VisitorWorkflowSettings>();
         public DbSet<DisplayDevice> DisplayDevices => Set<DisplayDevice>();
         public DbSet<DisplaySecuritySettings> DisplaySecuritySettings =>
             Set<DisplaySecuritySettings>();
@@ -81,6 +84,8 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<DelegationPermission>().HasKey(x => x.Id);
             modelBuilder.Entity<AdministrationSettings>().HasKey(x => x.Id);
             modelBuilder.Entity<PlatformSettings>().HasKey(x => x.Id);
+            modelBuilder.Entity<SubscriptionPlan>().HasKey(x => x.Code);
+            modelBuilder.Entity<VisitorWorkflowSettings>().HasKey(x => x.TenantId);
             modelBuilder.Entity<DisplayDevice>().HasKey(x => x.Id);
             modelBuilder.Entity<DisplaySecuritySettings>().HasKey(x => x.Id);
             modelBuilder.Entity<ExternalUserLogin>().HasKey(x => x.Id);
@@ -92,6 +97,8 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Tenant>().Property(x => x.Slug).HasMaxLength(256);
             modelBuilder.Entity<Tenant>().Property(x => x.SubscriptionStatus).HasMaxLength(32);
             modelBuilder.Entity<Tenant>().Property(x => x.PlanName).HasMaxLength(128);
+            modelBuilder.Entity<Tenant>().Property(x => x.SignupPlanCode).HasMaxLength(64);
+            modelBuilder.Entity<Tenant>().Property(x => x.SignupPlanPrice).HasPrecision(18, 2);
             modelBuilder.Entity<Tenant>().HasIndex(x => x.Slug).IsUnique();
             modelBuilder.Entity<PlatformSettings>().Property(x => x.ProviderName).HasMaxLength(256);
             modelBuilder
@@ -120,6 +127,26 @@ namespace VehiclePermitSystemWeb.Data
                 .Property(x => x.DataHostingLocation)
                 .HasMaxLength(256);
             modelBuilder.Entity<PlatformSettings>().Property(x => x.BackupPolicy).HasMaxLength(1000);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.Code).HasMaxLength(64);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.Name).HasMaxLength(96);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.Summary).HasMaxLength(320);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.Price).HasPrecision(18, 2);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.OriginalPrice).HasPrecision(18, 2);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.OfferLabel).HasMaxLength(64);
+            modelBuilder.Entity<SubscriptionPlan>().Property(x => x.FeaturesJson).HasMaxLength(4000);
+            modelBuilder.Entity<SubscriptionPlan>().HasIndex(x => x.SortOrder);
+            modelBuilder
+                .Entity<VisitorWorkflowSettings>()
+                .Property(x => x.TenantId)
+                .HasMaxLength(64);
+            modelBuilder
+                .Entity<VisitorWorkflowSettings>()
+                .Property(x => x.TemplateKey)
+                .HasMaxLength(24);
+            modelBuilder
+                .Entity<VisitorWorkflowSettings>()
+                .Property(x => x.WelcomeMessage)
+                .HasMaxLength(240);
             ConfigureTenantScopedEntity<Permit>(modelBuilder);
             ConfigureTenantScopedEntity<Visit>(modelBuilder);
             ConfigureTenantScopedEntity<VisitCompanion>(modelBuilder);
@@ -132,6 +159,9 @@ namespace VehiclePermitSystemWeb.Data
             ConfigureTenantScopedEntity<Delegation>(modelBuilder);
             ConfigureTenantScopedEntity<DelegationPermission>(modelBuilder);
             ConfigureTenantScopedEntity<AdministrationSettings>(modelBuilder);
+            modelBuilder
+                .Entity<VisitorWorkflowSettings>()
+                .HasQueryFilter(settings => settings.TenantId == CurrentTenantId);
             ConfigureTenantScopedEntity<DisplayDevice>(modelBuilder);
             ConfigureTenantScopedEntity<DisplaySecuritySettings>(modelBuilder);
             ConfigureTenantScopedEntity<ExternalUserLogin>(modelBuilder);

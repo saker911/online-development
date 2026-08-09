@@ -1,12 +1,13 @@
 @using VehiclePermitSystemWeb.Services.Administration
 @using VehiclePermitSystemWeb.Services.Tenants
+@inject ISubscriptionPlanService SubscriptionPlanService
 @{
     ViewData["Title"] = ProductIdentity.DisplayName;
     ViewData["Description"] = ProductIdentity.Description;
     ViewData["CanonicalPath"] = "/";
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "public-landing-body";
-    var plans = TenantPlanCatalog.GetPlans();
+    var plans = SubscriptionPlanService.GetPublicPlans();
 }
 
 <main class="public-landing-shell">
@@ -31,7 +32,7 @@
 
     <section class="public-landing-hero">
         <div class="public-landing-copy">
-            <span class="public-landing-kicker">تشغيل احترافي للبوابات والاستقبال</span>
+            <span class="public-landing-kicker">مرحباً بكم في منصة التصاريح</span>
             <h1>كل دخول واضح.<br />كل بوابة تحت السيطرة.</h1>
             <p>
                 نظّم الزوار والتصاريح والمركبات في مسار رقمي واحد، من الطلب والموافقة
@@ -47,7 +48,71 @@
                 <span>صلاحيات دقيقة للفريق</span>
             </div>
         </div>
+        <figure class="public-landing-product-visual" aria-label="منظومة تصاريح عبر البوابة والجوال ولوحة التشغيل">
+            <div class="product-ecosystem-scene" aria-hidden="true">
+                <div class="product-scene-backdrop"></div>
 
+                <div class="product-scene-monitor">
+                    <div class="product-scene-monitor-frame">
+                        <div class="product-scene-dashboard">
+                            <aside class="product-scene-sidebar">
+                                <span class="product-scene-mini-brand">
+                                    <img src="~/@ProductIdentity.MarkPath" alt="" />
+                                    <b>تصاريح</b>
+                                </span>
+                                <i class="is-active"></i><i></i><i></i><i></i><i></i>
+                            </aside>
+                            <div class="product-scene-workspace">
+                                <header><b>لوحة العمليات</b><span></span><span></span></header>
+                                <div class="product-scene-metrics">
+                                    <span><small>التصاريح</small><b>564</b><i></i></span>
+                                    <span><small>الزوار</small><b>342</b><i></i></span>
+                                    <span><small>الموجودون</small><b>87</b><i></i></span>
+                                    <span><small>البوابات</small><b>12</b><i></i></span>
+                                </div>
+                                <div class="product-scene-table">
+                                    <strong>آخر العمليات</strong>
+                                    <div><i></i><span></span><span></span><b>مسموح</b></div>
+                                    <div><i></i><span></span><span></span><b>مسموح</b></div>
+                                    <div><i></i><span></span><span></span><b>مراجعة</b></div>
+                                    <div><i></i><span></span><span></span><b>مسموح</b></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-scene-monitor-neck"></div>
+                    <div class="product-scene-monitor-base"></div>
+                </div>
+
+                <div class="product-scene-scanner">
+                    <div class="product-scene-scanner-body">
+                        <span class="product-scene-mini-brand"><img src="~/@ProductIdentity.MarkPath" alt="" /><b>تصاريح</b></span>
+                        <small>امسح التصريح</small>
+                        <span class="product-scene-qr"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                        <b class="product-scene-status">جاهز للمسح</b>
+                    </div>
+                    <div class="product-scene-scanner-neck"></div>
+                    <div class="product-scene-scanner-base"></div>
+                </div>
+
+                <div class="product-scene-phone">
+                    <span class="product-scene-phone-speaker"></span>
+                    <span class="product-scene-mini-brand"><img src="~/@ProductIdentity.MarkPath" alt="" /><b>تصريح دخول</b></span>
+                    <small>نشط</small>
+                    <span class="product-scene-qr"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                    <b>TAS-2048</b>
+                </div>
+
+                <div class="product-scene-guard">
+                    <header><span class="product-scene-mini-brand"><img src="~/@ProductIdentity.MarkPath" alt="" /><b>البوابة</b></span><i></i></header>
+                    <strong>الموجودون الآن <b>87</b></strong>
+                    <div><i></i><span></span><b>تم الدخول</b></div>
+                    <div><i></i><span></span><b>تم الدخول</b></div>
+                    <div><i></i><span></span><b>بانتظار التحقق</b></div>
+                    <div><i></i><span></span><b>تم الدخول</b></div>
+                </div>
+            </div>
+        </figure>
     </section>
 
     <section class="public-proof-strip" aria-label="مزايا التشغيل الأساسية">
@@ -112,11 +177,17 @@
             {
                 <article class="@(plan.IsFeatured ? "is-featured" : "")">
                     <div>
-                        <span>@(plan.IsFeatured ? "الأكثر استخدامًا" : "باقة مرنة")</span>
+                        <span>@(!string.IsNullOrWhiteSpace(plan.BadgeText) ? plan.BadgeText : "باقة مرنة")</span>
                         <h3>@plan.Name</h3>
                         <p>@plan.Summary</p>
                     </div>
-                    <strong>@plan.PriceText</strong>
+                    <div class="public-plan-price">
+                        <strong>@plan.PriceText</strong>
+                        @if (!string.IsNullOrWhiteSpace(plan.OriginalPriceText))
+                        {
+                            <del>@plan.OriginalPriceText</del>
+                        }
+                    </div>
                     <ul>
                         <li>@plan.DurationText</li>
                         <li>جميع خدمات النظام</li>

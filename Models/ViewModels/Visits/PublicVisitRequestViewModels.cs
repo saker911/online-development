@@ -6,6 +6,15 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
     {
         public string TenantSlug { get; set; } = string.Empty;
         public string OrganizationName { get; set; } = string.Empty;
+        public string WelcomeMessage { get; set; } = string.Empty;
+        public bool ShowNationalId { get; set; } = true;
+        public bool RequireNationalId { get; set; }
+        public bool ShowHostName { get; set; } = true;
+        public bool RequireHostName { get; set; } = true;
+        public bool ShowVisitLocation { get; set; } = true;
+        public bool RequireVisitLocation { get; set; } = true;
+        public bool ShowPurpose { get; set; } = true;
+        public bool RequirePurpose { get; set; } = true;
 
         [Display(Name = "الاسم الكامل")]
         [Required(ErrorMessage = "يرجى إدخال الاسم الكامل.")]
@@ -26,17 +35,14 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
         public DateTime VisitDate { get; set; }
 
         [Display(Name = "الشخص المراد زيارته")]
-        [Required(ErrorMessage = "يرجى إدخال اسم الشخص المراد زيارته.")]
         [StringLength(128, ErrorMessage = "اسم الشخص يجب ألا يتجاوز 128 حرفًا.")]
         public string VisitedPersonName { get; set; } = string.Empty;
 
         [Display(Name = "مكان الزيارة")]
-        [Required(ErrorMessage = "يرجى إدخال مكان الزيارة.")]
         [StringLength(256, ErrorMessage = "مكان الزيارة يجب ألا يتجاوز 256 حرفًا.")]
         public string VisitLocation { get; set; } = string.Empty;
 
         [Display(Name = "سبب الزيارة")]
-        [Required(ErrorMessage = "يرجى توضيح سبب الزيارة.")]
         [StringLength(256, ErrorMessage = "سبب الزيارة يجب ألا يتجاوز 256 حرفًا.")]
         public string Purpose { get; set; } = string.Empty;
 

@@ -491,6 +491,8 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteDelegationsTables(db);
             EnsureSqliteDisplayDeviceTables(db);
             EnsureSqlitePlatformSettingsTable(db);
+            EnsureSqliteSubscriptionPlansTable(db);
+            EnsureSqliteVisitorWorkflowSettingsTable(db);
             EnsureSqliteTenancySchema(db);
         }
 
@@ -544,6 +546,9 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     CreatedAtUtc TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     SubscriptionStatus TEXT NOT NULL DEFAULT 'Active',
                     PlanName TEXT NOT NULL DEFAULT 'أساسية',
+                    SignupPlanCode TEXT NOT NULL DEFAULT '',
+                    SignupPlanPrice TEXT NULL,
+                    SignupPlanDurationMonths INTEGER NULL,
                     TrialEndsAtUtc TEXT NULL,
                     SubscriptionEndsAtUtc TEXT NULL,
                     MaxUsers INTEGER NULL,
@@ -561,6 +566,9 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "TEXT NOT NULL DEFAULT 'Active'"
             );
             EnsureSqliteColumn(db, "Tenants", "PlanName", "TEXT NOT NULL DEFAULT 'أساسية'");
+            EnsureSqliteColumn(db, "Tenants", "SignupPlanCode", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "Tenants", "SignupPlanPrice", "TEXT NULL");
+            EnsureSqliteColumn(db, "Tenants", "SignupPlanDurationMonths", "INTEGER NULL");
             EnsureSqliteColumn(db, "Tenants", "TrialEndsAtUtc", "TEXT NULL");
             EnsureSqliteColumn(db, "Tenants", "SubscriptionEndsAtUtc", "TEXT NULL");
             EnsureSqliteColumn(db, "Tenants", "SignupExpiresAtUtc", "TEXT NULL");
@@ -627,6 +635,54 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     ""DataHostingLocation"" TEXT NOT NULL DEFAULT '',
                     ""BackupPolicy"" TEXT NOT NULL DEFAULT '',
                     ""UpdatedAtUtc"" TEXT NULL
+                );"
+            );
+        }
+
+        private static void EnsureSqliteSubscriptionPlansTable(ApplicationDbContext db)
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS ""SubscriptionPlans"" (
+                    ""Code"" TEXT NOT NULL CONSTRAINT ""PK_SubscriptionPlans"" PRIMARY KEY,
+                    ""Name"" TEXT NOT NULL DEFAULT '',
+                    ""Summary"" TEXT NOT NULL DEFAULT '',
+                    ""DurationMonths"" INTEGER NOT NULL,
+                    ""Price"" TEXT NOT NULL,
+                    ""OriginalPrice"" TEXT NULL,
+                    ""OfferLabel"" TEXT NOT NULL DEFAULT '',
+                    ""OfferStartsAtUtc"" TEXT NULL,
+                    ""OfferEndsAtUtc"" TEXT NULL,
+                    ""IsFeatured"" INTEGER NOT NULL DEFAULT 0,
+                    ""IsActive"" INTEGER NOT NULL DEFAULT 1,
+                    ""SortOrder"" INTEGER NOT NULL DEFAULT 0,
+                    ""FeaturesJson"" TEXT NOT NULL DEFAULT '[]',
+                    ""UpdatedAtUtc"" TEXT NOT NULL
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_SubscriptionPlans_SortOrder ON SubscriptionPlans (SortOrder);"
+            );
+        }
+
+        private static void EnsureSqliteVisitorWorkflowSettingsTable(ApplicationDbContext db)
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS ""VisitorWorkflowSettings"" (
+                    ""TenantId"" TEXT NOT NULL CONSTRAINT ""PK_VisitorWorkflowSettings"" PRIMARY KEY,
+                    ""TemplateKey"" TEXT NOT NULL DEFAULT 'Standard',
+                    ""IsEnabled"" INTEGER NOT NULL DEFAULT 1,
+                    ""ShowNationalId"" INTEGER NOT NULL DEFAULT 1,
+                    ""RequireNationalId"" INTEGER NOT NULL DEFAULT 0,
+                    ""ShowHostName"" INTEGER NOT NULL DEFAULT 1,
+                    ""RequireHostName"" INTEGER NOT NULL DEFAULT 1,
+                    ""ShowVisitLocation"" INTEGER NOT NULL DEFAULT 1,
+                    ""RequireVisitLocation"" INTEGER NOT NULL DEFAULT 1,
+                    ""ShowPurpose"" INTEGER NOT NULL DEFAULT 1,
+                    ""RequirePurpose"" INTEGER NOT NULL DEFAULT 1,
+                    ""MinimumLeadMinutes"" INTEGER NOT NULL DEFAULT 5,
+                    ""MaximumAdvanceDays"" INTEGER NOT NULL DEFAULT 30,
+                    ""WelcomeMessage"" TEXT NOT NULL DEFAULT '',
+                    ""UpdatedAtUtc"" TEXT NOT NULL
                 );"
             );
         }

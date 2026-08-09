@@ -776,6 +776,11 @@
                                                         <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#administration")"></use></svg>
                                                         <span>بيانات مالك المنصة</span>
                                                     </a>
+                                                    <a class="app-sidebar-link @(isControllerActive("Pricing") ? "active" : string.Empty)"
+                                                           asp-controller="Pricing" asp-action="Index">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#reports")"></use></svg>
+                                                        <span>الأسعار والعروض</span>
+                                                    </a>
                                                 }
                                                 @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDelegations))
                                                 {
@@ -787,6 +792,14 @@
                                                 }
                                                 @if (canManageDepartments || canManageAdministration)
                                                 {
+                                                    @if (canManageAdministration)
+                                                    {
+                                                        <a class="app-sidebar-link @(isControllerActive("VisitorWorkflow") ? "active" : string.Empty)"
+                                                               asp-controller="VisitorWorkflow" asp-action="Index">
+                                                            <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#visit")"></use></svg>
+                                                            <span>مسار الزيارة</span>
+                                                        </a>
+                                                    }
                                                     <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Edit", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
                                                            asp-controller="Administration" asp-action="Edit">
                                                         <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#administration")"></use></svg>

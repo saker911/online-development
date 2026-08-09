@@ -58,17 +58,22 @@ namespace VehiclePermitSystemWeb.Services.Tenants
 
         public static TenantPlanViewModel? Find(string? code)
         {
-            var normalizedCode = (code ?? string.Empty).Trim();
-            normalizedCode = normalizedCode.ToLowerInvariant() switch
+            var normalizedCode = NormalizeCode(code);
+            return Plans.FirstOrDefault(plan =>
+                string.Equals(plan.Code, normalizedCode, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        public static string NormalizeCode(string? code)
+        {
+            var normalizedCode = (code ?? string.Empty).Trim().ToLowerInvariant();
+            return normalizedCode switch
             {
                 "visitors" => "monthly",
                 "operations" => "six-months",
                 "enterprise" => "annual",
                 _ => normalizedCode,
             };
-            return Plans.FirstOrDefault(plan =>
-                string.Equals(plan.Code, normalizedCode, StringComparison.OrdinalIgnoreCase)
-            );
         }
     }
 }

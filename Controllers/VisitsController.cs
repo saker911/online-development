@@ -48,6 +48,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
         private readonly ITimeLimitedDataProtector _publicVisitProtector;
+        private readonly IVisitorWorkflowService? _visitorWorkflowService;
 
         public VisitsController(
             IVisitService visitService,
@@ -56,7 +57,8 @@ namespace VehiclePermitSystemWeb.Controllers
             IAccessControlService accessControl,
             IWebHostEnvironment environment,
             IConfiguration configuration,
-            IDataProtectionProvider dataProtectionProvider
+            IDataProtectionProvider dataProtectionProvider,
+            IVisitorWorkflowService? visitorWorkflowService = null
         )
         {
             _visitService = visitService;
@@ -65,6 +67,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _accessControl = accessControl;
             _environment = environment;
             _configuration = configuration;
+            _visitorWorkflowService = visitorWorkflowService;
             _publicVisitProtector = dataProtectionProvider
                 .CreateProtector("VehiclePermitSystem.PublicVisitStatus.v1")
                 .ToTimeLimitedDataProtector();
@@ -81,15 +84,20 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var now = _systemClock.LocalNow;
-            ConfigurePublicRequestView(now);
-            return View(
-                new PublicVisitRequestViewModel
-                {
-                    TenantSlug = resolvedTenant.Slug,
-                    OrganizationName = ResolvePublicOrganizationName(resolvedTenant),
-                    VisitDate = now.AddMinutes(30),
-                }
-            );
+            var workflow = GetVisitorWorkflowSettings();
+            if (!workflow.IsEnabled)
+            {
+                return NotFound();
+            }
+
+            var model = new PublicVisitRequestViewModel
+            {
+                TenantSlug = resolvedTenant.Slug,
+                OrganizationName = ResolvePublicOrganizationName(resolvedTenant),
+                VisitDate = now.AddMinutes(Math.Max(30, workflow.MinimumLeadMinutes + 5)),
+            };
+            ConfigurePublicRequestView(now, model, workflow);
+            return View(model);
         }
 
         [AllowAnonymous]
@@ -105,12 +113,20 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var now = _systemClock.LocalNow;
+            var workflow = GetVisitorWorkflowSettings();
+            if (!workflow.IsEnabled)
+            {
+                return NotFound();
+            }
+
             model.TenantSlug = resolvedTenant.Slug;
             model.OrganizationName = ResolvePublicOrganizationName(resolvedTenant);
+            ConfigurePublicRequestView(now, model, workflow);
             NormalizePublicRequestInput(model);
             ModelState.Clear();
             TryValidateModel(model);
-            ValidatePublicRequestSchedule(model, now);
+            ValidatePublicRequestWorkflow(model);
+            ValidatePublicRequestSchedule(model, workflow, now);
 
             if (!string.IsNullOrWhiteSpace(model.Website))
             {
@@ -119,12 +135,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (!ModelState.IsValid)
             {
-                ConfigurePublicRequestView(now);
                 return View(model);
             }
 
             var nationalId = string.IsNullOrWhiteSpace(model.NationalId)
-                || OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                || !model.ShowNationalId
                     ? OnlineEditionSettings.BuildSyntheticNationalId(
                         model.VisitorName,
                         model.PhoneNumber,
@@ -139,11 +154,19 @@ namespace VehiclePermitSystemWeb.Controllers
                 PhoneNumber = model.PhoneNumber,
                 NationalId = nationalId,
                 VisitDate = model.VisitDate,
-                VisitedPersonName = model.VisitedPersonName,
-                HostName = model.VisitedPersonName,
+                VisitedPersonName = string.IsNullOrWhiteSpace(model.VisitedPersonName)
+                    ? "الاستقبال"
+                    : model.VisitedPersonName,
+                HostName = string.IsNullOrWhiteSpace(model.VisitedPersonName)
+                    ? "الاستقبال"
+                    : model.VisitedPersonName,
                 VisitedPersonType = Visit.VisitedPersonTypeHost,
-                VisitLocation = model.VisitLocation,
-                Purpose = model.Purpose,
+                VisitLocation = string.IsNullOrWhiteSpace(model.VisitLocation)
+                    ? "الموقع الرئيسي"
+                    : model.VisitLocation,
+                Purpose = string.IsNullOrWhiteSpace(model.Purpose)
+                    ? "زيارة عامة"
+                    : model.Purpose,
                 RequestSource = Visit.RequestSourcePublicSelfService,
                 RequestedAtUtc = _systemClock.UtcNow,
                 Status = "Active",
@@ -805,6 +828,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         StringComparison.OrdinalIgnoreCase
                     ));
             var publicRequestUrl = currentTenant == null
+                || !GetVisitorWorkflowSettings().IsEnabled
                 || SubscriptionAccessMiddleware.IsSubscriptionRestricted(currentTenant, DateTime.UtcNow)
                     ? string.Empty
                     : Url.Action(
@@ -864,11 +888,31 @@ namespace VehiclePermitSystemWeb.Controllers
                 : administration.OrganizationName.Trim();
         }
 
-        private void ConfigurePublicRequestView(DateTime now)
+        private void ConfigurePublicRequestView(
+            DateTime now,
+            PublicVisitRequestViewModel model,
+            VisitorWorkflowSettingsViewModel workflow
+        )
         {
-            ViewData["HideSensitiveIdentityFields"] = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration);
-            ViewData["VisitDateMin"] = now.AddMinutes(5).ToString("yyyy-MM-ddTHH:mm");
-            ViewData["VisitDateMax"] = now.AddDays(30).ToString("yyyy-MM-ddTHH:mm");
+            var sensitiveIdentityHidden = OnlineEditionSettings.HideSensitiveIdentityFields(
+                _configuration
+            );
+            model.ShowNationalId = workflow.ShowNationalId && !sensitiveIdentityHidden;
+            model.RequireNationalId = model.ShowNationalId && workflow.RequireNationalId;
+            model.ShowHostName = workflow.ShowHostName;
+            model.RequireHostName = workflow.ShowHostName && workflow.RequireHostName;
+            model.ShowVisitLocation = workflow.ShowVisitLocation;
+            model.RequireVisitLocation = workflow.ShowVisitLocation
+                && workflow.RequireVisitLocation;
+            model.ShowPurpose = workflow.ShowPurpose;
+            model.RequirePurpose = workflow.ShowPurpose && workflow.RequirePurpose;
+            model.WelcomeMessage = workflow.WelcomeMessage;
+            ViewData["VisitDateMin"] = now
+                .AddMinutes(workflow.MinimumLeadMinutes)
+                .ToString("yyyy-MM-ddTHH:mm");
+            ViewData["VisitDateMax"] = now
+                .AddDays(workflow.MaximumAdvanceDays)
+                .ToString("yyyy-MM-ddTHH:mm");
         }
 
         private static void NormalizePublicRequestInput(PublicVisitRequestViewModel model)
@@ -881,18 +925,62 @@ namespace VehiclePermitSystemWeb.Controllers
             model.Purpose = (model.Purpose ?? string.Empty).Trim();
         }
 
-        private void ValidatePublicRequestSchedule(PublicVisitRequestViewModel model, DateTime now)
+        private void ValidatePublicRequestWorkflow(PublicVisitRequestViewModel model)
         {
-            if (TruncateToMinute(model.VisitDate) < TruncateToMinute(now.AddMinutes(5)))
+            if (model.ShowNationalId && model.RequireNationalId
+                && string.IsNullOrWhiteSpace(model.NationalId))
             {
-                ModelState.AddModelError(nameof(model.VisitDate), "اختر موعدًا بعد الوقت الحالي بخمس دقائق على الأقل.");
+                ModelState.AddModelError(nameof(model.NationalId), "يرجى إدخال رقم الهوية أو الإقامة.");
             }
 
-            if (model.VisitDate > now.AddDays(30))
+            if (model.ShowHostName && model.RequireHostName
+                && string.IsNullOrWhiteSpace(model.VisitedPersonName))
             {
-                ModelState.AddModelError(nameof(model.VisitDate), "يمكن طلب موعد خلال الثلاثين يومًا القادمة فقط.");
+                ModelState.AddModelError(nameof(model.VisitedPersonName), "يرجى إدخال اسم الشخص المراد زيارته.");
+            }
+
+            if (model.ShowVisitLocation && model.RequireVisitLocation
+                && string.IsNullOrWhiteSpace(model.VisitLocation))
+            {
+                ModelState.AddModelError(nameof(model.VisitLocation), "يرجى إدخال مكان الزيارة.");
+            }
+
+            if (model.ShowPurpose && model.RequirePurpose
+                && string.IsNullOrWhiteSpace(model.Purpose))
+            {
+                ModelState.AddModelError(nameof(model.Purpose), "يرجى توضيح سبب الزيارة.");
             }
         }
+
+        private void ValidatePublicRequestSchedule(
+            PublicVisitRequestViewModel model,
+            VisitorWorkflowSettingsViewModel workflow,
+            DateTime now
+        )
+        {
+            if (TruncateToMinute(model.VisitDate)
+                < TruncateToMinute(now.AddMinutes(workflow.MinimumLeadMinutes)))
+            {
+                ModelState.AddModelError(
+                    nameof(model.VisitDate),
+                    workflow.MinimumLeadMinutes == 0
+                        ? "اختر موعدًا صحيحًا يبدأ من الوقت الحالي."
+                        : $"اختر موعدًا بعد الوقت الحالي بـ {workflow.MinimumLeadMinutes} دقيقة على الأقل."
+                );
+            }
+
+            if (model.VisitDate > now.AddDays(workflow.MaximumAdvanceDays))
+            {
+                ModelState.AddModelError(
+                    nameof(model.VisitDate),
+                    $"يمكن طلب موعد خلال {workflow.MaximumAdvanceDays} يومًا القادمة فقط."
+                );
+            }
+        }
+
+        private VisitorWorkflowSettingsViewModel GetVisitorWorkflowSettings() =>
+            _visitorWorkflowService?.GetSettings()
+            ?? VisitorWorkflowSettingsViewModel.CreateDefault();
 
         private bool TryReadPublicVisitToken(string? token, string tenantId, out string visitId)
         {

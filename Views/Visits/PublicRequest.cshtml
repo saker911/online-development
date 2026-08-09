@@ -5,8 +5,6 @@
     ViewData["HideShell"] = true;
     ViewData["BodyClass"] = "public-visit-body";
     ViewData["Robots"] = "noindex,nofollow,noarchive";
-    var hideIdentity = ViewData["HideSensitiveIdentityFields"] as bool? ?? false;
-    var secondaryFieldClass = hideIdentity ? "public-visit-field-half" : "public-visit-field-third";
 }
 
 @section Styles {
@@ -28,7 +26,7 @@
         <div class="public-visit-intro">
             <span class="public-visit-eyebrow">بوابة الزوار</span>
             <h1 id="public-visit-title">طلب زيارة</h1>
-            <p>أدخل بيانات الزيارة، وسيصل الطلب إلى @Model.OrganizationName للمراجعة.</p>
+            <p>@Model.WelcomeMessage</p>
             <div class="public-visit-flow-note">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm-1 5h2v5h-2V8Zm0 7h2v2h-2v-2Z" fill="currentColor" /></svg>
                 <span>بعد الإرسال احتفظ برابط المتابعة؛ يظهر رمز الدخول بعد اعتماد الطلب.</span>
@@ -62,11 +60,13 @@
                         <input asp-for="PhoneNumber" class="form-control ltr-field" inputmode="numeric" autocomplete="tel" dir="ltr" placeholder="05xxxxxxxx" />
                         <span asp-validation-for="PhoneNumber"></span>
                     </div>
-                    @if (!hideIdentity)
+                    @if (Model.ShowNationalId)
                     {
                         <div class="public-visit-field public-visit-field-third">
-                            <label asp-for="NationalId"></label>
-                            <input asp-for="NationalId" class="form-control ltr-field" inputmode="numeric" dir="ltr" maxlength="10" placeholder="اختياري" />
+                            <label asp-for="NationalId">رقم الهوية أو الإقامة @if (Model.RequireNationalId) { <small>مطلوب</small> }</label>
+                            <input asp-for="NationalId" class="form-control ltr-field" inputmode="numeric" dir="ltr" maxlength="10"
+                                   aria-required="@Model.RequireNationalId.ToString().ToLowerInvariant()"
+                                   placeholder="@(Model.RequireNationalId ? "10 أرقام" : "اختياري")" />
                             <span asp-validation-for="NationalId"></span>
                         </div>
                     }
@@ -86,21 +86,30 @@
                         </div>
                         <span asp-validation-for="VisitDate"></span>
                     </div>
-                    <div class="public-visit-field @secondaryFieldClass">
-                        <label asp-for="VisitedPersonName"></label>
-                        <input asp-for="VisitedPersonName" class="form-control" placeholder="اسم المضيف أو الموظف" />
-                        <span asp-validation-for="VisitedPersonName"></span>
-                    </div>
-                    <div class="public-visit-field @secondaryFieldClass">
-                        <label asp-for="VisitLocation"></label>
-                        <input asp-for="VisitLocation" class="form-control" placeholder="المبنى أو الموقع" />
-                        <span asp-validation-for="VisitLocation"></span>
-                    </div>
-                    <div class="public-visit-field public-visit-field-wide">
-                        <label asp-for="Purpose"></label>
-                        <input asp-for="Purpose" class="form-control" placeholder="اكتب سبب الزيارة باختصار" />
-                        <span asp-validation-for="Purpose"></span>
-                    </div>
+                    @if (Model.ShowHostName)
+                    {
+                        <div class="public-visit-field public-visit-field-third">
+                            <label asp-for="VisitedPersonName">الشخص المراد زيارته @if (Model.RequireHostName) { <small>مطلوب</small> }</label>
+                            <input asp-for="VisitedPersonName" class="form-control" aria-required="@Model.RequireHostName.ToString().ToLowerInvariant()" placeholder="اسم المضيف أو الموظف" />
+                            <span asp-validation-for="VisitedPersonName"></span>
+                        </div>
+                    }
+                    @if (Model.ShowVisitLocation)
+                    {
+                        <div class="public-visit-field public-visit-field-third">
+                            <label asp-for="VisitLocation">مكان الزيارة @if (Model.RequireVisitLocation) { <small>مطلوب</small> }</label>
+                            <input asp-for="VisitLocation" class="form-control" aria-required="@Model.RequireVisitLocation.ToString().ToLowerInvariant()" placeholder="المبنى أو الموقع" />
+                            <span asp-validation-for="VisitLocation"></span>
+                        </div>
+                    }
+                    @if (Model.ShowPurpose)
+                    {
+                        <div class="public-visit-field public-visit-field-wide">
+                            <label asp-for="Purpose">سبب الزيارة @if (Model.RequirePurpose) { <small>مطلوب</small> }</label>
+                            <input asp-for="Purpose" class="form-control" aria-required="@Model.RequirePurpose.ToString().ToLowerInvariant()" placeholder="اكتب سبب الزيارة باختصار" />
+                            <span asp-validation-for="Purpose"></span>
+                        </div>
+                    }
                 </div>
 
                 <div class="public-visit-form-footer">

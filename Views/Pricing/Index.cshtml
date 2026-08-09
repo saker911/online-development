@@ -1,0 +1,107 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Platform.SubscriptionPricingViewModel
+
+@{
+    ViewData["Title"] = "الأسعار والعروض";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/platform-settings.css" asp-append-version="true" />
+}
+
+<main class="platform-settings-shell pricing-settings-shell">
+    <header class="platform-settings-heading">
+        <div>
+            <span>إدارة تجارية</span>
+            <h1>الأسعار والعروض</h1>
+            <p>تحكم في الباقات المنشورة للعملاء الجدد. يحتفظ كل طلب قائم بالسعر والمدة المسجلين وقت إنشائه.</p>
+        </div>
+        <a asp-controller="Subscription" asp-action="Plans" class="btn btn-outline-secondary" target="_blank" rel="noopener">معاينة الباقات</a>
+    </header>
+
+    <form asp-action="Index" method="post" class="platform-settings-form" data-confirm-message="هل تريد نشر الأسعار والعروض الجديدة؟">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="field-validation-error pricing-validation-summary"></div>
+
+        @for (var index = 0; index < Model.Plans.Count; index++)
+        {
+            var plan = Model.Plans[index];
+            <section class="platform-settings-section pricing-plan-editor" aria-labelledby="plan-title-@index">
+                <input asp-for="Plans[index].Code" type="hidden" />
+                <div class="platform-settings-section-head pricing-plan-head">
+                    <span>@(index + 1)</span>
+                    <div>
+                        <h2 id="plan-title-@index">@plan.Name</h2>
+                        <p class="ltr-field">@plan.Code</p>
+                    </div>
+                    <div class="pricing-plan-toggles">
+                        <label class="pricing-toggle">
+                            <input asp-for="Plans[index].IsActive" type="checkbox" />
+                            <span>منشورة</span>
+                        </label>
+                        <label class="pricing-toggle">
+                            <input type="radio" asp-for="FeaturedPlanCode" value="@plan.Code" />
+                            <span>الباقة المميزة</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="platform-settings-grid pricing-settings-grid">
+                    <div class="field-group">
+                        <label asp-for="Plans[index].Name" class="form-label">اسم الباقة</label>
+                        <input asp-for="Plans[index].Name" class="form-control" />
+                        <span asp-validation-for="Plans[index].Name" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group">
+                        <label asp-for="Plans[index].DurationMonths" class="form-label">المدة بالأشهر</label>
+                        <input asp-for="Plans[index].DurationMonths" class="form-control ltr-field" type="number" min="1" max="120" />
+                        <span asp-validation-for="Plans[index].DurationMonths" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group span-2">
+                        <label asp-for="Plans[index].Summary" class="form-label">الوصف التسويقي المختصر</label>
+                        <input asp-for="Plans[index].Summary" class="form-control" />
+                        <span asp-validation-for="Plans[index].Summary" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group">
+                        <label asp-for="Plans[index].Price" class="form-label">السعر الحالي (ر.س)</label>
+                        <input asp-for="Plans[index].Price" class="form-control ltr-field" type="number" min="0" step="0.01" />
+                        <span asp-validation-for="Plans[index].Price" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group">
+                        <label asp-for="Plans[index].OriginalPrice" class="form-label">السعر قبل الخصم</label>
+                        <input asp-for="Plans[index].OriginalPrice" class="form-control ltr-field" type="number" min="0" step="0.01" placeholder="اختياري" />
+                        <span asp-validation-for="Plans[index].OriginalPrice" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group span-2">
+                        <label asp-for="Plans[index].OfferLabel" class="form-label">شارة العرض</label>
+                        <input asp-for="Plans[index].OfferLabel" class="form-control" placeholder="مثال: عرض الإطلاق أو وفر 20%" />
+                        <span asp-validation-for="Plans[index].OfferLabel" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group">
+                        <label asp-for="Plans[index].OfferStartsAtUtc" class="form-label">بداية العرض</label>
+                        <input asp-for="Plans[index].OfferStartsAtUtc" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control ltr-field" type="datetime-local" />
+                        <span asp-validation-for="Plans[index].OfferStartsAtUtc" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group">
+                        <label asp-for="Plans[index].OfferEndsAtUtc" class="form-label">نهاية العرض</label>
+                        <input asp-for="Plans[index].OfferEndsAtUtc" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control ltr-field" type="datetime-local" />
+                        <span asp-validation-for="Plans[index].OfferEndsAtUtc" class="field-validation-error"></span>
+                    </div>
+                    <div class="field-group span-2">
+                        <label asp-for="Plans[index].FeaturesText" class="form-label">المزايا</label>
+                        <textarea asp-for="Plans[index].FeaturesText" class="form-control" rows="5" placeholder="ميزة واحدة في كل سطر"></textarea>
+                        <span asp-validation-for="Plans[index].FeaturesText" class="field-validation-error"></span>
+                    </div>
+                </div>
+            </section>
+        }
+
+        <footer class="platform-settings-actions pricing-settings-actions">
+            <span>الأسعار الجديدة تطبق على التسجيلات الجديدة فقط.</span>
+            <button type="submit" class="btn btn-primary">حفظ ونشر الأسعار</button>
+        </footer>
+    </form>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

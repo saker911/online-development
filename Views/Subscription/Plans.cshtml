@@ -44,14 +44,20 @@
             @foreach (var plan in Model.Plans)
             {
                 <article class="subscription-plan-card @(plan.IsFeatured ? "is-featured" : "")">
-                    @if (plan.IsFeatured)
+                    @if (!string.IsNullOrWhiteSpace(plan.BadgeText))
                     {
-                        <span class="subscription-plan-badge">الأكثر استخدامًا</span>
+                        <span class="subscription-plan-badge">@plan.BadgeText</span>
                     }
                     <h2>@plan.Name</h2>
                     <span class="subscription-plan-fit">@plan.DurationText</span>
                     <p>@plan.Summary</p>
-                    <strong>@plan.PriceText</strong>
+                    <div class="subscription-plan-price">
+                        <strong>@plan.PriceText</strong>
+                        @if (!string.IsNullOrWhiteSpace(plan.OriginalPriceText))
+                        {
+                            <del>@plan.OriginalPriceText</del>
+                        }
+                    </div>
                     <ul>
                         @foreach (var feature in plan.Features)
                         {
