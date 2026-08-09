@@ -6,6 +6,7 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Webp;
 using System.Security.Cryptography;
 using VehiclePermitSystemWeb.Models.Entities;
+using VehiclePermitSystemWeb.Services.Uploads;
 using VehiclePermitSystemWeb.Utilities.Deployment;
 
 namespace VehiclePermitSystemWeb.Services.Administration
@@ -57,11 +58,13 @@ namespace VehiclePermitSystemWeb.Services.Administration
         public static async Task<string> SaveAsync(
             IFormFile file,
             string prefix,
-            DateTime utcNow
+            DateTime utcNow,
+            IUploadThreatScanner? threatScanner = null,
+            CancellationToken cancellationToken = default
         )
         {
             _ = utcNow;
-            var processed = await ProcessAsync(file);
+            var processed = await ProcessAsync(file, threatScanner, cancellationToken);
             var uploadsFolder = AppStoragePaths.GetAdministrationUploadsRoot();
             var safePrefix = string.Equals(prefix, "signature", StringComparison.OrdinalIgnoreCase)
                 ? "signature"
@@ -70,12 +73,31 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 .ToLowerInvariant();
             var fileName = $"{safePrefix}-{randomName}{processed.Extension}";
             var fullPath = Path.Combine(uploadsFolder, fileName);
-            await File.WriteAllBytesAsync(fullPath, processed.Data);
+            var stagingPath = AppStoragePaths.GetPersistentDataPath(
+                Path.Combine("upload-staging", $"{randomName}.tmp")
+            );
+
+            try
+            {
+                await File.WriteAllBytesAsync(stagingPath, processed.Data, cancellationToken);
+                File.Move(stagingPath, fullPath, overwrite: false);
+            }
+            finally
+            {
+                if (File.Exists(stagingPath))
+                {
+                    File.Delete(stagingPath);
+                }
+            }
 
             return Path.Combine("uploads", "administration", fileName).Replace('\\', '/');
         }
 
-        public static async Task<ProcessedImage> ProcessAsync(IFormFile file)
+        public static async Task<ProcessedImage> ProcessAsync(
+            IFormFile file,
+            IUploadThreatScanner? threatScanner = null,
+            CancellationToken cancellationToken = default
+        )
         {
             if (file.Length <= 0 || file.Length > MaxImageBytes)
             {
@@ -91,22 +113,55 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 ),
             };
 
-            var allowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            var expectedContentType = safeExtension switch
             {
-                "image/png",
-                "image/jpeg",
-                "image/webp",
+                ".png" => "image/png",
+                ".webp" => "image/webp",
+                _ => "image/jpeg",
             };
-            if (!allowedMimeTypes.Contains(file.ContentType ?? string.Empty))
+            if (!string.Equals(file.ContentType, expectedContentType, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("نوع ملف الصورة غير مسموح.");
+                throw new InvalidOperationException(
+                    "نوع ملف الصورة لا يطابق الامتداد المحدد."
+                );
             }
 
             try
             {
+                if (threatScanner != null)
+                {
+                    await using var scanStream = file.OpenReadStream();
+                    await threatScanner.ScanAsync(
+                        scanStream,
+                        file.FileName,
+                        cancellationToken
+                    );
+                }
+
+                await using (var formatStream = file.OpenReadStream())
+                {
+                    var detectedFormat = await Image.DetectFormatAsync(
+                        formatStream,
+                        cancellationToken
+                    );
+                    if (
+                        detectedFormat == null
+                        || !string.Equals(
+                            detectedFormat.DefaultMimeType,
+                            expectedContentType,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                    {
+                        throw new InvalidOperationException(
+                            "محتوى الصورة لا يطابق نوع الملف المعلن."
+                        );
+                    }
+                }
+
                 await using (var identifyStream = file.OpenReadStream())
                 {
-                    var imageInfo = await Image.IdentifyAsync(identifyStream);
+                    var imageInfo = await Image.IdentifyAsync(identifyStream, cancellationToken);
                     if (imageInfo == null)
                     {
                         throw new InvalidOperationException("محتوى ملف الصورة غير صالح.");
@@ -116,7 +171,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 }
 
                 await using var input = file.OpenReadStream();
-                using var image = await Image.LoadAsync(input);
+                using var image = await Image.LoadAsync(input, cancellationToken);
                 ValidateDimensions(image.Width, image.Height);
 
                 if (image.Frames.Count != 1)
@@ -142,7 +197,7 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 };
 
                 await using var output = new MemoryStream();
-                await image.SaveAsync(output, encoder);
+                await image.SaveAsync(output, encoder, cancellationToken);
                 if (output.Length > MaxImageBytes)
                 {
                     throw new InvalidOperationException(

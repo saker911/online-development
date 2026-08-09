@@ -57,6 +57,22 @@ test("backup page creates and downloads backup, restore rejects invalid upload",
   await expect(page.getByRole("alert").or(page.locator(".validation-summary-errors")).getByText(/رفض|غير صالح|تعذر|فشل|آمن/).first()).toBeVisible();
 });
 
+test("administration rejects an image whose declared type does not match its content", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+
+  await page.goto("/Administration/Edit");
+  await page.locator('input[name="logoFile"]').setInputFiles({
+    name: "disguised-logo.jpg",
+    mimeType: "image/jpeg",
+    buffer: createTestPngBuffer(15, 118, 110),
+  });
+  await page.getByRole("button", { name: "حفظ البيانات" }).click();
+  await page.getByRole("button", { name: "متابعة" }).click();
+
+  await expect(page).toHaveURL(/\/Administration\/Edit/i);
+  await expect(page.locator(".form-summary-only")).toContainText(/لا يطابق|محتوى الصورة/);
+});
+
 test("organization name remains contextual while the product mark stays consistent", async ({ page }) => {
   await ensureOwnerSignedIn(page);
   const organizationName = `شركة تشغيل ${uniqueSuffix()}`;

@@ -43,6 +43,12 @@ services:
       Email__Smtp__FromAddress: ${Email__Smtp__FromAddress:-}
       Email__Smtp__FromName: ${Email__Smtp__FromName:-منصة تصاريح}
       Email__Smtp__EnableSsl: ${Email__Smtp__EnableSsl:-true}
+      UploadSecurity__Antivirus__Enabled: "true"
+      UploadSecurity__Antivirus__Required: "true"
+      UploadSecurity__Antivirus__Host: clamav
+      UploadSecurity__Antivirus__Port: 3310
+      UploadSecurity__Antivirus__TimeoutSeconds: 45
+      UploadSecurity__Antivirus__MaxScanBytes: 104857600
       Legal__ProviderName: ${Legal__ProviderName:-}
       Legal__CommercialRegistration: ${Legal__CommercialRegistration:-}
       Legal__VatNumber: ${Legal__VatNumber:-}
@@ -60,6 +66,17 @@ services:
     networks:
       - backend
       - web
+
+  clamav:
+    image: clamav/clamav:1.5
+    restart: unless-stopped
+    environment:
+      CLAMAV_NO_MILTERD: "true"
+      FRESHCLAM_CHECKS: "12"
+    volumes:
+      - clamav_data:/var/lib/clamav
+    networks:
+      - backend
 
   caddy:
     image: caddy:2-alpine
@@ -82,6 +99,7 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  clamav_data:
 
 networks:
   backend:

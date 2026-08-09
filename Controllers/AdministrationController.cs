@@ -26,6 +26,7 @@ using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Users;
+using VehiclePermitSystemWeb.Services.Uploads;
 using VehiclePermitSystemWeb.Services.Visits;
 
 namespace VehiclePermitSystemWeb.Controllers
@@ -1053,6 +1054,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private static string BuildRestoreBackupErrorMessage(Exception exception)
         {
+            if (exception is UnsafeUploadException)
+            {
+                return "تم رفض الملف لأنه لم يجتز فحص الحماية من البرمجيات الضارة.";
+            }
+
             var message = exception.Message;
             if (
                 message.Contains(
@@ -1116,14 +1122,18 @@ namespace VehiclePermitSystemWeb.Controllers
                     effectiveSettings.LogoPath = await AdministrationImageStorage.SaveAsync(
                         logoFile,
                         "logo",
-                        _systemClock.UtcNow
+                        _systemClock.UtcNow,
+                        HttpContext.RequestServices.GetRequiredService<IUploadThreatScanner>(),
+                        HttpContext.RequestAborted
                     );
                 }
 
                 if (signatureFile is { Length: > 0 })
                 {
                     var processedSignature = await AdministrationImageStorage.ProcessAsync(
-                        signatureFile
+                        signatureFile,
+                        HttpContext.RequestServices.GetRequiredService<IUploadThreatScanner>(),
+                        HttpContext.RequestAborted
                     );
                     effectiveSettings.SignatureImageData = processedSignature.Data;
                     effectiveSettings.SignatureImageContentType = processedSignature.ContentType;

@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Services.Uploads;
 
 namespace VehiclePermitSystemWeb.Services.Backup
 {
@@ -27,19 +28,22 @@ namespace VehiclePermitSystemWeb.Services.Backup
         private readonly ILogger<BackupService> _logger;
         private readonly IHostEnvironment _environment;
         private readonly ISystemClock _systemClock;
+        private readonly IUploadThreatScanner? _uploadThreatScanner;
         private readonly SemaphoreSlim _backupLock = new(1, 1);
 
         public BackupService(
             IConfiguration configuration,
             ILogger<BackupService> logger,
             IHostEnvironment environment,
-            ISystemClock systemClock
+            ISystemClock systemClock,
+            IUploadThreatScanner? uploadThreatScanner = null
         )
         {
             _configuration = configuration;
             _logger = logger;
             _environment = environment;
             _systemClock = systemClock;
+            _uploadThreatScanner = uploadThreatScanner;
         }
 
         public bool IsEnabled =>
@@ -195,6 +199,16 @@ namespace VehiclePermitSystemWeb.Services.Backup
             if (backupFile.Length > MaxRestoreArchiveBytes)
             {
                 throw new InvalidOperationException("Backup archive exceeds the allowed size limit.");
+            }
+
+            if (_uploadThreatScanner != null)
+            {
+                await using var scanStream = backupFile.OpenReadStream();
+                await _uploadThreatScanner.ScanAsync(
+                    scanStream,
+                    backupFile.FileName,
+                    cancellationToken
+                );
             }
 
             var restoreSafetyBackup = await CreateBackupAsync("restore-pre", cancellationToken);

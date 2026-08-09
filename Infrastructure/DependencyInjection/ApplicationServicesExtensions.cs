@@ -13,6 +13,7 @@ using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Tenants;
+using VehiclePermitSystemWeb.Services.Uploads;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 
@@ -63,6 +64,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddScoped<IToastNotificationService, ToastNotificationService>();
             services.AddTransient<IClaimsTransformation, DelegationClaimsTransformation>();
             services.AddSingleton<BackupService>();
+            services.AddSingleton<IUploadThreatScanner, ClamAvUploadThreatScanner>();
 
             if (!runSchemaUpgradeOnly)
             {

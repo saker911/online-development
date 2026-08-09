@@ -2,13 +2,19 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Buffers.Binary;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Claims;
+using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using VehiclePermitSystemWeb.Models.ViewModels.Tenants;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Administration;
 using VehiclePermitSystemWeb.Services.Tenants;
+using VehiclePermitSystemWeb.Services.Uploads;
 using Xunit;
 
 namespace PermitBehaviorChecks;
@@ -481,6 +487,106 @@ public sealed class SecurityHardeningTests
     }
 
     [Fact]
+    public async Task UploadedImagesRejectDeclaredTypeThatDoesNotMatchContent()
+    {
+        await using var source = new MemoryStream();
+        using (var image = new Image<Rgba32>(2, 2, Color.White))
+        {
+            await image.SaveAsPngAsync(source);
+        }
+
+        var pngBytes = source.ToArray();
+        await using var stream = new MemoryStream(pngBytes);
+        var file = new FormFile(stream, 0, pngBytes.Length, "logo", "logo.jpg")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "image/jpeg",
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            AdministrationImageStorage.ProcessAsync(file)
+        );
+
+        Assert.Contains("لا يطابق", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("stream: OK\0", false)]
+    [InlineData("stream: Eicar-Signature FOUND\0", true)]
+    public async Task ClamAvScannerAcceptsCleanFilesAndRejectsThreats(
+        string response,
+        bool shouldReject
+    )
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var serverTask = ServeClamAvResponseAsync(listener, response);
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["UploadSecurity:Antivirus:Enabled"] = "true",
+                    ["UploadSecurity:Antivirus:Required"] = "true",
+                    ["UploadSecurity:Antivirus:Host"] = "127.0.0.1",
+                    ["UploadSecurity:Antivirus:Port"] = port.ToString(),
+                    ["UploadSecurity:Antivirus:TimeoutSeconds"] = "5",
+                }
+            )
+            .Build();
+        var scanner = new ClamAvUploadThreatScanner(
+            configuration,
+            NullLogger<ClamAvUploadThreatScanner>.Instance
+        );
+        await using var content = new MemoryStream(Encoding.ASCII.GetBytes("test upload"));
+
+        if (shouldReject)
+        {
+            await Assert.ThrowsAsync<UnsafeUploadException>(() =>
+                scanner.ScanAsync(content, "test-upload.bin")
+            );
+        }
+        else
+        {
+            await scanner.ScanAsync(content, "test-upload.bin");
+        }
+
+        await serverTask;
+    }
+
+    [Fact]
+    public async Task ClamAvScannerFailsClosedWhenRequiredScannerIsUnavailable()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var unavailablePort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["UploadSecurity:Antivirus:Enabled"] = "true",
+                    ["UploadSecurity:Antivirus:Required"] = "true",
+                    ["UploadSecurity:Antivirus:Host"] = "127.0.0.1",
+                    ["UploadSecurity:Antivirus:Port"] = unavailablePort.ToString(),
+                    ["UploadSecurity:Antivirus:TimeoutSeconds"] = "2",
+                }
+            )
+            .Build();
+        var scanner = new ClamAvUploadThreatScanner(
+            configuration,
+            NullLogger<ClamAvUploadThreatScanner>.Instance
+        );
+        await using var content = new MemoryStream(Encoding.ASCII.GetBytes("test upload"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            scanner.ScanAsync(content, "test-upload.bin")
+        );
+
+        Assert.Contains("تعذر إجراء الفحص الأمني", exception.Message);
+    }
+
+    [Fact]
     public void TenantQueryFiltersHideOtherTenantOperationalRecords()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -515,5 +621,35 @@ public sealed class SecurityHardeningTests
     private sealed class FixedTenantContext(string tenantId) : ITenantContext
     {
         public string TenantId { get; } = tenantId;
+    }
+
+    private static async Task ServeClamAvResponseAsync(
+        TcpListener listener,
+        string response
+    )
+    {
+        using var client = await listener.AcceptTcpClientAsync();
+        await using var stream = client.GetStream();
+        var command = new byte["zINSTREAM\0".Length];
+        await stream.ReadExactlyAsync(command);
+        Assert.Equal("zINSTREAM\0", Encoding.ASCII.GetString(command));
+
+        var lengthBuffer = new byte[sizeof(uint)];
+        while (true)
+        {
+            await stream.ReadExactlyAsync(lengthBuffer);
+            var chunkLength = BinaryPrimitives.ReadUInt32BigEndian(lengthBuffer);
+            if (chunkLength == 0)
+            {
+                break;
+            }
+
+            var chunk = new byte[checked((int)chunkLength)];
+            await stream.ReadExactlyAsync(chunk);
+        }
+
+        await stream.WriteAsync(Encoding.UTF8.GetBytes(response));
+        await stream.FlushAsync();
+        listener.Stop();
     }
 }

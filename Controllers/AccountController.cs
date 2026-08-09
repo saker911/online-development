@@ -31,6 +31,7 @@ using VehiclePermitSystemWeb.Services.Notifications;
 using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Tenants;
+using VehiclePermitSystemWeb.Services.Uploads;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 
@@ -442,7 +443,9 @@ namespace VehiclePermitSystemWeb.Controllers
                     model.LogoPath = await AdministrationImageStorage.SaveAsync(
                         logoFile,
                         "logo",
-                        SystemClock.UtcNow
+                        SystemClock.UtcNow,
+                        HttpContext.RequestServices.GetRequiredService<IUploadThreatScanner>(),
+                        HttpContext.RequestAborted
                     );
                 }
             }
