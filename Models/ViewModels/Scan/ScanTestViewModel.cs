@@ -25,5 +25,6 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Scan
         public bool IsSpecificPermitBarcode { get; set; }
         public string SamplePermitNotice { get; set; } = string.Empty;
         public Permit? ScannedPermit { get; set; }
+        public List<PermitActivity> RecentActivities { get; set; } = new();
     }
 }

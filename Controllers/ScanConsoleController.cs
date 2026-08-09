@@ -52,6 +52,7 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult Index(ScanTestViewModel model)
         {
             PopulateSamplePermit(model);
+            PopulateRecentActivities(model);
             model.Identifier = (model.Identifier ?? string.Empty).Trim();
             model.ScannerUserName = User.Identity?.Name ?? string.Empty;
             model.ScannedPermit = null;
@@ -116,7 +117,29 @@ namespace VehiclePermitSystemWeb.Controllers
             var viewModel = model ?? new ScanTestViewModel();
             viewModel.ScannerUserName = User.Identity?.Name ?? string.Empty;
             PopulateSamplePermit(viewModel, id);
+            PopulateRecentActivities(viewModel);
             return viewModel;
+        }
+
+        private void PopulateRecentActivities(ScanTestViewModel model)
+        {
+            var username = User.Identity?.Name ?? string.Empty;
+            model.RecentActivities = _permitService
+                .GetRecentPermitActivities(50, username)
+                .Where(activity =>
+                    string.Equals(
+                        activity.GateOperatorAccount,
+                        username,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    || string.Equals(
+                        activity.RecordedBy,
+                        username,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
+                .Take(6)
+                .ToList();
         }
 
         private void PopulateSamplePermit(ScanTestViewModel model, string? id = null)
@@ -150,10 +173,6 @@ namespace VehiclePermitSystemWeb.Controllers
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(id))
-            {
-                samplePermit = _permitService.GetApprovedPermitsForDisplay().FirstOrDefault();
-            }
             model.SamplePermitNumber = samplePermit?.PermitNumber ?? string.Empty;
             model.SamplePermitPublicCode = samplePermit?.PublicPermitCode ?? string.Empty;
             model.SamplePermitDisplayName = samplePermit?.DriverName ?? string.Empty;

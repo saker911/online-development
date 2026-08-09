@@ -18,6 +18,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const scannedPermitCard = document.getElementById("scannedPermitCard");
     const scannedPermitPublicCode = document.getElementById("scannedPermitPublicCode");
     const scannedPermitDetails = document.getElementById("scannedPermitDetails");
+    const scannedSubjectTitle = document.getElementById("scannedSubjectTitle");
+    const decisionCard = document.getElementById("scanDecisionCard");
+    const decisionMark = document.getElementById("scanDecisionMark");
+    const decisionKicker = document.getElementById("scanDecisionKicker");
+    const decisionTitle = document.getElementById("scanDecisionTitle");
+    const decisionMessage = document.getElementById("scanDecisionMessage");
+    const decisionCode = document.getElementById("scanDecisionCode");
+    const networkStatus = document.getElementById("scanNetworkStatus");
+    const recentActivityList = document.getElementById("scanRecentActivityList");
+    const shiftScanCount = document.getElementById("shiftScanCount");
+    const shiftAllowedCount = document.getElementById("shiftAllowedCount");
+    const shiftDeniedCount = document.getElementById("shiftDeniedCount");
+    const resetShiftSummaryButton = document.getElementById("resetShiftSummaryButton");
     const cameraButton = document.getElementById("scanConsoleCameraButton");
     const cameraPanel = document.getElementById("scanConsoleCameraPanel");
     const cameraPreview = document.getElementById("scanConsoleCameraPreview");
@@ -36,6 +49,8 @@ document.addEventListener("DOMContentLoaded", function () {
     let cameraScanLocked = false;
     let pendingExecutionMethod = "manual";
     const scannerDeviceId = resolveScannerDeviceId();
+    const shiftStorageKey = `gate_shift_summary:${form?.dataset.scannerUser || "anonymous"}`;
+    let shiftSummary = readShiftSummary();
     const topRowShiftedDigits = {
         Digit1: '!',
         Digit2: '@',
@@ -119,6 +134,53 @@ document.addEventListener("DOMContentLoaded", function () {
         "exit_recorded": "تم تسجيل خروج الزيارة بنجاح.",
         "invalid_request": "تعذر تنفيذ القراءة. تأكد من القيمة المقروءة ثم أعد المحاولة."
     };
+
+    function readShiftSummary() {
+        try {
+            const stored = JSON.parse(window.sessionStorage.getItem(shiftStorageKey) || "null");
+            return {
+                total: Number(stored?.total) || 0,
+                allowed: Number(stored?.allowed) || 0,
+                denied: Number(stored?.denied) || 0
+            };
+        }
+        catch {
+            return { total: 0, allowed: 0, denied: 0 };
+        }
+    }
+
+    function persistShiftSummary() {
+        try {
+            window.sessionStorage.setItem(shiftStorageKey, JSON.stringify(shiftSummary));
+        }
+        catch {
+        }
+    }
+
+    function renderShiftSummary() {
+        if (shiftScanCount) shiftScanCount.textContent = String(shiftSummary.total);
+        if (shiftAllowedCount) shiftAllowedCount.textContent = String(shiftSummary.allowed);
+        if (shiftDeniedCount) shiftDeniedCount.textContent = String(shiftSummary.denied);
+    }
+
+    function recordShiftResult(isAllowed) {
+        shiftSummary.total += 1;
+        shiftSummary[isAllowed ? "allowed" : "denied"] += 1;
+        persistShiftSummary();
+        renderShiftSummary();
+    }
+
+    function updateNetworkStatus() {
+        if (!networkStatus) {
+            return;
+        }
+
+        const isOnline = navigator.onLine;
+        networkStatus.classList.toggle("is-online", isOnline);
+        networkStatus.classList.toggle("is-offline", !isOnline);
+        networkStatus.lastChild.textContent = isOnline ? " متصل" : " غير متصل";
+        if (cameraButton) cameraButton.disabled = !isOnline;
+    }
 
     function resetScannerBuffer() {
         scannerBuffer.length = 0;
@@ -257,21 +319,55 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function renderResult(isAllowed, message, identifier) {
-        const formattedMessage = identifier
-            ? `${message} (آخر قيمة مقروءة: ${identifier})`
-            : message;
-        if (window.appToast) {
-            if (isAllowed) {
-                window.appToast.success(formattedMessage);
-            }
-            else {
-                window.appToast.error(formattedMessage);
-            }
+    function resolveDecisionTitle(isAllowed, message) {
+        if (!isAllowed) return "تم الرفض";
+        if (message.includes("خروج")) return "تم تسجيل الخروج";
+        if (message.includes("عودة")) return "تم تسجيل العودة";
+        return "دخول مسموح";
+    }
+
+    function prependRecentActivity(isAllowed, message, identifier, payload) {
+        if (!recentActivityList || !payload) {
+            return;
         }
+
+        document.getElementById("scanRecentEmptyState")?.remove();
+        const displayName = payload.displayName
+            || payload.permit?.driverName
+            || payload.visit?.visitorName
+            || identifier;
+        const item = document.createElement("article");
+        item.className = `gate-mobile-activity ${isAllowed ? "is-allowed" : "is-denied"}`;
+        item.innerHTML = `
+            <div>
+                <strong>${escapeHtml(displayName)}</strong>
+                <span>${escapeHtml(resolveDecisionTitle(isAllowed, message))}</span>
+            </div>
+            <time>${escapeHtml(new Date().toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" }))}</time>`;
+        recentActivityList.prepend(item);
+
+        while (recentActivityList.children.length > 6) {
+            recentActivityList.lastElementChild?.remove();
+        }
+    }
+
+    function renderResult(isAllowed, message, identifier, payload) {
+        if (decisionCard) {
+            decisionCard.classList.remove("state-idle", "state-success", "state-danger");
+            decisionCard.classList.add(isAllowed ? "state-success" : "state-danger");
+        }
+        if (decisionMark) decisionMark.textContent = isAllowed ? "سماح" : "رفض";
+        if (decisionKicker) decisionKicker.textContent = "قرار البوابة";
+        if (decisionTitle) decisionTitle.textContent = resolveDecisionTitle(isAllowed, message);
+        if (decisionMessage) decisionMessage.textContent = message;
+        if (decisionCode) decisionCode.textContent = identifier || "";
         playToneSequence(isAllowed ? "success" : "error");
         if (navigator.vibrate) {
             navigator.vibrate(isAllowed ? [90] : [180, 80, 180]);
+        }
+        if (payload) {
+            recordShiftResult(isAllowed);
+            prependRecentActivity(isAllowed, message, identifier, payload);
         }
     }
 
@@ -296,55 +392,85 @@ document.addEventListener("DOMContentLoaded", function () {
         if (scannedPermitPublicCode) {
             scannedPermitPublicCode.textContent = permit.publicPermitCode || "";
         }
+        if (scannedSubjectTitle) {
+            scannedSubjectTitle.textContent = "بيانات التصريح";
+        }
 
         if (scannedPermitDetails) {
             scannedPermitDetails.classList.remove("d-none");
             scannedPermitDetails.innerHTML = `
-                <div class="col-md-6">
-                    <strong>رقم التصريح</strong>
-                    <div class="ltr-field">${escapeHtml(permit.permitNumber)}</div>
+                <div class="gate-mobile-detail">
+                    <span>المصرح له</span>
+                    <strong>${escapeHtml(permit.driverName || "-")}</strong>
                 </div>
-                <div class="col-md-6">
-                    <strong>اسم المصرح له</strong>
-                    <div>${escapeHtml(permit.driverName)}</div>
+                <div class="gate-mobile-detail">
+                    <span>رقم التصريح</span>
+                    <strong class="ltr-field">${escapeHtml(permit.permitNumber || "-")}</strong>
                 </div>
-                <div class="col-md-6">
-                    <strong>الحالة الحالية</strong>
-                    <div>${escapeHtml(permit.approvalStatusDisplay)}</div>
+                <div class="gate-mobile-detail">
+                    <span>نوع التصريح</span>
+                    <strong>${escapeHtml(permit.permitTypeDisplay || "-")}</strong>
                 </div>
-                <div class="col-md-6">
-                    <strong>نوع التصريح</strong>
-                    <div>${escapeHtml(permit.permitTypeDisplay)}</div>
+                <div class="gate-mobile-detail">
+                    <span>رقم اللوحة</span>
+                    <strong class="ltr-field">${escapeHtml(permit.plateNumberDisplay || "-")}</strong>
                 </div>
-                <div class="col-md-6">
-                    <strong>القسم</strong>
-                    <div>${escapeHtml(permit.departmentName)}</div>
+                <div class="gate-mobile-detail">
+                    <span>القسم</span>
+                    <strong>${escapeHtml(permit.departmentName || "-")}</strong>
                 </div>
-                <div class="col-md-6">
-                    <strong>موقع العمل / الزيارة</strong>
-                    <div>${escapeHtml(permit.locationDisplay)}</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>المعرف الداخلي</strong>
-                    <div class="national-id-field">${escapeHtml(permit.nationalId)}</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>رقم اللوحة</strong>
-                    <div class="ltr-field">${escapeHtml(permit.plateNumberDisplay)}</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>نوع المركبة</strong>
-                    <div>${escapeHtml(permit.vehicleType)}</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>رقم الجوال</strong>
-                    <div class="ltr-field">${escapeHtml(permit.employeePhone)}</div>
-                </div>
-                <div class="col-12">
-                    <strong>نص التصريح</strong>
-                    <div>${escapeHtml(permit.subject)}</div>
+                <div class="gate-mobile-detail">
+                    <span>الموقع</span>
+                    <strong>${escapeHtml(permit.locationDisplay || "-")}</strong>
                 </div>`;
         }
+    }
+
+    function renderVisitDetails(visit) {
+        if (!scannedPermitCard || !visit) {
+            return;
+        }
+
+        scannedPermitCard.classList.remove("d-none");
+        if (scannedPermitPublicCode) scannedPermitPublicCode.textContent = visit.visitId || "";
+        if (scannedSubjectTitle) scannedSubjectTitle.textContent = "بيانات الزيارة";
+        if (scannedPermitDetails) {
+            scannedPermitDetails.classList.remove("d-none");
+            scannedPermitDetails.innerHTML = `
+                <div class="gate-mobile-detail">
+                    <span>الزائر</span>
+                    <strong>${escapeHtml(visit.visitorName || "-")}</strong>
+                </div>
+                <div class="gate-mobile-detail">
+                    <span>رقم الزيارة</span>
+                    <strong class="ltr-field">${escapeHtml(visit.visitId || "-")}</strong>
+                </div>
+                <div class="gate-mobile-detail">
+                    <span>المضيف</span>
+                    <strong>${escapeHtml(visit.hostName || visit.visitedPersonName || "-")}</strong>
+                </div>
+                <div class="gate-mobile-detail">
+                    <span>الموقع</span>
+                    <strong>${escapeHtml(visit.visitLocation || "-")}</strong>
+                </div>
+                <div class="gate-mobile-detail">
+                    <span>المرافقون</span>
+                    <strong>${escapeHtml(visit.companionCount ?? 0)}</strong>
+                </div>
+                <div class="gate-mobile-detail">
+                    <span>الحالة</span>
+                    <strong>${escapeHtml(visit.status || "-")}</strong>
+                </div>`;
+        }
+    }
+
+    function renderScanDetails(payload) {
+        if (payload?.visit) {
+            renderVisitDetails(payload.visit);
+            return;
+        }
+
+        renderPermitDetails(payload?.permit || null);
     }
 
     function detectScanMode(rawIdentifier) {
@@ -448,7 +574,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     renderPermitDetails(errorPayload.permit);
                 }
 
-                renderResult(false, errorMessage, errorPayload?.identifier || identifier);
+                renderResult(
+                    false,
+                    errorMessage,
+                    errorPayload?.identifier || identifier,
+                    errorPayload
+                );
                 isSubmitting = false;
                 return;
             }
@@ -465,8 +596,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 : translateReason(payload.reason, payloadMode);
 
             updateDetectedModeLabel(payloadMode);
-            renderResult(!!payload.allowed, message, payload.identifier || identifier);
-            renderPermitDetails(payload.permit || null);
+            renderResult(!!payload.allowed, message, payload.identifier || identifier, payload);
+            renderScanDetails(payload);
             input.value = "";
             if (!cameraRunning) {
                 input.focus();
@@ -701,6 +832,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     window.addEventListener("load", armScannerFocus);
     window.addEventListener("focus", armScannerFocus);
+    window.addEventListener("online", updateNetworkStatus);
+    window.addEventListener("offline", updateNetworkStatus);
     document.addEventListener("visibilitychange", function () {
         if (!document.hidden) {
             armScannerFocus();
@@ -751,6 +884,14 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    if (resetShiftSummaryButton) {
+        resetShiftSummaryButton.addEventListener("click", function () {
+            shiftSummary = { total: 0, allowed: 0, denied: 0 };
+            persistShiftSummary();
+            renderShiftSummary();
+        });
+    }
+
     window.addEventListener("pagehide", function () {
         stopCameraScanner();
     });
@@ -766,4 +907,6 @@ document.addEventListener("DOMContentLoaded", function () {
         catch {
         }
     }
+    renderShiftSummary();
+    updateNetworkStatus();
 });

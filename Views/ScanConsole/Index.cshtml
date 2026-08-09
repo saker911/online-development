@@ -1,11 +1,22 @@
 @using System.Text.Json
+@using VehiclePermitSystemWeb.Utilities
 @model VehiclePermitSystemWeb.Models.ViewModels.Scan.ScanTestViewModel
 
 @{
-    ViewData["Title"] = "مسح باركود";
+    ViewData["Title"] = "مركز البوابة";
     var permitNotFoundMessage = Model.ScannedPermit != null
         ? "هذا التصريح موجود لكنه غير نشط حاليًا أو منتهي."
         : "رقم التصريح غير موجود.";
+    Func<string?, string> maskValue = value =>
+    {
+        var normalized = (value ?? string.Empty).Trim();
+        if (normalized.Length <= 4)
+        {
+            return normalized;
+        }
+
+        return new string('*', normalized.Length - 4) + normalized[^4..];
+    };
     var initialPermitJson = Model.ScannedPermit == null
         ? "null"
         : JsonSerializer.Serialize(
@@ -18,10 +29,10 @@
                 Model.ScannedPermit.PermitTypeDisplay,
                 Model.ScannedPermit.DepartmentName,
                 Model.ScannedPermit.LocationDisplay,
-                Model.ScannedPermit.NationalId,
+                NationalId = maskValue(Model.ScannedPermit.NationalId),
                 Model.ScannedPermit.PlateNumberDisplay,
                 Model.ScannedPermit.VehicleType,
-                Model.ScannedPermit.EmployeePhone,
+                EmployeePhone = maskValue(Model.ScannedPermit.EmployeePhone),
                 Model.ScannedPermit.Subject,
             },
             new JsonSerializerOptions(JsonSerializerDefaults.Web)
@@ -32,137 +43,163 @@
     <link rel="stylesheet" href="~/css/scan-console.css" asp-append-version="true" />
 }
 
-<div class="card-permit scan-console-shell mx-auto">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+<div class="gate-mobile-page">
+    <header class="gate-mobile-header">
         <div>
-            <h1 class="mb-1">ماسح البوابة</h1>
+            <span class="gate-mobile-eyebrow">تشغيل البوابة</span>
+            <h1>مركز البوابة</h1>
+            <p>اقرأ تصريح الموظف أو الزائر وسجّل الحركة مباشرة.</p>
         </div>
-        <span class="badge bg-light text-dark border">المستخدم: @Model.ScannerUserName</span>
-    </div>
-
-    @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNumber))
-    {
-        <div class="card-permit mb-4 border-primary-subtle">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div>
-                    <h2 class="h5 mb-1">@(Model.IsSpecificPermitBarcode ? "باركود التصريح المعتمد" : "رمز تجريبي")</h2>
-                </div>
-                <span class="badge bg-primary-subtle text-primary-emphasis">@Model.SamplePermitPublicCode</span>
-            </div>
-
-            <div class="row g-3 align-items-center">
-                <div class="col-md-4 text-center">
-                    <img src="@Url.Action("Barcode", "Permits", new { id = Model.SamplePermitNumber })" alt="رمز الاستجابة السريعة التجريبي"
-                         class="img-fluid barcode-preview-img barcode-preview-img-large" />
-                </div>
-                <div class="col-md-8">
-                    <div class="fw-semibold mb-1">@Model.SamplePermitDisplayName</div>
-                    <div class="small text-muted">رمز التصريح: <span class="ltr-field">@Model.SamplePermitPublicCode</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-    @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNotice))
-    {
-        <div class="app-inline-note app-inline-note-warning mb-4">@Model.SamplePermitNotice</div>
-    }
-
-    <div id="scannedPermitCard" class="card-permit mb-4 @(Model.ScannedPermit == null ? "d-none" : string.Empty)">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-            <div>
-                <h2 class="h5 mb-1">بيانات التصريح المقروء</h2>
-            </div>
-            <span class="badge bg-primary-subtle text-primary-emphasis" id="scannedPermitPublicCode">
-                @(Model.ScannedPermit?.PublicPermitCode ?? string.Empty)
+        <div class="gate-mobile-header-status">
+            <span class="gate-mobile-network is-online" id="scanNetworkStatus" role="status">
+                <span aria-hidden="true"></span>
+                متصل
             </span>
+            <span class="gate-mobile-operator">@Model.ScannerUserName</span>
         </div>
+    </header>
 
-        <div class="row g-3 @(Model.ScannedPermit == null ? "d-none" : string.Empty)" id="scannedPermitDetails">
-            @if (Model.ScannedPermit != null)
+    <div class="gate-mobile-layout">
+        <main class="gate-mobile-main">
+            <section class="gate-mobile-decision state-idle" id="scanDecisionCard" aria-live="assertive">
+                <div class="gate-mobile-decision-mark" id="scanDecisionMark" aria-hidden="true">جاهز</div>
+                <div class="gate-mobile-decision-copy">
+                    <span id="scanDecisionKicker">بانتظار القراءة</span>
+                    <h2 id="scanDecisionTitle">جاهز للمسح</h2>
+                    <p id="scanDecisionMessage">شغّل الكاميرا أو استخدم جهاز الباركود.</p>
+                    <strong class="ltr-field" id="scanDecisionCode"></strong>
+                </div>
+            </section>
+
+            <section class="gate-mobile-capture">
+                <form method="post"
+                      novalidate
+                      id="scanConsoleForm"
+                      data-scan-endpoint="@Url.Content("~/api/scan/auto")"
+                      data-scanner-user="@Model.ScannerUserName"
+                      data-permit-not-found-message="@permitNotFoundMessage">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
+
+                    <div class="gate-mobile-input-row">
+                        <div class="gate-mobile-input-wrap">
+                            <label asp-for="Identifier">رمز التصريح أو الزيارة</label>
+                            <input asp-for="Identifier"
+                                   class="form-control ltr-field scan-input"
+                                   autocomplete="off"
+                                   autocapitalize="off"
+                                   spellcheck="false"
+                                   autofocus
+                                   required
+                                   placeholder="امسح الرمز أو أدخله" />
+                            <span asp-validation-for="Identifier" class="field-validation-error small"></span>
+                        </div>
+                        <button type="submit" class="gate-mobile-manual-button" id="scanConsoleSubmitButton">تحقق</button>
+                    </div>
+
+                    <div class="gate-mobile-mode" id="detectedScanModeText" aria-live="polite">يكتشف النظام نوع الرمز تلقائياً.</div>
+
+                    <button type="button" class="gate-mobile-camera-button" id="scanConsoleCameraButton">
+                        تشغيل كاميرا الجوال
+                    </button>
+
+                    <div class="mobile-camera-panel" id="scanConsoleCameraPanel" hidden>
+                        <div class="mobile-camera-stage">
+                            <video class="mobile-camera-preview" id="scanConsoleCameraPreview" playsinline muted></video>
+                            <div class="mobile-camera-reticle" aria-hidden="true"></div>
+                        </div>
+                        <div class="mobile-camera-status" id="scanConsoleCameraStatus">وجّه الكاميرا نحو QR أو الباركود.</div>
+                        <div class="mobile-camera-actions">
+                            <button type="button" class="gate-mobile-icon-button" id="scanConsoleFullscreenButton" title="ملء الشاشة" aria-label="ملء الشاشة">ملء الشاشة</button>
+                            <button type="button" class="gate-mobile-stop-button" id="scanConsoleStopCameraButton">إيقاف الكاميرا</button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section id="scannedPermitCard" class="gate-mobile-details @(Model.ScannedPermit == null ? "d-none" : string.Empty)">
+                <div class="gate-mobile-section-head">
+                    <div>
+                        <span>آخر قراءة</span>
+                        <h2 id="scannedSubjectTitle">بيانات التصريح</h2>
+                    </div>
+                    <strong class="ltr-field" id="scannedPermitPublicCode">@(Model.ScannedPermit?.PublicPermitCode ?? string.Empty)</strong>
+                </div>
+                <div class="gate-mobile-detail-grid @(Model.ScannedPermit == null ? "d-none" : string.Empty)" id="scannedPermitDetails"></div>
+            </section>
+        </main>
+
+        <aside class="gate-mobile-sidebar">
+            <section class="gate-mobile-shift">
+                <div class="gate-mobile-section-head">
+                    <div>
+                        <span>الجلسة الحالية</span>
+                        <h2>ملخص الوردية</h2>
+                    </div>
+                    <button type="button" class="gate-mobile-reset" id="resetShiftSummaryButton">تصفير</button>
+                </div>
+                <div class="gate-mobile-stats">
+                    <div><strong id="shiftScanCount">0</strong><span>قراءة</span></div>
+                    <div><strong id="shiftAllowedCount">0</strong><span>سماح</span></div>
+                    <div><strong id="shiftDeniedCount">0</strong><span>رفض</span></div>
+                </div>
+            </section>
+
+            <section class="gate-mobile-recent">
+                <div class="gate-mobile-section-head">
+                    <div>
+                        <span>سجل المشغل</span>
+                        <h2>آخر العمليات</h2>
+                    </div>
+                </div>
+                <div class="gate-mobile-activity-list" id="scanRecentActivityList">
+                    @if (Model.RecentActivities.Count == 0)
+                    {
+                        <p class="gate-mobile-empty" id="scanRecentEmptyState">لا توجد عمليات مسجلة لهذا المشغل بعد.</p>
+                    }
+                    else
+                    {
+                        foreach (var activity in Model.RecentActivities)
+                        {
+                            var isAllowed = activity.ActionType.Contains("Entry", StringComparison.OrdinalIgnoreCase)
+                                || activity.ActionType.Contains("Return", StringComparison.OrdinalIgnoreCase)
+                                || activity.ActionType.Contains("Exit", StringComparison.OrdinalIgnoreCase)
+                                   && !activity.ActionType.Contains("Unauthorized", StringComparison.OrdinalIgnoreCase);
+                            <article class="gate-mobile-activity @(isAllowed ? "is-allowed" : "is-denied")">
+                                <div>
+                                    <strong>@(string.IsNullOrWhiteSpace(activity.DriverName) ? activity.PermitNumber : activity.DriverName)</strong>
+                                    <span>@activity.ActionLabel</span>
+                                </div>
+                                <time>@HijriDateFormatter.Format(activity.OccurredAt)</time>
+                            </article>
+                        }
+                    }
+                </div>
+            </section>
+
+            @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNumber))
             {
-                <div class="col-md-6">
-                    <strong>رقم التصريح</strong>
-                    <div class="ltr-field">@Model.ScannedPermit.PermitNumber</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>اسم المصرح له</strong>
-                    <div>@Model.ScannedPermit.DriverName</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>الحالة الحالية</strong>
-                    <div>@Model.ScannedPermit.ApprovalStatusDisplay</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>نوع التصريح</strong>
-                    <div>@Model.ScannedPermit.PermitTypeDisplay</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>القسم</strong>
-                    <div>@Model.ScannedPermit.DepartmentName</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>موقع العمل / الزيارة</strong>
-                    <div>@Model.ScannedPermit.LocationDisplay</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>المعرف الداخلي</strong>
-                    <div class="national-id-field">@Model.ScannedPermit.NationalId</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>رقم اللوحة</strong>
-                    <div class="ltr-field">@Model.ScannedPermit.PlateNumberDisplay</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>نوع المركبة</strong>
-                    <div>@Model.ScannedPermit.VehicleType</div>
-                </div>
-                <div class="col-md-6">
-                    <strong>رقم الجوال</strong>
-                    <div class="ltr-field">@Model.ScannedPermit.EmployeePhone</div>
-                </div>
-                <div class="col-12">
-                    <strong>نص التصريح</strong>
-                    <div>@Model.ScannedPermit.Subject</div>
-                </div>
+                <section class="gate-mobile-linked-permit">
+                    <div class="gate-mobile-section-head">
+                        <div>
+                            <span>تصريح محدد</span>
+                            <h2>باركود التصريح المعتمد</h2>
+                        </div>
+                    </div>
+                    <p>@Model.SamplePermitDisplayName</p>
+                    <img src="@Url.Action("Barcode", "Permits", new { id = Model.SamplePermitNumber })"
+                         alt="رمز التصريح @Model.SamplePermitNumber"
+                         class="barcode-preview-img" />
+                    <strong class="ltr-field">@Model.SamplePermitNumber</strong>
+                    <strong class="ltr-field">@Model.SamplePermitPublicCode</strong>
+                </section>
             }
-        </div>
+            @if (!string.IsNullOrWhiteSpace(Model.SamplePermitNotice))
+            {
+                <div class="gate-mobile-warning">@Model.SamplePermitNotice</div>
+            }
+        </aside>
     </div>
-
-    <form method="post" class="needs-validation" novalidate id="scanConsoleForm"
-          data-scan-endpoint="@Url.Content("~/api/scan/auto")"
-          data-scanner-user="@Model.ScannerUserName"
-          data-permit-not-found-message="@permitNotFoundMessage">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
-
-        <div class="row g-3 align-items-end">
-            <div class="col-12">
-                <label asp-for="Identifier" class="form-label">القيمة المقروءة</label>
-                <input asp-for="Identifier" class="form-control ltr-field scan-input" autocomplete="off" autofocus
-                       required />
-                <div class="small text-muted mt-1" id="detectedScanModeText" aria-live="polite"></div>
-                <span asp-validation-for="Identifier" class="field-validation-error small"></span>
-            </div>
-            <div class="col-12">
-                <div class="mobile-camera-panel" id="scanConsoleCameraPanel" hidden>
-                    <div class="mobile-camera-stage">
-                        <video class="mobile-camera-preview" id="scanConsoleCameraPreview" playsinline muted></video>
-                        <div class="mobile-camera-reticle" aria-hidden="true"></div>
-                    </div>
-                    <div class="mobile-camera-status" id="scanConsoleCameraStatus">وجّه كاميرا الجوال نحو QR أو الباركود.</div>
-                    <div class="mobile-camera-actions">
-                        <button type="button" class="btn btn-outline-light btn-sm mobile-camera-fullscreen" id="scanConsoleFullscreenButton"
-                                title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="scanConsoleStopCameraButton">إيقاف الكاميرا</button>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-outline-primary w-100 mt-2" id="scanConsoleCameraButton">
-                    قراءة بكاميرا الجوال
-                </button>
-            </div>
-        </div>
-    </form>
 </div>
 
 <script type="application/json" id="scanConsoleInitialPermit" nonce="@(Context.Items["CspScriptNonce"])">@Html.Raw(initialPermitJson)</script>

@@ -1,50 +1,332 @@
-.barcode-preview-img {
-    display: block;
-    margin-inline: auto;
-    background: #fff;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: pixelated;
+:root {
+    --scan-bg: #f5f7f6;
+    --scan-surface: #ffffff;
+    --scan-surface-soft: #f1f4f2;
+    --scan-border: #d9e0dc;
+    --scan-text: #171918;
+    --scan-muted: #65706a;
+    --scan-accent: #168a6f;
+    --scan-accent-strong: #0e7059;
+    --scan-success: #147a52;
+    --scan-success-soft: #e8f7f0;
+    --scan-danger: #b4232f;
+    --scan-danger-soft: #fff0f1;
+    --scan-warning: #9a6700;
+    --scan-shadow: 0 18px 46px rgba(18, 38, 30, .08);
 }
 
-.barcode-preview-img-large {
-    width: 260px;
-    height: 260px;
+[data-theme="dark"] {
+    --scan-bg: #0d0d0d;
+    --scan-surface: #171717;
+    --scan-surface-soft: #202020;
+    --scan-border: #383838;
+    --scan-text: #f3f3f3;
+    --scan-muted: #a6a6a6;
+    --scan-accent: #43c8a6;
+    --scan-accent-strong: #70ddc0;
+    --scan-success: #55d89b;
+    --scan-success-soft: #14251e;
+    --scan-danger: #ff7a84;
+    --scan-danger-soft: #2a1719;
+    --scan-warning: #f3c969;
+    --scan-shadow: none;
 }
 
-.scan-console-shell {
-    max-width: 860px;
+.gate-mobile-page {
+    width: 100%;
     min-width: 0;
+    max-width: 1480px;
+    margin-inline: auto;
+    color: var(--scan-text);
+}
+
+.gate-mobile-page,
+.gate-mobile-page * {
+    box-sizing: border-box;
+}
+
+.gate-mobile-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 18px;
+}
+
+.gate-mobile-eyebrow,
+.gate-mobile-section-head span,
+.gate-mobile-decision-copy > span {
+    display: block;
+    color: var(--scan-accent);
+    font-size: .78rem;
+    font-weight: 800;
+}
+
+.gate-mobile-header h1 {
+    margin: 3px 0 4px;
+    color: var(--scan-text);
+    font-size: clamp(1.65rem, 3vw, 2.35rem);
+    line-height: 1.2;
+}
+
+.gate-mobile-header p {
+    margin: 0;
+    color: var(--scan-muted);
+    font-size: .94rem;
+}
+
+.gate-mobile-header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.gate-mobile-network,
+.gate-mobile-operator {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 11px;
+    border: 1px solid var(--scan-border);
+    border-radius: 6px;
+    background: var(--scan-surface);
+    color: var(--scan-muted);
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.gate-mobile-network > span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--scan-success);
+}
+
+.gate-mobile-network.is-offline {
+    color: var(--scan-danger);
+    border-color: color-mix(in srgb, var(--scan-danger) 34%, var(--scan-border));
+}
+
+.gate-mobile-network.is-offline > span {
+    background: var(--scan-danger);
+}
+
+.gate-mobile-operator {
+    max-width: 220px;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--scan-text);
 }
 
-.scan-console-shell,
-.scan-console-shell * {
-    overflow-wrap: anywhere;
+.gate-mobile-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(280px, .75fr);
+    gap: 16px;
+    align-items: start;
 }
 
-.scan-console-info-panel {
-    border: 1px solid #dbe5f1;
-    background: #f8fbff;
+.gate-mobile-main,
+.gate-mobile-sidebar {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.gate-mobile-decision,
+.gate-mobile-capture,
+.gate-mobile-details,
+.gate-mobile-shift,
+.gate-mobile-recent,
+.gate-mobile-linked-permit,
+.gate-mobile-warning {
+    border: 1px solid var(--scan-border);
+    border-radius: 8px;
+    background: var(--scan-surface);
+    box-shadow: var(--scan-shadow);
+}
+
+.gate-mobile-decision {
+    min-height: 172px;
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    gap: 22px;
+    padding: 24px;
+    border-inline-start: 5px solid var(--scan-border);
+}
+
+.gate-mobile-decision.state-success {
+    background: var(--scan-success-soft);
+    border-color: color-mix(in srgb, var(--scan-success) 45%, var(--scan-border));
+    border-inline-start-color: var(--scan-success);
+}
+
+.gate-mobile-decision.state-danger {
+    background: var(--scan-danger-soft);
+    border-color: color-mix(in srgb, var(--scan-danger) 45%, var(--scan-border));
+    border-inline-start-color: var(--scan-danger);
+}
+
+.gate-mobile-decision-mark {
+    width: 88px;
+    height: 88px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--scan-border);
+    border-radius: 50%;
+    background: var(--scan-surface-soft);
+    color: var(--scan-muted);
+    font-size: .82rem;
+    font-weight: 900;
+}
+
+.state-success .gate-mobile-decision-mark {
+    color: var(--scan-success);
+    border-color: currentColor;
+    background: var(--scan-surface);
+}
+
+.state-danger .gate-mobile-decision-mark {
+    color: var(--scan-danger);
+    border-color: currentColor;
+    background: var(--scan-surface);
+}
+
+.gate-mobile-decision-copy {
+    min-width: 0;
+}
+
+.gate-mobile-decision-copy h2 {
+    margin: 3px 0 5px;
+    color: var(--scan-text);
+    font-size: clamp(1.45rem, 3.2vw, 2.25rem);
+    line-height: 1.2;
+}
+
+.gate-mobile-decision-copy p {
+    margin: 0;
+    color: var(--scan-muted);
+    font-size: .96rem;
+}
+
+.gate-mobile-decision-copy strong {
+    display: block;
+    min-height: 1.25rem;
+    margin-top: 10px;
+    color: var(--scan-text);
+    font-size: .82rem;
+}
+
+.gate-mobile-capture,
+.gate-mobile-details,
+.gate-mobile-shift,
+.gate-mobile-recent,
+.gate-mobile-linked-permit {
+    padding: 18px;
+}
+
+.gate-mobile-input-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 10px;
+    align-items: end;
+}
+
+.gate-mobile-input-wrap {
+    min-width: 0;
+}
+
+.gate-mobile-input-wrap label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--scan-text);
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.gate-mobile-input-wrap .form-control {
+    height: 52px;
+    border-color: var(--scan-border);
+    border-radius: 6px;
+    background: var(--scan-surface-soft);
+    color: var(--scan-text);
+    box-shadow: none;
+    font-size: 1rem;
+}
+
+.gate-mobile-input-wrap .form-control:focus {
+    border-color: var(--scan-accent);
+    outline: 3px solid color-mix(in srgb, var(--scan-accent) 16%, transparent);
+}
+
+.gate-mobile-manual-button,
+.gate-mobile-camera-button,
+.gate-mobile-stop-button,
+.gate-mobile-icon-button,
+.gate-mobile-reset {
+    border: 1px solid var(--scan-border);
+    border-radius: 6px;
+    font-weight: 800;
+}
+
+.gate-mobile-manual-button {
+    height: 52px;
+    background: var(--scan-text);
+    color: var(--scan-surface);
+}
+
+.gate-mobile-camera-button {
+    width: 100%;
+    min-height: 54px;
+    margin-top: 14px;
+    background: var(--scan-accent);
+    border-color: var(--scan-accent);
+    color: #fff;
+    font-size: 1rem;
+}
+
+.gate-mobile-camera-button:hover,
+.gate-mobile-camera-button:focus {
+    background: var(--scan-accent-strong);
+    border-color: var(--scan-accent-strong);
+    color: #fff;
+}
+
+.gate-mobile-manual-button:disabled,
+.gate-mobile-camera-button:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.gate-mobile-mode {
+    min-height: 20px;
+    margin-top: 7px;
+    color: var(--scan-muted);
+    font-size: .78rem;
 }
 
 .mobile-camera-panel {
-    border: 1px solid #dbe5f1;
-    border-radius: 8px;
-    background: #f8fbff;
-    padding: 10px;
     display: grid;
     gap: 10px;
     position: relative;
+    margin-top: 14px;
+    padding: 10px;
     overflow: hidden;
+    border: 1px solid var(--scan-border);
+    border-radius: 8px;
+    background: #111;
 }
 
 .mobile-camera-stage {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 10;
-    border-radius: 6px;
-    background: #171717;
     overflow: hidden;
+    border-radius: 6px;
+    background: #080808;
 }
 
 .mobile-camera-preview {
@@ -56,55 +338,48 @@
 .mobile-camera-reticle {
     position: absolute;
     inset: 50% auto auto 50%;
-    width: min(72%, 320px);
+    width: min(72%, 330px);
     aspect-ratio: 1;
     translate: -50% -50%;
-    border: 2px solid rgba(255, 255, 255, 0.92);
+    border: 2px solid #fff;
     border-radius: 8px;
-    box-shadow: 0 0 0 999px rgba(3, 7, 18, 0.3);
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, .34);
     pointer-events: none;
 }
 
 .mobile-camera-status {
-    color: #52657d;
-    font-size: 0.9rem;
+    color: #e8e8e8;
+    font-size: .84rem;
+    text-align: center;
 }
 
 .mobile-camera-status.is-error {
-    color: #b42318;
-    font-weight: 700;
-}
-
-.mobile-camera-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-#scanConsoleCameraButton {
-    min-height: 48px;
+    color: #ff9aa2;
     font-weight: 800;
 }
 
-#scanConsoleStopCameraButton {
-    min-height: 42px;
+.mobile-camera-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
-.mobile-camera-fullscreen {
-    width: 42px;
-    min-width: 42px;
-    padding-inline: 0;
-    color: #0f172a;
-    border-color: #94a3b8;
+.gate-mobile-stop-button,
+.gate-mobile-icon-button {
+    min-height: 42px;
+    background: #222;
+    border-color: #444;
+    color: #f5f5f5;
 }
 
 .mobile-camera-panel:fullscreen,
 .mobile-camera-panel:-webkit-full-screen {
     width: 100vw;
     height: 100dvh;
+    margin: 0;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     border: 0;
     border-radius: 0;
-    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
     background: #0d0d0d;
     grid-template-rows: minmax(0, 1fr) auto auto;
 }
@@ -115,58 +390,280 @@
     aspect-ratio: auto;
 }
 
-.mobile-camera-panel:fullscreen .mobile-camera-status,
-.mobile-camera-panel:-webkit-full-screen .mobile-camera-status {
-    color: #f8fafc;
+.gate-mobile-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.gate-mobile-section-head h2 {
+    margin: 2px 0 0;
+    color: var(--scan-text);
+    font-size: 1.02rem;
+}
+
+.gate-mobile-section-head > strong {
+    max-width: 48%;
+    overflow: hidden;
+    color: var(--scan-muted);
+    font-size: .76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gate-mobile-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--scan-border);
+    border-radius: 6px;
+    background: var(--scan-border);
+}
+
+.gate-mobile-detail {
+    min-width: 0;
+    min-height: 76px;
+    padding: 12px;
+    background: var(--scan-surface-soft);
+}
+
+.gate-mobile-detail span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--scan-muted);
+    font-size: .72rem;
+}
+
+.gate-mobile-detail strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--scan-text);
+    font-size: .88rem;
+}
+
+.gate-mobile-reset {
+    min-height: 34px;
+    padding: 5px 10px;
+    background: transparent;
+    color: var(--scan-muted);
+    font-size: .75rem;
+}
+
+.gate-mobile-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--scan-border);
+    border-radius: 6px;
+    background: var(--scan-border);
+}
+
+.gate-mobile-stats > div {
+    padding: 13px 8px;
+    background: var(--scan-surface-soft);
     text-align: center;
-    font-size: 1rem;
 }
 
-#scannedPermitCard {
-    min-height: 0;
-    max-height: min(340px, 34vh);
+.gate-mobile-stats strong,
+.gate-mobile-stats span {
+    display: block;
+}
+
+.gate-mobile-stats strong {
+    color: var(--scan-text);
+    font-size: 1.35rem;
+}
+
+.gate-mobile-stats span {
+    margin-top: 2px;
+    color: var(--scan-muted);
+    font-size: .7rem;
+}
+
+.gate-mobile-activity-list {
+    display: grid;
+    gap: 8px;
+    max-height: 350px;
     overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-gutter: stable;
-    overscroll-behavior: contain;
 }
 
-#scannedPermitDetails {
-    min-height: 0;
+.gate-mobile-activity {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 11px;
+    border: 1px solid var(--scan-border);
+    border-inline-start: 3px solid var(--scan-muted);
+    border-radius: 6px;
+    background: var(--scan-surface-soft);
 }
 
-[data-theme="dark"] .scan-console-info-panel {
-    background: rgba(18, 29, 46, 0.78);
-    border-color: rgba(155, 173, 196, 0.16);
+.gate-mobile-activity.is-allowed {
+    border-inline-start-color: var(--scan-success);
 }
 
-[data-theme="dark"] .mobile-camera-panel {
-    background: rgba(18, 29, 46, 0.78);
-    border-color: rgba(155, 173, 196, 0.16);
+.gate-mobile-activity.is-denied {
+    border-inline-start-color: var(--scan-danger);
 }
 
-[data-theme="dark"] .mobile-camera-status {
-    color: #c6d3e1;
+.gate-mobile-activity div,
+.gate-mobile-activity strong,
+.gate-mobile-activity span {
+    min-width: 0;
 }
 
-[data-theme="dark"] .mobile-camera-fullscreen {
-    color: #f8fafc;
-    border-color: #64748b;
+.gate-mobile-activity strong,
+.gate-mobile-activity span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-@media (min-width: 992px) {
-    .scan-console-shell {
-        max-height: calc(100dvh - 118px);
-        display: grid;
-        align-content: start;
-        overflow: hidden;
+.gate-mobile-activity strong {
+    color: var(--scan-text);
+    font-size: .82rem;
+}
+
+.gate-mobile-activity span,
+.gate-mobile-activity time {
+    color: var(--scan-muted);
+    font-size: .7rem;
+}
+
+.gate-mobile-empty {
+    margin: 0;
+    padding: 22px 8px;
+    color: var(--scan-muted);
+    font-size: .82rem;
+    text-align: center;
+}
+
+.gate-mobile-linked-permit {
+    text-align: center;
+}
+
+.barcode-preview-img {
+    display: block;
+    width: min(100%, 210px);
+    aspect-ratio: 1;
+    margin: 0 auto 10px;
+    background: #fff;
+    image-rendering: pixelated;
+}
+
+.gate-mobile-linked-permit > strong {
+    color: var(--scan-text);
+    font-size: .78rem;
+}
+
+.gate-mobile-warning {
+    padding: 13px;
+    color: var(--scan-warning);
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.ltr-field {
+    direction: ltr;
+    text-align: left;
+}
+
+@media (max-width: 1080px) {
+    .gate-mobile-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .gate-mobile-sidebar {
+        grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr);
+    }
+
+    .gate-mobile-linked-permit,
+    .gate-mobile-warning {
+        grid-column: 1 / -1;
     }
 }
 
-@media (max-width: 991.98px) {
-    #scannedPermitCard {
-        max-height: none;
-        overflow: visible;
+@media (max-width: 680px) {
+    .gate-mobile-page {
+        width: calc(100% + 12px);
+        margin-inline: -6px;
+    }
+
+    .gate-mobile-header {
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .gate-mobile-header p,
+    .gate-mobile-operator {
+        display: none;
+    }
+
+    .gate-mobile-header h1 {
+        font-size: 1.55rem;
+    }
+
+    .gate-mobile-layout,
+    .gate-mobile-main,
+    .gate-mobile-sidebar {
+        gap: 10px;
+    }
+
+    .gate-mobile-sidebar {
+        grid-template-columns: 1fr;
+    }
+
+    .gate-mobile-decision {
+        min-height: 140px;
+        grid-template-columns: 66px minmax(0, 1fr);
+        gap: 14px;
+        padding: 17px 14px;
+    }
+
+    .gate-mobile-decision-mark {
+        width: 62px;
+        height: 62px;
+        font-size: .7rem;
+    }
+
+    .gate-mobile-decision-copy h2 {
+        font-size: 1.45rem;
+    }
+
+    .gate-mobile-decision-copy p {
+        font-size: .82rem;
+    }
+
+    .gate-mobile-capture,
+    .gate-mobile-details,
+    .gate-mobile-shift,
+    .gate-mobile-recent,
+    .gate-mobile-linked-permit {
+        padding: 13px;
+    }
+
+    .gate-mobile-input-row {
+        grid-template-columns: minmax(0, 1fr) 80px;
+    }
+
+    .gate-mobile-input-wrap .form-control,
+    .gate-mobile-manual-button {
+        height: 48px;
+    }
+
+    .gate-mobile-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gate-mobile-detail {
+        min-height: 68px;
+        padding: 10px;
     }
 
     .mobile-camera-stage {
@@ -174,7 +671,18 @@
         max-height: 62dvh;
     }
 
-    .mobile-camera-actions #scanConsoleStopCameraButton {
-        flex: 1;
+    .gate-mobile-activity-list {
+        max-height: none;
+    }
+}
+
+@media (max-width: 360px) {
+    .gate-mobile-input-row,
+    .gate-mobile-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gate-mobile-manual-button {
+        width: 100%;
     }
 }

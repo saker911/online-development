@@ -7,6 +7,7 @@ const {
   changePassword,
   createEmployeePermit,
   createUser,
+  createVisit,
   ensureOwnerSignedIn,
   expectAccessDeniedOrLogin,
   roles,
@@ -16,12 +17,16 @@ const {
   uniqueNationalId,
 } = require("./helpers/e2e-helpers");
 
-async function approvePermitForScan(page, permitNumber) {
+async function ensureScanApprovalSignature(page) {
   await ensureOwnerSignedIn(page);
   await page.goto("/Administration/Edit");
   await page.locator('[name="SignatureText"]').fill("اعتماد E2E للمسح");
   await page.getByRole("button", { name: "حفظ البيانات" }).click();
   await page.getByRole("button", { name: "متابعة" }).click({ timeout: 2000 }).catch(() => { });
+}
+
+async function approvePermitForScan(page, permitNumber) {
+  await ensureScanApprovalSignature(page);
   await submitForm(page, `/Permits/ForwardToGeneralManager/${permitNumber}`, {}, {
     tokenPath: `/Permits/Details/${permitNumber}`,
   });
@@ -29,6 +34,15 @@ async function approvePermitForScan(page, permitNumber) {
   await page.getByRole("button", { name: "اعتماد مباشر" }).click();
   await page.goto(`/Permits/Details/${permitNumber}`);
   await expect(page.getByText("معتمد")).toBeVisible();
+}
+
+async function approveVisitForScan(page, visitId) {
+  await ensureScanApprovalSignature(page);
+  await submitForm(page, `/Visits/ApproveDetained/${visitId}`, {}, {
+    tokenPath: `/Visits/Details/${visitId}`,
+  });
+  await page.goto(`/Visits/Details/${visitId}`);
+  await expect(page.locator(".badge").getByText("معتمد").first()).toBeVisible();
 }
 
 async function createReadyGateUser(page) {
@@ -97,11 +111,62 @@ test("GateSecurity can open scan console and invalid scan shows denial", async (
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);
   await expect(page).toHaveURL(/\/ScanConsole/i);
-  await expect(page.getByRole("heading", { name: "ماسح البوابة" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "مركز البوابة" })).toBeVisible();
 
-  await page.getByLabel("القيمة المقروءة").fill("NOT-A-REAL-CODE");
-  await page.getByLabel("القيمة المقروءة").press("Enter");
-  await expect(page.getByRole("alert").getByText(/غير موجود|تعذر|غير صالح/).first()).toBeVisible();
+  await page.getByLabel("رمز التصريح أو الزيارة").fill("NOT-A-REAL-CODE");
+  await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
+  await expect(page.locator("#scanDecisionCard")).toHaveClass(/state-danger/);
+  await expect(page.locator("#scanDecisionMessage")).toContainText(/غير موجود|تعذر|غير صالح/);
+});
+
+test("mobile gate console records a visit entry and exit without horizontal overflow", async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  const visit = await createVisit(page, {
+    visitorName: "زائر اختبار بوابة الجوال",
+  });
+  await approveVisitForScan(page, visit.visitId);
+
+  const gate = await createReadyGateUser(page);
+  await signIn(page, gate.username, gate.password);
+  await expect(page).toHaveURL(/\/ScanConsole/i);
+  await expect(page.getByRole("heading", { name: "مركز البوابة" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "تشغيل كاميرا الجوال" })).toBeVisible();
+
+  const initialMetrics = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(initialMetrics.scrollWidth).toBeLessThanOrEqual(initialMetrics.clientWidth + 1);
+
+  const firstScanResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/scan/auto") && response.request().method() === "POST"
+  );
+  await page.getByLabel("رمز التصريح أو الزيارة").fill(visit.visitId);
+  await page.getByRole("button", { name: "تحقق" }).click();
+  const firstPayload = await (await firstScanResponse).json();
+  expect(firstPayload.allowed).toBeTruthy();
+  await expect(page.locator("#scanDecisionCard")).toHaveClass(/state-success/);
+  await expect(page.locator("#scanDecisionTitle")).toContainText(/دخول|عودة/);
+  await expect(page.locator("#shiftScanCount")).toHaveText("1");
+
+  const secondScanResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/scan/auto") && response.request().method() === "POST"
+  );
+  await page.getByLabel("رمز التصريح أو الزيارة").fill(visit.visitId);
+  await page.getByRole("button", { name: "تحقق" }).click();
+  const secondPayload = await (await secondScanResponse).json();
+  expect(secondPayload.allowed).toBeTruthy();
+  await expect(page.locator("#scanDecisionTitle")).toContainText("الخروج");
+  await expect(page.locator("#shiftScanCount")).toHaveText("2");
+  await expect(page.locator("#shiftAllowedCount")).toHaveText("2");
+
+  const finalMetrics = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+  expect(finalMetrics.scrollWidth).toBeLessThanOrEqual(finalMetrics.clientWidth + 1);
 });
 
 test("Receptionist without ScanOperations cannot open scan console", async ({ page }) => {
@@ -134,8 +199,8 @@ test("valid, stopped, and rejected permit scans return expected states", async (
   const approvedScanResponse = page.waitForResponse((response) =>
     response.url().includes("/api/scan/auto") && response.request().method() === "POST"
   );
-  await page.getByLabel("القيمة المقروءة").fill(permit.permitNumber);
-  await page.getByLabel("القيمة المقروءة").press("Enter");
+  await page.getByLabel("رمز التصريح أو الزيارة").fill(permit.permitNumber);
+  await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
   const approvedScan = await (await approvedScanResponse).json();
   expect(approvedScan.allowed).toBeTruthy();
   expect(approvedScan.permit?.driverName).toBe(permit.driverName);
@@ -143,8 +208,8 @@ test("valid, stopped, and rejected permit scans return expected states", async (
   const stoppedScanResponse = page.waitForResponse((response) =>
     response.url().includes("/api/scan/auto") && response.request().method() === "POST"
   );
-  await page.getByLabel("القيمة المقروءة").fill(stopped.permitNumber);
-  await page.getByLabel("القيمة المقروءة").press("Enter");
+  await page.getByLabel("رمز التصريح أو الزيارة").fill(stopped.permitNumber);
+  await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
   const stoppedScan = await (await stoppedScanResponse).json();
   expect(stoppedScan.allowed).toBeFalsy();
   expect(stoppedScan.permit?.approvalStatusDisplay).toMatch(/موقوف|غير نشط|منتهي/);
@@ -152,8 +217,8 @@ test("valid, stopped, and rejected permit scans return expected states", async (
   const rejectedScanResponse = page.waitForResponse((response) =>
     response.url().includes("/api/scan/auto") && response.request().method() === "POST"
   );
-  await page.getByLabel("القيمة المقروءة").fill(rejected.permitNumber);
-  await page.getByLabel("القيمة المقروءة").press("Enter");
+  await page.getByLabel("رمز التصريح أو الزيارة").fill(rejected.permitNumber);
+  await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
   const rejectedScan = await (await rejectedScanResponse).json();
   expect(rejectedScan.allowed).toBeFalsy();
   expect(rejectedScan.permit?.approvalStatusDisplay).toMatch(/مرفوض|غير نشط|منتهي/);
@@ -188,8 +253,8 @@ test("ScanConsole recovers EntryOnly stale pending exit into a new entry", async
   const scanResponse = page.waitForResponse((response) =>
     response.url().includes("/api/scan/auto") && response.request().method() === "POST"
   );
-  await page.getByLabel("القيمة المقروءة").fill(permit.permitNumber);
-  await page.getByLabel("القيمة المقروءة").press("Enter");
+  await page.getByLabel("رمز التصريح أو الزيارة").fill(permit.permitNumber);
+  await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
   const scanPayload = await (await scanResponse).json();
 
   expect(scanPayload.allowed).toBeTruthy();
@@ -240,10 +305,10 @@ test("repeated approved permit scans do not stretch scan console layout", async 
     const scanResponse = page.waitForResponse((response) =>
       response.url().includes("/api/scan/auto") && response.request().method() === "POST"
     );
-    await page.getByLabel("القيمة المقروءة").fill(permit.permitNumber);
-    await page.getByLabel("القيمة المقروءة").press("Enter");
+    await page.getByLabel("رمز التصريح أو الزيارة").fill(permit.permitNumber);
+    await page.getByLabel("رمز التصريح أو الزيارة").press("Enter");
     await scanResponse;
-    await expect(page.getByLabel("القيمة المقروءة")).toBeFocused();
+    await expect(page.getByLabel("رمز التصريح أو الزيارة")).toBeFocused();
   }
 
   const metrics = await page.evaluate(() => {
@@ -263,7 +328,7 @@ test("repeated approved permit scans do not stretch scan console layout", async 
   expect(metrics.documentHeight).toBeLessThanOrEqual(metrics.viewportHeight + 120);
   expect(metrics.cardHeight).toBeLessThanOrEqual(360);
   expect(metrics.cardVisible).toBeTruthy();
-  expect(metrics.cardScrollsInternally).toBeTruthy();
+  expect(metrics.cardScrollsInternally).toBeFalsy();
   expect(metrics.inputFocused).toBeTruthy();
 });
 
