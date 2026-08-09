@@ -42,6 +42,9 @@ for (const viewport of [
     await page.goto("/Pricing");
 
     await expect(page.locator(".pricing-plan-editor")).toHaveCount(3);
+    await expect(page.locator("[data-date-field]")).toHaveCount(6);
+    await expect(page.locator("[data-date-hijri-switch]")).toHaveCount(6);
+    await expect(page.locator("[data-duration-preview]").first()).not.toBeEmpty();
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,

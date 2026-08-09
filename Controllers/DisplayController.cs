@@ -164,6 +164,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [AllowAnonymous]
         [HttpPost]
         [IgnoreAntiforgeryToken]
+        [EnableRateLimiting("display-heartbeat")]
         public IActionResult Heartbeat()
         {
             return Json(new { success = _displayDeviceService.RecordHeartbeat(HttpContext) });
@@ -189,6 +190,12 @@ namespace VehiclePermitSystemWeb.Controllers
             if (authorizationResult != null)
             {
                 return authorizationResult;
+            }
+
+            var configuredModeRedirect = RedirectApprovedDeviceToConfiguredMode(nameof(Gate));
+            if (configuredModeRedirect != null)
+            {
+                return configuredModeRedirect;
             }
 
             var isAccountScanner =
@@ -261,6 +268,36 @@ namespace VehiclePermitSystemWeb.Controllers
                 : "unified-gate-kiosk-body";
 
             return View("~/Views/ScanConsole/Index.cshtml", model);
+        }
+
+        [AllowAnonymous]
+        public IActionResult WaitingBoard()
+        {
+            var authorizationResult = EnsureDisplayPageAccess();
+            if (authorizationResult != null)
+            {
+                return authorizationResult;
+            }
+
+            var configuredModeRedirect = RedirectApprovedDeviceToConfiguredMode(
+                nameof(WaitingBoard)
+            );
+            if (configuredModeRedirect != null)
+            {
+                return configuredModeRedirect;
+            }
+
+            ViewData["HideShell"] = true;
+            ViewData["BodyClass"] = "waiting-board-body";
+            return View(BuildWaitingBoardViewModel());
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult WaitingBoardStatus()
+        {
+            var authorizationResult = EnsureDisplayApiAccess();
+            return authorizationResult ?? Json(BuildWaitingBoardViewModel());
         }
 
         [HttpGet]
@@ -546,31 +583,7 @@ namespace VehiclePermitSystemWeb.Controllers
         [AllowAnonymous]
         public IActionResult VisitsStatus()
         {
-            var authorizationResult = EnsureDisplayApiAccess();
-            if (authorizationResult != null)
-            {
-                return authorizationResult;
-            }
-
-            var visitorsAwaitingArrival = _visitService
-                .GetVisitorsAwaitingArrival()
-                .Take(5)
-                .ToList();
-            var visitorsInside = _visitService.GetVisitorsInside().Take(5).ToList();
-            var visitorsCompleted = _visitService.GetVisitorsCompleted().Take(5).ToList();
-
-            return Json(
-                new
-                {
-                    awaitingArrivalCount = visitorsAwaitingArrival.Count,
-                    insideCount = visitorsInside.Count,
-                    visitorsAwaitingArrival = visitorsAwaitingArrival.Select(
-                        SerializeVisitForDisplay
-                    ),
-                    visitorsInside = visitorsInside.Select(SerializeVisitForDisplay),
-                    visitorsCompleted = visitorsCompleted.Select(SerializeVisitForDisplay),
-                }
-            );
+            return WaitingBoardStatus();
         }
 
         [HttpPost]
@@ -629,6 +642,89 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return Url.Action(nameof(Gate)) ?? "/Display/Gate";
+        }
+
+        private IActionResult? RedirectApprovedDeviceToConfiguredMode(string currentAction)
+        {
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return null;
+            }
+
+            var device = _displayDeviceService.GetApprovedDevice(HttpContext);
+            if (device == null)
+            {
+                return null;
+            }
+
+            var targetAction = DisplayDeviceModes.Normalize(device.Mode) switch
+            {
+                DisplayDeviceModes.WaitingBoard => nameof(WaitingBoard),
+                _ => nameof(Gate),
+            };
+            return string.Equals(currentAction, targetAction, StringComparison.Ordinal)
+                ? null
+                : RedirectToAction(targetAction);
+        }
+
+        private DisplayWaitingBoardViewModel BuildWaitingBoardViewModel()
+        {
+            return new DisplayWaitingBoardViewModel
+            {
+                Waiting = _visitService
+                    .GetVisitorsAwaitingArrival()
+                    .Take(8)
+                    .Select(visit => BuildWaitingTicket(
+                        visit,
+                        "بانتظار الوصول",
+                        visit.VisitDate
+                    ))
+                    .ToList(),
+                Inside = _visitService
+                    .GetVisitorsInside()
+                    .Take(8)
+                    .Select(visit => BuildWaitingTicket(
+                        visit,
+                        "داخل الجهة",
+                        visit.EntryTime ?? visit.VisitDate
+                    ))
+                    .ToList(),
+                Completed = _visitService
+                    .GetVisitorsCompleted()
+                    .Take(8)
+                    .Select(visit => BuildWaitingTicket(
+                        visit,
+                        "مكتملة",
+                        visit.ExitTime ?? visit.VisitDate
+                    ))
+                    .ToList(),
+                UpdatedAtText = DateTime.Now.ToString("HH:mm:ss"),
+            };
+        }
+
+        private static DisplayWaitingTicketViewModel BuildWaitingTicket(
+            Visit visit,
+            string statusText,
+            DateTime time
+        )
+        {
+            var normalizedId = new string(
+                (visit.VisitId ?? string.Empty).Where(char.IsLetterOrDigit).ToArray()
+            );
+            var suffix = normalizedId.Length <= 5 ? normalizedId : normalizedId[^5..];
+            var location = (visit.VisitLocation ?? string.Empty).Trim();
+            if (location.Length > 64)
+            {
+                location = location[..64] + "…";
+            }
+
+            return new DisplayWaitingTicketViewModel
+            {
+                TicketNumber = string.IsNullOrWhiteSpace(suffix) ? "V-----" : $"V-{suffix.ToUpperInvariant()}",
+                Location = string.IsNullOrWhiteSpace(location) ? "الاستقبال" : location,
+                TimeText = HijriDateFormatter.Format(time),
+                StatusText = statusText,
+            };
         }
 
         private IActionResult? EnsureDisplayPageAccess()

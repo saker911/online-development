@@ -422,6 +422,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<DisplayDevice>().Property(x => x.ScreenName).HasMaxLength(128);
             modelBuilder.Entity<DisplayDevice>().Property(x => x.ScreenLocation).HasMaxLength(128);
             modelBuilder.Entity<DisplayDevice>().Property(x => x.Description).HasMaxLength(512);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.Mode).HasMaxLength(24);
             modelBuilder.Entity<DisplayDevice>().Property(x => x.Status).HasMaxLength(24);
             modelBuilder.Entity<DisplayDevice>().Property(x => x.DeviceTokenHash).HasMaxLength(128);
             modelBuilder.Entity<DisplayDevice>().Property(x => x.RequestCode).HasMaxLength(64);

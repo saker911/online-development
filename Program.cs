@@ -214,6 +214,43 @@ builder.Services.AddRateLimiter(options =>
             );
         }
     );
+    options.AddPolicy<string>(
+        "gate-scan",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var account = context.User.Identity?.IsAuthenticated == true
+                ? context.User.Identity.Name ?? "authenticated"
+                : "display-device";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: $"{account}:{remoteIp}",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 180,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+    options.AddPolicy<string>(
+        "display-heartbeat",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: remoteIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
 });
 var dataProvider = builder.Configuration["Data:Provider"] ?? "Sqlite";
 var developmentUseLocalData =

@@ -26,6 +26,7 @@ namespace VehiclePermitSystemWeb.Services.Display
         bool RejectDevice(int id, string actor);
         bool DisableDevice(int id, string actor);
         bool ActivateDevice(int id, string actor);
+        bool UpdateDeviceMode(int id, string mode, string actor);
         bool DeleteDevice(int id, string actor);
         (bool Success, string? DeviceToken) RotateDeviceToken(
             int id,

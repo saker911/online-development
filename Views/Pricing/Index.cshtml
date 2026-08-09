@@ -25,6 +25,8 @@
         @for (var index = 0; index < Model.Plans.Count; index++)
         {
             var plan = Model.Plans[index];
+            var offerStartInputId = $"Plans_{index}__OfferStartsAtUtc";
+            var offerEndInputId = $"Plans_{index}__OfferEndsAtUtc";
             <section class="platform-settings-section pricing-plan-editor" aria-labelledby="plan-title-@index">
                 <input asp-for="Plans[index].Code" type="hidden" />
                 <div class="platform-settings-section-head pricing-plan-head">
@@ -52,8 +54,13 @@
                         <span asp-validation-for="Plans[index].Name" class="field-validation-error"></span>
                     </div>
                     <div class="field-group">
-                        <label asp-for="Plans[index].DurationMonths" class="form-label">المدة بالأشهر</label>
-                        <input asp-for="Plans[index].DurationMonths" class="form-control ltr-field" type="number" min="1" max="120" />
+                        <label asp-for="Plans[index].DurationMonths" class="form-label">مدة الاشتراك</label>
+                        <div class="pricing-duration-control">
+                            <input asp-for="Plans[index].DurationMonths" class="form-control ltr-field" type="number"
+                                   min="1" max="120" data-duration-months />
+                            <span>شهر</span>
+                        </div>
+                        <small class="pricing-duration-preview" data-duration-preview></small>
                         <span asp-validation-for="Plans[index].DurationMonths" class="field-validation-error"></span>
                     </div>
                     <div class="field-group span-2">
@@ -76,14 +83,40 @@
                         <input asp-for="Plans[index].OfferLabel" class="form-control" placeholder="مثال: عرض الإطلاق أو وفر 20%" />
                         <span asp-validation-for="Plans[index].OfferLabel" class="field-validation-error"></span>
                     </div>
-                    <div class="field-group">
+                    <div class="field-group date-field-shell" data-date-field data-date-display-mode="hijri">
                         <label asp-for="Plans[index].OfferStartsAtUtc" class="form-label">بداية العرض</label>
-                        <input asp-for="Plans[index].OfferStartsAtUtc" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control ltr-field" type="datetime-local" />
+                        <div class="date-input-shell">
+                            <input asp-for="Plans[index].OfferStartsAtUtc" asp-format="{0:yyyy-MM-ddTHH:mm}"
+                                   id="@offerStartInputId" class="form-control ltr-field hijri-source-input date-native-hidden"
+                                   type="datetime-local" lang="ar-SA" data-hijri-source />
+                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="@offerStartInputId"
+                                 data-empty-text="يوم/شهر/سنة - الوقت">
+                                @(plan.OfferStartsAtUtc.HasValue ? HijriDateFormatter.Format(plan.OfferStartsAtUtc.Value) : "يوم/شهر/سنة - الوقت")
+                            </div>
+                            <label class="date-hijri-toggle" dir="rtl">
+                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                <input type="checkbox" checked data-date-hijri-switch />
+                                <span class="date-hijri-toggle-track"></span>
+                            </label>
+                        </div>
                         <span asp-validation-for="Plans[index].OfferStartsAtUtc" class="field-validation-error"></span>
                     </div>
-                    <div class="field-group">
+                    <div class="field-group date-field-shell" data-date-field data-date-display-mode="hijri">
                         <label asp-for="Plans[index].OfferEndsAtUtc" class="form-label">نهاية العرض</label>
-                        <input asp-for="Plans[index].OfferEndsAtUtc" asp-format="{0:yyyy-MM-ddTHH:mm}" class="form-control ltr-field" type="datetime-local" />
+                        <div class="date-input-shell">
+                            <input asp-for="Plans[index].OfferEndsAtUtc" asp-format="{0:yyyy-MM-ddTHH:mm}"
+                                   id="@offerEndInputId" class="form-control ltr-field hijri-source-input date-native-hidden"
+                                   type="datetime-local" lang="ar-SA" data-hijri-source />
+                            <div class="date-inline-preview date-inline-overlay" data-hijri-preview-for="@offerEndInputId"
+                                 data-empty-text="يوم/شهر/سنة - الوقت">
+                                @(plan.OfferEndsAtUtc.HasValue ? HijriDateFormatter.Format(plan.OfferEndsAtUtc.Value) : "يوم/شهر/سنة - الوقت")
+                            </div>
+                            <label class="date-hijri-toggle" dir="rtl">
+                                <span class="date-hijri-toggle-label">التاريخ الهجري</span>
+                                <input type="checkbox" checked data-date-hijri-switch />
+                                <span class="date-hijri-toggle-track"></span>
+                            </label>
+                        </div>
                         <span asp-validation-for="Plans[index].OfferEndsAtUtc" class="field-validation-error"></span>
                     </div>
                     <div class="field-group span-2">
@@ -104,4 +137,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/pricing-settings.js" asp-append-version="true"></script>
 }

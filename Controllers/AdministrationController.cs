@@ -303,6 +303,24 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = AppPolicies.ManageAdministration)]
+        public IActionResult UpdateDisplayDeviceMode(int id, string mode)
+        {
+            var normalizedMode = DisplayDeviceModes.Normalize(mode);
+            this.ToastSuccess(
+                _displayDeviceService!.UpdateDeviceMode(
+                    id,
+                    normalizedMode,
+                    User.Identity?.Name ?? string.Empty
+                )
+                    ? $"تم تحويل الشاشة إلى {DisplayDeviceModes.GetDisplayName(normalizedMode)}."
+                    : "تعذر تحديث وضع الشاشة."
+            );
+            return RedirectToAction(nameof(DisplaySettings));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = AppPolicies.ManageAdministration)]
         public IActionResult DeleteDisplayDevice(int id)
         {
             this.ToastSuccess(
@@ -1278,6 +1296,10 @@ namespace VehiclePermitSystemWeb.Controllers
                 AllowedClientIpRanges = settings.AllowedClientIpRanges,
                 GateDisplayUrl = BuildDisplayManagementUrl(
                     nameof(DisplayController.Gate),
+                    includeSetupKey: false
+                ),
+                WaitingBoardUrl = BuildDisplayManagementUrl(
+                    nameof(DisplayController.WaitingBoard),
                     includeSetupKey: false
                 ),
                 VisitsDisplayUrl = BuildDisplayManagementUrl(

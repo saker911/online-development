@@ -32,6 +32,7 @@
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="@Model.GateDisplayUrl" target="_blank" class="btn btn-outline-primary btn-sm">فتح مركز البوابة</a>
+                    <a href="@Model.WaitingBoardUrl" target="_blank" class="btn btn-outline-secondary btn-sm">معاينة لوحة الانتظار</a>
                 </div>
             </div>
         </div>
@@ -109,6 +110,7 @@
                         <th>User-Agent</th>
                         <th>تاريخ الطلب</th>
                         <th>آخر ظهور</th>
+                        <th>الوضع</th>
                         <th>الحالة</th>
                         <th>إجراءات</th>
                     </tr>
@@ -129,6 +131,27 @@
                             <td class="small">@item.UserAgentSummary</td>
                             <td>@HijriDateFormatter.Format(item.CreatedAtUtc.ToLocalTime())</td>
                             <td>@(item.LastSeenUtc.HasValue ? HijriDateFormatter.Format(item.LastSeenUtc.Value.ToLocalTime()) : "-")</td>
+                            <td>
+                                <form asp-action="UpdateDisplayDeviceMode" method="post" class="display-device-mode-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <select name="mode" class="form-select form-select-sm" aria-label="وضع شاشة @item.ScreenName">
+                                        @foreach (var mode in DisplayDeviceModes.Supported)
+                                        {
+                                            <option value="@mode" selected="@(string.Equals(item.Mode, mode, StringComparison.OrdinalIgnoreCase))">
+                                                @DisplayDeviceModes.GetDisplayName(mode)
+                                            </option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="record-icon-action record-icon-action-primary"
+                                            title="حفظ وضع الشاشة" aria-label="حفظ وضع شاشة @item.ScreenName">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="m5 12 4 4L19 6" fill="none" stroke="currentColor"
+                                                  stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            </td>
                             <td><span class="badge bg-secondary">@item.StatusText</span></td>
                             <td>
                                 <div class="record-row-actions display-device-row-actions">
@@ -225,7 +248,7 @@
                     }
                     @if (!group.Item2.Any())
                     {
-                        <tr><td colspan="8" class="text-muted">لا توجد عناصر.</td></tr>
+                        <tr><td colspan="9" class="text-muted">لا توجد عناصر.</td></tr>
                     }
                 </tbody>
             </table>

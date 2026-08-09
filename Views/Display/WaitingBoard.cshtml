@@ -1,0 +1,95 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Display.DisplayWaitingBoardViewModel
+
+@{
+    ViewData["Title"] = "لوحة الانتظار";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/waiting-board.css" asp-append-version="true" />
+}
+
+<div class="waiting-board" id="waitingBoardRoot"
+     data-status-endpoint="@Url.Action("WaitingBoardStatus", "Display")"
+     data-heartbeat-endpoint="@Url.Action("Heartbeat", "Display")">
+    <header class="waiting-board-header">
+        <div class="waiting-board-brand">
+            <span class="waiting-board-brand-mark" aria-hidden="true">T</span>
+            <div>
+                <strong>تصاريح | Tasareeh</strong>
+                <span>لوحة الانتظار والزيارات</span>
+            </div>
+        </div>
+        <div class="waiting-board-live">
+            <span><i aria-hidden="true"></i> تحديث مباشر</span>
+            <time id="waitingBoardClock">@Model.UpdatedAtText</time>
+        </div>
+    </header>
+
+    <section class="waiting-board-summary" aria-label="ملخص الانتظار">
+        <div><span>بانتظار الوصول</span><strong id="waitingBoardWaitingCount">@Model.Waiting.Count</strong></div>
+        <div><span>داخل الجهة</span><strong id="waitingBoardInsideCount">@Model.Inside.Count</strong></div>
+        <div><span>مكتملة مؤخرًا</span><strong id="waitingBoardCompletedCount">@Model.Completed.Count</strong></div>
+    </section>
+
+    <main class="waiting-board-columns">
+        <section class="waiting-board-column is-waiting" aria-labelledby="waitingTitle">
+            <header><span>01</span><h1 id="waitingTitle">بانتظار الوصول</h1></header>
+            <div class="waiting-board-list" id="waitingBoardWaitingList">
+                @foreach (var ticket in Model.Waiting)
+                {
+                    <article class="waiting-ticket">
+                        <strong class="ltr-field">@ticket.TicketNumber</strong>
+                        <div><span>@ticket.Location</span><time>@ticket.TimeText</time></div>
+                    </article>
+                }
+                @if (!Model.Waiting.Any())
+                {
+                    <p class="waiting-board-empty">لا توجد مواعيد بانتظار الوصول.</p>
+                }
+            </div>
+        </section>
+
+        <section class="waiting-board-column is-inside" aria-labelledby="insideTitle">
+            <header><span>02</span><h2 id="insideTitle">داخل الجهة</h2></header>
+            <div class="waiting-board-list" id="waitingBoardInsideList">
+                @foreach (var ticket in Model.Inside)
+                {
+                    <article class="waiting-ticket">
+                        <strong class="ltr-field">@ticket.TicketNumber</strong>
+                        <div><span>@ticket.Location</span><time>@ticket.TimeText</time></div>
+                    </article>
+                }
+                @if (!Model.Inside.Any())
+                {
+                    <p class="waiting-board-empty">لا توجد زيارات داخل الجهة حاليًا.</p>
+                }
+            </div>
+        </section>
+
+        <section class="waiting-board-column is-completed" aria-labelledby="completedTitle">
+            <header><span>03</span><h2 id="completedTitle">مكتملة مؤخرًا</h2></header>
+            <div class="waiting-board-list" id="waitingBoardCompletedList">
+                @foreach (var ticket in Model.Completed)
+                {
+                    <article class="waiting-ticket">
+                        <strong class="ltr-field">@ticket.TicketNumber</strong>
+                        <div><span>@ticket.Location</span><time>@ticket.TimeText</time></div>
+                    </article>
+                }
+                @if (!Model.Completed.Any())
+                {
+                    <p class="waiting-board-empty">لا توجد زيارات مكتملة مؤخرًا.</p>
+                }
+            </div>
+        </section>
+    </main>
+
+    <footer class="waiting-board-footer">
+        <span>تُعرض أرقام المتابعة فقط لحماية خصوصية الزوار.</span>
+        <span id="waitingBoardStatus" role="status">متصل</span>
+    </footer>
+</div>
+
+@section Scripts {
+    <script src="~/js/waiting-board.js" asp-append-version="true"></script>
+}

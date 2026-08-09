@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using VehiclePermitSystemWeb.Models.DTOs;
 using VehiclePermitSystemWeb.Models.Entities;
 using VehiclePermitSystemWeb.Models.ViewModels.Account;
@@ -139,6 +140,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpPost("auto")]
         [AllowAnonymous]
+        [EnableRateLimiting("gate-scan")]
         public IActionResult ScanAuto([FromBody] JsonElement requestBody)
         {
             if (!HasScanAccess())

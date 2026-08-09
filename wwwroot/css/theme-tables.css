@@ -14,6 +14,20 @@
     flex-wrap: wrap;
 }
 
+.display-device-mode-form {
+    display: grid;
+    grid-template-columns: minmax(132px, 1fr) 34px;
+    align-items: center;
+    gap: 6px;
+    min-width: 178px;
+}
+
+.display-device-mode-form .record-icon-action {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+}
+
 .record-icon-action {
     width: 34px;
     height: 34px;

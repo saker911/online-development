@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Collections.Concurrent;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ namespace VehiclePermitSystemWeb.Services.Display
         private readonly ISystemClock _systemClock;
         private readonly IPermitAuditService _auditService;
         private readonly IUserAdminService? _userAdminService;
+        private readonly ConcurrentDictionary<string, DateTime> _rejectedAccessAuditThrottle = new();
 
         public DisplayDeviceService(
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
@@ -104,7 +106,6 @@ namespace VehiclePermitSystemWeb.Services.Display
             var token = context.Request.Cookies[DeviceCookieName];
             if (string.IsNullOrWhiteSpace(token))
             {
-                RecordRejectedAccess(context, "missing-cookie");
                 return null;
             }
 
@@ -192,6 +193,7 @@ namespace VehiclePermitSystemWeb.Services.Display
                 ScreenName = (model.ScreenName ?? string.Empty).Trim(),
                 ScreenLocation = (model.ScreenLocation ?? string.Empty).Trim(),
                 Description = (model.Description ?? string.Empty).Trim(),
+                Mode = DisplayDeviceModes.Gate,
                 Status = DisplayDeviceStatuses.Pending,
                 RequestCode = SecureTokenGenerator.GenerateSecureToken(12),
                 IpAddress = ResolveIp(context),
@@ -278,6 +280,33 @@ namespace VehiclePermitSystemWeb.Services.Display
                 "DisplayDeviceActivated",
                 "تنشيط شاشة عرض"
             );
+
+        public bool UpdateDeviceMode(int id, string mode, string actor)
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var device = db.DisplayDevices.FirstOrDefault(item => item.Id == id);
+            if (device == null)
+            {
+                return false;
+            }
+
+            var normalizedMode = DisplayDeviceModes.Normalize(mode);
+            if (string.Equals(device.Mode, normalizedMode, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            device.Mode = normalizedMode;
+            RecordDeviceAudit(
+                db,
+                device,
+                "DisplayDeviceModeChanged",
+                $"تغيير وضع الشاشة إلى {DisplayDeviceModes.GetDisplayName(normalizedMode)}",
+                actor
+            );
+            db.SaveChanges();
+            return true;
+        }
 
         public bool DeleteDevice(int id, string actor)
         {
@@ -398,13 +427,6 @@ namespace VehiclePermitSystemWeb.Services.Display
 
             tracked.LastSeenUtc = _systemClock.UtcNow;
             tracked.LastIpAddress = ResolveIp(context);
-            RecordDeviceAudit(
-                db,
-                tracked,
-                "DisplayDeviceHeartbeat",
-                "نبض شاشة عرض",
-                "display-device"
-            );
             db.SaveChanges();
             return true;
         }
@@ -442,6 +464,29 @@ namespace VehiclePermitSystemWeb.Services.Display
 
         public void RecordRejectedAccess(HttpContext context, string reason)
         {
+            var now = _systemClock.UtcNow;
+            var throttleKey = $"{ResolveIp(context)}:{reason}";
+            if (
+                _rejectedAccessAuditThrottle.TryGetValue(throttleKey, out var lastRecordedAt)
+                && now - lastRecordedAt < TimeSpan.FromMinutes(5)
+            )
+            {
+                return;
+            }
+
+            _rejectedAccessAuditThrottle[throttleKey] = now;
+            if (_rejectedAccessAuditThrottle.Count > 2048)
+            {
+                foreach (
+                    var stale in _rejectedAccessAuditThrottle.Where(item =>
+                        now - item.Value > TimeSpan.FromHours(1)
+                    )
+                )
+                {
+                    _rejectedAccessAuditThrottle.TryRemove(stale.Key, out _);
+                }
+            }
+
             using var db = _dbContextFactory.CreateDbContext();
             _auditService.RecordUserActivity(
                 db,
@@ -452,7 +497,7 @@ namespace VehiclePermitSystemWeb.Services.Display
                 $"تم رفض وصول شاشة عرض. السبب: {reason}. IP: {ResolveIp(context)}",
                 nameof(DisplayDeviceService),
                 "display-device",
-                _systemClock.UtcNow
+                now
             );
             db.SaveChanges();
         }
@@ -528,6 +573,8 @@ namespace VehiclePermitSystemWeb.Services.Display
                 ScreenName = device.ScreenName,
                 ScreenLocation = device.ScreenLocation,
                 Description = device.Description,
+                Mode = DisplayDeviceModes.Normalize(device.Mode),
+                ModeText = DisplayDeviceModes.GetDisplayName(device.Mode),
                 Status = device.Status,
                 StatusText = device.Status switch
                 {

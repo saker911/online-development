@@ -120,6 +120,43 @@
     resize: vertical;
 }
 
+.pricing-duration-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+}
+
+.pricing-duration-control .form-control {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+.pricing-duration-control > span {
+    display: grid;
+    min-width: 62px;
+    place-items: center;
+    border: 1px solid var(--t-border);
+    border-inline-start: 0;
+    border-start-end-radius: var(--t-input-radius, 8px);
+    border-end-end-radius: var(--t-input-radius, 8px);
+    background: var(--t-surface-soft);
+    color: var(--t-text-muted);
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.pricing-duration-preview {
+    display: block;
+    min-height: 1.25rem;
+    margin-top: 6px;
+    color: var(--t-text-muted);
+    font-size: .72rem;
+}
+
+.pricing-settings-grid .date-field-shell {
+    max-width: none;
+}
+
 .pricing-settings-actions {
     position: sticky;
     bottom: 0;

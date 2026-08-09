@@ -29,7 +29,28 @@ test("owner updates administration data and opens display settings", async ({ pa
 
   await page.goto("/Administration/DisplaySettings");
   await expect(page.getByRole("heading", { name: "شاشات العرض" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "معاينة لوحة الانتظار" })).toBeVisible();
+  expect(await page.getByRole("columnheader", { name: "الوضع" }).count()).toBeGreaterThan(0);
 });
+
+for (const viewport of [
+  { name: "desktop", width: 1440, height: 900 },
+  { name: "mobile", width: 390, height: 844 },
+]) {
+  test(`waiting board is privacy-safe and responsive on ${viewport.name}`, async ({ page }) => {
+    await ensureOwnerSignedIn(page);
+    await page.setViewportSize(viewport);
+    await page.goto("/Display/WaitingBoard");
+
+    await expect(page.getByRole("heading", { name: "بانتظار الوصول" })).toBeVisible();
+    await expect(page.getByText("تُعرض أرقام المتابعة فقط لحماية خصوصية الزوار.")).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+  });
+}
 
 test("backup page creates and downloads backup, restore rejects invalid upload", async ({ page }) => {
   await ensureOwnerSignedIn(page);

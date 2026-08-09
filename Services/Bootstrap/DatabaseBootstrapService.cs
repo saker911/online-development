@@ -379,6 +379,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Permits", "PlateOrigin", "TEXT NOT NULL DEFAULT 'Saudi'");
             EnsureSqliteColumn(db, "Permits", "RequiresReturn", "INTEGER NOT NULL DEFAULT 1");
             EnsureSqliteColumn(db, "Permits", "AccessMode", "TEXT NOT NULL DEFAULT 'FullAccess'");
+            EnsureSqliteColumn(db, "DisplayDevices", "Mode", "TEXT NOT NULL DEFAULT 'Gate'");
             db.Database.ExecuteSqlRaw(
                 @"UPDATE Permits
                   SET AccessMode = CASE
@@ -735,6 +736,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                     ScreenName TEXT NOT NULL DEFAULT '',
                     ScreenLocation TEXT NOT NULL DEFAULT '',
                     Description TEXT NOT NULL DEFAULT '',
+                    Mode TEXT NOT NULL DEFAULT 'Gate',
                     Status TEXT NOT NULL DEFAULT 'Pending',
                     DeviceTokenHash TEXT NOT NULL DEFAULT '',
                     RequestCode TEXT NOT NULL DEFAULT '',

@@ -17,6 +17,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Display
 
         public string GateDisplayUrl { get; set; } = string.Empty;
 
+        public string WaitingBoardUrl { get; set; } = string.Empty;
+
         public string VisitsDisplayUrl { get; set; } = string.Empty;
 
         public string RegistrationUrl { get; set; } = string.Empty;

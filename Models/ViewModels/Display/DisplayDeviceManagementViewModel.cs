@@ -29,6 +29,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Display
         public string ScreenName { get; set; } = string.Empty;
         public string ScreenLocation { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Mode { get; set; } = DisplayDeviceModes.Gate;
+        public string ModeText { get; set; } = DisplayDeviceModes.GetDisplayName(DisplayDeviceModes.Gate);
         public string Status { get; set; } = string.Empty;
         public string StatusText { get; set; } = string.Empty;
         public bool IsOnline { get; set; }

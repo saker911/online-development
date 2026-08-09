@@ -59,6 +59,14 @@ internal static partial class ScenarioCatalog
 
         var approvedResult = displayDeviceService.ApproveDevice(pending!.Id, "tester");
         Require(approvedResult.Success, "admin should approve pending display device");
+        Require(
+            displayDeviceService.UpdateDeviceMode(
+                pending.Id,
+                DisplayDeviceModes.WaitingBoard,
+                "tester"
+            ),
+            "admin should be able to switch an approved display to waiting-board mode"
+        );
         var approvedContext = BuildDisplayHttpContext(approvedResult.DeviceToken);
         Require(
             displayDeviceService.GetApprovedDevice(approvedContext) != null,
@@ -74,6 +82,16 @@ internal static partial class ScenarioCatalog
         {
             var stored = db.DisplayDevices.Single(item => item.Id == pending.Id);
             Require(stored.LastSeenUtc.HasValue, "heartbeat should update LastSeenUtc");
+            Require(
+                stored.Mode == DisplayDeviceModes.WaitingBoard,
+                "selected display mode should be persisted"
+            );
+            Require(
+                !db.UserActivities.Any(activity =>
+                    activity.ActionType == "DisplayDeviceHeartbeat"
+                ),
+                "display heartbeats should not flood the audit log"
+            );
         }
 
         var returningDeviceContext = BuildDisplayHttpContext(requestCode: pending.RequestCode);
