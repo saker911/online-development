@@ -48,6 +48,15 @@
             <strong class="public-visit-qr-caption">امسح الرمز عند البوابة</strong>
         }
 
+        @if (Model.HasQueueTicket)
+        {
+            <section class="public-visit-queue" aria-label="حالة الدور">
+                <span>رقم الدور</span>
+                <strong class="ltr-field">@Model.QueueTicketNumber</strong>
+                <p>@Model.QueueStatusDisplay</p>
+            </section>
+        }
+
         <dl class="public-visit-summary">
             <div><dt>الزائر</dt><dd>@Model.VisitorName</dd></div>
             <div><dt>الجوال</dt><dd dir="ltr">@Model.MaskedPhoneNumber</dd></div>

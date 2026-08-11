@@ -465,6 +465,14 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Visits", "ArchivedAt", "TEXT NULL");
             EnsureSqliteColumn(db, "Visits", "RequestSource", "TEXT NOT NULL DEFAULT 'Internal'");
             EnsureSqliteColumn(db, "Visits", "RequestedAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Visits", "QueueStatus", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "Visits", "QueuedAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Visits", "CalledAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Visits", "ServiceStartedAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "Visits", "QueueCompletedAtUtc", "TEXT NULL");
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_Visits_TenantId_QueueStatus ON Visits (TenantId, QueueStatus);"
+            );
             EnsureSqliteColumn(db, "Permits", "HolderEmail", "TEXT NULL");
             EnsureSqliteColumn(
                 db,

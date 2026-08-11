@@ -73,8 +73,15 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
         public DateTime VisitDate { get; set; }
         public string ApprovalStatus { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public string QueueTicketNumber { get; set; } = string.Empty;
+        public string QueueStatus { get; set; } = string.Empty;
+        public string QueueStatusDisplay { get; set; } = string.Empty;
+        public DateTime? QueuedAtUtc { get; set; }
+        public DateTime? CalledAtUtc { get; set; }
+        public DateTime? ServiceStartedAtUtc { get; set; }
         public bool IsApproved => string.Equals(ApprovalStatus, "Approved", StringComparison.OrdinalIgnoreCase);
         public bool IsRejected => string.Equals(ApprovalStatus, "Rejected", StringComparison.OrdinalIgnoreCase);
         public bool IsPending => !IsApproved && !IsRejected;
+        public bool HasQueueTicket => !string.IsNullOrWhiteSpace(QueueStatus);
     }
 }

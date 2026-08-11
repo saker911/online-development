@@ -666,6 +666,7 @@ namespace VehiclePermitSystemWeb.Security
         public const string CreateVisits = nameof(CreateVisits);
         public const string EditVisits = nameof(EditVisits);
         public const string ApproveDetainedVisits = nameof(ApproveDetainedVisits);
+        public const string ManageVisitQueue = nameof(ManageVisitQueue);
         public const string ViewDisplays = nameof(ViewDisplays);
         public const string ScanOperations = nameof(ScanOperations);
         public const string ManageUsers = nameof(ManageUsers);

@@ -20,6 +20,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
         IEnumerable<Visit> GetVisitorsInside();
         IEnumerable<Visit> GetVisitorsCompleted();
         IEnumerable<Visit> GetSuspendedVisits();
+        IEnumerable<Visit> GetQueueVisits();
         void AddVisit(Visit visit, string? performedBy = null);
         Visit? GetVisitById(string visitId);
         void UpdateVisit(Visit visit, string? performedBy = null, bool resetApprovalStatus = true);
@@ -33,6 +34,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
             string approvalStatus,
             string? performedBy = null
         );
+        bool UpdateQueueStatus(string visitId, string queueStatus, string performedBy);
         (bool allowed, string reason) RecordVisitScan(string visitId, string? scannerUser = null);
     }
 }

@@ -166,6 +166,9 @@
     var canReviewUnauthorizedExit = !isSubscriptionRestricted && tenantServices.Permits && User.HasPermission(AppPermissions.ReviewUnauthorizedExit);
     var canStopPermit = !isSubscriptionRestricted && tenantServices.Permits && User.HasPermission(AppPermissions.StopPermit);
     var canViewVisits = !isSubscriptionRestricted && tenantServices.Visits && AccessControlService.CanViewVisits(currentUser);
+    var canManageVisitQueue = !isSubscriptionRestricted
+        && tenantServices.Queue
+        && (User.HasPermission(AppPermissions.ApproveVisits) || User.HasPermission(AppPermissions.ScanOperations));
     var canViewPermits = !isSubscriptionRestricted && tenantServices.Permits && AccessControlService.CanViewPermits(currentUser);
     var canApproveDetainedVisits = !isSubscriptionRestricted && tenantServices.Visits && User.HasPermission(AppPermissions.ApproveDetainedVisit);
     var canManageDepartments = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDepartments);
@@ -712,6 +715,14 @@
                                                            asp-controller="Visits" asp-action="Index">
                                                         <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#visit")"></use></svg>
                                                         <span>الزيارات</span>
+                                                    </a>
+                                                }
+                                                @if (canManageVisitQueue)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Queue") ? "active" : string.Empty)"
+                                                           asp-controller="Queue" asp-action="Index">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#monitoring")"></use></svg>
+                                                        <span>تنظيم الطابور</span>
                                                     </a>
                                                 }
                                                 @if (!isSubscriptionRestricted && tenantServices.Gate && (User.HasPermission(AppPermissions.ViewDisplays) || canManageAdministration))

@@ -669,33 +669,34 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private DisplayWaitingBoardViewModel BuildWaitingBoardViewModel()
         {
+            var queueVisits = _visitService.GetQueueVisits().ToList();
             return new DisplayWaitingBoardViewModel
             {
-                Waiting = _visitService
-                    .GetVisitorsAwaitingArrival()
+                Waiting = queueVisits
+                    .Where(visit => visit.QueueStatus == Visit.QueueStatusWaiting)
                     .Take(8)
                     .Select(visit => BuildWaitingTicket(
                         visit,
-                        "بانتظار الوصول",
-                        visit.VisitDate
+                        "بانتظار الاستدعاء",
+                        visit.QueuedAtUtc?.ToLocalTime() ?? visit.VisitDate
                     ))
                     .ToList(),
-                Inside = _visitService
-                    .GetVisitorsInside()
+                Inside = queueVisits
+                    .Where(visit => visit.QueueStatus == Visit.QueueStatusCalled)
                     .Take(8)
                     .Select(visit => BuildWaitingTicket(
                         visit,
-                        "داخل الجهة",
-                        visit.EntryTime ?? visit.VisitDate
+                        "تم الاستدعاء",
+                        visit.CalledAtUtc?.ToLocalTime() ?? visit.VisitDate
                     ))
                     .ToList(),
-                Completed = _visitService
-                    .GetVisitorsCompleted()
+                Completed = queueVisits
+                    .Where(visit => visit.QueueStatus == Visit.QueueStatusServing)
                     .Take(8)
                     .Select(visit => BuildWaitingTicket(
                         visit,
-                        "مكتملة",
-                        visit.ExitTime ?? visit.VisitDate
+                        "قيد الخدمة",
+                        visit.ServiceStartedAtUtc?.ToLocalTime() ?? visit.VisitDate
                     ))
                     .ToList(),
                 UpdatedAtText = DateTime.Now.ToString("HH:mm:ss"),
@@ -708,10 +709,6 @@ namespace VehiclePermitSystemWeb.Controllers
             DateTime time
         )
         {
-            var normalizedId = new string(
-                (visit.VisitId ?? string.Empty).Where(char.IsLetterOrDigit).ToArray()
-            );
-            var suffix = normalizedId.Length <= 5 ? normalizedId : normalizedId[^5..];
             var location = (visit.VisitLocation ?? string.Empty).Trim();
             if (location.Length > 64)
             {
@@ -720,7 +717,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             return new DisplayWaitingTicketViewModel
             {
-                TicketNumber = string.IsNullOrWhiteSpace(suffix) ? "V-----" : $"V-{suffix.ToUpperInvariant()}",
+                TicketNumber = visit.QueueTicketNumber,
                 Location = string.IsNullOrWhiteSpace(location) ? "الاستقبال" : location,
                 TimeText = HijriDateFormatter.Format(time),
                 StatusText = statusText,

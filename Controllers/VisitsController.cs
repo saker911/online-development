@@ -214,6 +214,12 @@ namespace VehiclePermitSystemWeb.Controllers
                     VisitDate = visit.VisitDate,
                     ApprovalStatus = visit.ApprovalStatus,
                     Status = visit.Status,
+                    QueueTicketNumber = visit.QueueTicketNumber,
+                    QueueStatus = visit.QueueStatus,
+                    QueueStatusDisplay = visit.QueueStatusDisplay,
+                    QueuedAtUtc = visit.QueuedAtUtc,
+                    CalledAtUtc = visit.CalledAtUtc,
+                    ServiceStartedAtUtc = visit.ServiceStartedAtUtc,
                 }
             );
         }

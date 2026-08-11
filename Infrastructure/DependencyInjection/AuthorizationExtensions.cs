@@ -123,6 +123,14 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
                         )
                 );
                 options.AddPolicy(
+                    AppPolicies.ManageVisitQueue,
+                    policy =>
+                        policy.RequireAssertion(context =>
+                            context.User.HasPermission(AppPermissions.ApproveVisits)
+                            || context.User.HasPermission(AppPermissions.ScanOperations)
+                        )
+                );
+                options.AddPolicy(
                     AppPolicies.ViewDisplays,
                     policy =>
                         policy.RequireClaim(AppPermissions.ClaimType, AppPermissions.ViewDisplays)

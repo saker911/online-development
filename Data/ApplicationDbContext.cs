@@ -76,6 +76,8 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Permit>().HasIndex(x => x.PermitNumber).IsUnique();
             modelBuilder.Entity<Permit>().HasIndex(x => x.ArchivedAt);
             modelBuilder.Entity<Visit>().HasKey(x => x.VisitId);
+            modelBuilder.Entity<Visit>().Property(x => x.QueueStatus).HasMaxLength(24);
+            modelBuilder.Entity<Visit>().HasIndex(x => new { x.TenantId, x.QueueStatus });
             modelBuilder.Entity<VisitCompanion>().HasKey(x => x.Id);
             modelBuilder.Entity<PermitActivity>().HasKey(x => x.Id);
             modelBuilder.Entity<Department>().HasKey(x => x.Id);

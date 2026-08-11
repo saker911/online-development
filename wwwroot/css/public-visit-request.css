@@ -84,6 +84,10 @@ body.public-visit-body .app-system-meta-kiosk { display: none !important; }
 .public-visit-qr-frame { width: 246px; max-width: 100%; aspect-ratio: 1; margin: 28px auto 8px; padding: 12px; border: 1px solid var(--visit-line); border-radius: 8px; background: #fff; }
 .public-visit-qr-frame img { display: block; width: 100%; height: 100%; }
 .public-visit-qr-caption { display: block; margin-bottom: 26px; font-size: 13px; }
+.public-visit-queue { margin: 24px 0 4px; padding: 18px; border: 1px solid var(--visit-line); border-radius: 8px; background: color-mix(in srgb, var(--visit-accent) 7%, var(--visit-surface)); }
+.public-visit-queue span { display: block; color: var(--visit-muted); font-size: 12px; }
+.public-visit-queue strong { display: block; margin: 3px 0; color: var(--visit-ink); font-size: 32px; }
+.public-visit-queue p { margin: 0; color: var(--visit-accent); font-size: 14px; font-weight: 800; }
 .public-visit-summary { margin: 28px 0 0; border-top: 1px solid var(--visit-line); text-align: right; }
 .public-visit-summary div { display: grid; grid-template-columns: 115px 1fr; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--visit-line); }
 .public-visit-summary dt { color: var(--visit-muted); font-size: 13px; }

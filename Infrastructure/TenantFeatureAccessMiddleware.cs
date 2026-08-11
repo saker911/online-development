@@ -115,6 +115,21 @@ namespace VehiclePermitSystemWeb.Infrastructure
                 return [TenantServiceKeys.Visits, TenantServiceKeys.SelfService];
             }
 
+            if (path.StartsWithSegments("/Queue", StringComparison.OrdinalIgnoreCase))
+            {
+                return [TenantServiceKeys.Visits, TenantServiceKeys.Queue];
+            }
+
+            if (
+                path.StartsWithSegments(
+                    "/Display/WaitingBoard",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                return [TenantServiceKeys.Visits, TenantServiceKeys.Queue, TenantServiceKeys.Gate];
+            }
+
             if (
                 path.StartsWithSegments("/Display", StringComparison.OrdinalIgnoreCase)
                 || path.StartsWithSegments("/ScanConsole", StringComparison.OrdinalIgnoreCase)

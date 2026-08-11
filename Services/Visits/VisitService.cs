@@ -101,6 +101,23 @@ namespace VehiclePermitSystemWeb.Services.Visits
             return CreateVisitQuery(db).AsNoTracking().Where(v => v.Status == "Suspended").ToList();
         }
 
+        public IEnumerable<Visit> GetQueueVisits()
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            SynchronizeVisitStates(db);
+            return CreateVisitQuery(db)
+                .AsNoTracking()
+                .Where(visit =>
+                    visit.ArchivedAt == null
+                    && visit.QueueStatus != string.Empty
+                    && visit.ApprovalStatus == "Approved"
+                )
+                .AsEnumerable()
+                .OrderBy(visit => QueueStatusOrder(visit.QueueStatus))
+                .ThenBy(visit => visit.QueuedAtUtc ?? visit.RequestedAtUtc ?? visit.VisitDate)
+                .ToList();
+        }
+
         public void AddVisit(Visit visit, string? performedBy = null)
         {
             using var db = _dbContextFactory.CreateDbContext();
@@ -327,6 +344,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     visit.ArchivedAt = _systemClock.LocalNow;
                     visit.Status = "Completed";
                     visit.ExpiresAt = visit.ArchivedAt;
+                    CloseQueueVisit(visit, Visit.QueueStatusSkipped);
 
                     if (!string.IsNullOrWhiteSpace(performedBy))
                     {
@@ -363,6 +381,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     }
 
                     visit.Status = "Suspended";
+                    CloseQueueVisit(visit, Visit.QueueStatusSkipped);
 
                     if (!string.IsNullOrWhiteSpace(performedBy))
                     {
@@ -505,6 +524,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         {
                             visit.Status = "Active";
                         }
+                        ApplyQueueDecision(db, visit, isApproved);
 
                         RecordUserActivity(
                             db,
@@ -604,10 +624,99 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     {
                         visit.Status = "Active";
                     }
+                    ApplyQueueDecision(
+                        db,
+                        visit,
+                        string.Equals(
+                            approvalStatus,
+                            "Approved",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    );
 
                     _emailNotificationQueue?.QueueVisitDecision(db, visit);
                     db.SaveChanges();
                     return 0;
+                }
+            );
+        }
+
+        public bool UpdateQueueStatus(string visitId, string queueStatus, string performedBy)
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            return ExecuteInTransaction(
+                db,
+                () =>
+                {
+                    var visit = db.Visits.FirstOrDefault(item => item.VisitId == visitId);
+                    if (
+                        visit == null
+                        || !string.Equals(
+                            visit.ApprovalStatus,
+                            "Approved",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                        || string.Equals(visit.Status, "Suspended", StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        return false;
+                    }
+
+                    var targetStatus = NormalizeQueueStatus(queueStatus);
+                    var currentStatus = NormalizeQueueStatus(visit.QueueStatus);
+                    if (string.IsNullOrWhiteSpace(targetStatus))
+                    {
+                        return false;
+                    }
+                    if (string.Equals(currentStatus, targetStatus, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                    if (!CanTransitionQueue(currentStatus, targetStatus))
+                    {
+                        return false;
+                    }
+
+                    var now = _systemClock.UtcNow;
+                    visit.QueueStatus = targetStatus;
+                    switch (targetStatus)
+                    {
+                        case Visit.QueueStatusWaiting:
+                            visit.QueuedAtUtc = now;
+                            visit.CalledAtUtc = null;
+                            visit.ServiceStartedAtUtc = null;
+                            visit.QueueCompletedAtUtc = null;
+                            break;
+                        case Visit.QueueStatusCalled:
+                            visit.QueuedAtUtc ??= now;
+                            visit.CalledAtUtc = now;
+                            break;
+                        case Visit.QueueStatusServing:
+                            visit.QueuedAtUtc ??= now;
+                            visit.CalledAtUtc ??= now;
+                            visit.ServiceStartedAtUtc = now;
+                            break;
+                        case Visit.QueueStatusCompleted:
+                        case Visit.QueueStatusSkipped:
+                            visit.QueueCompletedAtUtc = now;
+                            break;
+                    }
+
+                    RecordUserActivity(
+                        db,
+                        visit.VisitId,
+                        visit.VisitorName,
+                        "QueueStatusChanged",
+                        "تحديث دور الزيارة",
+                        $"تم تحديث دور {visit.QueueTicketNumber} إلى {visit.QueueStatusDisplay}.",
+                        "QueueController",
+                        performedBy,
+                        _systemClock.LocalNow,
+                        performedBy,
+                        entityId: visit.VisitId
+                    );
+                    db.SaveChanges();
+                    return true;
                 }
             );
         }
@@ -655,6 +764,15 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         visit.EntryTime = entryTime;
                         visit.ExpiresAt = CalculateVisitExpiration(entryTime, workHours);
                         visit.Status = "Inside";
+                        if (
+                            visit.QueueStatus == Visit.QueueStatusWaiting
+                            || visit.QueueStatus == Visit.QueueStatusCalled
+                        )
+                        {
+                            visit.QueueStatus = Visit.QueueStatusServing;
+                            visit.CalledAtUtc ??= _systemClock.UtcNow;
+                            visit.ServiceStartedAtUtc ??= _systemClock.UtcNow;
+                        }
                         ApplyVisitTimesToCompanions(visit, entryTime, null);
                         db.SaveChanges();
                         return (true, "entry_recorded");
@@ -665,6 +783,11 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         visit.ExitTime = now;
                         visit.ExpiresAt = visit.ExitTime;
                         visit.Status = "Completed";
+                        if (!string.IsNullOrWhiteSpace(visit.QueueStatus))
+                        {
+                            visit.QueueStatus = Visit.QueueStatusCompleted;
+                            visit.QueueCompletedAtUtc = _systemClock.UtcNow;
+                        }
                         ApplyVisitTimesToCompanions(visit, visit.EntryTime, now);
                         db.SaveChanges();
                         return (true, "exit_recorded");
@@ -674,6 +797,97 @@ namespace VehiclePermitSystemWeb.Services.Visits
                 }
             );
         }
+
+        private void ApplyQueueDecision(ApplicationDbContext db, Visit visit, bool isApproved)
+        {
+            var isSelfService = string.Equals(
+                visit.RequestSource,
+                Visit.RequestSourcePublicSelfService,
+                StringComparison.OrdinalIgnoreCase
+            );
+            var queueEnabled = db.Tenants
+                .AsNoTracking()
+                .Any(tenant =>
+                    tenant.TenantId == db.CurrentTenantId
+                    && tenant.VisitsServiceEnabled
+                    && tenant.SelfServiceEnabled
+                    && tenant.QueueServiceEnabled
+                );
+            if (
+                isApproved
+                && isSelfService
+                && queueEnabled
+                && string.IsNullOrWhiteSpace(visit.QueueStatus)
+            )
+            {
+                visit.QueueStatus = Visit.QueueStatusWaiting;
+                visit.QueuedAtUtc = _systemClock.UtcNow;
+                return;
+            }
+
+            if (!isApproved && !string.IsNullOrWhiteSpace(visit.QueueStatus))
+            {
+                visit.QueueStatus = Visit.QueueStatusSkipped;
+                visit.QueueCompletedAtUtc = _systemClock.UtcNow;
+            }
+        }
+
+        private void CloseQueueVisit(Visit visit, string status)
+        {
+            if (string.IsNullOrWhiteSpace(visit.QueueStatus))
+            {
+                return;
+            }
+
+            visit.QueueStatus = status;
+            visit.QueueCompletedAtUtc ??= _systemClock.UtcNow;
+        }
+
+        private static bool CanTransitionQueue(string currentStatus, string targetStatus)
+        {
+            return targetStatus switch
+            {
+                Visit.QueueStatusWaiting =>
+                    string.IsNullOrWhiteSpace(currentStatus)
+                    || currentStatus == Visit.QueueStatusSkipped,
+                Visit.QueueStatusCalled => currentStatus == Visit.QueueStatusWaiting,
+                Visit.QueueStatusServing =>
+                    currentStatus == Visit.QueueStatusWaiting
+                    || currentStatus == Visit.QueueStatusCalled,
+                Visit.QueueStatusCompleted =>
+                    currentStatus == Visit.QueueStatusWaiting
+                    || currentStatus == Visit.QueueStatusCalled
+                    || currentStatus == Visit.QueueStatusServing,
+                Visit.QueueStatusSkipped =>
+                    currentStatus == Visit.QueueStatusWaiting
+                    || currentStatus == Visit.QueueStatusCalled,
+                _ => false,
+            };
+        }
+
+        private static string NormalizeQueueStatus(string? queueStatus)
+        {
+            return (queueStatus ?? string.Empty).Trim() switch
+            {
+                Visit.QueueStatusWaiting => Visit.QueueStatusWaiting,
+                Visit.QueueStatusCalled => Visit.QueueStatusCalled,
+                Visit.QueueStatusServing => Visit.QueueStatusServing,
+                Visit.QueueStatusCompleted => Visit.QueueStatusCompleted,
+                Visit.QueueStatusSkipped => Visit.QueueStatusSkipped,
+                _ => string.Empty,
+            };
+        }
+
+        private static int QueueStatusOrder(string? queueStatus) =>
+            NormalizeQueueStatus(queueStatus) switch
+            {
+                Visit.QueueStatusCalled => 0,
+                Visit.QueueStatusServing => 1,
+                Visit.QueueStatusWaiting => 2,
+                Visit.QueueStatusCompleted => 3,
+                Visit.QueueStatusSkipped => 4,
+                _ => 5,
+            };
 
         private void PrepareVisitForSave(Visit visit)
         {
@@ -949,6 +1163,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     {
                         visit.Status = "Completed";
                         visit.ExitTime ??= expirationTime;
+                        CloseQueueVisit(visit, Visit.QueueStatusCompleted);
                         ApplyVisitTimesToCompanions(visit, visit.EntryTime, visit.ExitTime);
                         changed = true;
                     }
@@ -962,6 +1177,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                 {
                     visit.Status = "Completed";
                     visit.ExitTime ??= visit.ExpiresAt;
+                    CloseQueueVisit(visit, Visit.QueueStatusSkipped);
                     ApplyVisitTimesToCompanions(visit, visit.EntryTime, visit.ExitTime);
                     changed = true;
                 }
@@ -970,6 +1186,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                 {
                     visit.Status = "Completed";
                     visit.ExitTime ??= visit.VisitDate.AddMinutes(20);
+                    CloseQueueVisit(visit, Visit.QueueStatusSkipped);
                     ApplyVisitTimesToCompanions(visit, visit.EntryTime, visit.ExitTime);
                     changed = true;
                 }

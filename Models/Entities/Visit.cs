@@ -12,6 +12,11 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public const string VisitedPersonTypePrisoner = "Prisoner";
         public const string VisitedPersonTypeEmployee = "Employee";
         public const string VisitedPersonTypeOther = "Other";
+        public const string QueueStatusWaiting = "Waiting";
+        public const string QueueStatusCalled = "Called";
+        public const string QueueStatusServing = "Serving";
+        public const string QueueStatusCompleted = "Completed";
+        public const string QueueStatusSkipped = "Skipped";
 
         public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
         public string VisitId { get; set; } = string.Empty;
@@ -75,6 +80,11 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public string ApprovalStatus { get; set; } = "Pending"; // Pending, Approved, Rejected
         public string RequestSource { get; set; } = RequestSourceInternal;
         public DateTime? RequestedAtUtc { get; set; }
+        public string QueueStatus { get; set; } = string.Empty;
+        public DateTime? QueuedAtUtc { get; set; }
+        public DateTime? CalledAtUtc { get; set; }
+        public DateTime? ServiceStartedAtUtc { get; set; }
+        public DateTime? QueueCompletedAtUtc { get; set; }
 
         public List<VisitCompanion> Companions { get; set; } = new();
 
@@ -139,6 +149,27 @@ namespace VehiclePermitSystemWeb.Models.Entities
             ApprovalStatus == "Pending" ? "بانتظار الاعتماد"
             : ApprovalStatus == "Rejected" ? "مرفوض"
             : "معتمد";
+
+        [NotMapped]
+        public string QueueTicketNumber
+        {
+            get
+            {
+                var digits = new string((VisitId ?? string.Empty).Where(char.IsDigit).ToArray());
+                return string.IsNullOrWhiteSpace(digits)
+                    ? "V---"
+                    : $"V-{digits.PadLeft(3, '0')}";
+            }
+        }
+
+        [NotMapped]
+        public string QueueStatusDisplay =>
+            QueueStatus == QueueStatusWaiting ? "بانتظار الاستدعاء"
+            : QueueStatus == QueueStatusCalled ? "تم الاستدعاء"
+            : QueueStatus == QueueStatusServing ? "قيد الخدمة"
+            : QueueStatus == QueueStatusCompleted ? "اكتملت الخدمة"
+            : QueueStatus == QueueStatusSkipped ? "تم تجاوز الدور"
+            : "غير مضاف للطابور";
 
         [Display(Name = "مخوّل الاعتماد")]
         public string VisitApproverUsername { get; set; } = string.Empty;

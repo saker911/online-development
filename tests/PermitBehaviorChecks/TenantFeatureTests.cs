@@ -146,6 +146,36 @@ public sealed class TenantFeatureTests
         );
     }
 
+    [Theory]
+    [InlineData("/Queue")]
+    [InlineData("/Display/WaitingBoard")]
+    public async Task QueueToggleClosesOperatorAndDisplayRoutes(string path)
+    {
+        var nextCalled = false;
+        var middleware = new TenantFeatureAccessMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+        var context = new DefaultHttpContext();
+        context.Request.Path = path;
+        context.User = new ClaimsPrincipal(
+            new ClaimsIdentity([new Claim(ClaimTypes.Name, "operator")], "Test")
+        );
+        var featureService = new FixedFeatureService(
+            new TenantServiceAvailability("limited", true, true, true, false, true)
+        );
+
+        await middleware.InvokeAsync(context, featureService);
+
+        Assert.False(nextCalled);
+        Assert.Equal(StatusCodes.Status302Found, context.Response.StatusCode);
+        Assert.Contains(
+            "/Home/FeatureUnavailable?feature=Queue",
+            context.Response.Headers.Location.ToString()
+        );
+    }
+
     private static ServiceProvider CreateProvider(string databasePrefix)
     {
         var services = new ServiceCollection();

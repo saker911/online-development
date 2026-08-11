@@ -1,0 +1,116 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Visits.VisitQueueViewModel
+@using VehiclePermitSystemWeb.Models.Entities
+
+@{
+    ViewData["Title"] = "تنظيم الطابور";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/visit-queue.css" asp-append-version="true" />
+}
+
+<div class="queue-page">
+    <header class="queue-page-header">
+        <div>
+            <span class="queue-kicker">تشغيل الاستقبال</span>
+            <h1>تنظيم الطابور</h1>
+            <p>استدعاء الأدوار ومتابعة الخدمة لحظياً.</p>
+        </div>
+        <div class="queue-live"><i aria-hidden="true"></i><span>مباشر</span><time>@Model.UpdatedAt.ToString("HH:mm")</time></div>
+    </header>
+
+    <section class="queue-summary" aria-label="ملخص الطابور">
+        <div><span>بانتظار الاستدعاء</span><strong>@Model.Waiting.Count</strong></div>
+        <div><span>تم استدعاؤهم</span><strong>@Model.Called.Count</strong></div>
+        <div><span>قيد الخدمة</span><strong>@Model.Serving.Count</strong></div>
+        <div><span>مكتملة مؤخراً</span><strong>@Model.Recent.Count</strong></div>
+    </section>
+
+    <div class="queue-workspace">
+        <section class="queue-lane queue-lane-primary">
+            <header><div><span>الدور التالي</span><h2>المنتظرون</h2></div><strong>@Model.Waiting.Count</strong></header>
+            <div class="queue-list">
+                @foreach (var item in Model.Waiting)
+                {
+                    <article class="queue-row">
+                        <div class="queue-number ltr-field">@item.TicketNumber</div>
+                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                        <form asp-action="Update" method="post">
+                            <input type="hidden" name="id" value="@item.VisitId" />
+                            <button type="submit" name="status" value="@Visit.QueueStatusCalled" class="btn btn-dark">استدعاء</button>
+                            <button type="submit" name="status" value="@Visit.QueueStatusServing" class="btn btn-outline-secondary">بدء الخدمة</button>
+                            <button type="submit" name="status" value="@Visit.QueueStatusSkipped" class="btn btn-link text-danger">تجاوز</button>
+                        </form>
+                    </article>
+                }
+                @if (!Model.Waiting.Any())
+                {
+                    <p class="queue-empty">لا توجد أدوار بانتظار الاستدعاء.</p>
+                }
+            </div>
+        </section>
+
+        <section class="queue-lane">
+            <header><div><span>النداء الحالي</span><h2>تم الاستدعاء</h2></div><strong>@Model.Called.Count</strong></header>
+            <div class="queue-list">
+                @foreach (var item in Model.Called)
+                {
+                    <article class="queue-row is-called">
+                        <div class="queue-number ltr-field">@item.TicketNumber</div>
+                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                        <form asp-action="Update" method="post">
+                            <input type="hidden" name="id" value="@item.VisitId" />
+                            <button type="submit" name="status" value="@Visit.QueueStatusServing" class="btn btn-dark">بدء الخدمة</button>
+                            <button type="submit" name="status" value="@Visit.QueueStatusSkipped" class="btn btn-link text-danger">تجاوز</button>
+                        </form>
+                    </article>
+                }
+                @if (!Model.Called.Any())
+                {
+                    <p class="queue-empty">لم يتم استدعاء أي دور.</p>
+                }
+            </div>
+        </section>
+
+        <section class="queue-lane">
+            <header><div><span>المعاملات المفتوحة</span><h2>قيد الخدمة</h2></div><strong>@Model.Serving.Count</strong></header>
+            <div class="queue-list">
+                @foreach (var item in Model.Serving)
+                {
+                    <article class="queue-row is-serving">
+                        <div class="queue-number ltr-field">@item.TicketNumber</div>
+                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                        <form asp-action="Update" method="post">
+                            <input type="hidden" name="id" value="@item.VisitId" />
+                            <button type="submit" name="status" value="@Visit.QueueStatusCompleted" class="btn btn-success">إنهاء الخدمة</button>
+                        </form>
+                    </article>
+                }
+                @if (!Model.Serving.Any())
+                {
+                    <p class="queue-empty">لا توجد خدمة جارية الآن.</p>
+                }
+            </div>
+        </section>
+
+        @if (Model.Available.Any())
+        {
+            <details class="queue-available">
+                <summary>إضافة زيارة معتمدة إلى الطابور <strong>@Model.Available.Count</strong></summary>
+                <div class="queue-list">
+                    @foreach (var item in Model.Available)
+                    {
+                        <article class="queue-row">
+                            <div class="queue-number ltr-field">@item.TicketNumber</div>
+                            <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                            <form asp-action="Update" method="post">
+                                <input type="hidden" name="id" value="@item.VisitId" />
+                                <button type="submit" name="status" value="@Visit.QueueStatusWaiting" class="btn btn-outline-secondary">إضافة</button>
+                            </form>
+                        </article>
+                    }
+                </div>
+            </details>
+        }
+    </div>
+</div>

@@ -10,17 +10,17 @@ document.addEventListener("DOMContentLoaded", function () {
         waiting: {
             list: document.getElementById("waitingBoardWaitingList"),
             count: document.getElementById("waitingBoardWaitingCount"),
-            empty: "لا توجد مواعيد بانتظار الوصول."
+            empty: "لا توجد أدوار بانتظار الاستدعاء."
         },
         inside: {
             list: document.getElementById("waitingBoardInsideList"),
             count: document.getElementById("waitingBoardInsideCount"),
-            empty: "لا توجد زيارات داخل الجهة حاليًا."
+            empty: "لم يتم استدعاء أي دور."
         },
         completed: {
             list: document.getElementById("waitingBoardCompletedList"),
             count: document.getElementById("waitingBoardCompletedCount"),
-            empty: "لا توجد زيارات مكتملة مؤخرًا."
+            empty: "لا توجد خدمة جارية الآن."
         }
     };
 
