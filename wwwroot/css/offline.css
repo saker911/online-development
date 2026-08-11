@@ -26,6 +26,12 @@ img { width: 72px; height: 72px; }
 h1 { margin: 24px 0 8px; font-size: 30px; }
 p { margin: 0 0 24px; color: #475569; line-height: 1.8; }
 
+.connection-status {
+  margin-top: -10px;
+  font-size: 14px;
+  color: #0f766e;
+}
+
 a {
   display: inline-grid;
   place-items: center;
@@ -44,5 +50,6 @@ a {
 @media (prefers-color-scheme: dark) {
   body { background: #0d0d0d; color: #f8fafc; }
   p { color: #cbd5e1; }
+  .connection-status { color: #5eead4; }
   a { background: #f8fafc; color: #171717; }
 }

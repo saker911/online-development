@@ -1,8 +1,9 @@
-const CACHE_NAME = "permit-platform-static-v5";
+const CACHE_NAME = "permit-platform-static-v6";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
   "/css/offline.css",
+  "/js/offline-retry.js",
   "/icons/brand-mark.svg",
   "/icons/app-icon.svg",
   "/icons/app-icon-192.png",

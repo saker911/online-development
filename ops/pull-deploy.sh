@@ -38,6 +38,51 @@ docker compose \
   -f "${COMPOSE_FILE}" \
   up -d --build --remove-orphans
 
+app_ready=false
+for _ in {1..30}; do
+  if curl --fail --silent --show-error \
+    --header "Host: tasareehapp.com" \
+    --header "X-Forwarded-Proto: https" \
+    http://127.0.0.1:10000/healthz >/dev/null; then
+    app_ready=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "${app_ready}" != "true" ]]; then
+  docker compose \
+    --env-file "${ENV_FILE}" \
+    -f "${COMPOSE_FILE}" \
+    logs --tail=100 app
+  exit 1
+fi
+
+# Caddy resolves the app container when its configuration loads. Refresh it
+# after recreating the app so the proxy never keeps the previous container IP.
+docker compose \
+  --env-file "${ENV_FILE}" \
+  -f "${COMPOSE_FILE}" \
+  restart caddy
+
+for _ in {1..15}; do
+  if curl --fail --silent --show-error \
+    --resolve tasareehapp.com:443:127.0.0.1 \
+    https://tasareehapp.com/healthz >/dev/null; then
+    proxy_ready=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "${proxy_ready:-false}" != "true" ]]; then
+  docker compose \
+    --env-file "${ENV_FILE}" \
+    -f "${COMPOSE_FILE}" \
+    logs --tail=100 caddy app
+  exit 1
+fi
+
 install -m 0644 \
   "${REPOSITORY_DIR}/ops/tasareehapp-backup.service" \
   /etc/systemd/system/tasareehapp-backup.service
