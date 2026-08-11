@@ -26,7 +26,9 @@ readonly TARGET_REVISION="$(git rev-parse "origin/${BRANCH}")"
 readonly CURRENT_REVISION="$(git rev-parse HEAD)"
 
 if [[ "${CURRENT_REVISION}" == "${TARGET_REVISION}" ]] \
-  && docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" ps --status running --quiet \
+  && docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" ps --status running --quiet app \
+    | grep -q . \
+  && docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" ps --status running --quiet caddy \
     | grep -q .; then
   exit 0
 fi
