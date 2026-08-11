@@ -267,5 +267,6 @@
 <script type="application/json" id="scanConsoleInitialPermit" nonce="@(Context.Items["CspScriptNonce"])">@Html.Raw(initialPermitJson)</script>
 
 @section Scripts {
+    <script src="~/lib/zxing-browser/zxing-browser.min.js" asp-append-version="true"></script>
     <script src="~/js/scan-console.js" asp-append-version="true"></script>
 }

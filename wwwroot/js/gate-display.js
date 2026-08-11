@@ -118,6 +118,7 @@
     let activeOperator = null;
     let cameraStream = null;
     let cameraDetector = null;
+    let cameraFallbackControls = null;
     let cameraFrameRequest = 0;
     let cameraRunning = false;
     let lastScannedPermitNumber = '';
@@ -1302,6 +1303,11 @@
             cameraFrameRequest = 0;
         }
 
+        if (cameraFallbackControls) {
+            cameraFallbackControls.stop();
+            cameraFallbackControls = null;
+        }
+
         if (cameraStream) {
             cameraStream.getTracks().forEach((track) => track.stop());
             cameraStream = null;
@@ -1326,6 +1332,18 @@
         focusScanner();
     };
 
+    const handleCameraValue = (rawValue) => {
+        const value = String(rawValue || '').trim();
+        if (!value || !cameraRunning) {
+            return;
+        }
+
+        scannerInput.value = value;
+        resetScannerBuffer();
+        stopCameraScanner('تمت قراءة الرمز من الكاميرا');
+        submitScan();
+    };
+
     const detectCameraFrame = async () => {
         if (!cameraRunning || !cameraDetector || !gateCameraPreview) {
             return;
@@ -1335,10 +1353,7 @@
             const codes = await cameraDetector.detect(gateCameraPreview);
             const rawValue = codes && codes.length ? String(codes[0].rawValue || '').trim() : '';
             if (rawValue) {
-                scannerInput.value = rawValue;
-                resetScannerBuffer();
-                stopCameraScanner('تمت قراءة الرمز من الكاميرا');
-                submitScan();
+                handleCameraValue(rawValue);
                 return;
             }
         } catch {
@@ -1359,9 +1374,9 @@
             return;
         }
 
-        if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+        if (!navigator.mediaDevices?.getUserMedia) {
             gateCameraPanel.hidden = false;
-            setCameraStatus('الكاميرا غير مدعومة في هذا المتصفح. استخدم Chrome/Edge أو قارئ الباركود الخارجي.', true);
+            setCameraStatus('هذا المتصفح لا يسمح بتشغيل الكاميرا. افتح الرابط في Safari أو Chrome واسمح بإذن الكاميرا.', true);
             return;
         }
 
@@ -1370,28 +1385,63 @@
             gateCameraPanel.hidden = false;
             setCameraStatus('جاري تشغيل كاميرا الجوال...');
 
-            const formats = ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e'];
-            const supportedFormats = typeof BarcodeDetector.getSupportedFormats === 'function'
-                ? await BarcodeDetector.getSupportedFormats()
-                : formats;
-            const activeFormats = formats.filter((format) => supportedFormats.includes(format));
-
-            cameraDetector = new BarcodeDetector(activeFormats.length ? { formats: activeFormats } : undefined);
-            cameraStream = await navigator.mediaDevices.getUserMedia({
+            const constraints = {
                 video: { facingMode: { ideal: 'environment' } },
                 audio: false,
-            });
-            gateCameraPreview.srcObject = cameraStream;
-            await gateCameraPreview.play();
+            };
             cameraRunning = true;
+
+            if ('BarcodeDetector' in window) {
+                const formats = ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e'];
+                const supportedFormats = typeof BarcodeDetector.getSupportedFormats === 'function'
+                    ? await BarcodeDetector.getSupportedFormats()
+                    : formats;
+                const activeFormats = formats.filter((format) => supportedFormats.includes(format));
+
+                cameraDetector = new BarcodeDetector(activeFormats.length ? { formats: activeFormats } : undefined);
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                gateCameraPreview.srcObject = cameraStream;
+                await gateCameraPreview.play();
+                setCameraStatus('وجّه كاميرا الجوال نحو QR أو الباركود.');
+                cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
+                return;
+            }
+
+            if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
+                throw new Error('camera_reader_unavailable');
+            }
+
+            cameraDetector = null;
+            const fallbackReader = new window.ZXingBrowser.BrowserMultiFormatReader(undefined, {
+                delayBetweenScanAttempts: 120,
+            });
+            cameraFallbackControls = await fallbackReader.decodeFromConstraints(
+                constraints,
+                gateCameraPreview,
+                (result) => {
+                    if (result && cameraRunning) {
+                        handleCameraValue(result.getText ? result.getText() : result.text);
+                    }
+                }
+            );
+            if (!cameraRunning) {
+                cameraFallbackControls.stop();
+                cameraFallbackControls = null;
+                return;
+            }
             setCameraStatus('وجّه كاميرا الجوال نحو QR أو الباركود.');
-            cameraFrameRequest = window.requestAnimationFrame(detectCameraFrame);
-        } catch {
+        } catch (error) {
             stopCameraScanner();
             if (gateCameraPanel) {
                 gateCameraPanel.hidden = false;
             }
-            setCameraStatus('تعذر تشغيل الكاميرا. تحقق من السماح للمتصفح باستخدام الكاميرا.', true);
+            const permissionDenied = error?.name === 'NotAllowedError';
+            setCameraStatus(
+                permissionDenied
+                    ? 'تم رفض إذن الكاميرا. اسمح للموقع باستخدامها من إعدادات المتصفح ثم أعد المحاولة.'
+                    : 'تعذر تشغيل الكاميرا. أغلق أي تطبيق يستخدمها ثم أعد المحاولة.',
+                true
+            );
         }
     };
 

@@ -154,7 +154,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 rawIdentifier = resolvedPermitCode;
             }
 
-            var identifier = NormalizeIdentifier(rawIdentifier, out var scanMode);
+            var (identifier, scanMode) = ResolveAutoIdentifier(rawIdentifier);
             if (string.IsNullOrWhiteSpace(identifier))
                 return Ok(new { allowed = false, reason = "invalid_request" });
 
@@ -340,6 +340,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private static string NormalizeIdentifier(string identifier, out string scanMode)
         {
+            identifier = NormalizeDigits(identifier);
             scanMode = DetectScanMode(identifier);
             if (string.Equals(scanMode, "visit", StringComparison.OrdinalIgnoreCase))
             {
@@ -356,7 +357,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return "permit";
             }
 
-            var normalized = identifier.Trim().ToUpperInvariant();
+            var normalized = NormalizeDigits(identifier).Trim().ToUpperInvariant();
             if (
                 normalized.StartsWith("V", StringComparison.OrdinalIgnoreCase)
                 && normalized.Length > 1
@@ -380,7 +381,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return string.Empty;
             }
 
-            var trimmed = identifier.Trim();
+            var trimmed = NormalizeDigits(identifier).Trim();
             var digits = new string(trimmed.Where(char.IsDigit).ToArray());
             if (int.TryParse(digits, out var visitNumber))
             {
@@ -392,7 +393,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private static string BuildPermitCode(string identifier)
         {
-            var trimmed = identifier.Trim();
+            var trimmed = NormalizeDigits(identifier).Trim();
             var digits = new string(trimmed.Where(char.IsDigit).ToArray());
             if (int.TryParse(digits, out var publicNumber))
             {
@@ -400,6 +401,45 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return string.Empty;
+        }
+
+        private (string Identifier, string ScanMode) ResolveAutoIdentifier(string rawIdentifier)
+        {
+            var normalizedRaw = NormalizeDigits(rawIdentifier).Trim();
+            var identifier = NormalizeIdentifier(normalizedRaw, out var scanMode);
+            if (!IsDigitsOnly(normalizedRaw))
+            {
+                return (identifier, scanMode);
+            }
+
+            var visitIdentifier = NormalizeVisitIdentifier(normalizedRaw);
+            var permitExists = !string.IsNullOrWhiteSpace(identifier)
+                && _permitService.GetPermitByNumber(identifier) != null;
+            var visitExists = !string.IsNullOrWhiteSpace(visitIdentifier)
+                && _visitService.GetVisitById(visitIdentifier) != null;
+            return visitExists && !permitExists
+                ? (visitIdentifier, "visit")
+                : (identifier, scanMode);
+        }
+
+        private static bool IsDigitsOnly(string value) =>
+            !string.IsNullOrWhiteSpace(value) && value.All(char.IsDigit);
+
+        private static string NormalizeDigits(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return string.Concat(
+                value.Select(character => character switch
+                {
+                    >= '\u0660' and <= '\u0669' => (char)('0' + character - '\u0660'),
+                    >= '\u06F0' and <= '\u06F9' => (char)('0' + character - '\u06F0'),
+                    _ => character,
+                })
+            );
         }
 
         private static string? ResolveScannerUserId(JsonElement requestBody)
