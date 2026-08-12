@@ -294,7 +294,7 @@
                             const isPermanent = permitTypeSelect.value === 'Permanent';
                             const isVisitor = permitTypeSelect.value === 'Visitor';
 
-                            returnRequirementGroup.classList.toggle('d-none', isVisitor);
+                            returnRequirementGroup?.classList.toggle('d-none', isVisitor);
                             if (permitDateGroup) {
                                 permitDateGroup.classList.toggle('d-none', isVisitor);
                             }
@@ -318,8 +318,8 @@
                                 phoneLabel.textContent = isVisitor ? 'رقم الجوال' : 'رقم الجوال';
                             }
 
-                            workLocationGroup.classList.toggle('d-none', isVisitor);
-                            visitLocationGroup.classList.toggle('d-none', !isVisitor);
+                            workLocationGroup?.classList.toggle('d-none', isVisitor);
+                            visitLocationGroup?.classList.toggle('d-none', !isVisitor);
                             if (expiresAtGroup) {
                                 expiresAtGroup.classList.toggle('d-none', isVisitor);
                                 if (expiresAtLabel) {
@@ -364,8 +364,10 @@
                         if (workLocationInput) {
                             workLocationInput.addEventListener('change', resolveManagerForDepartment);
                         }
-                        permitTypeSelect.addEventListener('change', togglePermitFields);
-                        togglePermitFields();
+                        if (permitTypeSelect) {
+                            permitTypeSelect.addEventListener('change', togglePermitFields);
+                            togglePermitFields();
+                        }
                     })();
                     <!-- central validation handled in wwwroot/js/site.js -->
                 </script>

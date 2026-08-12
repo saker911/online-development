@@ -268,7 +268,7 @@ conflicts.Any())
                                 const isPermanent = permitTypeSelect.value === 'Permanent';
                                 const isVisitor = permitTypeSelect.value === 'Visitor';
 
-                                returnRequirementGroup.classList.toggle('d-none', isVisitor);
+                                returnRequirementGroup?.classList.toggle('d-none', isVisitor);
                                 if (permitDateGroup) {
                                     permitDateGroup.classList.toggle('d-none', isVisitor);
                                 }
@@ -292,8 +292,8 @@ conflicts.Any())
                                     phoneLabel.textContent = 'رقم الجوال';
                                 }
 
-                                workLocationGroup.classList.toggle('d-none', isVisitor);
-                                visitLocationGroup.classList.toggle('d-none', !isVisitor);
+                                workLocationGroup?.classList.toggle('d-none', isVisitor);
+                                visitLocationGroup?.classList.toggle('d-none', !isVisitor);
                                 if (expiresAtGroup) {
                                     expiresAtGroup.classList.remove('d-none');
                                     if (expiresAtLabel) {
@@ -335,8 +335,10 @@ conflicts.Any())
                             if (workLocationInput) {
                                 workLocationInput.addEventListener('change', resolveManagerForDepartment);
                             }
-                            permitTypeSelect.addEventListener('change', togglePermitFields);
-                            togglePermitFields();
+                            if (permitTypeSelect) {
+                                permitTypeSelect.addEventListener('change', togglePermitFields);
+                                togglePermitFields();
+                            }
                         })();
                         <!-- Plate validation handled centrally in wwwroot/js/site.js -->
                     </script>
