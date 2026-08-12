@@ -162,6 +162,23 @@ builder.Services.AddRateLimiter(options =>
         }
     );
     options.AddPolicy<string>(
+        "password-recovery",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: remoteIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 5,
+                    Window = TimeSpan.FromMinutes(15),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+    options.AddPolicy<string>(
         "display-registration",
         context =>
         {

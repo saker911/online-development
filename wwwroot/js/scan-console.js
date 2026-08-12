@@ -1304,8 +1304,31 @@ document.addEventListener("DOMContentLoaded", function () {
         refreshOperatorStatus();
         const heartbeatEndpoint = unifiedGateRoot?.dataset.heartbeatEndpoint;
         if (heartbeatEndpoint) {
-            const sendHeartbeat = function () {
-                fetch(heartbeatEndpoint, { method: "POST", credentials: "same-origin" }).catch(function () { });
+            const sendHeartbeat = async function () {
+                const payload = new URLSearchParams({
+                    appVersion: document.documentElement.dataset.appVersion || "web",
+                    platform: navigator.userAgentData?.platform || navigator.platform || "web",
+                    networkStatus: navigator.onLine ? "online" : "offline",
+                    cameraStatus: cameraStream ? "active" : "idle",
+                    appliedConfigurationVersion: localStorage.getItem("displayConfigVersion") || "0"
+                });
+                try {
+                    if (navigator.getBattery) {
+                        const battery = await navigator.getBattery();
+                        payload.set("batteryLevel", String(Math.round(battery.level * 100)));
+                    }
+                    const response = await fetch(heartbeatEndpoint, {
+                        method: "POST",
+                        credentials: "same-origin",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+                        body: payload.toString()
+                    });
+                    const result = await response.json();
+                    if (result?.reloadRequired && result.configurationVersion) {
+                        localStorage.setItem("displayConfigVersion", String(result.configurationVersion));
+                        window.location.reload();
+                    }
+                } catch { }
             };
             sendHeartbeat();
             window.setInterval(sendHeartbeat, 30000);

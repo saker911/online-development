@@ -49,11 +49,42 @@
                     <input asp-for="ScreenName" class="form-control" placeholder="شاشة البوابة" />
                     <span asp-validation-for="ScreenName" class="text-danger"></span>
                 </div>
-                <div class="col-md-6 login-field">
-                    <label asp-for="ScreenLocation" class="form-label">موقع الشاشة</label>
-                    <input asp-for="ScreenLocation" class="form-control" placeholder="البوابة الرئيسية" />
-                    <span asp-validation-for="ScreenLocation" class="text-danger"></span>
-                </div>
+                @if (Model.Locations.Count > 0)
+                {
+                    <div class="col-md-6 login-field">
+                        <label asp-for="WorkplaceSiteId" class="form-label">الموقع</label>
+                        <select asp-for="WorkplaceSiteId" class="form-select" required>
+                            <option value="">اختر الموقع</option>
+                            @foreach (var site in Model.Locations)
+                            {
+                                <option value="@site.SiteId">@site.SiteName</option>
+                            }
+                        </select>
+                        <span asp-validation-for="WorkplaceSiteId" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 login-field">
+                        <label asp-for="WorkplaceSiteEntranceId" class="form-label">المدخل</label>
+                        <select asp-for="WorkplaceSiteEntranceId" class="form-select">
+                            <option value="">بدون مدخل محدد</option>
+                            @foreach (var site in Model.Locations)
+                            {
+                                <optgroup label="@site.SiteName">
+                                    @foreach (var entrance in site.Entrances)
+                                    {
+                                        <option value="@entrance.Id">@entrance.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </div>
+                }
+                else
+                {
+                    <div class="col-md-6 login-field">
+                        <label asp-for="ScreenLocation" class="form-label">موقع الشاشة</label>
+                        <input asp-for="ScreenLocation" class="form-control" placeholder="البوابة الرئيسية" />
+                    </div>
+                }
                 <div class="col-12 login-field">
                     <label asp-for="Description" class="form-label">وصف اختياري</label>
                     <textarea asp-for="Description" class="form-control" rows="3"></textarea>

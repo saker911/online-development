@@ -119,6 +119,36 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         [Display(Name = "البوابات والشاشات")]
         public bool GateServiceEnabled { get; set; } = true;
 
+        [Display(Name = "مركز الإشعارات")]
+        public bool NotificationCenterEnabled { get; set; } = true;
+
+        [Display(Name = "تنبيهات التصاريح")]
+        public bool PermitNotificationsEnabled { get; set; } = true;
+
+        [Display(Name = "تنبيهات الزيارات")]
+        public bool VisitNotificationsEnabled { get; set; } = true;
+
+        [Display(Name = "التنبيهات الأمنية")]
+        public bool SecurityAlertsEnabled { get; set; } = true;
+
+        [Display(Name = "العمليات الفاشلة")]
+        public bool FailedOperationAlertsEnabled { get; set; } = true;
+
+        [Display(Name = "حركات الدخول والخروج غير المصرح بها")]
+        public bool UnauthorizedMovementAlertsEnabled { get; set; } = true;
+
+        [Display(Name = "الاحتفاظ بالإشعارات (يوم)")]
+        [Range(7, 730, ErrorMessage = "مدة الاحتفاظ بالإشعارات من 7 إلى 730 يومًا.")]
+        public int NotificationRetentionDays { get; set; } = 90;
+
+        [Display(Name = "الاحتفاظ بسجل البريد (يوم)")]
+        [Range(7, 365, ErrorMessage = "مدة الاحتفاظ بسجل البريد من 7 إلى 365 يومًا.")]
+        public int EmailOutboxRetentionDays { get; set; } = 30;
+
+        [Display(Name = "الاحتفاظ بسجل التدقيق (يوم)")]
+        [Range(90, 2555, ErrorMessage = "مدة الاحتفاظ بسجل التدقيق من 90 يومًا إلى 7 سنوات.")]
+        public int AuditLogRetentionDays { get; set; } = 365;
+
         public IReadOnlyList<string> SubscriptionStatusOptions =>
             TenantSubscriptionStatuses.All;
     }

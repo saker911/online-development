@@ -1,0 +1,101 @@
+@model EmergencyDashboardViewModel
+@{
+    ViewData["Title"] = "الطوارئ والإخلاء";
+    ViewData["BodyClass"] = "workplace-page-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="workplace-page emergency-page" data-emergency-page>
+    @await Html.PartialAsync("_WorkplaceNavigation")
+    <header class="workplace-heading workplace-heading-compact">
+        <div><span class="workplace-eyebrow">السلامة</span><h1>الطوارئ والإخلاء</h1></div>
+        <form method="get" class="workplace-filter-bar">
+            <select name="siteId" onchange="this.form.submit()">
+                @foreach (var site in Model.Sites)
+                {
+                    <option value="@site.SiteId" selected="@(site.SiteId == Model.SelectedSiteId)">@site.SiteName</option>
+                }
+            </select>
+        </form>
+    </header>
+
+    @if (Model.ActiveSession == null)
+    {
+        <section class="workplace-panel emergency-empty">
+            <h2>لا توجد حالة طوارئ نشطة</h2>
+            <p>يُنشئ البدء لقطة فورية بالأشخاص المسجل وجودهم في الموقع.</p>
+            @if (Model.SelectedSiteId.HasValue)
+            {
+                <form method="post" asp-action="Start" data-confirm-message="بدء جلسة طوارئ لهذا الموقع؟">
+                    <input type="hidden" name="siteId" value="@Model.SelectedSiteId" />
+                    <button class="btn btn-danger" type="submit">بدء حالة طوارئ</button>
+                </form>
+            }
+        </section>
+    }
+    else
+    {
+        var session = Model.ActiveSession;
+        <section class="workplace-metrics emergency-metrics">
+            <article><span>الإجمالي</span><strong>@session.TotalCount</strong></article>
+            <article><span>آمن</span><strong class="is-positive">@session.SafeCount</strong></article>
+            <article><span>مساعدة</span><strong>@session.AssistanceCount</strong></article>
+            <article><span>غير موجود</span><strong>@session.MissingCount</strong></article>
+            <article><span>لم يتحقق</span><strong>@session.PendingCount</strong></article>
+        </section>
+
+        <section class="workplace-panel emergency-session-panel">
+            <header>
+                <div><span class="workplace-eyebrow">جلسة نشطة</span><h2>@session.SiteName</h2></div>
+                <form method="post" asp-action="Complete" data-confirm-message="إنهاء جلسة الطوارئ وحفظ النتيجة؟">
+                    <input type="hidden" name="sessionId" value="@session.Id" />
+                    <input type="hidden" name="siteId" value="@session.SiteId" />
+                    <button class="btn btn-outline-danger" type="submit">إنهاء الجلسة</button>
+                </form>
+            </header>
+            <div class="emergency-offline-state" data-emergency-network aria-live="polite"></div>
+            <div class="emergency-member-list">
+                @foreach (var member in session.Members)
+                {
+                    <article class="emergency-member" data-member-id="@member.Id" data-status="@member.Status">
+                        <div>
+                            <strong>@member.FullName</strong>
+                            <small>@member.PersonTypeDisplay · @member.Reference · @member.Location</small>
+                        </div>
+                        <span class="emergency-status">@member.StatusDisplay</span>
+                        <div class="emergency-actions">
+                            @foreach (var state in new[] {
+                                (EmergencyMemberStatuses.Safe, "آمن"),
+                                (EmergencyMemberStatuses.Assistance, "مساعدة"),
+                                (EmergencyMemberStatuses.Missing, "غير موجود") })
+                            {
+                                <form method="post" asp-action="UpdateMember" data-emergency-update>
+                                    <input type="hidden" name="sessionId" value="@session.Id" />
+                                    <input type="hidden" name="memberId" value="@member.Id" />
+                                    <input type="hidden" name="siteId" value="@session.SiteId" />
+                                    <input type="hidden" name="status" value="@state.Item1" />
+                                    <button class="btn btn-sm @(member.Status == state.Item1 ? "btn-dark" : "btn-outline-secondary")" type="submit">@state.Item2</button>
+                                </form>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+
+    <section class="workplace-panel emergency-history">
+        <header><div><span class="workplace-eyebrow">السجل</span><h2>آخر الجلسات</h2></div></header>
+        @foreach (var item in Model.RecentSessions)
+        {
+            <div class="emergency-history-row"><strong>@item.SiteName</strong><span>@item.StatusDisplay</span><span>@item.TotalCount شخص</span><time>@HijriDateFormatter.Format(item.StartedAtUtc.ToLocalTime())</time></div>
+        }
+    </section>
+</div>
+
+@section Scripts {
+    <script src="~/js/emergency-offline.js" asp-append-version="true"></script>
+}

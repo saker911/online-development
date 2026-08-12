@@ -219,6 +219,16 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "GateServiceEnabled",
                 "INTEGER NOT NULL DEFAULT 1"
             );
+            EnsureSqliteColumn(db, "Tenants", "NotificationCenterEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "Tenants", "PermitNotificationsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "Tenants", "VisitNotificationsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "Tenants", "SecurityAlertsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "Tenants", "FailedOperationAlertsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "Tenants", "UnauthorizedMovementAlertsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "Tenants", "NotificationRetentionDays", "INTEGER NOT NULL DEFAULT 90");
+            EnsureSqliteColumn(db, "Tenants", "EmailOutboxRetentionDays", "INTEGER NOT NULL DEFAULT 30");
+            EnsureSqliteColumn(db, "Tenants", "AuditLogRetentionDays", "INTEGER NOT NULL DEFAULT 365");
+            EnsureSqliteColumn(db, "Tenants", "LastRetentionRunAtUtc", "TEXT NULL");
             EnsureSqliteColumn(
                 db,
                 "AdministrationSettings",
@@ -406,10 +416,30 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Permits", "LeaveReason", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "Permits", "CurrentState", "TEXT NOT NULL DEFAULT 'Outside'");
             EnsureSqliteColumn(db, "Permits", "VisitLocation", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "Permits", "WorkplaceSiteId", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Permits", "WorkplaceSiteEntranceId", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Visits", "WorkplaceSiteId", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Visits", "WorkplaceSiteEntranceId", "INTEGER NULL");
             EnsureSqliteColumn(db, "Permits", "PlateOrigin", "TEXT NOT NULL DEFAULT 'Saudi'");
             EnsureSqliteColumn(db, "Permits", "RequiresReturn", "INTEGER NOT NULL DEFAULT 1");
             EnsureSqliteColumn(db, "Permits", "AccessMode", "TEXT NOT NULL DEFAULT 'FullAccess'");
             EnsureSqliteColumn(db, "DisplayDevices", "Mode", "TEXT NOT NULL DEFAULT 'Gate'");
+            EnsureSqliteColumn(db, "DisplayDevices", "WorkplaceSiteId", "INTEGER NULL");
+            EnsureSqliteColumn(
+                db,
+                "DisplayDevices",
+                "WorkplaceSiteEntranceId",
+                "INTEGER NULL"
+            );
+            EnsureSqliteColumn(db, "DisplayDevices", "AppVersion", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "DisplayDevices", "Platform", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "DisplayDevices", "NetworkStatus", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "DisplayDevices", "CameraStatus", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "DisplayDevices", "BatteryLevel", "INTEGER NULL");
+            EnsureSqliteColumn(db, "DisplayDevices", "LastHealthError", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "DisplayDevices", "LastHealthReportedAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "DisplayDevices", "ConfigurationVersion", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "DisplayDevices", "AppliedConfigurationVersion", "INTEGER NOT NULL DEFAULT 0");
             db.Database.ExecuteSqlRaw(
                 @"UPDATE Permits
                   SET AccessMode = CASE
@@ -526,6 +556,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                   END;"
             );
             EnsureSqlitePermitActivitiesTable(db);
+            EnsureSqliteWorkplaceTables(db);
             EnsureSqlitePermitIndexes(db);
             EnsureSqliteUserActivitiesTable(db);
             EnsureSqliteAuditLogsTable(db);
@@ -535,7 +566,133 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteSubscriptionPlansTable(db);
             EnsureSqliteVisitorWorkflowSettingsTable(db);
             EnsureSqliteEmailNotificationOutboxTable(db);
+            EnsureSqliteInAppNotificationsTable(db);
             EnsureSqliteTenancySchema(db);
+        }
+
+        private static void EnsureSqliteWorkplaceTables(ApplicationDbContext db)
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS WorkplaceSites (
+                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    TenantId TEXT NOT NULL DEFAULT 'default',
+                    Name TEXT NOT NULL,
+                    Code TEXT NOT NULL DEFAULT '',
+                    Address TEXT NOT NULL DEFAULT '',
+                    Latitude REAL NULL,
+                    Longitude REAL NULL,
+                    GeofenceRadiusMeters INTEGER NOT NULL DEFAULT 150,
+                    IsActive INTEGER NOT NULL DEFAULT 1,
+                    CreatedAtUtc TEXT NOT NULL,
+                    UpdatedAtUtc TEXT NOT NULL
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_WorkplaceSites_TenantId_Name ON WorkplaceSites (TenantId, Name);"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_WorkplaceSites_TenantId_Code ON WorkplaceSites (TenantId, Code);"
+            );
+            EnsureSqliteColumn(db, "WorkplaceSites", "PermitsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "WorkplaceSites", "VisitsEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "WorkplaceSites", "SelfServiceEnabled", "INTEGER NOT NULL DEFAULT 1");
+            EnsureSqliteColumn(db, "WorkplaceSites", "QueueEnabled", "INTEGER NOT NULL DEFAULT 0");
+            EnsureSqliteColumn(db, "WorkplaceSites", "GateEnabled", "INTEGER NOT NULL DEFAULT 1");
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS WorkplaceSiteEntrances (
+                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    TenantId TEXT NOT NULL DEFAULT 'default',
+                    WorkplaceSiteId INTEGER NOT NULL,
+                    Name TEXT NOT NULL,
+                    Code TEXT NOT NULL DEFAULT '',
+                    LocationDescription TEXT NOT NULL DEFAULT '',
+                    IsActive INTEGER NOT NULL DEFAULT 1,
+                    CreatedAtUtc TEXT NOT NULL,
+                    UpdatedAtUtc TEXT NOT NULL,
+                    FOREIGN KEY (WorkplaceSiteId) REFERENCES WorkplaceSites (Id) ON DELETE CASCADE
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_WorkplaceSiteEntrances_TenantId_WorkplaceSiteId_Name ON WorkplaceSiteEntrances (TenantId, WorkplaceSiteId, Name);"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_WorkplaceSiteEntrances_TenantId_WorkplaceSiteId_Code ON WorkplaceSiteEntrances (TenantId, WorkplaceSiteId, Code);"
+            );
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS PersonProfiles (
+                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    TenantId TEXT NOT NULL DEFAULT 'default',
+                    SourceKey TEXT NOT NULL,
+                    PersonType TEXT NOT NULL DEFAULT 'Employee',
+                    FullName TEXT NOT NULL DEFAULT '',
+                    NationalId TEXT NOT NULL DEFAULT '',
+                    PhoneNumber TEXT NOT NULL DEFAULT '',
+                    Email TEXT NOT NULL DEFAULT '',
+                    EmployeeNumber TEXT NOT NULL DEFAULT '',
+                    Department TEXT NOT NULL DEFAULT '',
+                    JobTitle TEXT NOT NULL DEFAULT '',
+                    Organization TEXT NOT NULL DEFAULT '',
+                    LastReference TEXT NOT NULL DEFAULT '',
+                    IsActive INTEGER NOT NULL DEFAULT 1,
+                    LastSeenAtUtc TEXT NULL,
+                    CreatedAtUtc TEXT NOT NULL,
+                    UpdatedAtUtc TEXT NOT NULL
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_PersonProfiles_TenantId_SourceKey ON PersonProfiles (TenantId, SourceKey);"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_PersonProfiles_TenantId_PersonType ON PersonProfiles (TenantId, PersonType);"
+            );
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS PersonPhotos (
+                    PersonProfileId INTEGER NOT NULL PRIMARY KEY,
+                    TenantId TEXT NOT NULL DEFAULT 'default',
+                    Data BLOB NOT NULL,
+                    ContentType TEXT NOT NULL DEFAULT 'image/jpeg',
+                    UpdatedAtUtc TEXT NOT NULL,
+                    FOREIGN KEY (PersonProfileId) REFERENCES PersonProfiles (Id) ON DELETE CASCADE
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_PersonPhotos_TenantId ON PersonPhotos (TenantId);"
+            );
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS EmergencySessions (
+                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    TenantId TEXT NOT NULL DEFAULT 'default',
+                    WorkplaceSiteId INTEGER NOT NULL,
+                    Status TEXT NOT NULL DEFAULT 'Active',
+                    StartedBy TEXT NOT NULL DEFAULT '',
+                    StartedAtUtc TEXT NOT NULL,
+                    EndedBy TEXT NOT NULL DEFAULT '',
+                    EndedAtUtc TEXT NULL,
+                    FOREIGN KEY (WorkplaceSiteId) REFERENCES WorkplaceSites (Id) ON DELETE RESTRICT
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_EmergencySessions_TenantId_WorkplaceSiteId_Status ON EmergencySessions (TenantId, WorkplaceSiteId, Status);"
+            );
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS EmergencySessionMembers (
+                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    TenantId TEXT NOT NULL DEFAULT 'default',
+                    EmergencySessionId INTEGER NOT NULL,
+                    PersonProfileId INTEGER NOT NULL,
+                    FullName TEXT NOT NULL DEFAULT '',
+                    PersonType TEXT NOT NULL DEFAULT 'Employee',
+                    Reference TEXT NOT NULL DEFAULT '',
+                    Location TEXT NOT NULL DEFAULT '',
+                    Status TEXT NOT NULL DEFAULT 'Pending',
+                    UpdatedBy TEXT NOT NULL DEFAULT '',
+                    UpdatedAtUtc TEXT NULL,
+                    FOREIGN KEY (EmergencySessionId) REFERENCES EmergencySessions (Id) ON DELETE CASCADE
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_EmergencySessionMembers_TenantId_EmergencySessionId_Status ON EmergencySessionMembers (TenantId, EmergencySessionId, Status);"
+            );
         }
 
         private static void EnsureDefaultTenant(ApplicationDbContext db)
@@ -637,6 +794,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "DisplayDevices",
                 "DisplaySecuritySettings",
                 "EmailNotificationOutbox",
+                "InAppNotifications",
             })
             {
                 EnsureSqliteColumn(
@@ -763,6 +921,33 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             );
             db.Database.ExecuteSqlRaw(
                 "CREATE INDEX IF NOT EXISTS IX_EmailNotificationOutbox_Status_NextAttemptAtUtc ON EmailNotificationOutbox (Status, NextAttemptAtUtc);"
+            );
+        }
+
+        private static void EnsureSqliteInAppNotificationsTable(ApplicationDbContext db)
+        {
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS ""InAppNotifications"" (
+                    ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_InAppNotifications"" PRIMARY KEY AUTOINCREMENT,
+                    ""TenantId"" TEXT NOT NULL DEFAULT 'default',
+                    ""RecipientUsername"" TEXT NOT NULL DEFAULT '',
+                    ""Category"" TEXT NOT NULL DEFAULT 'System',
+                    ""Severity"" TEXT NOT NULL DEFAULT 'Info',
+                    ""Title"" TEXT NOT NULL DEFAULT '',
+                    ""Message"" TEXT NOT NULL DEFAULT '',
+                    ""ActionUrl"" TEXT NOT NULL DEFAULT '',
+                    ""SourceKey"" TEXT NOT NULL DEFAULT '',
+                    ""OccurredAtUtc"" TEXT NOT NULL,
+                    ""CreatedAtUtc"" TEXT NOT NULL,
+                    ""ReadAtUtc"" TEXT NULL,
+                    ""DismissedAtUtc"" TEXT NULL
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_InAppNotifications_TenantId_RecipientUsername_SourceKey ON InAppNotifications (TenantId, RecipientUsername, SourceKey);"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_InAppNotifications_TenantId_RecipientUsername_DismissedAtUtc_OccurredAtUtc ON InAppNotifications (TenantId, RecipientUsername, DismissedAtUtc, OccurredAtUtc);"
             );
         }
 

@@ -175,6 +175,69 @@
                 </div>
             </fieldset>
 
+            <fieldset class="tenant-services-editor">
+                <legend>
+                    <span>الإشعارات والتنبيهات</span>
+                    <small>إعداد مستقل لهذه الجهة ومستخدميها.</small>
+                </legend>
+                <div class="tenant-services-grid">
+                    <label class="tenant-service-option">
+                        <input name="NotificationCenterEnabled" type="checkbox" value="true" checked="@Model.Editor.NotificationCenterEnabled" />
+                        <input name="NotificationCenterEnabled" type="hidden" value="false" />
+                        <span><strong>مركز الإشعارات</strong><small>الجرس وقائمة الإشعارات المقروءة والجديدة.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="PermitNotificationsEnabled" type="checkbox" value="true" checked="@Model.Editor.PermitNotificationsEnabled" />
+                        <input name="PermitNotificationsEnabled" type="hidden" value="false" />
+                        <span><strong>التصاريح</strong><small>طلبات الاعتماد والحالات التشغيلية.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="VisitNotificationsEnabled" type="checkbox" value="true" checked="@Model.Editor.VisitNotificationsEnabled" />
+                        <input name="VisitNotificationsEnabled" type="hidden" value="false" />
+                        <span><strong>الزيارات</strong><small>الطلبات المعلقة والزيارات الموقوفة.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="SecurityAlertsEnabled" type="checkbox" value="true" checked="@Model.Editor.SecurityAlertsEnabled" />
+                        <input name="SecurityAlertsEnabled" type="hidden" value="false" />
+                        <span><strong>التنبيهات الأمنية</strong><small>الحالات التي تتطلب متابعة أمنية.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="FailedOperationAlertsEnabled" type="checkbox" value="true" checked="@Model.Editor.FailedOperationAlertsEnabled" />
+                        <input name="FailedOperationAlertsEnabled" type="hidden" value="false" />
+                        <span><strong>العمليات الفاشلة</strong><small>تنبيه المسؤول عند فشل إجراء مسجل.</small></span>
+                    </label>
+                    <label class="tenant-service-option">
+                        <input name="UnauthorizedMovementAlertsEnabled" type="checkbox" value="true" checked="@Model.Editor.UnauthorizedMovementAlertsEnabled" />
+                        <input name="UnauthorizedMovementAlertsEnabled" type="hidden" value="false" />
+                        <span><strong>الحركة غير المصرح بها</strong><small>مخالفات الدخول والخروج عند البوابات.</small></span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset class="tenant-services-editor">
+                <legend>
+                    <span>الاحتفاظ بالبيانات</span>
+                    <small>تنظيف آلي للسجلات القديمة دون المساس ببيانات التشغيل الفعالة.</small>
+                </legend>
+                <div class="tenant-form-grid">
+                    <div class="tenant-field">
+                        <label asp-for="Editor.NotificationRetentionDays"></label>
+                        <input class="form-control" asp-for="Editor.NotificationRetentionDays" name="NotificationRetentionDays" min="7" max="730" />
+                        <span asp-validation-for="Editor.NotificationRetentionDays" class="text-danger"></span>
+                    </div>
+                    <div class="tenant-field">
+                        <label asp-for="Editor.EmailOutboxRetentionDays"></label>
+                        <input class="form-control" asp-for="Editor.EmailOutboxRetentionDays" name="EmailOutboxRetentionDays" min="7" max="365" />
+                        <span asp-validation-for="Editor.EmailOutboxRetentionDays" class="text-danger"></span>
+                    </div>
+                    <div class="tenant-field">
+                        <label asp-for="Editor.AuditLogRetentionDays"></label>
+                        <input class="form-control" asp-for="Editor.AuditLogRetentionDays" name="AuditLogRetentionDays" min="90" max="2555" />
+                        <span asp-validation-for="Editor.AuditLogRetentionDays" class="text-danger"></span>
+                    </div>
+                </div>
+            </fieldset>
+
             <div class="tenant-form-actions">
                 @if (isEditMode)
                 {

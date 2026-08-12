@@ -1,287 +1,215 @@
 @using System.Globalization
-@using VehiclePermitSystemWeb.Models.DTOs
-@using VehiclePermitSystemWeb.Models.Entities
-@using VehiclePermitSystemWeb.Models.ViewModels.Account
-@using VehiclePermitSystemWeb.Models.ViewModels.Backup
-@using VehiclePermitSystemWeb.Models.ViewModels.Delegations
-@using VehiclePermitSystemWeb.Models.ViewModels.Departments
-@using VehiclePermitSystemWeb.Models.ViewModels.Display
-@using VehiclePermitSystemWeb.Models.ViewModels.Permits
-@using VehiclePermitSystemWeb.Models.ViewModels.Reports
-@using VehiclePermitSystemWeb.Models.ViewModels.Scan
-@using VehiclePermitSystemWeb.Models.ViewModels.Users
-@using VehiclePermitSystemWeb.Models.ViewModels.Visits
 @using VehiclePermitSystemWeb.Security
 @using VehiclePermitSystemWeb.Services.Tenants
 @inject ITenantFeatureService TenantFeatureService
 @{
-    ViewData["Title"] = "لوحة التحكم";
-    ViewData["BodyClass"] = "dashboard-page-body";
+    ViewData["Title"] = "مساحة العمل";
+    ViewData["BodyClass"] = "dashboard-page-body portal-launcher-body";
 
-    var pendingPermits = ViewBag.PendingPermits as List<Permit> ?? new List<Permit>();
     var pendingPermitCount = ViewBag.PendingPermitCount as int? ?? 0;
-    var currentUserName = User.FindFirst("DisplayName")?.Value
-        ?? User.Identity?.Name
-        ?? "المستخدم";
-    var hijriCulture = new CultureInfo("ar-SA");
-    var workflowPendingCount = ViewBag.WorkflowPendingCount as int? ?? 0;
-    var workflowUnderReviewCount = ViewBag.WorkflowUnderReviewCount as int? ?? 0;
-    var workflowStoppedCount = ViewBag.WorkflowStoppedCount as int? ?? 0;
-    var workflowClosedCount = ViewBag.WorkflowClosedCount as int? ?? 0;
+    var totalPermits = ViewBag.TotalPermits as int? ?? 0;
+    var activePermits = ViewBag.ActivePermits as int? ?? 0;
+    var totalVisits = ViewBag.TotalVisits as int? ?? 0;
+    var suspendedVisits = ViewBag.SuspendedVisits as int? ?? 0;
+    var currentUserName = User.FindFirst("DisplayName")?.Value ?? User.Identity?.Name ?? "المستخدم";
     var tenantServices = TenantFeatureService.GetCurrent();
+
     var canViewPermits = tenantServices.Permits && User.HasPermission(AppPermissions.ViewPermits);
-    var canCreatePermits = tenantServices.Permits && User.HasPermission(AppPermissions.CreatePermit);
     var canViewVisits = tenantServices.Visits && User.HasPermission(AppPermissions.ViewVisits);
-    var canCreateVisits = tenantServices.Visits && User.HasPermission(AppPermissions.CreateVisit);
+    var canViewPeople = User.HasPermission(AppPermissions.ViewDashboard)
+        || canViewPermits
+        || canViewVisits
+        || User.HasPermission(AppPermissions.ManageUsers);
+    var canViewAttendance = tenantServices.Gate
+        && (User.HasPermission(AppPermissions.ViewDashboard)
+            || User.HasPermission(AppPermissions.ScanOperations)
+            || canViewPermits
+            || canViewVisits);
+    var canOperateGate = tenantServices.Gate && User.HasPermission(AppPermissions.ScanOperations);
     var canViewDisplays = tenantServices.Gate && User.HasPermission(AppPermissions.ViewDisplays);
+    var canManageQueue = tenantServices.Queue
+        && (User.HasPermission(AppPermissions.ApproveVisits) || User.HasPermission(AppPermissions.ScanOperations));
+    var canManageUsers = User.HasPermission(AppPermissions.ManageUsers);
+    var canManageAdministration = User.HasPermission(AppPermissions.ManageAdministration);
 }
 
-<section class="dashboard-hero">
-    <div class="dashboard-hero-copy">
-        <span class="dashboard-kicker">بوابة المتابعة</span>
-        <h1>مرحبًا، @currentUserName</h1>
-        <p>تابع حالة التصاريح والزيارات والمخالفات اليومية، وانتقل مباشرة إلى الإجراءات الأكثر استخدامًا.</p>
-        <div class="dashboard-hero-actions">
-            @if (canCreatePermits)
-            {
-                <a asp-controller="Permits" asp-action="Create" class="btn btn-primary">طلب تصريح جديد</a>
-            }
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="portal-launcher" aria-labelledby="portal-launcher-heading">
+    <header class="portal-launcher-heading">
+        <div>
+            <span class="portal-launcher-eyebrow">مساحة العمل</span>
+            <h1 id="portal-launcher-heading">مرحباً، @currentUserName</h1>
+            <time datetime="@AppClock.LocalNow.ToString("yyyy-MM-dd")">
+                @AppClock.LocalNow.ToString("dddd، dd MMMM", new CultureInfo("ar-SA"))
+            </time>
+        </div>
+        <span class="portal-launcher-state"><i aria-hidden="true"></i> النظام يعمل</span>
+    </header>
+
+    <section class="portal-launcher-metrics" aria-label="ملخص اليوم">
+        @if (tenantServices.Permits)
+        {
+            <article><strong>@totalPermits</strong><span>التصاريح</span></article>
+            <article class="is-live"><strong>@activePermits</strong><span>الفعالة</span></article>
+            <article><strong>@pendingPermitCount</strong><span>بانتظار الاعتماد</span></article>
+        }
+        @if (tenantServices.Visits)
+        {
+            <article><strong>@totalVisits</strong><span>الزيارات</span></article>
+            <article><strong>@suspendedVisits</strong><span>الموقوفة</span></article>
+        }
+    </section>
+
+    <section class="portal-feature-group" aria-labelledby="daily-tools-heading">
+        <header>
+            <h2 id="daily-tools-heading">التشغيل اليومي</h2>
+            <span>ابدأ من الخدمة المطلوبة</span>
+        </header>
+        <div class="portal-feature-grid portal-feature-grid-primary">
             @if (canViewPermits)
             {
-                <a asp-controller="Permits" asp-action="Index" class="btn btn-outline-primary">عرض التصاريح</a>
-            }
-            @if (canCreateVisits)
-            {
-                <a asp-controller="Visits" asp-action="Create" class="btn btn-outline-success">تسجيل زيارة</a>
-            }
-            @if (canViewDisplays)
-            {
-                <a asp-controller="Display" asp-action="Access" class="btn btn-outline-dark">صفحة العرض</a>
-            }
-        </div>
-    </div>
-
-    <div class="dashboard-hero-card">
-        <div class="dashboard-hero-avatar">
-            <img src="~/icons/account.svg" alt="" />
-        </div>
-        <div class="dashboard-hero-meta">
-            <strong>ملخص اليوم</strong>
-            <span>@AppClock.LocalNow.ToString("dddd، dd MMMM yyyy", hijriCulture)</span>
-        </div>
-        <div class="dashboard-mini-grid">
-            @if (tenantServices.Permits)
-            {
-                <div class="dashboard-mini-stat dashboard-mini-stat-blue">
-                    <span>إجمالي التصاريح</span>
-                    <strong>@ViewBag.TotalPermits</strong>
-                </div>
-                <div class="dashboard-mini-stat dashboard-mini-stat-green">
-                    <span>التصاريح الفعالة</span>
-                    <strong>@ViewBag.ActivePermits</strong>
-                </div>
-            }
-            @if (tenantServices.Visits)
-            {
-                <div class="dashboard-mini-stat dashboard-mini-stat-cyan">
-                    <span>إجمالي الزيارات</span>
-                    <strong>@ViewBag.TotalVisits</strong>
-                </div>
-                <div class="dashboard-mini-stat dashboard-mini-stat-amber">
-                    <span>الزيارات الموقوفة</span>
-                    <strong>@ViewBag.SuspendedVisits</strong>
-                </div>
-            }
-        </div>
-    </div>
-</section>
-
-@if (canViewPermits)
-{
-<section class="dashboard-panel mt-4">
-    <div class="dashboard-panel-head">
-        <div>
-            <h2>لوحة المخاطر اليوم</h2>
-            <p>ملخص سريع للمخالفات والعودة المتأخرة والحالات الموقوفة، مع أهم التحسينات المفعلة الآن.</p>
-        </div>
-    </div>
-
-    <div class="dashboard-mini-grid">
-        <div class="dashboard-mini-stat dashboard-mini-stat-amber">
-            <span>عدد المخالفات اليوم</span>
-            <strong>@ViewBag.TodayViolations</strong>
-        </div>
-        <div class="dashboard-mini-stat dashboard-mini-stat-cyan">
-            <span>المتأخرين</span>
-            <strong>@ViewBag.TodayLateReturns</strong>
-        </div>
-        <div class="dashboard-mini-stat dashboard-mini-stat-blue">
-            <span>الموقوفين</span>
-            <strong>@ViewBag.StoppedPermits</strong>
-        </div>
-    </div>
-
-    <div class="report-strip mt-3">
-        <div class="metric-card">
-            <span>التحقق من الدوام</span>
-            <strong>@ViewBag.WorkDayStatus</strong>
-            <small>@ViewBag.WorkDayStatusHint</small>
-        </div>
-        <div class="metric-card">
-            <span>مهلة السماح</span>
-            <strong>@ViewBag.LateReturnGraceLabel</strong>
-            <small>ساعات الدوام الحالية: @ViewBag.WorkHoursLabel</small>
-        </div>
-        <div class="metric-card">
-            <span>أيام الدوام</span>
-            <strong>@ViewBag.OfficialWorkDaysLabel</strong>
-            <small>تنعكس هذه الأيام مباشرة على المنع، الجدولة، وإغلاق نهاية الدوام.</small>
-        </div>
-    </div>
-</section>
-
-@if (canViewPermits)
-{
-    <section class="dashboard-panel mt-4">
-        <div class="dashboard-panel-head">
-            <div>
-                <h2>مراحل مخالفات الخروج</h2>
-                <p>بطاقات سريعة تعرض مرحلة معالجة مخالفات الخروج وتفتح الفلتر المناسب مباشرة.</p>
-            </div>
-            <div class="dashboard-panel-actions">
-                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" class="btn btn-outline-dark">فتح
-                    اللوحة</a>
-                </div>
-            </div>
-
-            <div class="dashboard-shortcuts-grid">
-                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="Pending"
-                       class="dashboard-shortcut-card dashboard-shortcut-amber">
-                    <span class="dashboard-shortcut-label">معلقة</span>
-                    <strong>@workflowPendingCount</strong>
-                    <small>الحالات التي ما زالت بانتظار أول حسم.</small>
+                <a class="portal-feature-card is-featured" asp-controller="Permits" asp-action="Index">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#permit")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy">
+                        <strong>التصاريح</strong>
+                        <small>إنشاء الطلبات ومراجعتها واعتمادها</small>
+                    </span>
+                    @if (pendingPermitCount > 0)
+                    {
+                        <b class="portal-feature-badge">@pendingPermitCount</b>
+                    }
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
                 </a>
-                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="UnderReview"
-                       class="dashboard-shortcut-card dashboard-shortcut-cyan">
-                    <span class="dashboard-shortcut-label">مراجعة</span>
-                    <strong>@workflowUnderReviewCount</strong>
-                    <small>حالات تتطلب قرارًا إداريًا الآن.</small>
+            }
+            @if (canViewVisits)
+            {
+                <a class="portal-feature-card is-featured" asp-controller="Visits" asp-action="Index">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#visit")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy">
+                        <strong>الزيارات</strong>
+                        <small>إدارة الزوار وروابط الطلب والمتابعة</small>
+                    </span>
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
                 </a>
-                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="Stopped"
-                       class="dashboard-shortcut-card dashboard-shortcut-dark">
-                    <span class="dashboard-shortcut-label">موقوفة</span>
-                    <strong>@workflowStoppedCount</strong>
-                    <small>تصاريح تحولت إلى إيقاف بعد التصعيد.</small>
+            }
+            @if (canOperateGate)
+            {
+                <a class="portal-feature-card is-featured" asp-controller="Display" asp-action="Gate">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#scan")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy">
+                        <strong>مركز البوابة</strong>
+                        <small>قراءة الباركود وتسجيل الدخول والخروج</small>
+                    </span>
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
                 </a>
-                <a asp-controller="Reports" asp-action="UnauthorizedExitWorkflow" asp-route-workflowStatusFilter="Closed"
-                       class="dashboard-shortcut-card dashboard-shortcut-green">
-                    <span class="dashboard-shortcut-label">مغلقة</span>
-                    <strong>@workflowClosedCount</strong>
-                    <small>حالات أغلقت إداريًا أو دون مخالفة نهائية.</small>
+            }
+        </div>
+    </section>
+
+    <section class="portal-feature-group" aria-labelledby="people-tools-heading">
+        <header>
+            <h2 id="people-tools-heading">الأفراد والمتابعة</h2>
+        </header>
+        <div class="portal-feature-grid portal-feature-grid-secondary">
+            @if (canViewPeople)
+            {
+                <a class="portal-feature-card" asp-controller="People" asp-action="Index">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#users")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy"><strong>الأشخاص</strong><small>ملفات الموظفين والزوار</small></span>
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
                 </a>
+            }
+            @if (canViewAttendance)
+            {
+                <a class="portal-feature-card" asp-controller="Attendance" asp-action="Index">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#attendance")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy"><strong>الحضور</strong><small>الحركة الحالية وسجل الدخول</small></span>
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                </a>
+            }
+            @if (canManageQueue)
+            {
+                <a class="portal-feature-card" asp-controller="Queue" asp-action="Index">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#queue")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy"><strong>تنظيم الطابور</strong><small>الأرقام والانتظار والاستدعاء</small></span>
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                </a>
+            }
+            @if (canViewPermits || canViewVisits)
+            {
+                <a class="portal-feature-card" asp-controller="Reports" asp-action="Index">
+                    <span class="portal-feature-icon" aria-hidden="true">
+                        <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#reports")"></use></svg>
+                    </span>
+                    <span class="portal-feature-copy"><strong>التقارير</strong><small>السجلات والمؤشرات والتصدير</small></span>
+                    <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                </a>
+            }
+        </div>
+    </section>
+
+    @if (canViewDisplays || canManageUsers || canManageAdministration)
+    {
+        <section class="portal-feature-group" aria-labelledby="manage-tools-heading">
+            <header>
+                <h2 id="manage-tools-heading">الإدارة</h2>
+            </header>
+            <div class="portal-feature-grid portal-feature-grid-secondary">
+                @if (canViewDisplays || canManageAdministration)
+                {
+                    var displayController = canManageAdministration ? "Administration" : "Display";
+                    var displayAction = canManageAdministration ? "DisplaySettings" : "Access";
+                    <a class="portal-feature-card" asp-controller="@displayController" asp-action="@displayAction">
+                        <span class="portal-feature-icon" aria-hidden="true">
+                            <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#display")"></use></svg>
+                        </span>
+                        <span class="portal-feature-copy"><strong>شاشات العرض</strong><small>الأجهزة والإعدادات المعتمدة</small></span>
+                        <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                    </a>
+                }
+                @if (canManageUsers)
+                {
+                    <a class="portal-feature-card" asp-controller="Users" asp-action="Index">
+                        <span class="portal-feature-icon" aria-hidden="true">
+                            <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#users")"></use></svg>
+                        </span>
+                        <span class="portal-feature-copy"><strong>فريق التشغيل</strong><small>الحسابات والأدوار والصلاحيات</small></span>
+                        <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                    </a>
+                }
+                @if (canManageAdministration)
+                {
+                    <a class="portal-feature-card" asp-controller="Sites" asp-action="Index">
+                        <span class="portal-feature-icon" aria-hidden="true">
+                            <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#sites")"></use></svg>
+                        </span>
+                        <span class="portal-feature-copy"><strong>المواقع</strong><small>الفروع والبوابات ونطاقات العمل</small></span>
+                        <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                    </a>
+                    <a class="portal-feature-card" asp-controller="Administration" asp-action="Edit">
+                        <span class="portal-feature-icon" aria-hidden="true">
+                            <svg><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#administration")"></use></svg>
+                        </span>
+                        <span class="portal-feature-copy"><strong>إعدادات الجهة</strong><small>الهوية والخدمات وسياسات التشغيل</small></span>
+                        <i class="portal-feature-arrow" aria-hidden="true">←</i>
+                    </a>
+                }
             </div>
         </section>
     }
-
-    <section class="dashboard-panel dashboard-permits-panel">
-        <div class="dashboard-panel-head">
-            <div>
-                <h2>الطلبات المؤهلة للتسجيل</h2>
-                <p>بطاقات مختصرة تعرض الطلبات التي تنتظر الاعتماد، مع وصول سريع إلى الإضافة أو العرض الكامل.</p>
-            </div>
-            @if (canCreatePermits)
-            {
-                <div class="dashboard-panel-actions">
-                    <a asp-controller="Permits" asp-action="Create" class="btn btn-primary">إضافة طلب</a>
-                </div>
-            }
-        </div>
-
-        @if (pendingPermitCount > 0)
-        {
-            <div class="dashboard-permits-list">
-                @foreach (var permit in pendingPermits)
-                {
-                    <article class="dashboard-permit-item">
-                        <div class="dashboard-permit-icon">
-                            <img src="~/icons/permit.svg" alt="" />
-                        </div>
-                        <div class="dashboard-permit-content">
-                            <strong>@permit.DriverName</strong>
-                            <span>@permit.PermitNumber - @permit.PermitTypeDisplay</span>
-                        </div>
-                        <div class="dashboard-permit-meta">
-                            <span>ينتهي: @(permit.ExpiresAt.HasValue? permit.ExpiresAt.Value.ToString("dd/MM/yyyy") : "-")</span>
-                        </div>
-                    </article>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="dashboard-empty-state">
-                <div class="dashboard-empty-illustration">
-                    <img src="~/icons/account.svg" alt="" />
-                </div>
-                <h3>لا توجد طلبات بانتظار التسجيل</h3>
-                @if (canCreatePermits)
-                {
-                    <a asp-controller="Permits" asp-action="Create" class="btn btn-primary">إضافة طلب</a>
-                }
-                else if (canViewPermits)
-                {
-                    <a asp-controller="Permits" asp-action="Index" class="btn btn-outline-primary">عرض التصاريح</a>
-                }
-            </div>
-        }
-    </section>
-}
-
-    <section class="dashboard-shortcuts-title">الخدمات المميزة</section>
-    <div class="dashboard-shortcuts-grid">
-        @if (canViewPermits)
-        {
-            <a asp-controller="Permits" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-blue">
-                <span class="dashboard-shortcut-icon"><img src="~/icons/permit.svg" alt="" /></span>
-                <span class="dashboard-shortcut-label">التصاريح</span>
-                <strong>@ViewBag.TotalPermits</strong>
-                <small>إجمالي التصاريح المسجلة</small>
-            </a>
-        }
-        @if (canViewVisits)
-        {
-            <a asp-controller="Visits" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-green">
-                <span class="dashboard-shortcut-icon"><img src="~/icons/visit.svg" alt="" /></span>
-                <span class="dashboard-shortcut-label">الزيارات</span>
-                <strong>@ViewBag.TotalVisits</strong>
-                <small>الزيارات المسجلة حاليًا</small>
-            </a>
-        }
-        @if (canViewPermits || canViewVisits)
-        {
-            <a asp-controller="Reports" asp-action="Index" class="dashboard-shortcut-card dashboard-shortcut-dark">
-                <span class="dashboard-shortcut-icon"><img src="~/icons/reports.svg" alt="" /></span>
-                <span class="dashboard-shortcut-label">التقارير</span>
-                <strong>@(ViewBag.ActivePermits + ViewBag.SuspendedVisits)</strong>
-                <small>مؤشرات النشاط الحالية</small>
-            </a>
-        }
-        @if (canViewDisplays)
-        {
-            <a asp-controller="Display" asp-action="Access" class="dashboard-shortcut-card dashboard-shortcut-cyan">
-                <span class="dashboard-shortcut-icon"><img src="~/icons/display.svg" alt="" /></span>
-                <span class="dashboard-shortcut-label">شاشات العرض</span>
-                <strong>مباشر</strong>
-                <small>واجهة العرض المباشرة</small>
-            </a>
-        }
-        @if (tenantServices.Gate && User.HasPermission(AppPermissions.ScanOperations))
-        {
-            <a asp-controller="Display" asp-action="Gate" class="dashboard-shortcut-card dashboard-shortcut-dark">
-                <span class="dashboard-shortcut-icon"><img src="~/icons/permit.svg" alt="" /></span>
-                <span class="dashboard-shortcut-label">مركز البوابة</span>
-                <strong>تشغيل</strong>
-                <small>التصاريح والزيارات من شاشة واحدة</small>
-            </a>
-        }
-    </div>
+</div>

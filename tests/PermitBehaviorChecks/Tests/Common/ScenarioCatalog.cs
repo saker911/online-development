@@ -115,6 +115,18 @@ internal static partial class ScenarioCatalog
                 fixture => ScenarioSuperAdminDoesNotUseHardcodedPasswordBackdoor()
             ),
             Scenario(
+                "Password recovery token is secure and single use",
+                fixture => ScenarioPasswordRecoveryTokenIsSecureAndSingleUse(fixture)
+            ),
+            Scenario(
+                "Tenant retention removes only eligible old records",
+                fixture => ScenarioTenantRetentionRemovesOnlyEligibleOldRecords(fixture)
+            ),
+            Scenario(
+                "Notification mutations cannot cross tenant boundary",
+                fixture => ScenarioNotificationMutationsCannotCrossTenantBoundary(fixture)
+            ),
+            Scenario(
                 "Super admin can execute permit and visit approval",
                 fixture =>
                     ScenarioSuperAdminCanExecutePermitAndVisitApproval(
@@ -789,6 +801,14 @@ internal static partial class ScenarioCatalog
                         fixture.DbFactory,
                         fixture.PermitService
                     )
+            ),
+            Scenario(
+                "Workplace sites own entrances and device assignments",
+                fixture => ScenarioWorkplaceSiteOwnsEntrancesAndDeviceAssignments(fixture)
+            ),
+            Scenario(
+                "Emergency session tracks site presence",
+                fixture => ScenarioEmergencySessionTracksSitePresence(fixture)
             ),
             Scenario(
                 "Daily scheduled leave without return authorizes final exit and keeps schedule",

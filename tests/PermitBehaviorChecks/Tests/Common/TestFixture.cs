@@ -34,6 +34,7 @@ using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Services.Workplace;
 
 namespace PermitBehaviorChecks;
 
@@ -81,6 +82,10 @@ internal sealed class TestFixture : IAsyncDisposable
         >();
         services.AddSingleton<IReportsDashboardService, ReportsDashboardService>();
         services.AddSingleton<IMonitoringDashboardService, MonitoringDashboardService>();
+        services.AddSingleton<INotificationCenterService, NotificationCenterService>();
+        services.AddSingleton<IDataRetentionService, DataRetentionService>();
+        services.AddSingleton<IWorkplaceDirectoryService, WorkplaceDirectoryService>();
+        services.AddSingleton<IEmergencyService, EmergencyService>();
 
         _serviceProvider = services.BuildServiceProvider();
 
@@ -95,6 +100,11 @@ internal sealed class TestFixture : IAsyncDisposable
         AccessControlService = _serviceProvider.GetRequiredService<IAccessControlService>();
         DelegationService = _serviceProvider.GetRequiredService<IDelegationService>();
         DisplayDeviceService = _serviceProvider.GetRequiredService<IDisplayDeviceService>();
+        DataRetentionService = _serviceProvider.GetRequiredService<IDataRetentionService>();
+        NotificationCenterService = _serviceProvider.GetRequiredService<INotificationCenterService>();
+        WorkplaceDirectoryService =
+            _serviceProvider.GetRequiredService<IWorkplaceDirectoryService>();
+        EmergencyService = _serviceProvider.GetRequiredService<IEmergencyService>();
 
         using var db = DbFactory.CreateDbContext();
         db.Database.EnsureCreated();
@@ -151,6 +161,14 @@ internal sealed class TestFixture : IAsyncDisposable
     public IDelegationService DelegationService { get; }
 
     public IDisplayDeviceService DisplayDeviceService { get; }
+
+    public IDataRetentionService DataRetentionService { get; }
+
+    public INotificationCenterService NotificationCenterService { get; }
+
+    public IWorkplaceDirectoryService WorkplaceDirectoryService { get; }
+
+    public IEmergencyService EmergencyService { get; }
 
     public async ValueTask DisposeAsync()
     {

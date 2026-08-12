@@ -135,6 +135,15 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 SelfServiceEnabled = tenant.SelfServiceEnabled,
                 QueueServiceEnabled = tenant.QueueServiceEnabled,
                 GateServiceEnabled = tenant.GateServiceEnabled,
+                NotificationCenterEnabled = tenant.NotificationCenterEnabled,
+                PermitNotificationsEnabled = tenant.PermitNotificationsEnabled,
+                VisitNotificationsEnabled = tenant.VisitNotificationsEnabled,
+                SecurityAlertsEnabled = tenant.SecurityAlertsEnabled,
+                FailedOperationAlertsEnabled = tenant.FailedOperationAlertsEnabled,
+                UnauthorizedMovementAlertsEnabled = tenant.UnauthorizedMovementAlertsEnabled,
+                NotificationRetentionDays = tenant.NotificationRetentionDays,
+                EmailOutboxRetentionDays = tenant.EmailOutboxRetentionDays,
+                AuditLogRetentionDays = tenant.AuditLogRetentionDays,
             };
         }
 
@@ -213,6 +222,15 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     SelfServiceEnabled = model.SelfServiceEnabled,
                     QueueServiceEnabled = model.QueueServiceEnabled,
                     GateServiceEnabled = model.GateServiceEnabled,
+                    NotificationCenterEnabled = model.NotificationCenterEnabled,
+                    PermitNotificationsEnabled = model.PermitNotificationsEnabled,
+                    VisitNotificationsEnabled = model.VisitNotificationsEnabled,
+                    SecurityAlertsEnabled = model.SecurityAlertsEnabled,
+                    FailedOperationAlertsEnabled = model.FailedOperationAlertsEnabled,
+                    UnauthorizedMovementAlertsEnabled = model.UnauthorizedMovementAlertsEnabled,
+                    NotificationRetentionDays = Math.Clamp(model.NotificationRetentionDays, 7, 730),
+                    EmailOutboxRetentionDays = Math.Clamp(model.EmailOutboxRetentionDays, 7, 365),
+                    AuditLogRetentionDays = Math.Clamp(model.AuditLogRetentionDays, 90, 2555),
                 }
             );
 
@@ -626,6 +644,15 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             tenant.SelfServiceEnabled = model.SelfServiceEnabled;
             tenant.QueueServiceEnabled = model.QueueServiceEnabled;
             tenant.GateServiceEnabled = model.GateServiceEnabled;
+            tenant.NotificationCenterEnabled = model.NotificationCenterEnabled;
+            tenant.PermitNotificationsEnabled = model.PermitNotificationsEnabled;
+            tenant.VisitNotificationsEnabled = model.VisitNotificationsEnabled;
+            tenant.SecurityAlertsEnabled = model.SecurityAlertsEnabled;
+            tenant.FailedOperationAlertsEnabled = model.FailedOperationAlertsEnabled;
+            tenant.UnauthorizedMovementAlertsEnabled = model.UnauthorizedMovementAlertsEnabled;
+            tenant.NotificationRetentionDays = Math.Clamp(model.NotificationRetentionDays, 7, 730);
+            tenant.EmailOutboxRetentionDays = Math.Clamp(model.EmailOutboxRetentionDays, 7, 365);
+            tenant.AuditLogRetentionDays = Math.Clamp(model.AuditLogRetentionDays, 90, 2555);
 
             var settings = db
                 .AdministrationSettings.IgnoreQueryFilters()
@@ -738,6 +765,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             db.PermitActivities.RemoveRange(
                 db.PermitActivities.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
             );
+            db.PersonPhotos.RemoveRange(
+                db.PersonPhotos.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.PersonProfiles.RemoveRange(
+                db.PersonProfiles.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
             db.VisitCompanions.RemoveRange(
                 db.VisitCompanions.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
             );
@@ -765,11 +798,32 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             db.DisplayDevices.RemoveRange(
                 db.DisplayDevices.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
             );
+            db.EmergencySessionMembers.RemoveRange(
+                db.EmergencySessionMembers.IgnoreQueryFilters()
+                    .Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.EmergencySessions.RemoveRange(
+                db.EmergencySessions.IgnoreQueryFilters()
+                    .Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.WorkplaceSiteEntrances.RemoveRange(
+                db.WorkplaceSiteEntrances.IgnoreQueryFilters()
+                    .Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.WorkplaceSites.RemoveRange(
+                db.WorkplaceSites.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
             db.DisplaySecuritySettings.RemoveRange(
                 db.DisplaySecuritySettings.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
             );
             db.ExternalUserLogins.RemoveRange(
                 db.ExternalUserLogins.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.InAppNotifications.RemoveRange(
+                db.InAppNotifications.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
+            );
+            db.EmailNotificationOutbox.RemoveRange(
+                db.EmailNotificationOutbox.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)
             );
             db.UserAccounts.RemoveRange(
                 db.UserAccounts.IgnoreQueryFilters().Where(item => item.TenantId == tenant.TenantId)

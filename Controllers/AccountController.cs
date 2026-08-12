@@ -43,6 +43,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly LoginAttemptGuard _loginAttemptGuard;
         private readonly IExternalLoginService? _externalLoginService;
         private readonly ITenantManagementService? _tenantManagementService;
+        private readonly IAccountPasswordResetService? _passwordResetService;
 
         private IToastNotificationService ToastNotifications =>
             HttpContext.RequestServices.GetRequiredService<IToastNotificationService>();
@@ -56,14 +57,20 @@ namespace VehiclePermitSystemWeb.Controllers
             IUserAdminService userAdminService,
             LoginAttemptGuard? loginAttemptGuard = null,
             IExternalLoginService? externalLoginService = null,
-            ITenantManagementService? tenantManagementService = null
+            ITenantManagementService? tenantManagementService = null,
+            IAccountPasswordResetService? passwordResetService = null
         )
         {
             _userAdminService = userAdminService;
             _loginAttemptGuard = loginAttemptGuard ?? new LoginAttemptGuard();
             _externalLoginService = externalLoginService;
             _tenantManagementService = tenantManagementService;
+            _passwordResetService = passwordResetService;
         }
+
+        private IAccountPasswordResetService PasswordResetService =>
+            _passwordResetService
+            ?? HttpContext.RequestServices.GetRequiredService<IAccountPasswordResetService>();
 
         [HttpGet]
         public IActionResult Login(string? returnUrl = null, string? tenant = null)
@@ -199,6 +206,134 @@ namespace VehiclePermitSystemWeb.Controllers
             _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
             ToastNotifications.Error("اسم المستخدم أو كلمة المرور غير صحيحة");
             return View();
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ForgotPassword(string? tenant = null)
+        {
+            var resolvedTenant = ResolveTenantReference(tenant);
+            if (!string.IsNullOrWhiteSpace(tenant) && resolvedTenant == null)
+            {
+                return NotFound();
+            }
+
+            ConfigurePasswordRecoveryView(resolvedTenant);
+            return View(
+                new ForgotPasswordViewModel
+                {
+                    Tenant = resolvedTenant?.TenantId ?? TenantDefaults.DefaultTenantId,
+                }
+            );
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("password-recovery")]
+        public async Task<IActionResult> ForgotPassword(
+            ForgotPasswordViewModel model,
+            CancellationToken cancellationToken
+        )
+        {
+            var resolvedTenant = ResolveTenantReference(model.Tenant);
+            if (resolvedTenant == null)
+            {
+                return NotFound();
+            }
+
+            ConfigurePasswordRecoveryView(resolvedTenant);
+            model.AccountIdentifier = (model.AccountIdentifier ?? string.Empty).Trim();
+            model.Tenant = resolvedTenant.TenantId;
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var challenge = PasswordResetService.CreateChallenge(
+                resolvedTenant.TenantId,
+                model.AccountIdentifier
+            );
+            if (challenge != null && PasswordResetService.IsDeliveryConfigured)
+            {
+                var resetUrl = Url.Action(
+                    nameof(ResetPassword),
+                    "Account",
+                    new { token = challenge.Token },
+                    Request.Scheme
+                );
+                if (!string.IsNullOrWhiteSpace(resetUrl))
+                {
+                    await PasswordResetService.SendAsync(
+                        challenge,
+                        resetUrl,
+                        cancellationToken
+                    );
+                }
+            }
+
+            ViewData["Tenant"] = resolvedTenant.TenantId;
+            return View("ForgotPasswordConfirmation");
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPassword(string token)
+        {
+            ConfigurePasswordRecoveryView();
+            var validation = PasswordResetService.Validate(token);
+            if (!validation.Succeeded)
+            {
+                ViewData["ResetError"] = validation.Message;
+            }
+            else
+            {
+                ViewData["Tenant"] = validation.TenantId;
+            }
+
+            return View(new ResetPasswordViewModel { Token = token ?? string.Empty });
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("password-recovery")]
+        public IActionResult ResetPassword(ResetPasswordViewModel model)
+        {
+            ConfigurePasswordRecoveryView();
+            if (
+                !string.IsNullOrWhiteSpace(model.NewPassword)
+                && !PasswordValidationRules.IsStrongPassword(model.NewPassword)
+            )
+            {
+                ModelState.AddModelError(
+                    nameof(model.NewPassword),
+                    "كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حرف كبير وحرف صغير ورقم ورمز خاص."
+                );
+            }
+
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var result = PasswordResetService.Reset(model.Token, model.NewPassword);
+            if (!result.Succeeded)
+            {
+                ModelState.AddModelError(string.Empty, result.Message);
+                return View(model);
+            }
+
+            HttpContext.Items[HttpTenantContext.ResolvedTenantItemKey] = result.TenantId;
+            _userAdminService.RecordUserActivity(
+                result.Username,
+                result.DisplayName,
+                "ResetPassword",
+                "استعادة كلمة المرور",
+                "تم تعيين كلمة مرور جديدة عبر رابط الاستعادة وإغلاق الجلسات السابقة.",
+                nameof(AccountController),
+                result.Username
+            );
+            ViewData["Tenant"] = result.TenantId;
+            return View("ResetPasswordConfirmation");
         }
 
         [HttpGet]
@@ -969,6 +1104,20 @@ namespace VehiclePermitSystemWeb.Controllers
             ViewData["Tenant"] = tenant?.TenantId ?? string.Empty;
             ViewData["TenantName"] = tenant?.Name ?? string.Empty;
             ViewData["TenantSlug"] = tenant?.Slug ?? string.Empty;
+        }
+
+        private void ConfigurePasswordRecoveryView(Tenant? tenant = null)
+        {
+            if (tenant != null)
+            {
+                HttpContext.Items[HttpTenantContext.ResolvedTenantItemKey] = tenant.TenantId;
+            }
+
+            ViewData["Title"] = "استعادة كلمة المرور";
+            ViewData["HideShell"] = true;
+            ViewData["BodyClass"] = "login-page-body";
+            ViewData["Tenant"] = tenant?.TenantId ?? ViewData["Tenant"] ?? string.Empty;
+            ViewData["TenantName"] = tenant?.Name ?? string.Empty;
         }
 
         private static bool IsTenantAvailableForLogin(Tenant tenant)

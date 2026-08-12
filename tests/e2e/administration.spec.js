@@ -42,8 +42,14 @@ for (const viewport of [
     await page.setViewportSize(viewport);
     await page.goto("/Display/WaitingBoard");
 
-    await expect(page.getByRole("heading", { name: "بانتظار الوصول" })).toBeVisible();
-    await expect(page.getByText("تُعرض أرقام المتابعة فقط لحماية خصوصية الزوار.")).toBeVisible();
+    const waitingBoardHeading = page.getByRole("heading", { name: "بانتظار الوصول" });
+    const disabledHeading = page.getByRole("heading", { name: "تنظيم الطابور غير مفعلة" });
+    await expect(waitingBoardHeading.or(disabledHeading)).toBeVisible();
+    if (await waitingBoardHeading.isVisible()) {
+      await expect(page.getByText("تُعرض أرقام المتابعة فقط لحماية خصوصية الزوار.")).toBeVisible();
+    } else {
+      await expect(page.getByRole("region", { name: "تنظيم الطابور غير مفعلة" })).toBeVisible();
+    }
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,

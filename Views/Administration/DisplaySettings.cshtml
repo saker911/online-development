@@ -105,9 +105,9 @@
                 <thead>
                     <tr>
                         <th>الشاشة</th>
-                        <th>الموقع</th>
+                        <th>الموقع والمدخل</th>
                         <th>IP</th>
-                        <th>User-Agent</th>
+                        <th>صحة الجهاز</th>
                         <th>تاريخ الطلب</th>
                         <th>آخر ظهور</th>
                         <th>الوضع</th>
@@ -126,9 +126,26 @@
                                     <div class="small text-muted">@item.Description</div>
                                 }
                             </td>
-                            <td>@item.ScreenLocation</td>
+                            <td>
+                                <strong>@(string.IsNullOrWhiteSpace(item.SiteName) ? item.ScreenLocation : item.SiteName)</strong>
+                                @if (!string.IsNullOrWhiteSpace(item.EntranceName))
+                                {
+                                    <div class="small text-muted">@item.EntranceName</div>
+                                }
+                            </td>
                             <td class="ltr-field">@(!string.IsNullOrWhiteSpace(item.LastIpAddress) ? item.LastIpAddress : item.IpAddress)</td>
-                            <td class="small">@item.UserAgentSummary</td>
+                            <td class="small">
+                                <div>@(string.IsNullOrWhiteSpace(item.NetworkStatus) ? "لم يرسل تقريراً" : item.NetworkStatus) · كاميرا @(string.IsNullOrWhiteSpace(item.CameraStatus) ? "-" : item.CameraStatus)</div>
+                                <div class="text-muted">@(item.BatteryLevel.HasValue ? $"بطارية {item.BatteryLevel}%" : item.Platform)</div>
+                                @if (item.ConfigurationPending)
+                                {
+                                    <span class="badge bg-warning text-dark">إعدادات بانتظار التطبيق</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.LastHealthError))
+                                {
+                                    <div class="text-danger">@item.LastHealthError</div>
+                                }
+                            </td>
                             <td>@HijriDateFormatter.Format(item.CreatedAtUtc.ToLocalTime())</td>
                             <td>@(item.LastSeenUtc.HasValue ? HijriDateFormatter.Format(item.LastSeenUtc.Value.ToLocalTime()) : "-")</td>
                             <td>

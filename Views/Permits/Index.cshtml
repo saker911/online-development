@@ -126,17 +126,6 @@
     <section class="records-page-hero card-permit app-card-surface">
         <div class="records-page-hero-copy">
             <h1>التصاريح</h1>
-
-            <div class="records-page-chip-list">
-                <span class="records-page-chip">الموقوفة: @Model.StoppedPermitsCount</span>
-                <span class="records-page-chip">قيد التدقيق: @Model.PendingReviewCount</span>
-                <span class="records-page-chip">أرشفة ظاهرة: @archivedPermits</span>
-                <span class="records-page-chip">تنبيهات تشغيلية: @operationalAlerts</span>
-                @if (hasSearch)
-                {
-                    <span class="records-page-chip records-page-chip-accent">البحث: @Model.SearchTerm</span>
-                }
-            </div>
         </div>
 
         <div class="records-page-stats">

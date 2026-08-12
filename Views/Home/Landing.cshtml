@@ -49,68 +49,17 @@
             </div>
         </div>
         <figure class="public-landing-product-visual" aria-label="منظومة تصاريح عبر البوابة والجوال ولوحة التشغيل">
-            <div class="product-ecosystem-scene" aria-hidden="true">
-                <div class="product-scene-backdrop"></div>
-
-                <div class="product-scene-monitor">
-                    <div class="product-scene-monitor-frame">
-                        <div class="product-scene-dashboard">
-                            <aside class="product-scene-sidebar">
-                                <span class="product-scene-mini-brand">
-                                    <img src="~/@ProductIdentity.MarkPath" alt="" />
-                                    <b>تصاريح</b>
-                                </span>
-                                <i class="is-active"></i><i></i><i></i><i></i><i></i>
-                            </aside>
-                            <div class="product-scene-workspace">
-                                <header><b>لوحة العمليات</b><span></span><span></span></header>
-                                <div class="product-scene-metrics">
-                                    <span><small>التصاريح</small><b>564</b><i></i></span>
-                                    <span><small>الزوار</small><b>342</b><i></i></span>
-                                    <span><small>الموجودون</small><b>87</b><i></i></span>
-                                    <span><small>البوابات</small><b>12</b><i></i></span>
-                                </div>
-                                <div class="product-scene-table">
-                                    <strong>آخر العمليات</strong>
-                                    <div><i></i><span></span><span></span><b>مسموح</b></div>
-                                    <div><i></i><span></span><span></span><b>مسموح</b></div>
-                                    <div><i></i><span></span><span></span><b>مراجعة</b></div>
-                                    <div><i></i><span></span><span></span><b>مسموح</b></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="product-scene-monitor-neck"></div>
-                    <div class="product-scene-monitor-base"></div>
-                </div>
-
-                <div class="product-scene-scanner">
-                    <div class="product-scene-scanner-body">
-                        <span class="product-scene-mini-brand"><img src="~/@ProductIdentity.MarkPath" alt="" /><b>تصاريح</b></span>
-                        <small>امسح التصريح</small>
-                        <span class="product-scene-qr"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-                        <b class="product-scene-status">جاهز للمسح</b>
-                    </div>
-                    <div class="product-scene-scanner-neck"></div>
-                    <div class="product-scene-scanner-base"></div>
-                </div>
-
-                <div class="product-scene-phone">
-                    <span class="product-scene-phone-speaker"></span>
-                    <span class="product-scene-mini-brand"><img src="~/@ProductIdentity.MarkPath" alt="" /><b>تصريح دخول</b></span>
-                    <small>نشط</small>
-                    <span class="product-scene-qr"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-                    <b>TAS-2048</b>
-                </div>
-
-                <div class="product-scene-guard">
-                    <header><span class="product-scene-mini-brand"><img src="~/@ProductIdentity.MarkPath" alt="" /><b>البوابة</b></span><i></i></header>
-                    <strong>الموجودون الآن <b>87</b></strong>
-                    <div><i></i><span></span><b>تم الدخول</b></div>
-                    <div><i></i><span></span><b>تم الدخول</b></div>
-                    <div><i></i><span></span><b>بانتظار التحقق</b></div>
-                    <div><i></i><span></span><b>تم الدخول</b></div>
-                </div>
+            <div class="landing-hero-visual-stage" data-landing-hero-visual aria-hidden="true">
+                <img class="landing-hero-visual-image"
+                     src="~/images/tasareeh-platform-hero.png"
+                     asp-append-version="true"
+                     alt=""
+                     width="1672"
+                     height="941"
+                     fetchpriority="high"
+                     decoding="async" />
+                <span class="landing-hero-scan-beam"></span>
+                <span class="landing-hero-status-pulse"></span>
             </div>
         </figure>
     </section>
@@ -255,3 +204,5 @@
         <span>© 2026 جميع الحقوق محفوظة</span>
     </footer>
 </main>
+
+<script src="~/js/landing-hero.js" asp-append-version="true" defer></script>

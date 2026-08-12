@@ -1,0 +1,116 @@
+@model PeopleDirectoryViewModel
+@{
+    ViewData["Title"] = "الأشخاص";
+    ViewData["BodyClass"] = "workplace-page-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="workplace-page">
+    @await Html.PartialAsync("_WorkplaceNavigation")
+
+    <header class="workplace-heading">
+        <div>
+            <span class="workplace-eyebrow">دليل الجهة</span>
+            <h1>الأشخاص</h1>
+        </div>
+        @if (User.HasPermission(AppPermissions.ManageUsers))
+        {
+            <a class="btn btn-primary workplace-primary-action" asp-controller="Users" asp-action="Create">إضافة مستخدم</a>
+        }
+    </header>
+
+    <section class="workplace-metrics" aria-label="ملخص الأشخاص">
+        <article><span>إجمالي السجل</span><strong>@Model.TotalCount</strong></article>
+        <article><span>الموظفون</span><strong>@Model.EmployeeCount</strong></article>
+        <article><span>الزوار</span><strong>@Model.VisitorCount</strong></article>
+        <article><span>المتعاقدون</span><strong>@Model.ContractorCount</strong></article>
+        <article class="is-live"><span>داخل المواقع الآن</span><strong>@Model.OnSiteCount</strong></article>
+    </section>
+
+    <form method="get" class="workplace-filterbar" aria-label="تصفية دليل الأشخاص">
+        <label class="workplace-search">
+            <span class="visually-hidden">بحث</span>
+            <input type="search" name="query" value="@Model.Query" placeholder="ابحث بالاسم أو المرجع أو الإدارة" />
+        </label>
+        <select name="personType" aria-label="نوع الشخص">
+            <option value="">كل الأشخاص</option>
+            <option value="Employee" selected="@(Model.PersonType == PersonTypes.Employee)">الموظفون</option>
+            <option value="Visitor" selected="@(Model.PersonType == PersonTypes.Visitor)">الزوار</option>
+            <option value="Contractor" selected="@(Model.PersonType == PersonTypes.Contractor)">المتعاقدون</option>
+        </select>
+        <button class="btn btn-dark" type="submit">بحث</button>
+        @if (!string.IsNullOrWhiteSpace(Model.Query) || !string.IsNullOrWhiteSpace(Model.PersonType))
+        {
+            <a class="btn btn-outline-secondary" asp-action="Index">مسح</a>
+        }
+    </form>
+
+    <section class="workplace-list" aria-label="قائمة الأشخاص">
+        <div class="workplace-list-head">
+            <span>الشخص</span>
+            <span>النوع</span>
+            <span>بيانات العمل</span>
+            <span>آخر حالة</span>
+        </div>
+        @if (Model.People.Count == 0)
+        {
+            <div class="workplace-empty">
+                <strong>لا توجد نتائج مطابقة</strong>
+                <span>غيّر عبارة البحث أو نوع الشخص.</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var person in Model.People)
+            {
+                <article class="workplace-person-row">
+                    <div class="workplace-person-primary">
+                        <span class="workplace-avatar" aria-hidden="true">
+                            @if (person.HasPhoto)
+                            {
+                                <img src="@Url.Action("Photo", "People", new { id = person.Id })" alt="" />
+                            }
+                            else
+                            {
+                                @person.FullName.Trim().FirstOrDefault()
+                            }
+                        </span>
+                        <div>
+                            <a class="workplace-person-link" asp-action="Details" asp-route-id="@person.Id">@person.FullName</a>
+                            <small>@(string.IsNullOrWhiteSpace(person.Reference) ? "دون مرجع" : person.Reference)</small>
+                        </div>
+                    </div>
+                    <div><span class="workplace-type type-@person.PersonType.ToLowerInvariant()">@person.PersonTypeDisplay</span></div>
+                    <div class="workplace-person-meta">
+                        <strong>@(string.IsNullOrWhiteSpace(person.Department) ? "غير محدد" : person.Department)</strong>
+                        <small>@(string.IsNullOrWhiteSpace(person.JobTitle) ? person.PhoneNumberMasked : person.JobTitle)</small>
+                    </div>
+                    <div class="workplace-presence-state @(person.IsOnSite ? "is-on-site" : string.Empty)">
+                        <i aria-hidden="true"></i>
+                        <div>
+                            <strong>@(person.IsOnSite ? "داخل الموقع" : "غير موجود حالياً")</strong>
+                            <small>@(person.IsOnSite ? person.Location : person.LastActivityAt.HasValue ? HijriDateFormatter.Format(person.LastActivityAt) : "لا توجد حركة")</small>
+                        </div>
+                    </div>
+                    <a class="workplace-row-action" asp-action="Details" asp-route-id="@person.Id" aria-label="فتح ملف @person.FullName">فتح الملف</a>
+                </article>
+            }
+        }
+    </section>
+
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="workplace-pagination" aria-label="صفحات دليل الأشخاص">
+            <a class="@(Model.Page <= 1 ? "disabled" : string.Empty)"
+               asp-route-query="@Model.Query" asp-route-personType="@Model.PersonType"
+               asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize">السابق</a>
+            <span>صفحة @Model.Page من @Model.TotalPages</span>
+            <a class="@(Model.Page >= Model.TotalPages ? "disabled" : string.Empty)"
+               asp-route-query="@Model.Query" asp-route-personType="@Model.PersonType"
+               asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize">التالي</a>
+        </nav>
+    }
+</div>

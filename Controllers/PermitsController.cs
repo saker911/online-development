@@ -16,6 +16,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Models.ViewModels.Workplace;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Administration;
 using VehiclePermitSystemWeb.Services.Audit;
@@ -32,6 +33,7 @@ using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Utilities.Barcodes;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Services.Workplace;
 using VehiclePermitSystemWeb.Utilities.Online;
 using ZXing;
 using ZXing.Common;
@@ -53,6 +55,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly ISystemClock _systemClock;
         private readonly IConfiguration _configuration;
+        private readonly IWorkplaceDirectoryService? _workplaceDirectoryService;
 
         public PermitsController(
             IPermitService permitService,
@@ -60,7 +63,8 @@ namespace VehiclePermitSystemWeb.Controllers
             IAccessControlService accessControl,
             IWebHostEnvironment environment,
             ISystemClock systemClock,
-            IConfiguration configuration
+            IConfiguration configuration,
+            IWorkplaceDirectoryService? workplaceDirectoryService = null
         )
         {
             _permitService = permitService;
@@ -69,6 +73,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _environment = environment;
             _systemClock = systemClock;
             _configuration = configuration;
+            _workplaceDirectoryService = workplaceDirectoryService;
         }
 
         [HttpGet]
@@ -168,6 +173,7 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult Create()
         {
             PopulateDepartmentOptions();
+            PopulateLocationOptions();
             var defaultPermitType = User.HasPermission(AppPermissions.CreatePermit)
                 ? Permit.PermitTypePermanent
                 : Permit.PermitTypeVisitor;
@@ -369,6 +375,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             ModelState.Clear();
+            ValidateAndApplyLocation(permit);
             TryValidateModel(permit);
 
             if (ModelState.IsValid)
@@ -382,6 +389,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         "يوجد تصريح مسجل مسبقًا بنفس رقم الهوية أو الاسم أو رقم اللوحة. هل ترغب بالتعديل بدل إنشاء تصريح جديد؟"
                     );
                     PopulateDepartmentOptions(permit.DepartmentName);
+                    PopulateLocationOptions();
                     return View(permit);
                 }
 
@@ -401,6 +409,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             PopulateDepartmentOptions(permit.DepartmentName);
+            PopulateLocationOptions();
             return View(permit);
         }
 
@@ -620,6 +629,53 @@ namespace VehiclePermitSystemWeb.Controllers
 
             permit.DepartmentName = department;
             permit.EmployeeDepartment = department;
+        }
+
+        private void PopulateLocationOptions()
+        {
+            ViewData["WorkplaceLocations"] = _workplaceDirectoryService?.GetLocationOptions()
+                .Where(item => item.PermitsEnabled)
+                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+        }
+
+        private void ValidateAndApplyLocation(Permit permit)
+        {
+            var options = _workplaceDirectoryService?.GetLocationOptions()
+                .Where(item => item.PermitsEnabled)
+                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+            if (options.Count == 0 && !permit.WorkplaceSiteId.HasValue)
+            {
+                return;
+            }
+
+            var siteName = string.Empty;
+            var entranceName = string.Empty;
+            var error = string.Empty;
+            if (_workplaceDirectoryService == null
+                || !_workplaceDirectoryService.ResolveLocation(
+                    permit.WorkplaceSiteId,
+                    permit.WorkplaceSiteEntranceId,
+                    "permits",
+                    out siteName,
+                    out entranceName,
+                    out error))
+            {
+                ModelState.AddModelError(nameof(permit.WorkplaceSiteId), error);
+                return;
+            }
+
+            var location = string.IsNullOrWhiteSpace(entranceName)
+                ? siteName
+                : $"{siteName} - {entranceName}";
+            if (permit.IsVisitorPermit)
+            {
+                permit.VisitLocation = location;
+                permit.EmployeeDepartment = location;
+            }
+            else
+            {
+                permit.EmployeeDepartment = permit.DepartmentName;
+            }
         }
 
         private void NormalizePermitInput(Permit permit, bool isCreate)

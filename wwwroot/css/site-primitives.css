@@ -20,24 +20,24 @@
 @keyframes notifySlideIn {
     from {
         opacity: 0;
-        transform: translateY(-16px) scale(0.96);
+        transform: scale(0.97);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
     }
 }
 
 @keyframes notifySlideOut {
     from {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
     }
 
     to {
         opacity: 0;
-        transform: translateY(-12px) scale(0.95);
+        transform: scale(0.97);
     }
 }
 
@@ -780,6 +780,22 @@ button,
     text-decoration: none;
     transition: background 0.15s ease;
     position: relative;
+}
+
+.notif-dd-row-form {
+    margin: 0;
+}
+
+.notif-dd-row-form + .notif-dd-row-form {
+    border-top: 1px solid rgba(226, 232, 240, 0.45);
+}
+
+.notif-dd-row-form .notif-dd-row {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: start;
 }
 
 .notif-dd-row:hover {

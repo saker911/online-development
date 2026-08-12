@@ -1,0 +1,184 @@
+@model WorkplaceSiteDetailsViewModel
+@{
+    ViewData["Title"] = Model.Site.Name;
+    ViewData["BodyClass"] = "workplace-page-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="workplace-page workplace-site-hub">
+    @await Html.PartialAsync("_WorkplaceNavigation")
+
+    <header class="workplace-heading workplace-site-hub-heading">
+        <div>
+            <div class="workplace-site-breadcrumb">
+                <a class="workplace-back-link" asp-action="Index">المواقع</a>
+                <span class="workplace-eyebrow">مركز تشغيل الموقع</span>
+            </div>
+            <h1>@Model.Site.Name</h1>
+            <p>@(string.IsNullOrWhiteSpace(Model.Site.Address) ? "لم يحدد عنوان الموقع" : Model.Site.Address)</p>
+        </div>
+        <div class="workplace-heading-actions">
+            <span class="workplace-status @(Model.Site.IsActive ? "active" : string.Empty)">@(Model.Site.IsActive ? "نشط" : "متوقف")</span>
+            <a class="btn btn-outline-secondary" asp-action="Index" asp-route-edit="@Model.Site.Id">تعديل الموقع</a>
+        </div>
+    </header>
+
+    <section class="workplace-metrics workplace-site-hub-metrics" aria-label="ملخص الموقع">
+        <article><span>داخل الموقع</span><strong>@Model.Site.CurrentPeopleCount</strong></article>
+        <article><span>المداخل</span><strong>@Model.Site.EntranceCount</strong></article>
+        <article><span>الأجهزة</span><strong>@Model.Site.DeviceCount</strong></article>
+        <article><span>متصلة الآن</span><strong class="is-positive">@Model.Site.OnlineDeviceCount</strong></article>
+        <article><span>نطاق الموقع</span><strong>@Model.Site.GeofenceRadiusMeters <small>م</small></strong></article>
+    </section>
+
+    <section class="workplace-site-services" aria-label="خدمات الموقع">
+        <span class="@(Model.Site.PermitsEnabled ? "enabled" : "")">التصاريح</span>
+        <span class="@(Model.Site.VisitsEnabled ? "enabled" : "")">الزيارات</span>
+        <span class="@(Model.Site.SelfServiceEnabled ? "enabled" : "")">الخدمة الذاتية</span>
+        <span class="@(Model.Site.QueueEnabled ? "enabled" : "")">الطابور</span>
+        <span class="@(Model.Site.GateEnabled ? "enabled" : "")">البوابة</span>
+    </section>
+
+    <div class="workplace-site-hub-grid">
+        @if (Model.Site.SelfServiceEnabled)
+        {
+            <section class="workplace-panel workplace-hub-section workplace-rotating-qr" aria-labelledby="rotating-qr-heading">
+                <header><div><span class="workplace-eyebrow">الخدمة الذاتية</span><h2 id="rotating-qr-heading">رمز دخول متجدد</h2></div><span class="workplace-count" data-qr-countdown>90</span></header>
+                <div class="workplace-rotating-qr-body">
+                    <img src="@Url.Action("RotatingQr", new { id = Model.Site.Id, v = DateTimeOffset.UtcNow.ToUnixTimeSeconds() })"
+                         data-rotating-qr data-base-url="@Url.Action("RotatingQr", new { id = Model.Site.Id })"
+                         width="220" height="220" alt="رمز الخدمة الذاتية المتجدد للموقع" />
+                    <p>يتغير الرمز تلقائياً ويصبح الرابط السابق غير صالح بعد مدة قصيرة.</p>
+                </div>
+            </section>
+        }
+        <section class="workplace-panel workplace-hub-section" aria-labelledby="entrances-heading">
+            <header>
+                <div><span class="workplace-eyebrow">الوصول</span><h2 id="entrances-heading">المداخل والبوابات</h2></div>
+                <span class="workplace-count">@Model.Entrances.Count</span>
+            </header>
+
+            <div class="workplace-entrance-list">
+                @if (Model.Entrances.Count == 0)
+                {
+                    <p class="workplace-empty">أضف أول مدخل لربط أجهزة البوابة به.</p>
+                }
+                @foreach (var entrance in Model.Entrances)
+                {
+                    <article class="workplace-entrance-row">
+                        <span class="workplace-site-mark @(entrance.IsActive ? "active" : string.Empty)" aria-hidden="true"></span>
+                        <div>
+                            <strong>@entrance.Name</strong>
+                            <small>@(string.IsNullOrWhiteSpace(entrance.LocationDescription) ? entrance.Code : entrance.LocationDescription)</small>
+                        </div>
+                        <span class="workplace-device-count">@entrance.DeviceCount جهاز</span>
+                        <div class="workplace-inline-actions">
+                            <form method="post" asp-action="ToggleEntrance">
+                                <input type="hidden" name="siteId" value="@Model.Site.Id" />
+                                <input type="hidden" name="entranceId" value="@entrance.Id" />
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">@(entrance.IsActive ? "إيقاف" : "تفعيل")</button>
+                            </form>
+                            <form method="post" asp-action="DeleteEntrance">
+                                <input type="hidden" name="siteId" value="@Model.Site.Id" />
+                                <input type="hidden" name="entranceId" value="@entrance.Id" />
+                                <button class="btn btn-sm btn-outline-danger" type="submit">حذف</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+
+            <form class="workplace-inline-form workplace-entrance-form" method="post" asp-action="AddEntrance">
+                <input asp-for="EntranceInput.WorkplaceSiteId" type="hidden" />
+                <label><span>اسم المدخل</span><input asp-for="EntranceInput.Name" placeholder="البوابة الرئيسية" /></label>
+                <label><span>الرمز</span><input asp-for="EntranceInput.Code" placeholder="GATE-A" /></label>
+                <label class="workplace-wide-field"><span>الموقع</span><input asp-for="EntranceInput.LocationDescription" placeholder="الواجهة الشمالية" /></label>
+                <button class="btn btn-dark" type="submit">إضافة مدخل</button>
+            </form>
+        </section>
+
+        <section class="workplace-panel workplace-hub-section" aria-labelledby="devices-heading">
+            <header>
+                <div><span class="workplace-eyebrow">التشغيل</span><h2 id="devices-heading">الأجهزة</h2></div>
+                <a asp-controller="Administration" asp-action="DisplaySettings">إدارة الأجهزة</a>
+            </header>
+
+            <div class="workplace-device-list">
+                @if (Model.Devices.Count == 0)
+                {
+                    <p class="workplace-empty">لا توجد أجهزة مرتبطة بهذا الموقع.</p>
+                }
+                @foreach (var device in Model.Devices)
+                {
+                    <article class="workplace-device-row">
+                        <span class="workplace-device-indicator @(device.IsOnline ? "online" : string.Empty)" aria-hidden="true"></span>
+                        <div>
+                            <strong>@device.Name</strong>
+                            <small>@device.ModeDisplay · @device.EntranceName</small>
+                        </div>
+                        <span class="workplace-device-state @(device.IsOnline ? "online" : string.Empty)">@device.StatusDisplay</span>
+                        <form method="post" asp-action="UnassignDevice">
+                            <input type="hidden" name="siteId" value="@Model.Site.Id" />
+                            <input type="hidden" name="deviceId" value="@device.Id" />
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">إزالة</button>
+                        </form>
+                    </article>
+                }
+            </div>
+
+            @if (Model.AvailableDevices.Count > 0)
+            {
+                <form class="workplace-inline-form workplace-device-form" method="post" asp-action="AssignDevice">
+                    <input asp-for="DeviceAssignment.WorkplaceSiteId" type="hidden" />
+                    <label>
+                        <span>الجهاز</span>
+                        <select asp-for="DeviceAssignment.DisplayDeviceId">
+                            <option value="">اختر جهازاً</option>
+                            @foreach (var device in Model.AvailableDevices)
+                            {
+                                <option value="@device.Id">@device.Name · @device.ModeDisplay</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        <span>المدخل</span>
+                        <select asp-for="DeviceAssignment.WorkplaceSiteEntranceId">
+                            <option value="">بدون مدخل محدد</option>
+                            @foreach (var entrance in Model.Entrances.Where(item => item.IsActive))
+                            {
+                                <option value="@entrance.Id">@entrance.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <button class="btn btn-dark" type="submit">ربط الجهاز</button>
+                </form>
+            }
+            else
+            {
+                <div class="workplace-hub-footer-note">سجّل جهازاً جديداً من مركز الأجهزة ثم اربطه بهذا الموقع.</div>
+            }
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        (() => {
+            const image = document.querySelector('[data-rotating-qr]');
+            const counter = document.querySelector('[data-qr-countdown]');
+            if (!image || !counter) return;
+            let remaining = 90;
+            window.setInterval(() => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    remaining = 90;
+                    image.src = image.dataset.baseUrl + '&v=' + Date.now();
+                }
+                counter.textContent = String(remaining);
+            }, 1000);
+        })();
+    </script>
+}

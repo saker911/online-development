@@ -1,0 +1,32 @@
+@model AttendanceDashboardViewModel
+@{
+    ViewData["Title"] = "الحضور اللحظي";
+    ViewData["BodyClass"] = "workplace-page-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="workplace-page" data-attendance-page>
+    @await Html.PartialAsync("_WorkplaceNavigation")
+    <header class="workplace-heading workplace-heading-compact">
+        <div>
+            <span class="workplace-eyebrow">الحالة المباشرة</span>
+            <h1>الحضور</h1>
+        </div>
+        <div class="workplace-live-time">
+            <i aria-hidden="true"></i>
+            <span>تحديث مباشر</span>
+            <strong>@Model.UpdatedAt.ToString("HH:mm")</strong>
+        </div>
+    </header>
+
+    <div data-attendance-content>
+        @await Html.PartialAsync("_AttendanceContent", Model)
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/attendance-live.js" asp-append-version="true"></script>
+}

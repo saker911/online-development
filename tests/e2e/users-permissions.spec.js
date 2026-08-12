@@ -9,7 +9,9 @@ const {
   setUserActive,
   signIn,
   signOut,
+  submitForm,
   uniqueNationalId,
+  uniquePhone,
 } = require("./helpers/e2e-helpers");
 
 test("owner manages users and temporary credentials", async ({ page }) => {
@@ -141,4 +143,44 @@ test("simplified create exposes only operational roles and applies defaults", as
   await roleSelect.selectOption(roles.permitReviewer);
   await expect(page.locator("#CanEditPermit")).toBeChecked();
   await expect(page.locator("#CanApprovePermit")).not.toBeChecked();
+});
+
+test("company administrator can only create users inside the signed-in tenant", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+  const administrator = await createUser(page, { role: roles.systemAdmin });
+  const administratorPassword = `Aa${uniqueNationalId("7")}!`;
+
+  await signOut(page);
+  await signIn(page, administrator.username, administrator.temporaryPassword);
+  await changePassword(page, administrator.temporaryPassword, administratorPassword);
+  await page.goto("/Users/Create");
+
+  await expect(page.locator('select[name="TenantId"]')).toHaveCount(0);
+  await expect(page.locator('input[type="hidden"][name="TenantId"]')).toHaveValue("default");
+  await expect(page.locator("#users-tenant-select option")).toHaveCount(0);
+
+  const targetUsername = uniqueNationalId("2");
+  await submitForm(page, "/Users/Create", {
+    Username: targetUsername,
+    FullName: "مستخدم نطاق الجهة",
+    PhoneNumber: uniquePhone(),
+    JobTitle: "موظف تشغيل",
+    EmployeeNumber: `TENANT-${Date.now()}`,
+    TenantId: "tampered-foreign-tenant",
+    Role: roles.receptionist,
+    IsActive: "true",
+    ApplyRoleDefaults: "true",
+    WizardStep: "3",
+    MustChangeOperatorPin: "true",
+  });
+
+  await expect(page.getByText("بيانات الدخول المؤقتة للمستخدم الجديد")).toBeVisible();
+
+  await signOut(page);
+  await signIn(page, owner.username, owner.password);
+  await page.goto("/Users");
+  await page.locator("#users-table-search").fill(targetUsername);
+  const createdRow = page.locator('[data-user-row]', { hasText: targetUsername }).first();
+  await expect(createdRow).toBeVisible();
+  await expect(createdRow).toHaveAttribute("data-tenant-id", "default");
 });

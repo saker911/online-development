@@ -103,10 +103,43 @@
                     @if (Model.ShowVisitLocation)
                     {
                         <div class="public-visit-field public-visit-field-third">
-                            <label asp-for="VisitLocation">مكان الزيارة @if (Model.RequireVisitLocation) { <small>مطلوب</small> }</label>
-                            <input asp-for="VisitLocation" class="form-control" aria-required="@Model.RequireVisitLocation.ToString().ToLowerInvariant()" placeholder="المبنى أو الموقع" />
-                            <span asp-validation-for="VisitLocation"></span>
+                            @if (Model.Locations.Count > 0)
+                            {
+                                <label asp-for="WorkplaceSiteId">الموقع <small>مطلوب</small></label>
+                                <select asp-for="WorkplaceSiteId" class="form-select" required>
+                                    <option value="">اختر الموقع</option>
+                                    @foreach (var site in Model.Locations)
+                                    {
+                                        <option value="@site.SiteId">@site.SiteName</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="WorkplaceSiteId"></span>
+                            }
+                            else
+                            {
+                                <label asp-for="VisitLocation">مكان الزيارة @if (Model.RequireVisitLocation) { <small>مطلوب</small> }</label>
+                                <input asp-for="VisitLocation" class="form-control" aria-required="@Model.RequireVisitLocation.ToString().ToLowerInvariant()" placeholder="المبنى أو الموقع" />
+                                <span asp-validation-for="VisitLocation"></span>
+                            }
                         </div>
+                        @if (Model.Locations.Count > 0 && Model.Locations.Any(site => site.Entrances.Count > 0))
+                        {
+                            <div class="public-visit-field public-visit-field-third">
+                                <label asp-for="WorkplaceSiteEntranceId">المدخل</label>
+                                <select asp-for="WorkplaceSiteEntranceId" class="form-select">
+                                    <option value="">يحدد عند الوصول</option>
+                                    @foreach (var site in Model.Locations)
+                                    {
+                                        <optgroup label="@site.SiteName">
+                                            @foreach (var entrance in site.Entrances)
+                                            {
+                                                <option value="@entrance.Id">@entrance.Name</option>
+                                            }
+                                        </optgroup>
+                                    }
+                                </select>
+                            </div>
+                        }
                     }
                     @if (Model.ShowPurpose)
                     {

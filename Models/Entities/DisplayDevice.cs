@@ -8,18 +8,32 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public string ScreenLocation { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string Mode { get; set; } = DisplayDeviceModes.Gate;
+        public int? WorkplaceSiteId { get; set; }
+        public int? WorkplaceSiteEntranceId { get; set; }
         public string Status { get; set; } = DisplayDeviceStatuses.Pending;
         public string DeviceTokenHash { get; set; } = string.Empty;
         public string RequestCode { get; set; } = string.Empty;
         public string IpAddress { get; set; } = string.Empty;
         public string LastIpAddress { get; set; } = string.Empty;
         public string UserAgent { get; set; } = string.Empty;
+        public string AppVersion { get; set; } = string.Empty;
+        public string Platform { get; set; } = string.Empty;
+        public string NetworkStatus { get; set; } = string.Empty;
+        public string CameraStatus { get; set; } = string.Empty;
+        public int? BatteryLevel { get; set; }
+        public string LastHealthError { get; set; } = string.Empty;
+        public DateTime? LastHealthReportedAtUtc { get; set; }
+        public int ConfigurationVersion { get; set; } = 1;
+        public int AppliedConfigurationVersion { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? ApprovedAtUtc { get; set; }
         public string ApprovedByUserId { get; set; } = string.Empty;
         public DateTime? LastSeenUtc { get; set; }
         public DateTime? DisabledAtUtc { get; set; }
         public string Notes { get; set; } = string.Empty;
+
+        public WorkplaceSite? WorkplaceSite { get; set; }
+        public WorkplaceSiteEntrance? WorkplaceSiteEntrance { get; set; }
     }
 
     public static class DisplayDeviceModes

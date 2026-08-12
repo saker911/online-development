@@ -58,6 +58,15 @@ namespace VehiclePermitSystemWeb.Models.Entities
         [Display(Name = "مكان الزيارة")]
         public string VisitLocation { get; set; } = string.Empty;
 
+        [Display(Name = "الموقع")]
+        public int? WorkplaceSiteId { get; set; }
+
+        [Display(Name = "المدخل")]
+        public int? WorkplaceSiteEntranceId { get; set; }
+
+        public WorkplaceSite? WorkplaceSite { get; set; }
+        public WorkplaceSiteEntrance? WorkplaceSiteEntrance { get; set; }
+
         [Display(Name = "اسم الضابط")]
         public string OfficerName { get; set; } = string.Empty;
 

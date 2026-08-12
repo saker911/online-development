@@ -328,6 +328,50 @@
     text-decoration: none;
 }
 
+.login-recovery-link {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 8px;
+    color: #f5f5f4;
+    font-size: .86rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.login-recovery-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.login-status-card {
+    text-align: center;
+}
+
+.login-status-card .login-submit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-decoration: none;
+}
+
+.login-status-icon {
+    display: inline-grid;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 18px;
+    place-items: center;
+    color: #fff;
+    background: #159a8c;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    font-weight: 900;
+}
+
+.login-status-icon.is-error {
+    background: #b42318;
+}
+
 body.login-page-body:has(.subscription-page-shell) {
     background:
         radial-gradient(circle at 52% -12%, rgba(17, 24, 39, 0.09), transparent 34%),

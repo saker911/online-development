@@ -120,18 +120,7 @@
     <section class="records-page-hero card-permit app-card-surface">
         <div class="records-page-hero-copy">
             <h1>@(Model.SuspendedOnly ? "الزيارات الموقوفة" : "الزيارات")</h1>
-
-            <div class="records-page-chip-list">
-                <span class="records-page-chip">الحالة الحالية: @(Model.SuspendedOnly ? "موقوفة" :
-                                                                                Model.StatusFilter)</span>
-                    <span class="records-page-chip">داخل المنشأة: @insideVisits</span>
-                    <span class="records-page-chip">منتهية: @completedVisits</span>
-                    @if (hasSearch)
-                    {
-                        <span class="records-page-chip records-page-chip-accent">البحث: @Model.SearchTerm</span>
-                    }
-                </div>
-            </div>
+        </div>
 
             <div class="records-page-stats">
                 <div class="permit-stat-card permit-stat-card-pending">
@@ -180,7 +169,6 @@
             <section class="visitor-request-share card-permit app-card-surface" aria-labelledby="visitor-request-title">
                 <div class="visitor-request-share-copy">
                     <strong id="visitor-request-title">رابط طلب الزيارة للزوار</strong>
-                    <span>أرسله للزائر ليملأ بياناته ويتابع الاعتماد ورمز الدخول بنفسه.</span>
                 </div>
                 <div class="visitor-request-share-controls">
                     <input id="publicVisitRequestUrl" class="form-control" value="@Model.PublicRequestUrl" readonly aria-label="رابط طلب الزيارة" />

@@ -1,0 +1,97 @@
+@model WorkplaceSitesViewModel
+@{
+    ViewData["Title"] = "المواقع";
+    ViewData["BodyClass"] = "workplace-page-body";
+    var editing = Model.Input.Id.HasValue;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="workplace-page">
+    @await Html.PartialAsync("_WorkplaceNavigation")
+    <header class="workplace-heading workplace-heading-compact">
+        <div>
+            <span class="workplace-eyebrow">إدارة المنشأة</span>
+            <h1>المواقع</h1>
+        </div>
+    </header>
+
+    <div class="workplace-sites-layout">
+        <section class="workplace-panel workplace-sites-list">
+            <header><div><span class="workplace-eyebrow">المواقع المسجلة</span><h2>@Model.Sites.Count موقع</h2></div></header>
+            @foreach (var site in Model.Sites)
+            {
+                <article class="workplace-site-row">
+                    <div class="workplace-site-mark @(site.IsActive ? "active" : string.Empty)" aria-hidden="true"></div>
+                    <div class="workplace-site-copy">
+                        <strong>@site.Name</strong>
+                        <small>@(string.IsNullOrWhiteSpace(site.Address) ? site.Code : site.Address)</small>
+                    </div>
+                    <div class="workplace-site-stats">
+                        <strong>@site.CurrentPeopleCount</strong>
+                        <small>داخل الموقع</small>
+                    </div>
+                    <div class="workplace-site-stats workplace-site-device-stats">
+                        <strong>@site.OnlineDeviceCount/@site.DeviceCount</strong>
+                        <small>أجهزة متصلة</small>
+                    </div>
+                    <span class="workplace-status @(site.IsActive ? "active" : string.Empty)">@(site.IsActive ? "نشط" : "متوقف")</span>
+                    <div class="workplace-site-actions">
+                        <a class="btn btn-sm btn-dark" asp-action="Details" asp-route-id="@site.Id">فتح الموقع</a>
+                        <a class="btn btn-sm btn-outline-secondary" asp-route-edit="@site.Id">تعديل</a>
+                        <form method="post" asp-action="Toggle"><input type="hidden" name="id" value="@site.Id" /><button class="btn btn-sm btn-outline-secondary" type="submit">@(site.IsActive ? "إيقاف" : "تفعيل")</button></form>
+                        <form method="post" asp-action="Delete"><input type="hidden" name="id" value="@site.Id" /><button class="btn btn-sm btn-outline-danger" type="submit">حذف</button></form>
+                    </div>
+                </article>
+            }
+        </section>
+
+        <section class="workplace-panel workplace-site-editor">
+            <header>
+                <div><span class="workplace-eyebrow">@(editing ? "تحديث الموقع" : "موقع جديد")</span><h2>@(editing ? Model.Input.Name : "إضافة موقع")</h2></div>
+                @if (editing) { <a asp-action="Index">إلغاء</a> }
+            </header>
+            <form method="post" asp-action="Save">
+                <input asp-for="Input.Id" type="hidden" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <label><span>اسم الموقع</span><input asp-for="Input.Name" placeholder="مثال: المبنى الرئيسي" /></label>
+                <div class="workplace-form-pair">
+                    <label><span>رمز الموقع</span><input asp-for="Input.Code" placeholder="MAIN" /></label>
+                    <label><span>نطاق الموقع بالمتر</span><input asp-for="Input.GeofenceRadiusMeters" type="number" min="25" max="5000" /></label>
+                </div>
+                <label><span>العنوان</span><input asp-for="Input.Address" placeholder="المدينة والحي أو وصف مختصر" /></label>
+                <div class="workplace-form-pair">
+                    <label><span>خط العرض</span><input asp-for="Input.Latitude" inputmode="decimal" /></label>
+                    <label><span>خط الطول</span><input asp-for="Input.Longitude" inputmode="decimal" /></label>
+                </div>
+                @if (!editing && Model.Sites.Count > 0)
+                {
+                    <label>
+                        <span>نسخ إعدادات موقع</span>
+                        <select asp-for="Input.CopyFromSiteId">
+                            <option value="">بدون قالب</option>
+                            @foreach (var site in Model.Sites)
+                            {
+                                <option value="@site.Id">@site.Name</option>
+                            }
+                        </select>
+                    </label>
+                }
+                <fieldset class="workplace-service-fieldset">
+                    <legend>الخدمات المتاحة في الموقع</legend>
+                    <div class="workplace-service-switches">
+                        <label class="workplace-switch"><input asp-for="Input.PermitsEnabled" /><span>التصاريح</span></label>
+                        <label class="workplace-switch"><input asp-for="Input.VisitsEnabled" /><span>الزيارات</span></label>
+                        <label class="workplace-switch"><input asp-for="Input.SelfServiceEnabled" /><span>الخدمة الذاتية</span></label>
+                        <label class="workplace-switch"><input asp-for="Input.QueueEnabled" /><span>الطابور</span></label>
+                        <label class="workplace-switch"><input asp-for="Input.GateEnabled" /><span>البوابة</span></label>
+                    </div>
+                </fieldset>
+                <label class="workplace-switch"><input asp-for="Input.IsActive" /><span>الموقع نشط ومتاح للاستخدام</span></label>
+                <button class="btn btn-dark" type="submit">@(editing ? "حفظ التعديلات" : "إضافة الموقع")</button>
+            </form>
+        </section>
+    </div>
+</div>

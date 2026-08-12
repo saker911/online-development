@@ -43,5 +43,36 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Display
         public DateTime? ApprovedAtUtc { get; set; }
         public string ApprovedByUserId { get; set; } = string.Empty;
         public string Notes { get; set; } = string.Empty;
+        public string SiteName { get; set; } = string.Empty;
+        public string EntranceName { get; set; } = string.Empty;
+        public string AppVersion { get; set; } = string.Empty;
+        public string Platform { get; set; } = string.Empty;
+        public string NetworkStatus { get; set; } = string.Empty;
+        public string CameraStatus { get; set; } = string.Empty;
+        public int? BatteryLevel { get; set; }
+        public string LastHealthError { get; set; } = string.Empty;
+        public DateTime? LastHealthReportedAtUtc { get; set; }
+        public int ConfigurationVersion { get; set; }
+        public int AppliedConfigurationVersion { get; set; }
+        public bool ConfigurationPending => AppliedConfigurationVersion < ConfigurationVersion;
+    }
+
+    public sealed class DisplayDeviceHeartbeatViewModel
+    {
+        public string AppVersion { get; set; } = string.Empty;
+        public string Platform { get; set; } = string.Empty;
+        public string NetworkStatus { get; set; } = string.Empty;
+        public string CameraStatus { get; set; } = string.Empty;
+        public int? BatteryLevel { get; set; }
+        public string LastError { get; set; } = string.Empty;
+        public int AppliedConfigurationVersion { get; set; }
+    }
+
+    public sealed class DisplayHeartbeatResultViewModel
+    {
+        public bool Success { get; set; }
+        public int ConfigurationVersion { get; set; }
+        public bool ReloadRequired { get; set; }
+        public string Mode { get; set; } = DisplayDeviceModes.Gate;
     }
 }

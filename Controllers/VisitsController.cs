@@ -18,6 +18,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Models.ViewModels.Workplace;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Infrastructure;
 using VehiclePermitSystemWeb.Services.Administration;
@@ -34,6 +35,7 @@ using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Services.Workplace;
 using VehiclePermitSystemWeb.Utilities.Online;
 using VehiclePermitSystemWeb.Utilities.Barcodes;
 
@@ -49,6 +51,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IConfiguration _configuration;
         private readonly ITimeLimitedDataProtector _publicVisitProtector;
         private readonly IVisitorWorkflowService? _visitorWorkflowService;
+        private readonly IWorkplaceDirectoryService? _workplaceDirectoryService;
 
         public VisitsController(
             IVisitService visitService,
@@ -58,7 +61,8 @@ namespace VehiclePermitSystemWeb.Controllers
             IWebHostEnvironment environment,
             IConfiguration configuration,
             IDataProtectionProvider dataProtectionProvider,
-            IVisitorWorkflowService? visitorWorkflowService = null
+            IVisitorWorkflowService? visitorWorkflowService = null,
+            IWorkplaceDirectoryService? workplaceDirectoryService = null
         )
         {
             _visitService = visitService;
@@ -68,6 +72,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _environment = environment;
             _configuration = configuration;
             _visitorWorkflowService = visitorWorkflowService;
+            _workplaceDirectoryService = workplaceDirectoryService;
             _publicVisitProtector = dataProtectionProvider
                 .CreateProtector("VehiclePermitSystem.PublicVisitStatus.v1")
                 .ToTimeLimitedDataProtector();
@@ -124,6 +129,28 @@ namespace VehiclePermitSystemWeb.Controllers
             ConfigurePublicRequestView(now, model, workflow);
             NormalizePublicRequestInput(model);
             ModelState.Clear();
+            model.Locations = GetPublicVisitLocations();
+            if (model.Locations.Count > 0)
+            {
+                var locationError = string.Empty;
+                if (_workplaceDirectoryService == null
+                    || !_workplaceDirectoryService.ResolveLocation(
+                        model.WorkplaceSiteId,
+                        model.WorkplaceSiteEntranceId,
+                        "self-service-visits",
+                        out var siteName,
+                        out var entranceName,
+                        out locationError))
+                {
+                    ModelState.AddModelError(nameof(model.WorkplaceSiteId), locationError);
+                }
+                else
+                {
+                    model.VisitLocation = string.IsNullOrWhiteSpace(entranceName)
+                        ? siteName
+                        : $"{siteName} - {entranceName}";
+                }
+            }
             TryValidateModel(model);
             ValidatePublicRequestWorkflow(model);
             ValidatePublicRequestSchedule(model, workflow, now);
@@ -165,6 +192,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 VisitLocation = string.IsNullOrWhiteSpace(model.VisitLocation)
                     ? "الموقع الرئيسي"
                     : model.VisitLocation,
+                WorkplaceSiteId = model.WorkplaceSiteId,
+                WorkplaceSiteEntranceId = model.WorkplaceSiteEntranceId,
                 Purpose = string.IsNullOrWhiteSpace(model.Purpose)
                     ? "زيارة عامة"
                     : model.Purpose,
@@ -295,10 +324,27 @@ namespace VehiclePermitSystemWeb.Controllers
         }
 
         [Authorize(Policy = AppPolicies.CreateVisits)]
-        public IActionResult Create()
+        public IActionResult Create(long? personId = null)
         {
             ViewData["InitializeCurrentTime"] = true;
-            return View(new Visit { VisitDate = _systemClock.LocalNow });
+            PopulateLocationOptions();
+            var visit = new Visit { VisitDate = _systemClock.LocalNow };
+            if (personId.HasValue)
+            {
+                var knownVisitor = _workplaceDirectoryService?.BuildKnownVisitorPrefill(
+                    personId.Value
+                );
+                if (knownVisitor != null)
+                {
+                    visit.VisitorName = knownVisitor.FullName;
+                    visit.NationalId = knownVisitor.NationalId;
+                    visit.PhoneNumber = knownVisitor.PhoneNumber;
+                    visit.VisitorEmail = knownVisitor.Email;
+                    ViewData["KnownVisitorPrefill"] = true;
+                }
+            }
+
+            return View(visit);
         }
 
         [HttpPost]
@@ -307,6 +353,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             NormalizeVisitInput(visit);
             ModelState.Clear();
+            ValidateAndApplyLocation(visit, "visits");
             TryValidateModel(visit);
             ValidateVisitSchedule(visit);
             if (ModelState.IsValid)
@@ -322,6 +369,7 @@ namespace VehiclePermitSystemWeb.Controllers
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
+            PopulateLocationOptions();
             return View(visit);
         }
 
@@ -914,6 +962,7 @@ namespace VehiclePermitSystemWeb.Controllers
             model.ShowPurpose = workflow.ShowPurpose;
             model.RequirePurpose = workflow.ShowPurpose && workflow.RequirePurpose;
             model.WelcomeMessage = workflow.WelcomeMessage;
+            model.Locations = GetPublicVisitLocations();
             ViewData["VisitDateMin"] = now
                 .AddMinutes(workflow.MinimumLeadMinutes)
                 .ToString("yyyy-MM-ddTHH:mm");
@@ -921,6 +970,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 .AddDays(workflow.MaximumAdvanceDays)
                 .ToString("yyyy-MM-ddTHH:mm");
         }
+
+        private IReadOnlyList<WorkplaceLocationOptionViewModel> GetPublicVisitLocations() =>
+            _workplaceDirectoryService?.GetLocationOptions()
+                .Where(item => item.VisitsEnabled && item.SelfServiceEnabled)
+                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
 
         private static void NormalizePublicRequestInput(PublicVisitRequestViewModel model)
         {
@@ -1084,6 +1138,45 @@ namespace VehiclePermitSystemWeb.Controllers
                     );
                 companion.Relationship = (companion.Relationship ?? string.Empty).Trim();
             }
+        }
+
+        private void PopulateLocationOptions()
+        {
+            ViewData["WorkplaceLocations"] = _workplaceDirectoryService?.GetLocationOptions()
+                .Where(item => item.VisitsEnabled)
+                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+        }
+
+        private void ValidateAndApplyLocation(Visit visit, string service)
+        {
+            var options = _workplaceDirectoryService?.GetLocationOptions()
+                .Where(item => item.VisitsEnabled)
+                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+            if (options.Count == 0 && !visit.WorkplaceSiteId.HasValue)
+            {
+                return;
+            }
+
+            var error = string.Empty;
+            if (_workplaceDirectoryService == null
+                || !_workplaceDirectoryService.ResolveLocation(
+                    visit.WorkplaceSiteId,
+                    visit.WorkplaceSiteEntranceId,
+                    service,
+                    out var siteName,
+                    out var entranceName,
+                    out error))
+            {
+                ModelState.AddModelError(
+                    nameof(visit.WorkplaceSiteId),
+                    string.IsNullOrWhiteSpace(error) ? "تعذر التحقق من الموقع." : error
+                );
+                return;
+            }
+
+            visit.VisitLocation = string.IsNullOrWhiteSpace(entranceName)
+                ? siteName
+                : $"{siteName} - {entranceName}";
         }
 
         private static bool ShouldResetApprovalStatus(Visit existingVisit, Visit updatedVisit)

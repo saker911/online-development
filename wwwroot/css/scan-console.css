@@ -702,6 +702,39 @@ body.unified-gate-kiosk-body main {
     text-align: left;
 }
 
+@media (min-width: 1081px) and (max-height: 820px) {
+    .gate-mobile-header {
+        margin-bottom: 10px;
+    }
+
+    .gate-mobile-main,
+    .gate-mobile-sidebar {
+        gap: 10px;
+    }
+
+    .gate-mobile-decision {
+        min-height: 142px;
+        padding: 18px;
+    }
+
+    .gate-mobile-capture,
+    .gate-mobile-details,
+    .gate-mobile-shift,
+    .gate-mobile-recent,
+    .gate-mobile-linked-permit {
+        padding: 14px;
+    }
+
+    .gate-mobile-detail {
+        min-height: 64px;
+        padding: 9px;
+    }
+
+    .gate-mobile-section-head {
+        margin-bottom: 10px;
+    }
+}
+
 @media (max-width: 1080px) {
     .gate-mobile-layout {
         grid-template-columns: 1fr;

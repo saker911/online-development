@@ -85,10 +85,24 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function heartbeat() {
+    async function heartbeat() {
+        const payload = new URLSearchParams({
+            appVersion: document.documentElement.dataset.appVersion || "web",
+            platform: navigator.userAgentData?.platform || navigator.platform || "web",
+            networkStatus: navigator.onLine ? "online" : "offline",
+            cameraStatus: "not-required",
+            appliedConfigurationVersion: localStorage.getItem("displayConfigVersion") || "0"
+        });
         fetch(root.dataset.heartbeatEndpoint, {
             method: "POST",
-            credentials: "same-origin"
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: payload.toString()
+        }).then(response => response.json()).then(result => {
+            if (result?.reloadRequired && result.configurationVersion) {
+                localStorage.setItem("displayConfigVersion", String(result.configurationVersion));
+                window.location.reload();
+            }
         }).catch(function () { });
     }
 

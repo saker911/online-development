@@ -19,24 +19,24 @@ html.theme-transition *::after {
 @keyframes notifySlideIn {
     from {
         opacity: 0;
-        transform: translateY(-16px) scale(0.96);
+        transform: scale(0.97);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
     }
 }
 
 @keyframes notifySlideOut {
     from {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: scale(1);
     }
 
     to {
         opacity: 0;
-        transform: translateY(-12px) scale(0.95);
+        transform: scale(0.97);
     }
 }
 

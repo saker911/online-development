@@ -446,6 +446,16 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AppVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("AppliedConfigurationVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime?>("ApprovedAtUtc")
                         .HasColumnType("timestamp without time zone");
 
@@ -453,6 +463,19 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("BatteryLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CameraStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int>("ConfigurationVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp without time zone");
@@ -475,6 +498,14 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("LastHealthError")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("LastHealthReportedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<string>("LastIpAddress")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -488,10 +519,20 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(24)
                         .HasColumnType("character varying(24)");
 
+                    b.Property<string>("NetworkStatus")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(96)
+                        .HasColumnType("character varying(96)");
 
                     b.Property<string>("RequestCode")
                         .IsRequired()
@@ -525,12 +566,22 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
 
+                    b.Property<int?>("WorkplaceSiteEntranceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("WorkplaceSiteId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RequestCode")
                         .IsUnique();
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("WorkplaceSiteEntranceId");
+
+                    b.HasIndex("WorkplaceSiteId");
 
                     b.ToTable("DisplayDevices");
                 });
@@ -674,6 +725,121 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.ToTable("EmailNotificationOutbox");
                 });
 
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.EmergencySession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("EndedBy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("StartedBy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<int>("WorkplaceSiteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("WorkplaceSiteId");
+
+                    b.HasIndex("TenantId", "WorkplaceSiteId", "Status");
+
+                    b.ToTable("EmergencySessions");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.EmergencySessionMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmergencySessionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<long>("PersonProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PersonType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmergencySessionId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "EmergencySessionId", "Status");
+
+                    b.ToTable("EmergencySessionMembers");
+                });
+
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.ExternalUserLogin", b =>
                 {
                     b.Property<long>("Id")
@@ -728,6 +894,80 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .IsUnique();
 
                     b.ToTable("ExternalUserLogins");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.InAppNotification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DismissedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("RecipientUsername")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "RecipientUsername", "SourceKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "RecipientUsername", "DismissedAtUtc", "OccurredAtUtc");
+
+                    b.ToTable("InAppNotifications");
                 });
 
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.LoginAttemptRecord", b =>
@@ -943,6 +1183,12 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<int?>("WorkplaceSiteEntranceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("WorkplaceSiteId")
+                        .HasColumnType("integer");
+
                     b.HasKey("PermitNumber");
 
                     b.HasIndex("ArchivedAt");
@@ -951,6 +1197,12 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .IsUnique();
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("WorkplaceSiteEntranceId");
+
+                    b.HasIndex("WorkplaceSiteId");
+
+                    b.HasIndex("TenantId", "WorkplaceSiteId");
 
                     b.ToTable("Permits");
                 });
@@ -1077,6 +1329,131 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.HasIndex("PermitNumber", "OccurredAt");
 
                     b.ToTable("PermitActivities");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.PersonPhoto", b =>
+                {
+                    b.Property<long>("PersonProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("PersonProfileId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("PersonPhotos");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.PersonProfile", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("EmployeeNumber")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("LastReference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LastSeenAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("NationalId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Organization")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("PersonType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SourceKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "PersonType");
+
+                    b.HasIndex("TenantId", "SourceKey")
+                        .IsUnique();
+
+                    b.ToTable("PersonProfiles");
                 });
 
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.PlatformSettings", b =>
@@ -1274,8 +1651,23 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<int>("AuditLogRetentionDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(365);
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EmailOutboxRetentionDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
+                    b.Property<bool>("FailedOperationAlertsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("GateServiceEnabled")
                         .ValueGeneratedOnAdd()
@@ -1284,6 +1676,9 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastRetentionRunAtUtc")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int?>("MaxPermitsPerMonth")
                         .HasColumnType("integer");
@@ -1299,6 +1694,21 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("NotificationCenterEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("NotificationRetentionDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(90);
+
+                    b.Property<bool>("PermitNotificationsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("PermitsServiceEnabled")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -1313,6 +1723,11 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
+
+                    b.Property<bool>("SecurityAlertsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("SelfServiceEnabled")
                         .ValueGeneratedOnAdd()
@@ -1349,6 +1764,16 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     b.Property<DateTime?>("TrialEndsAtUtc")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("UnauthorizedMovementAlertsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("VisitNotificationsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("VisitsServiceEnabled")
                         .ValueGeneratedOnAdd()
@@ -1715,11 +2140,23 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<int?>("WorkplaceSiteEntranceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("WorkplaceSiteId")
+                        .HasColumnType("integer");
+
                     b.HasKey("VisitId");
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("WorkplaceSiteEntranceId");
+
+                    b.HasIndex("WorkplaceSiteId");
+
                     b.HasIndex("TenantId", "QueueStatus");
+
+                    b.HasIndex("TenantId", "WorkplaceSiteId");
 
                     b.ToTable("Visits");
                 });
@@ -1839,6 +2276,149 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.ToTable("VisitorWorkflowSettings");
                 });
 
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("GateEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("GeofenceRadiusMeters")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("PermitsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("QueueEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("SelfServiceEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("VisitsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "Code");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("WorkplaceSites");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LocationDescription")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("default");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("WorkplaceSiteId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("WorkplaceSiteId");
+
+                    b.HasIndex("TenantId", "WorkplaceSiteId", "Code");
+
+                    b.HasIndex("TenantId", "WorkplaceSiteId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("WorkplaceSiteEntrances");
+                });
+
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.DelegationPermission", b =>
                 {
                     b.HasOne("VehiclePermitSystemWeb.Models.Entities.Delegation", "Delegation")
@@ -1848,6 +2428,62 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .IsRequired();
 
                     b.Navigation("Delegation");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.DisplayDevice", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", "WorkplaceSiteEntrance")
+                        .WithMany("DisplayDevices")
+                        .HasForeignKey("WorkplaceSiteEntranceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", "WorkplaceSite")
+                        .WithMany("DisplayDevices")
+                        .HasForeignKey("WorkplaceSiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("WorkplaceSite");
+
+                    b.Navigation("WorkplaceSiteEntrance");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.EmergencySession", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", "WorkplaceSite")
+                        .WithMany()
+                        .HasForeignKey("WorkplaceSiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("WorkplaceSite");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.EmergencySessionMember", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.EmergencySession", "EmergencySession")
+                        .WithMany("Members")
+                        .HasForeignKey("EmergencySessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("EmergencySession");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.Permit", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", "WorkplaceSiteEntrance")
+                        .WithMany()
+                        .HasForeignKey("WorkplaceSiteEntranceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", "WorkplaceSite")
+                        .WithMany("Permits")
+                        .HasForeignKey("WorkplaceSiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("WorkplaceSite");
+
+                    b.Navigation("WorkplaceSiteEntrance");
                 });
 
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.PermitActivity", b =>
@@ -1861,6 +2497,32 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.Navigation("Permit");
                 });
 
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.PersonPhoto", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.PersonProfile", null)
+                        .WithOne()
+                        .HasForeignKey("VehiclePermitSystemWeb.Models.Entities.PersonPhoto", "PersonProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.Visit", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", "WorkplaceSiteEntrance")
+                        .WithMany()
+                        .HasForeignKey("WorkplaceSiteEntranceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", "WorkplaceSite")
+                        .WithMany("Visits")
+                        .HasForeignKey("WorkplaceSiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("WorkplaceSite");
+
+                    b.Navigation("WorkplaceSiteEntrance");
+                });
+
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.VisitCompanion", b =>
                 {
                     b.HasOne("VehiclePermitSystemWeb.Models.Entities.Visit", "Visit")
@@ -1872,9 +2534,25 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.Navigation("Visit");
                 });
 
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", "WorkplaceSite")
+                        .WithMany("Entrances")
+                        .HasForeignKey("WorkplaceSiteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkplaceSite");
+                });
+
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.Delegation", b =>
                 {
                     b.Navigation("Permissions");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.EmergencySession", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.Permit", b =>
@@ -1885,6 +2563,22 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.Visit", b =>
                 {
                     b.Navigation("Companions");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", b =>
+                {
+                    b.Navigation("DisplayDevices");
+
+                    b.Navigation("Entrances");
+
+                    b.Navigation("Permits");
+
+                    b.Navigation("Visits");
+                });
+
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", b =>
+                {
+                    b.Navigation("DisplayDevices");
                 });
 #pragma warning restore 612, 618
         }

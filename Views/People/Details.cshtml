@@ -1,0 +1,194 @@
+@model PersonDetailsViewModel
+@{
+    ViewData["Title"] = $"ملف {Model.FullName}";
+    ViewData["BodyClass"] = "workplace-page-body";
+    var canViewPermits = User.HasPermission(AppPermissions.ViewPermits)
+        || User.HasPermission(AppPermissions.ViewVisitorPermits);
+    var canViewVisits = User.HasPermission(AppPermissions.ViewVisits);
+    var canManagePhoto = User.HasPermission(AppPermissions.ManageUsers)
+        || User.HasPermission(AppPermissions.ManageAdministration)
+        || User.HasPermission(AppPermissions.CreateVisit)
+        || User.HasPermission(AppPermissions.EditVisit);
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
+}
+
+<div class="workplace-page workplace-person-details">
+    @await Html.PartialAsync("_WorkplaceNavigation")
+
+    <a class="workplace-back-link" asp-action="Index">العودة إلى الأشخاص</a>
+
+    <header class="workplace-heading workplace-profile-heading">
+        <div class="workplace-profile-identity">
+            <div class="workplace-profile-photo">
+                <span class="workplace-avatar workplace-avatar-large" aria-hidden="true">
+                    @if (Model.HasPhoto)
+                    {
+                        <img src="@Url.Action("Photo", "People", new { id = Model.Id })" alt="" />
+                    }
+                    else
+                    {
+                        @Model.FullName.Trim().FirstOrDefault()
+                    }
+                </span>
+                @if (canManagePhoto)
+                {
+                    <details class="workplace-photo-menu">
+                        <summary>إدارة الصورة</summary>
+                        <form asp-action="UploadPhoto" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data">
+                            @Html.AntiForgeryToken()
+                            <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required aria-label="صورة الشخص" />
+                            <button class="btn btn-dark btn-sm" type="submit">رفع الصورة</button>
+                        </form>
+                        @if (Model.HasPhoto)
+                        {
+                            <form asp-action="DeletePhoto" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button class="btn btn-outline-danger btn-sm" type="submit">حذف الصورة</button>
+                            </form>
+                        }
+                    </details>
+                }
+            </div>
+            <div>
+                <span class="workplace-eyebrow">ملف الشخص</span>
+                <h1>ملف الشخص</h1>
+                <p><strong>@Model.FullName</strong> · @Model.PersonTypeDisplay</p>
+            </div>
+        </div>
+        <div class="workplace-profile-actions">
+            @if (User.HasPermission(AppPermissions.CreatePermit) || User.HasPermission(AppPermissions.CreateVisitorPermit))
+            {
+                <a class="btn btn-dark" asp-controller="Permits" asp-action="Create">تصريح جديد</a>
+            }
+            @if (User.HasPermission(AppPermissions.CreateVisit))
+            {
+                <a class="btn btn-outline-secondary" asp-controller="Visits" asp-action="Create"
+                   asp-route-personId="@(Model.PersonType == PersonTypes.Visitor ? Model.Id : null)">زيارة جديدة</a>
+            }
+        </div>
+    </header>
+
+    <section class="workplace-profile-summary" aria-label="ملخص ملف الشخص">
+        <article>
+            <span>الحالة الحالية</span>
+            <strong class="@(Model.IsOnSite ? "is-present" : string.Empty)">@(Model.IsOnSite ? "داخل الموقع" : "خارج الموقع")</strong>
+            <small>@(Model.IsOnSite ? Model.CurrentLocation : "لا توجد حركة دخول مفتوحة")</small>
+        </article>
+        <article>
+            <span>السجلات المرتبطة</span>
+            <strong>@Model.Records.Count</strong>
+            <small>تصاريح وزيارات ضمن الجهة</small>
+        </article>
+        <article>
+            <span>الحركات المسجلة</span>
+            <strong>@Model.Timeline.Count</strong>
+            <small>@(Model.LastActivityAt.HasValue ? HijriDateFormatter.Format(Model.LastActivityAt) : "لا توجد حركة")</small>
+        </article>
+        <article>
+            <span>حالة الملف</span>
+            <strong>@(Model.IsActive ? "نشط" : "موقوف")</strong>
+            <small>@Model.PersonTypeDisplay</small>
+        </article>
+    </section>
+
+    <section class="workplace-profile-section" aria-labelledby="profileDataTitle">
+        <header>
+            <div>
+                <span class="workplace-eyebrow">الهوية والعمل</span>
+                <h2 id="profileDataTitle">البيانات الأساسية</h2>
+            </div>
+            <small>تظهر البيانات الحساسة بصورة مقنّعة.</small>
+        </header>
+        <dl class="workplace-profile-data">
+            <div><dt>المرجع الأخير</dt><dd>@(string.IsNullOrWhiteSpace(Model.Reference) ? "غير متوفر" : Model.Reference)</dd></div>
+            <div><dt>رقم الهوية</dt><dd>@(string.IsNullOrWhiteSpace(Model.NationalIdMasked) ? "غير متوفر" : Model.NationalIdMasked)</dd></div>
+            <div><dt>رقم الجوال</dt><dd>@(string.IsNullOrWhiteSpace(Model.PhoneNumberMasked) ? "غير متوفر" : Model.PhoneNumberMasked)</dd></div>
+            <div><dt>البريد الإلكتروني</dt><dd>@(string.IsNullOrWhiteSpace(Model.EmailMasked) ? "غير متوفر" : Model.EmailMasked)</dd></div>
+            <div><dt>الرقم الوظيفي</dt><dd>@(string.IsNullOrWhiteSpace(Model.EmployeeNumber) ? "غير متوفر" : Model.EmployeeNumber)</dd></div>
+            <div><dt>الإدارة</dt><dd>@(string.IsNullOrWhiteSpace(Model.Department) ? "غير محددة" : Model.Department)</dd></div>
+            <div><dt>المسمى الوظيفي</dt><dd>@(string.IsNullOrWhiteSpace(Model.JobTitle) ? "غير محدد" : Model.JobTitle)</dd></div>
+            <div><dt>الجهة المرتبطة</dt><dd>@(string.IsNullOrWhiteSpace(Model.Organization) ? "الجهة الحالية" : Model.Organization)</dd></div>
+        </dl>
+    </section>
+
+    <div class="workplace-profile-grid">
+        <section class="workplace-profile-section" aria-labelledby="profileRecordsTitle">
+            <header>
+                <div>
+                    <span class="workplace-eyebrow">السجل التشغيلي</span>
+                    <h2 id="profileRecordsTitle">التصاريح والزيارات</h2>
+                </div>
+                <span class="workplace-count">@Model.Records.Count</span>
+            </header>
+            @if (Model.Records.Count == 0)
+            {
+                <div class="workplace-empty compact"><strong>لا توجد سجلات مرتبطة</strong></div>
+            }
+            else
+            {
+                <div class="workplace-record-list">
+                    @foreach (var record in Model.Records)
+                    {
+                        <article>
+                            <div class="workplace-record-main">
+                                <span class="workplace-type">@record.RecordTypeDisplay</span>
+                                <div>
+                                    @if (record.RecordType == "Permit" && canViewPermits)
+                                    {
+                                        <a asp-controller="Permits" asp-action="Details" asp-route-id="@record.Reference">@record.Reference</a>
+                                    }
+                                    else if (record.RecordType == "Visit" && canViewVisits)
+                                    {
+                                        <a asp-controller="Visits" asp-action="Details" asp-route-id="@record.Reference">@record.Reference</a>
+                                    }
+                                    else
+                                    {
+                                        <strong>@record.Reference</strong>
+                                    }
+                                    <small>@(string.IsNullOrWhiteSpace(record.Title) ? record.Location : record.Title)</small>
+                                </div>
+                            </div>
+                            <div class="workplace-record-state">
+                                <strong>@record.Status</strong>
+                                <small>@(record.OccurredAt.HasValue ? HijriDateFormatter.Format(record.OccurredAt) : "دون تاريخ")</small>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="workplace-profile-section" aria-labelledby="profileTimelineTitle">
+            <header>
+                <div>
+                    <span class="workplace-eyebrow">التسلسل الزمني</span>
+                    <h2 id="profileTimelineTitle">آخر الحركات</h2>
+                </div>
+                <span class="workplace-count">@Model.Timeline.Count</span>
+            </header>
+            @if (Model.Timeline.Count == 0)
+            {
+                <div class="workplace-empty compact"><strong>لا توجد حركة مسجلة</strong></div>
+            }
+            else
+            {
+                <div class="workplace-timeline workplace-profile-timeline">
+                    @foreach (var item in Model.Timeline)
+                    {
+                        <article>
+                            <i class="@(item.IsEntry ? "entry" : "exit")" aria-hidden="true"></i>
+                            <div>
+                                <strong>@item.Action</strong>
+                                <span>@item.Reference · @(string.IsNullOrWhiteSpace(item.Location) ? "دون موقع" : item.Location)</span>
+                                <small>@HijriDateFormatter.Format(item.OccurredAt)</small>
+                            </div>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>

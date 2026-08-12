@@ -3562,13 +3562,26 @@ main:has(.users-registration-shell) {
         grid-template-columns: 1fr;
     }
 
+    .users-index-shell-compact .users-inline-actions-grow,
+    .users-index-shell-compact .users-inline-actions-grow.users-inline-actions-with-tenant {
+        width: 100%;
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-flow: row;
+    }
+
     .users-index-shell-compact .users-table-responsive {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
         border: 0;
         background: transparent;
-        overflow: visible;
+        overflow-x: hidden;
+        overflow-y: visible;
     }
 
     .users-index-table {
+        width: 100% !important;
+        min-width: 0 !important;
         border-collapse: separate;
         border-spacing: 0 10px;
     }

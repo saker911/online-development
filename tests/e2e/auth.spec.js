@@ -8,7 +8,7 @@ let permitSequence = 0;
 
 async function expectHomePage(page) {
   await expect(page).toHaveURL(/\/($|Home(\/Index)?$)/i);
-  await expect(page.getByText("تسجيل الدخول")).toHaveCount(0);
+  await expect(page.locator('form[action*="/Account/Login"]')).toHaveCount(0);
 }
 
 async function completeInitialSetup(page) {

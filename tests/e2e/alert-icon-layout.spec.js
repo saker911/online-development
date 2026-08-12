@@ -198,3 +198,32 @@ test("login error notification keeps icon separate from RTL text", async ({ page
     await expect(notification).toBeVisible();
     await assertRealIconAlertLayout(notification);
 });
+
+test("notifications fade in place without sliding from a side", async ({ page }) => {
+    await setTheme(page, "light");
+    await ensureOwnerSignedIn(page);
+    await page.goto("/Administration/Leadership");
+    await addAlertFixtures(page);
+
+    const transforms = await page.evaluate(() => {
+        const values = [];
+        for (const sheet of document.styleSheets) {
+            try {
+                for (const rule of sheet.cssRules) {
+                    if (rule.type !== CSSRule.KEYFRAMES_RULE || rule.name !== "notifySlideIn") {
+                        continue;
+                    }
+                    for (const step of rule.cssRules) {
+                        values.push(step.style.transform);
+                    }
+                }
+            } catch {
+            }
+        }
+        return values.filter(Boolean);
+    });
+
+    expect(transforms.length).toBeGreaterThan(0);
+    expect(transforms.every((value) => !value.includes("translate"))).toBe(true);
+    expect(transforms.some((value) => value.includes("scale"))).toBe(true);
+});

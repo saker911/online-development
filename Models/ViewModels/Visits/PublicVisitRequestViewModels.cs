@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using VehiclePermitSystemWeb.Models.ViewModels.Workplace;
 
 namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
 {
@@ -15,6 +16,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
         public bool RequireVisitLocation { get; set; } = true;
         public bool ShowPurpose { get; set; } = true;
         public bool RequirePurpose { get; set; } = true;
+        public int? WorkplaceSiteId { get; set; }
+        public int? WorkplaceSiteEntranceId { get; set; }
+        public IReadOnlyList<WorkplaceLocationOptionViewModel> Locations { get; set; } =
+            Array.Empty<WorkplaceLocationOptionViewModel>();
 
         [Display(Name = "الاسم الكامل")]
         [Required(ErrorMessage = "يرجى إدخال الاسم الكامل.")]

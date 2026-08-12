@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Models.ViewModels.Workplace;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Administration;
 using VehiclePermitSystemWeb.Services.Audit;
@@ -28,6 +29,7 @@ using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Services.Workplace;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -50,18 +52,21 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IPermitService _permitService;
         private readonly IVisitService _visitService;
         private readonly IDisplayDeviceService _displayDeviceService;
+        private readonly IWorkplaceDirectoryService? _workplaceDirectoryService;
 
         public DisplayController(
             IUserAdminService userAdminService,
             IPermitService permitService,
             IVisitService visitService,
-            IDisplayDeviceService displayDeviceService
+            IDisplayDeviceService displayDeviceService,
+            IWorkplaceDirectoryService? workplaceDirectoryService = null
         )
         {
             _userAdminService = userAdminService;
             _permitService = permitService;
             _visitService = visitService;
             _displayDeviceService = displayDeviceService;
+            _workplaceDirectoryService = workplaceDirectoryService;
         }
 
         [AllowAnonymous]
@@ -118,7 +123,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 );
             }
 
-            return View(new DisplayDeviceRegistrationViewModel());
+            return View(BuildDeviceRegistrationModel());
         }
 
         [AllowAnonymous]
@@ -136,6 +141,7 @@ namespace VehiclePermitSystemWeb.Controllers
             ViewBag.ReturnUrl = safeReturnUrl;
             if (!ModelState.IsValid)
             {
+                model.Locations = GetGateLocations();
                 return View(model);
             }
 
@@ -143,6 +149,7 @@ namespace VehiclePermitSystemWeb.Controllers
             if (device == null)
             {
                 ModelState.AddModelError(string.Empty, "تعذر إرسال طلب اعتماد الشاشة.");
+                model.Locations = GetGateLocations();
                 return View(model);
             }
 
@@ -165,9 +172,9 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpPost]
         [IgnoreAntiforgeryToken]
         [EnableRateLimiting("display-heartbeat")]
-        public IActionResult Heartbeat()
+        public IActionResult Heartbeat(DisplayDeviceHeartbeatViewModel model)
         {
-            return Json(new { success = _displayDeviceService.RecordHeartbeat(HttpContext) });
+            return Json(_displayDeviceService.RecordHealth(HttpContext, model));
         }
 
         [AllowAnonymous]
@@ -643,6 +650,16 @@ namespace VehiclePermitSystemWeb.Controllers
 
             return Url.Action(nameof(Gate)) ?? "/Display/Gate";
         }
+
+        private DisplayDeviceRegistrationViewModel BuildDeviceRegistrationModel() => new()
+        {
+            Locations = GetGateLocations(),
+        };
+
+        private IReadOnlyList<WorkplaceLocationOptionViewModel> GetGateLocations() =>
+            _workplaceDirectoryService?.GetLocationOptions()
+                .Where(item => item.GateEnabled)
+                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
 
         private IActionResult? RedirectApprovedDeviceToConfiguredMode(string currentAction)
         {

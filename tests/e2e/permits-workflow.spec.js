@@ -143,10 +143,11 @@ test("edit, approve, reject, stop, reactivate, print, and verify permit", async 
   await expect(page.getByText(permit.permitNumber, { exact: true }).first()).toBeVisible();
 
   await page.goto(`/Permits/VerifyByNumber/${permit.permitNumber}`);
-  await expect(page.getByRole("heading", { name: /تصريح/ })).toBeVisible();
-  await expect(page.getByText(/التصريح فعال ومصرح به/)).toBeVisible();
-  await expect(page.getByText(permit.permitNumber, { exact: true })).toBeVisible();
-  await expect(page.getByText(editedName, { exact: false })).toHaveCount(0);
+  const publicVerification = page.getByRole("region", { name: /تصريح/ });
+  await expect(publicVerification.getByRole("heading", { name: /تصريح/ })).toBeVisible();
+  await expect(publicVerification.getByText(/التصريح فعال ومصرح به/)).toBeVisible();
+  await expect(publicVerification.getByText(permit.permitNumber, { exact: true })).toBeVisible();
+  await expect(publicVerification.getByText(editedName, { exact: false })).toHaveCount(0);
 
   await submitForm(page, `/Permits/Stop/${permit.permitNumber}`, {}, { tokenPath: `/Permits/Details/${permit.permitNumber}` });
   await page.goto(`/Permits/Details/${permit.permitNumber}`);

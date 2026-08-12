@@ -1,0 +1,122 @@
+@model NotificationCenterPageViewModel
+@{
+    ViewData["Title"] = "مركز الإشعارات";
+    ViewData["BodyClass"] = "notifications-page-body";
+    var returnUrl = $"{Context.Request.Path}{Context.Request.QueryString}";
+    string CategoryLabel(string category) => category switch
+    {
+        NotificationCategories.Permit => "تصريح",
+        NotificationCategories.Visit => "زيارة",
+        NotificationCategories.Security => "أمني",
+        _ => "النظام",
+    };
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/notifications.css" asp-append-version="true" />
+}
+
+<section class="notification-page" aria-labelledby="notificationCenterTitle">
+    <header class="notification-heading">
+        <div>
+            <span class="notification-eyebrow">المتابعة</span>
+            <h1 id="notificationCenterTitle">مركز الإشعارات</h1>
+        </div>
+        <div class="notification-heading-actions">
+            @if (Model.UnreadCount > 0)
+            {
+                <form asp-action="MarkAllRead" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button class="btn btn-outline-secondary" type="submit">تحديد الكل كمقروء</button>
+                </form>
+            }
+            @if (Model.CanManageSettings)
+            {
+                <a class="btn btn-primary" asp-action="Settings">الإعدادات</a>
+            }
+        </div>
+    </header>
+
+    <section class="notification-metrics" aria-label="ملخص الإشعارات">
+        <div><strong>@Model.UnreadCount</strong><span>غير مقروء</span></div>
+        <div><strong>@Model.TotalCount</strong><span>الإجمالي</span></div>
+    </section>
+
+    <nav class="notification-filters" aria-label="تصفية الإشعارات">
+        <div class="notification-filter-group">
+            <a class="@(string.IsNullOrEmpty(Model.Category) ? "active" : null)" asp-action="Index" asp-route-state="@Model.State">الكل</a>
+            <a class="@(Model.Category == NotificationCategories.Permit ? "active" : null)" asp-action="Index" asp-route-category="permit" asp-route-state="@Model.State">التصاريح</a>
+            <a class="@(Model.Category == NotificationCategories.Visit ? "active" : null)" asp-action="Index" asp-route-category="visit" asp-route-state="@Model.State">الزيارات</a>
+            <a class="@(Model.Category == NotificationCategories.Security ? "active" : null)" asp-action="Index" asp-route-category="security" asp-route-state="@Model.State">الأمن</a>
+        </div>
+        <div class="notification-filter-group">
+            <a class="@(Model.State == "all" ? "active" : null)" asp-action="Index" asp-route-category="@Model.Category">الكل</a>
+            <a class="@(Model.State == "unread" ? "active" : null)" asp-action="Index" asp-route-category="@Model.Category" asp-route-state="unread">جديد</a>
+            <a class="@(Model.State == "read" ? "active" : null)" asp-action="Index" asp-route-category="@Model.Category" asp-route-state="read">مقروء</a>
+        </div>
+    </nav>
+
+    @if (!Model.IsEnabled)
+    {
+        <section class="notification-empty">
+            <h2>مركز الإشعارات متوقف</h2>
+            <p>يمكن لمدير الجهة تفعيله من الإعدادات.</p>
+        </section>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <section class="notification-empty">
+            <h2>لا توجد نتائج</h2>
+            <p>لا توجد إشعارات مطابقة للتصفية الحالية.</p>
+        </section>
+    }
+    else
+    {
+        <section class="notification-list" aria-label="الإشعارات">
+            @foreach (var item in Model.Items)
+            {
+                <article class="notification-row @(!item.IsRead ? "is-unread" : null)" data-severity="@item.Severity.ToLowerInvariant()">
+                    <span class="notification-status" aria-hidden="true"></span>
+                    <div class="notification-content">
+                        <div class="notification-row-meta">
+                            <span class="notification-category">@CategoryLabel(item.Category)</span>
+                            <time datetime="@item.OccurredAtUtc.ToString("O")">@DateHelper.ToArabicDate(item.OccurredAtUtc)</time>
+                        </div>
+                        <h2>@item.Title</h2>
+                        @if (!string.IsNullOrWhiteSpace(item.Message))
+                        {
+                            <p>@item.Message</p>
+                        }
+                    </div>
+                    <div class="notification-actions">
+                        @if (!string.IsNullOrWhiteSpace(item.ActionUrl))
+                        {
+                            <form asp-action="MarkRead" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="hidden" name="returnUrl" value="@item.ActionUrl" />
+                                <button class="btn btn-sm btn-outline-primary" type="submit">فتح</button>
+                            </form>
+                        }
+                        @if (!item.IsRead)
+                        {
+                            <form asp-action="MarkRead" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button class="notification-text-action" type="submit">تمت القراءة</button>
+                            </form>
+                        }
+                        <form asp-action="Dismiss" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <button class="notification-dismiss" type="submit" aria-label="إخفاء الإشعار" title="إخفاء">×</button>
+                        </form>
+                    </div>
+                </article>
+            }
+        </section>
+    }
+</section>

@@ -1,0 +1,16 @@
+@{
+    var controller = ViewContext.RouteData.Values["Controller"]?.ToString() ?? string.Empty;
+    string Active(string name) => string.Equals(controller, name, StringComparison.OrdinalIgnoreCase)
+        ? "active"
+        : string.Empty;
+}
+<nav class="workplace-section-nav" aria-label="مساحات التشغيل">
+    <a class="@Active("Home")" asp-controller="Home" asp-action="Index">النشاط</a>
+    <a class="@Active("People")" asp-controller="People" asp-action="Index">الأشخاص</a>
+    <a class="@Active("Attendance")" asp-controller="Attendance" asp-action="Index">الحضور</a>
+    @if (User.HasPermission(AppPermissions.ManageAdministration))
+    {
+        <a class="@Active("Sites")" asp-controller="Sites" asp-action="Index">المواقع</a>
+        <a class="@Active("Emergency")" asp-controller="Emergency" asp-action="Index">الطوارئ</a>
+    }
+</nav>

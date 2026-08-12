@@ -10,6 +10,10 @@
         <h1 class="mb-0">إنشاء زيارة جديدة</h1>
         <a asp-action="Index" class="btn btn-outline-secondary">العودة إلى القائمة</a>
     </div>
+    @if (ViewData["KnownVisitorPrefill"] as bool? == true)
+    {
+        <div class="app-inline-note app-inline-note-success" role="status">تم استدعاء بيانات الزائر المسجلة.</div>
+    }
     <form asp-action="Create" method="post"
           class="card-permit app-card-surface app-form-surface compact-form-card permit-form needs-validation" novalidate>
         @Html.AntiForgeryToken()

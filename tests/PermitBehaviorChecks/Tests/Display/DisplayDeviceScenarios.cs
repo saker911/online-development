@@ -78,10 +78,25 @@ internal static partial class ScenarioCatalog
             displayDeviceService.RecordHeartbeat(approvedContext),
             "approved display device heartbeat should succeed"
         );
+        var health = displayDeviceService.RecordHealth(
+            approvedContext,
+            new DisplayDeviceHeartbeatViewModel
+            {
+                AppVersion = "1.2.0",
+                Platform = "Android",
+                NetworkStatus = "online",
+                CameraStatus = "active",
+                BatteryLevel = 82,
+                AppliedConfigurationVersion = 0,
+            }
+        );
+        Require(health.Success, "approved display should report device health");
+        Require(health.ReloadRequired, "changed display configuration should request reload");
         using (var db = dbFactory.CreateDbContext())
         {
             var stored = db.DisplayDevices.Single(item => item.Id == pending.Id);
             Require(stored.LastSeenUtc.HasValue, "heartbeat should update LastSeenUtc");
+            Require(stored.BatteryLevel == 82, "health report should persist battery level");
             Require(
                 stored.Mode == DisplayDeviceModes.WaitingBoard,
                 "selected display mode should be persisted"

@@ -1,0 +1,93 @@
+@model NotificationSettingsViewModel
+@{
+    ViewData["Title"] = "إعدادات الإشعارات";
+    ViewData["BodyClass"] = "notifications-page-body";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/notifications.css" asp-append-version="true" />
+}
+
+<section class="notification-page notification-settings-page" aria-labelledby="notificationSettingsTitle">
+    <header class="notification-heading">
+        <div>
+            <span class="notification-eyebrow">إعدادات الجهة</span>
+            <h1 id="notificationSettingsTitle">الإشعارات والاحتفاظ</h1>
+        </div>
+        <a class="btn btn-outline-secondary" asp-action="Index">العودة للمركز</a>
+    </header>
+
+    <form asp-action="Settings" method="post" class="notification-settings-form">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        <section class="notification-settings-section">
+            <header><h2>مصادر الإشعار</h2></header>
+            <div class="notification-toggle-grid">
+                <label class="notification-toggle">
+                    <input asp-for="NotificationCenterEnabled" />
+                    <span><strong>مركز الإشعارات</strong><small>إظهار الجرس والمركز لمستخدمي الجهة.</small></span>
+                </label>
+                <label class="notification-toggle">
+                    <input asp-for="PermitNotificationsEnabled" />
+                    <span><strong>التصاريح</strong><small>طلبات الاعتماد والحالات التشغيلية.</small></span>
+                </label>
+                <label class="notification-toggle">
+                    <input asp-for="VisitNotificationsEnabled" />
+                    <span><strong>الزيارات</strong><small>الطلبات المعلقة والزيارات الموقوفة.</small></span>
+                </label>
+                <label class="notification-toggle">
+                    <input asp-for="SecurityAlertsEnabled" />
+                    <span><strong>الأمن</strong><small>الحالات التي تحتاج متابعة أمنية.</small></span>
+                </label>
+                <label class="notification-toggle">
+                    <input asp-for="FailedOperationAlertsEnabled" />
+                    <span><strong>العمليات الفاشلة</strong><small>محاولات وإجراءات لم تكتمل بنجاح.</small></span>
+                </label>
+                <label class="notification-toggle">
+                    <input asp-for="UnauthorizedMovementAlertsEnabled" />
+                    <span><strong>الحركة غير المصرح بها</strong><small>مخالفات الدخول والخروج عند البوابات.</small></span>
+                </label>
+            </div>
+        </section>
+
+        <section class="notification-settings-section">
+            <header>
+                <h2>الاحتفاظ بالبيانات</h2>
+                @if (Model.LastRetentionRunAtUtc.HasValue)
+                {
+                    <small>آخر تنظيف: @DateHelper.ToArabicDate(Model.LastRetentionRunAtUtc.Value)</small>
+                }
+            </header>
+            <div class="notification-retention-grid">
+                <label>
+                    <span>الإشعارات</span>
+                    <input class="form-control" asp-for="NotificationRetentionDays" inputmode="numeric" />
+                    <small>7 إلى 730 يومًا</small>
+                    <span asp-validation-for="NotificationRetentionDays" class="text-danger"></span>
+                </label>
+                <label>
+                    <span>سجل إرسال البريد</span>
+                    <input class="form-control" asp-for="EmailOutboxRetentionDays" inputmode="numeric" />
+                    <small>لا تُحذف الرسائل المنتظرة</small>
+                    <span asp-validation-for="EmailOutboxRetentionDays" class="text-danger"></span>
+                </label>
+                <label>
+                    <span>سجل التدقيق</span>
+                    <input class="form-control" asp-for="AuditLogRetentionDays" inputmode="numeric" />
+                    <small>الحد الأدنى 90 يومًا</small>
+                    <span asp-validation-for="AuditLogRetentionDays" class="text-danger"></span>
+                </label>
+            </div>
+            <p class="notification-retention-note">لا تشمل هذه السياسة التصاريح أو الزيارات أو بيانات الأشخاص الفعالة.</p>
+        </section>
+
+        <div class="notification-settings-actions">
+            <button class="btn btn-primary" type="submit">حفظ الإعدادات</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

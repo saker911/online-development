@@ -8,19 +8,57 @@
         .OrderBy(c => c.SortOrder)
         .ThenBy(c => c.Id)
         .ToList();
+    var workplaceLocations = ViewData["WorkplaceLocations"] as IReadOnlyList<WorkplaceLocationOptionViewModel>
+        ?? Array.Empty<WorkplaceLocationOptionViewModel>();
 }
 
 <div class="row g-3">
+    @if (workplaceLocations.Count > 0)
+    {
+        <div class="col-md-4">
+            <label asp-for="WorkplaceSiteId" class="form-label">الموقع التشغيلي</label>
+            <select asp-for="WorkplaceSiteId" class="form-select" required>
+                <option value="">اختر الموقع</option>
+                @foreach (var site in workplaceLocations)
+                {
+                    <option value="@site.SiteId">@site.SiteName</option>
+                }
+            </select>
+            <span asp-validation-for="WorkplaceSiteId" class="field-validation-error small"></span>
+        </div>
+        <div class="col-md-4">
+            <label asp-for="WorkplaceSiteEntranceId" class="form-label">المدخل</label>
+            <select asp-for="WorkplaceSiteEntranceId" class="form-select">
+                <option value="">يحدد عند الوصول</option>
+                @foreach (var site in workplaceLocations)
+                {
+                    <optgroup label="@site.SiteName">
+                        @foreach (var entrance in site.Entrances)
+                        {
+                            <option value="@entrance.Id">@entrance.Name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </div>
+    }
     <div class="col-md-4">
         <label asp-for="VisitorName" class="form-label">اسم الزائر الرئيسي</label>
         <input asp-for="VisitorName" class="form-control" required />
         <span asp-validation-for="VisitorName" class="field-validation-error small"></span>
     </div>
-    <div class="col-md-4">
-        <label asp-for="VisitLocation" class="form-label">مكان الزيارة</label>
-        <input asp-for="VisitLocation" class="form-control" required />
-        <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
-    </div>
+    @if (workplaceLocations.Count == 0)
+    {
+        <div class="col-md-4">
+            <label asp-for="VisitLocation" class="form-label">مكان الزيارة</label>
+            <input asp-for="VisitLocation" class="form-control" required />
+            <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
+        </div>
+    }
+    else
+    {
+        <input asp-for="VisitLocation" type="hidden" />
+    }
     @if (hideSensitiveIdentityFields)
     {
         <input asp-for="NationalId" type="hidden" />

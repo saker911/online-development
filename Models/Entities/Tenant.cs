@@ -96,6 +96,17 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public bool SelfServiceEnabled { get; set; } = true;
         public bool QueueServiceEnabled { get; set; }
         public bool GateServiceEnabled { get; set; } = true;
+
+        public bool NotificationCenterEnabled { get; set; } = true;
+        public bool PermitNotificationsEnabled { get; set; } = true;
+        public bool VisitNotificationsEnabled { get; set; } = true;
+        public bool SecurityAlertsEnabled { get; set; } = true;
+        public bool FailedOperationAlertsEnabled { get; set; } = true;
+        public bool UnauthorizedMovementAlertsEnabled { get; set; } = true;
+        public int NotificationRetentionDays { get; set; } = 90;
+        public int EmailOutboxRetentionDays { get; set; } = 30;
+        public int AuditLogRetentionDays { get; set; } = 365;
+        public DateTime? LastRetentionRunAtUtc { get; set; }
     }
 
     public static class TenantServiceKeys

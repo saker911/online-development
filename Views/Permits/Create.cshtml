@@ -7,6 +7,8 @@
     var currentPermit = Model ?? new VehiclePermitSystemWeb.Models.Entities.Permit();
     var departmentOptions = (IEnumerable<string>)(ViewBag.DepartmentOptions ?? Array.Empty<string>());
     var leaveRequestsEnabled = ViewData["LeaveRequestsEnabled"] as bool? == true;
+    var workplaceLocations = ViewData["WorkplaceLocations"] as IReadOnlyList<WorkplaceLocationOptionViewModel>
+        ?? Array.Empty<WorkplaceLocationOptionViewModel>();
 }
 
 <div class="compact-form-shell">
@@ -68,6 +70,35 @@
         @Html.AntiForgeryToken()
         <div asp-validation-summary="ModelOnly" class="visually-hidden form-summary-only"></div>
         <div class="row g-3">
+            @if (workplaceLocations.Count > 0)
+            {
+                <div class="col-md-4">
+                    <label asp-for="WorkplaceSiteId" class="form-label">الموقع التشغيلي</label>
+                    <select asp-for="WorkplaceSiteId" class="form-select" required>
+                        <option value="">اختر الموقع</option>
+                        @foreach (var site in workplaceLocations)
+                        {
+                            <option value="@site.SiteId">@site.SiteName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="WorkplaceSiteId" class="field-validation-error small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="WorkplaceSiteEntranceId" class="form-label">المدخل</label>
+                    <select asp-for="WorkplaceSiteEntranceId" class="form-select">
+                        <option value="">يحدد عند البوابة</option>
+                        @foreach (var site in workplaceLocations)
+                        {
+                            <optgroup label="@site.SiteName">
+                                @foreach (var entrance in site.Entrances)
+                                {
+                                    <option value="@entrance.Id">@entrance.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                </div>
+            }
             <div class="col-md-4">
                 <label for="permitTypeSelect" class="form-label">نوع التصريح</label>
                 <select asp-for="PermitType" class="form-select" id="permitTypeSelect" required>
@@ -143,11 +174,18 @@
                     </div>
                     <span asp-validation-for="DepartmentName" class="field-validation-error small"></span>
                 </div>
-                <div class="col-md-4 d-none" id="visitLocationGroup">
-                    <label asp-for="VisitLocation" class="form-label">مكان الزيارة</label>
-                    <input asp-for="VisitLocation" class="form-control" />
-                    <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
-                </div>
+                @if (workplaceLocations.Count == 0)
+                {
+                    <div class="col-md-4 d-none" id="visitLocationGroup">
+                        <label asp-for="VisitLocation" class="form-label">مكان الزيارة</label>
+                        <input asp-for="VisitLocation" class="form-control" />
+                        <span asp-validation-for="VisitLocation" class="field-validation-error small"></span>
+                    </div>
+                }
+                else
+                {
+                    <input asp-for="VisitLocation" type="hidden" />
+                }
 
                 <input asp-for="ManagerName" type="hidden" />
                 <div class="col-md-4">

@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Reports;
 using VehiclePermitSystemWeb.Models.ViewModels.Scan;
 using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
+using VehiclePermitSystemWeb.Models.ViewModels.Workplace;
 using VehiclePermitSystemWeb.Services.Tenants;
 
 namespace VehiclePermitSystemWeb.Data
@@ -66,6 +67,15 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<SignupAttemptRecord> SignupAttemptRecords => Set<SignupAttemptRecord>();
         public DbSet<EmailNotificationOutbox> EmailNotificationOutbox =>
             Set<EmailNotificationOutbox>();
+        public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
+        public DbSet<WorkplaceSite> WorkplaceSites => Set<WorkplaceSite>();
+        public DbSet<WorkplaceSiteEntrance> WorkplaceSiteEntrances =>
+            Set<WorkplaceSiteEntrance>();
+        public DbSet<PersonProfile> PersonProfiles => Set<PersonProfile>();
+        public DbSet<PersonPhoto> PersonPhotos => Set<PersonPhoto>();
+        public DbSet<EmergencySession> EmergencySessions => Set<EmergencySession>();
+        public DbSet<EmergencySessionMember> EmergencySessionMembers =>
+            Set<EmergencySessionMember>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -91,11 +101,25 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<SubscriptionPlan>().HasKey(x => x.Code);
             modelBuilder.Entity<VisitorWorkflowSettings>().HasKey(x => x.TenantId);
             modelBuilder.Entity<DisplayDevice>().HasKey(x => x.Id);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.AppVersion).HasMaxLength(32);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.Platform).HasMaxLength(96);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.NetworkStatus).HasMaxLength(32);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.CameraStatus).HasMaxLength(32);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.LastHealthError).HasMaxLength(256);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.ConfigurationVersion).HasDefaultValue(1);
+            modelBuilder.Entity<DisplayDevice>().Property(x => x.AppliedConfigurationVersion).HasDefaultValue(0);
             modelBuilder.Entity<DisplaySecuritySettings>().HasKey(x => x.Id);
             modelBuilder.Entity<ExternalUserLogin>().HasKey(x => x.Id);
             modelBuilder.Entity<LoginAttemptRecord>().HasKey(x => x.KeyHash);
             modelBuilder.Entity<SignupAttemptRecord>().HasKey(x => x.KeyHash);
             modelBuilder.Entity<EmailNotificationOutbox>().HasKey(x => x.Id);
+            modelBuilder.Entity<InAppNotification>().HasKey(x => x.Id);
+            modelBuilder.Entity<WorkplaceSite>().HasKey(x => x.Id);
+            modelBuilder.Entity<WorkplaceSiteEntrance>().HasKey(x => x.Id);
+            modelBuilder.Entity<PersonProfile>().HasKey(x => x.Id);
+            modelBuilder.Entity<PersonPhoto>().HasKey(x => x.PersonProfileId);
+            modelBuilder.Entity<EmergencySession>().HasKey(x => x.Id);
+            modelBuilder.Entity<EmergencySessionMember>().HasKey(x => x.Id);
 
             modelBuilder.Entity<Tenant>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<Tenant>().Property(x => x.Name).HasMaxLength(256);
@@ -109,6 +133,15 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Tenant>().Property(x => x.SelfServiceEnabled).HasDefaultValue(true);
             modelBuilder.Entity<Tenant>().Property(x => x.QueueServiceEnabled).HasDefaultValue(false);
             modelBuilder.Entity<Tenant>().Property(x => x.GateServiceEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.NotificationCenterEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.PermitNotificationsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.VisitNotificationsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.SecurityAlertsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.FailedOperationAlertsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.UnauthorizedMovementAlertsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<Tenant>().Property(x => x.NotificationRetentionDays).HasDefaultValue(90);
+            modelBuilder.Entity<Tenant>().Property(x => x.EmailOutboxRetentionDays).HasDefaultValue(30);
+            modelBuilder.Entity<Tenant>().Property(x => x.AuditLogRetentionDays).HasDefaultValue(365);
             modelBuilder.Entity<Tenant>().HasIndex(x => x.Slug).IsUnique();
             modelBuilder.Entity<PlatformSettings>().Property(x => x.ProviderName).HasMaxLength(256);
             modelBuilder
@@ -176,12 +209,96 @@ namespace VehiclePermitSystemWeb.Data
             ConfigureTenantScopedEntity<DisplaySecuritySettings>(modelBuilder);
             ConfigureTenantScopedEntity<ExternalUserLogin>(modelBuilder);
             ConfigureTenantScopedEntity<EmailNotificationOutbox>(modelBuilder);
+            ConfigureTenantScopedEntity<InAppNotification>(modelBuilder);
+            ConfigureTenantScopedEntity<WorkplaceSite>(modelBuilder);
+            ConfigureTenantScopedEntity<WorkplaceSiteEntrance>(modelBuilder);
+            ConfigureTenantScopedEntity<PersonProfile>(modelBuilder);
+            ConfigureTenantScopedEntity<PersonPhoto>(modelBuilder);
+            ConfigureTenantScopedEntity<EmergencySession>(modelBuilder);
+            ConfigureTenantScopedEntity<EmergencySessionMember>(modelBuilder);
+
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.Name).HasMaxLength(128);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.Code).HasMaxLength(32);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.Address).HasMaxLength(256);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.Latitude).HasPrecision(10, 7);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.Longitude).HasPrecision(10, 7);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.PermitsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.VisitsEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.SelfServiceEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.QueueEnabled).HasDefaultValue(false);
+            modelBuilder.Entity<WorkplaceSite>().Property(x => x.GateEnabled).HasDefaultValue(true);
+            modelBuilder.Entity<WorkplaceSite>().HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            modelBuilder.Entity<WorkplaceSite>().HasIndex(x => new { x.TenantId, x.Code });
+
+            modelBuilder.Entity<WorkplaceSiteEntrance>().Property(x => x.Name).HasMaxLength(128);
+            modelBuilder.Entity<WorkplaceSiteEntrance>().Property(x => x.Code).HasMaxLength(32);
+            modelBuilder
+                .Entity<WorkplaceSiteEntrance>()
+                .Property(x => x.LocationDescription)
+                .HasMaxLength(256);
+            modelBuilder
+                .Entity<WorkplaceSiteEntrance>()
+                .HasIndex(x => new { x.TenantId, x.WorkplaceSiteId, x.Name })
+                .IsUnique();
+            modelBuilder
+                .Entity<WorkplaceSiteEntrance>()
+                .HasIndex(x => new { x.TenantId, x.WorkplaceSiteId, x.Code });
+            modelBuilder
+                .Entity<WorkplaceSiteEntrance>()
+                .HasOne(x => x.WorkplaceSite)
+                .WithMany(x => x.Entrances)
+                .HasForeignKey(x => x.WorkplaceSiteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PersonProfile>().Property(x => x.SourceKey).HasMaxLength(160);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.PersonType).HasMaxLength(24);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.FullName).HasMaxLength(128);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.NationalId).HasMaxLength(32);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.PhoneNumber).HasMaxLength(32);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.Email).HasMaxLength(256);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.EmployeeNumber).HasMaxLength(64);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.Department).HasMaxLength(128);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.JobTitle).HasMaxLength(128);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.Organization).HasMaxLength(256);
+            modelBuilder.Entity<PersonProfile>().Property(x => x.LastReference).HasMaxLength(64);
+            modelBuilder.Entity<PersonProfile>()
+                .HasIndex(x => new { x.TenantId, x.SourceKey })
+                .IsUnique();
+            modelBuilder.Entity<PersonProfile>().HasIndex(x => new { x.TenantId, x.PersonType });
+            modelBuilder.Entity<PersonPhoto>().Property(x => x.ContentType).HasMaxLength(64);
+            modelBuilder.Entity<PersonPhoto>()
+                .HasOne<PersonProfile>()
+                .WithOne()
+                .HasForeignKey<PersonPhoto>(x => x.PersonProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<EmergencySession>().Property(x => x.Status).HasMaxLength(24);
+            modelBuilder.Entity<EmergencySession>().Property(x => x.StartedBy).HasMaxLength(64);
+            modelBuilder.Entity<EmergencySession>().Property(x => x.EndedBy).HasMaxLength(64);
+            modelBuilder.Entity<EmergencySession>().HasIndex(x => new { x.TenantId, x.WorkplaceSiteId, x.Status });
+            modelBuilder.Entity<EmergencySession>().HasOne(x => x.WorkplaceSite).WithMany()
+                .HasForeignKey(x => x.WorkplaceSiteId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<EmergencySessionMember>().Property(x => x.FullName).HasMaxLength(128);
+            modelBuilder.Entity<EmergencySessionMember>().Property(x => x.PersonType).HasMaxLength(24);
+            modelBuilder.Entity<EmergencySessionMember>().Property(x => x.Reference).HasMaxLength(64);
+            modelBuilder.Entity<EmergencySessionMember>().Property(x => x.Location).HasMaxLength(256);
+            modelBuilder.Entity<EmergencySessionMember>().Property(x => x.Status).HasMaxLength(24);
+            modelBuilder.Entity<EmergencySessionMember>().Property(x => x.UpdatedBy).HasMaxLength(64);
+            modelBuilder.Entity<EmergencySessionMember>().HasOne(x => x.EmergencySession)
+                .WithMany(x => x.Members).HasForeignKey(x => x.EmergencySessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<EmergencySessionMember>().HasIndex(x => new { x.TenantId, x.EmergencySessionId, x.Status });
 
             modelBuilder.Entity<Permit>().Property(x => x.PermitNumber).HasMaxLength(32);
             modelBuilder.Entity<Permit>().Property(x => x.PermitType).HasMaxLength(24);
             modelBuilder.Entity<Permit>().Property(x => x.AccessMode).HasMaxLength(24);
             modelBuilder.Entity<Permit>().Property(x => x.CurrentState).HasMaxLength(16);
             modelBuilder.Entity<Permit>().Property(x => x.VisitLocation).HasMaxLength(256);
+            modelBuilder.Entity<Permit>().HasIndex(x => new { x.TenantId, x.WorkplaceSiteId });
+            modelBuilder.Entity<Permit>().HasOne(x => x.WorkplaceSite).WithMany(x => x.Permits)
+                .HasForeignKey(x => x.WorkplaceSiteId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Permit>().HasOne(x => x.WorkplaceSiteEntrance).WithMany()
+                .HasForeignKey(x => x.WorkplaceSiteEntranceId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Permit>().Property(x => x.LeaveReason).HasMaxLength(256);
             modelBuilder
                 .Entity<Permit>()
@@ -194,6 +311,11 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Visit>().Property(x => x.VisitId).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.VisitorName).HasMaxLength(128);
             modelBuilder.Entity<Visit>().Property(x => x.VisitLocation).HasMaxLength(256);
+            modelBuilder.Entity<Visit>().HasIndex(x => new { x.TenantId, x.WorkplaceSiteId });
+            modelBuilder.Entity<Visit>().HasOne(x => x.WorkplaceSite).WithMany(x => x.Visits)
+                .HasForeignKey(x => x.WorkplaceSiteId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Visit>().HasOne(x => x.WorkplaceSiteEntrance).WithMany()
+                .HasForeignKey(x => x.WorkplaceSiteEntranceId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Visit>().Property(x => x.NationalId).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.PhoneNumber).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.VisitorEmail).HasMaxLength(256);
@@ -347,6 +469,20 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder
                 .Entity<EmailNotificationOutbox>()
                 .HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
+            modelBuilder.Entity<InAppNotification>().Property(x => x.RecipientUsername).HasMaxLength(64);
+            modelBuilder.Entity<InAppNotification>().Property(x => x.Category).HasMaxLength(32);
+            modelBuilder.Entity<InAppNotification>().Property(x => x.Severity).HasMaxLength(16);
+            modelBuilder.Entity<InAppNotification>().Property(x => x.Title).HasMaxLength(160);
+            modelBuilder.Entity<InAppNotification>().Property(x => x.Message).HasMaxLength(500);
+            modelBuilder.Entity<InAppNotification>().Property(x => x.ActionUrl).HasMaxLength(512);
+            modelBuilder.Entity<InAppNotification>().Property(x => x.SourceKey).HasMaxLength(256);
+            modelBuilder
+                .Entity<InAppNotification>()
+                .HasIndex(x => new { x.TenantId, x.RecipientUsername, x.SourceKey })
+                .IsUnique();
+            modelBuilder
+                .Entity<InAppNotification>()
+                .HasIndex(x => new { x.TenantId, x.RecipientUsername, x.DismissedAtUtc, x.OccurredAtUtc });
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Username).HasMaxLength(64);
             modelBuilder.Entity<ExternalUserLogin>().Property(x => x.Provider).HasMaxLength(32);
@@ -439,6 +575,18 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<DisplayDevice>().Property(x => x.ApprovedByUserId).HasMaxLength(64);
             modelBuilder.Entity<DisplayDevice>().Property(x => x.Notes).HasMaxLength(512);
             modelBuilder.Entity<DisplayDevice>().HasIndex(x => x.RequestCode).IsUnique();
+            modelBuilder
+                .Entity<DisplayDevice>()
+                .HasOne(x => x.WorkplaceSite)
+                .WithMany(x => x.DisplayDevices)
+                .HasForeignKey(x => x.WorkplaceSiteId)
+                .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder
+                .Entity<DisplayDevice>()
+                .HasOne(x => x.WorkplaceSiteEntrance)
+                .WithMany(x => x.DisplayDevices)
+                .HasForeignKey(x => x.WorkplaceSiteEntranceId)
+                .OnDelete(DeleteBehavior.SetNull);
             modelBuilder
                 .Entity<DisplaySecuritySettings>()
                 .Property(x => x.SetupKeyHash)

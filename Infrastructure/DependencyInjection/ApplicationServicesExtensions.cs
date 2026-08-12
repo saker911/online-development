@@ -16,6 +16,7 @@ using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Uploads;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Services.Workplace;
 
 namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
 {
@@ -58,6 +59,10 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
                 IAccountEmailVerificationService,
                 AccountEmailVerificationService
             >();
+            services.AddSingleton<
+                IAccountPasswordResetService,
+                AccountPasswordResetService
+            >();
             services.AddSingleton<ITenantContext, HttpTenantContext>();
             services.AddScoped<ITenantFeatureService, TenantFeatureService>();
             services.AddSingleton<ITenantManagementService, TenantManagementService>();
@@ -69,15 +74,20 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
                 OperationalEmailNotificationQueue
             >();
             services.AddSingleton<IEmailNotificationDispatcher, EmailNotificationDispatcher>();
+            services.AddSingleton<INotificationCenterService, NotificationCenterService>();
+            services.AddSingleton<IDataRetentionService, DataRetentionService>();
             services.AddTransient<IClaimsTransformation, DelegationClaimsTransformation>();
             services.AddSingleton<BackupService>();
             services.AddSingleton<IUploadThreatScanner, ClamAvUploadThreatScanner>();
+            services.AddSingleton<IWorkplaceDirectoryService, WorkplaceDirectoryService>();
+            services.AddSingleton<IEmergencyService, EmergencyService>();
 
             if (!runSchemaUpgradeOnly)
             {
                 services.AddHostedService<AutomaticBackupHostedService>();
                 services.AddHostedService<AutomaticWorkEndHostedService>();
                 services.AddHostedService<EmailNotificationHostedService>();
+                services.AddHostedService<DataRetentionHostedService>();
             }
 
             return services;

@@ -62,7 +62,18 @@ test("anonymous users are redirected to login for protected pages", async ({ pag
   await ensureOwnerSignedIn(page);
   await signOut(page);
   await page.context().clearCookies();
-  for (const path of ["/Users", "/Administration/Edit", "/Permits", "/Visits", "/Reports"]) {
+  for (const path of [
+    "/Users",
+    "/Administration/Edit",
+    "/Permits",
+    "/Visits",
+    "/Reports",
+    "/People",
+    "/People/Details/1",
+    "/People/Photo/1",
+    "/Attendance",
+    "/Sites",
+  ]) {
     await page.goto(path);
     await expect(page).toHaveURL(/\/Account\/Login/i);
   }

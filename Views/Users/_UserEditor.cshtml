@@ -801,31 +801,31 @@
 
                                                                                                                 <!-- إجراءات الحفظ -->
                                                                                                                 <div class="ue-actions app-card-surface ue-wizard-panel @(activeWizardStep == (isSimplifiedCreate ? 3 : 4) ? string.Empty : "is-hidden")" data-users-wizard-panel="@(isSimplifiedCreate ? 3 : 4)">
+                                                                                                                    <div class="ue-actions-start">
+                                                                                                                        <button type="button" class="btn btn-outline-secondary btn-sm" data-users-wizard-prev>السابق</button>
+                                                                                                                        @if (!isNew)
+                                                                                                                        {
+                                                                                                                            @if (!Model.IsSuperAdmin && canEditAdministrativeFields)
+                                                                                                                            {
+                                                                                                                                <button type="submit"
+                                                                                                                                        formaction="@Url.Action("Deactivate", "Users", new { id = Model.Username })"
+                                                                                                                                        formmethod="post"
+                                                                                                                                    formnovalidate
+                                                                                                                                    data-skip-validation="true"
+                                                                                                                                        class="btn btn-outline-danger btn-sm"
+                                                                                                                                        onclick="return confirm('هل أنت متأكد من تعطيل هذا الحساب؟');">تعطيل المستخدم</button>
+                                                                                                                            }
+                                                                                                                        }
+                                                                                                                    </div>
                                                                                                                     <div class="ue-actions-end">
-                                                                                                                        <a href="@cancelUrl" class="btn btn-secondary btn-sm">✓ إلغاء</a>
+                                                                                                                        <a href="@cancelUrl" class="btn btn-outline-secondary btn-sm">إلغاء</a>
                                                                                                                         @if (isNew)
                                                                                                                         {
-                                                                                                                            <button type="submit" name="SaveAndCreate" value="true" class="btn btn-outline-secondary btn-sm">حفظ
-                                                                                                                                وإضافة مستخدم</button>
+                                                                                                                            <button type="submit" name="SaveAndCreate" value="true" class="btn btn-outline-secondary btn-sm">حفظ وإضافة آخر</button>
                                                                                                                             }
-                                                                                                                            <button type="submit" class="btn btn-primary btn-sm" data-edit-submit="@(isNew ? "false" : "true")" data-edit-scope="@(isEditingCurrentUser ? "self" : "admin")">💾
+                                                                                                                            <button type="submit" class="btn btn-primary btn-sm" data-edit-submit="@(isNew ? "false" : "true")" data-edit-scope="@(isEditingCurrentUser ? "self" : "admin")">
                                                                                                                                 @(isNew ? "إضافة المستخدم" : isEditingCurrentUser ? "حفظ بياناتي" : "حفظ التغييرات")</button>
                                                                                                                             </div>
-                                                                                                                            @if (!isNew)
-                                                                                                                            {
-                                                                                                                                <div class="ue-actions-start">
-                                                                                                                                    @if (!Model.IsSuperAdmin && canEditAdministrativeFields)
-                                                                                                                                    {
-                                                                                                                                        <button type="submit"
-                                                                                                                                                formaction="@Url.Action("Deactivate", "Users", new { id = Model.Username })"
-                                                                                                                                                formmethod="post"
-                                                                                                                                            formnovalidate
-                                                                                                                                            data-skip-validation="true"
-                                                                                                                                                class="btn btn-outline-danger btn-sm"
-                                                                                                                                                onclick="return confirm('هل أنت متأكد من تعطيل هذا الحساب؟');">🗑️ تعطيل المستخدم</button>
-                                                                                                                                    }
-                                                                                                                                </div>
-                                                                                                                            }
                                                                                                                         </div>
                                                                                                                 </div>
 
@@ -866,8 +866,9 @@
                                                                                                                         const wizardShell = document.querySelector("[data-users-wizard-shell]");
                                                                                                                         const wizardPanels = Array.from(document.querySelectorAll("[data-users-wizard-panel]"));
                                                                                                                         const wizardPanelContainers = Array.from(document.querySelectorAll("[data-users-panel-container]"));
-                                                                                                                        const wizardStepTabs = Array.from(document.querySelectorAll("[data-users-wizard-step-jump]"));
-                                                                                                                        const wizardPrevButtons = Array.from(document.querySelectorAll("[data-users-wizard-prev]"));
+                                                                                                                         const wizardStepTabs = Array.from(document.querySelectorAll("[data-users-wizard-step-jump]"));
+                                                                                                                         const wizardNavigation = document.querySelector(".ue-wizard-nav");
+                                                                                                                         const wizardPrevButtons = Array.from(document.querySelectorAll("[data-users-wizard-prev]"));
                                                                                                                         const wizardNextButtons = Array.from(document.querySelectorAll("[data-users-wizard-next]"));
                                                                                                                         const wizardSaveNote = document.querySelector("[data-users-wizard-save-note]");
                                                                                                                         const identityLookupButton = document.getElementById("users-identity-lookup-btn");
@@ -1311,6 +1312,9 @@
                                                                                                                                     button.disabled = false;
                                                                                                                                    button.textContent = currentStep === wizardMaxStep - 1 ? "المراجعة" : "التالي";
                                                                                                                                 });
+                                                                                                                                if (wizardNavigation) {
+                                                                                                                                    wizardNavigation.hidden = currentStep >= wizardMaxStep;
+                                                                                                                                }
 
                                                                                                                                 updateValidationSummary(currentStep);
                                                                                                                                 updateLiveSummary();

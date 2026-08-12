@@ -163,6 +163,33 @@ namespace VehiclePermitSystemWeb.Services.Display
                 return null;
             }
 
+            var hasOperationalSites = db.WorkplaceSites.AsNoTracking()
+                .Any(item => item.IsActive && item.GateEnabled);
+            var site = model.WorkplaceSiteId.HasValue
+                ? db.WorkplaceSites.AsNoTracking().FirstOrDefault(item =>
+                    item.Id == model.WorkplaceSiteId.Value && item.IsActive && item.GateEnabled)
+                : null;
+            if (hasOperationalSites && site == null)
+            {
+                return null;
+            }
+
+            WorkplaceSiteEntrance? entrance = null;
+            if (model.WorkplaceSiteEntranceId.HasValue)
+            {
+                if (site == null)
+                {
+                    return null;
+                }
+                entrance = db.WorkplaceSiteEntrances.AsNoTracking().FirstOrDefault(item =>
+                    item.Id == model.WorkplaceSiteEntranceId.Value
+                    && item.WorkplaceSiteId == site.Id && item.IsActive);
+                if (entrance == null)
+                {
+                    return null;
+                }
+            }
+
             var existing = GetDeviceFromRequestCookie(context);
             if (existing != null)
             {
@@ -180,6 +207,11 @@ namespace VehiclePermitSystemWeb.Services.Display
                     trackedExisting.Description = (
                         model.Description ?? trackedExisting.Description
                     ).Trim();
+                    trackedExisting.WorkplaceSiteId = site?.Id;
+                    trackedExisting.WorkplaceSiteEntranceId = entrance?.Id;
+                    trackedExisting.ScreenLocation = entrance?.Name ?? site?.Name
+                        ?? (model.ScreenLocation ?? trackedExisting.ScreenLocation).Trim();
+                    trackedExisting.ConfigurationVersion++;
                     trackedExisting.LastIpAddress = ResolveIp(context);
                     trackedExisting.UserAgent = context.Request.Headers.UserAgent.ToString();
                     db.SaveChanges();
@@ -191,8 +223,11 @@ namespace VehiclePermitSystemWeb.Services.Display
             var device = new DisplayDevice
             {
                 ScreenName = (model.ScreenName ?? string.Empty).Trim(),
-                ScreenLocation = (model.ScreenLocation ?? string.Empty).Trim(),
                 Description = (model.Description ?? string.Empty).Trim(),
+                WorkplaceSiteId = site?.Id,
+                WorkplaceSiteEntranceId = entrance?.Id,
+                ScreenLocation = entrance?.Name ?? site?.Name
+                    ?? (model.ScreenLocation ?? string.Empty).Trim(),
                 Mode = DisplayDeviceModes.Gate,
                 Status = DisplayDeviceStatuses.Pending,
                 RequestCode = SecureTokenGenerator.GenerateSecureToken(12),
@@ -297,6 +332,7 @@ namespace VehiclePermitSystemWeb.Services.Display
             }
 
             device.Mode = normalizedMode;
+            device.ConfigurationVersion++;
             RecordDeviceAudit(
                 db,
                 device,
@@ -431,12 +467,59 @@ namespace VehiclePermitSystemWeb.Services.Display
             return true;
         }
 
+        public DisplayHeartbeatResultViewModel RecordHealth(
+            HttpContext context,
+            DisplayDeviceHeartbeatViewModel model
+        )
+        {
+            TryActivateApprovedRequest(context);
+            var device = GetApprovedDevice(context);
+            if (device == null)
+            {
+                return new DisplayHeartbeatResultViewModel();
+            }
+
+            using var db = _dbContextFactory.CreateDbContext();
+            var tracked = db.DisplayDevices.FirstOrDefault(item => item.Id == device.Id);
+            if (tracked == null || tracked.Status != DisplayDeviceStatuses.Approved)
+            {
+                return new DisplayHeartbeatResultViewModel();
+            }
+
+            tracked.LastSeenUtc = _systemClock.UtcNow;
+            tracked.LastHealthReportedAtUtc = _systemClock.UtcNow;
+            tracked.LastIpAddress = ResolveIp(context);
+            tracked.AppVersion = NormalizeHealthText(model.AppVersion, 32);
+            tracked.Platform = NormalizeHealthText(model.Platform, 96);
+            tracked.NetworkStatus = NormalizeHealthText(model.NetworkStatus, 32);
+            tracked.CameraStatus = NormalizeHealthText(model.CameraStatus, 32);
+            tracked.BatteryLevel = model.BatteryLevel.HasValue
+                ? Math.Clamp(model.BatteryLevel.Value, 0, 100)
+                : null;
+            tracked.LastHealthError = NormalizeHealthText(model.LastError, 256);
+            tracked.AppliedConfigurationVersion = Math.Max(
+                0,
+                model.AppliedConfigurationVersion
+            );
+            db.SaveChanges();
+
+            return new DisplayHeartbeatResultViewModel
+            {
+                Success = true,
+                ConfigurationVersion = tracked.ConfigurationVersion,
+                ReloadRequired = tracked.AppliedConfigurationVersion < tracked.ConfigurationVersion,
+                Mode = DisplayDeviceModes.Normalize(tracked.Mode),
+            };
+        }
+
         public DisplayDeviceManagementViewModel BuildManagementViewModel()
         {
             using var db = _dbContextFactory.CreateDbContext();
             var now = _systemClock.UtcNow;
             var items = db
                 .DisplayDevices.AsNoTracking()
+                .Include(item => item.WorkplaceSite)
+                .Include(item => item.WorkplaceSiteEntrance)
                 .OrderByDescending(item => item.CreatedAtUtc)
                 .ToList()
                 .Select(item => ToListItem(item, now))
@@ -598,7 +681,24 @@ namespace VehiclePermitSystemWeb.Services.Display
                 ApprovedAtUtc = device.ApprovedAtUtc,
                 ApprovedByUserId = device.ApprovedByUserId,
                 Notes = device.Notes,
+                SiteName = device.WorkplaceSite?.Name ?? string.Empty,
+                EntranceName = device.WorkplaceSiteEntrance?.Name ?? string.Empty,
+                AppVersion = device.AppVersion,
+                Platform = device.Platform,
+                NetworkStatus = device.NetworkStatus,
+                CameraStatus = device.CameraStatus,
+                BatteryLevel = device.BatteryLevel,
+                LastHealthError = device.LastHealthError,
+                LastHealthReportedAtUtc = device.LastHealthReportedAtUtc,
+                ConfigurationVersion = device.ConfigurationVersion,
+                AppliedConfigurationVersion = device.AppliedConfigurationVersion,
             };
+        }
+
+        private static string NormalizeHealthText(string? value, int maxLength)
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            return normalized.Length <= maxLength ? normalized : normalized[..maxLength];
         }
 
         private void RecordDeviceAudit(

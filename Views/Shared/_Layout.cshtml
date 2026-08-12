@@ -22,6 +22,7 @@
 @using VehiclePermitSystemWeb.Services.Administration
 @using VehiclePermitSystemWeb.Services.Display
 @using VehiclePermitSystemWeb.Services.Tenants
+@using VehiclePermitSystemWeb.Services.Notifications
 @inject IUserAdminService UserAdminService
 @inject IPermitService PermitService
 @inject IVisitService VisitService
@@ -29,6 +30,7 @@
 @inject IReportsDashboardService ReportsDashboardService
 @inject IDisplayDeviceService DisplayDeviceService
 @inject ITenantFeatureService TenantFeatureService
+@inject INotificationCenterService NotificationCenterService
 
 @{
     var notifications = new List<(string Id, string Message, string Type)>();
@@ -170,6 +172,21 @@
         && tenantServices.Queue
         && (User.HasPermission(AppPermissions.ApproveVisits) || User.HasPermission(AppPermissions.ScanOperations));
     var canViewPermits = !isSubscriptionRestricted && tenantServices.Permits && AccessControlService.CanViewPermits(currentUser);
+    var canViewPeople = !isSubscriptionRestricted
+        && (
+            User.HasPermission(AppPermissions.ViewDashboard)
+            || canViewPermits
+            || canViewVisits
+            || User.HasPermission(AppPermissions.ManageUsers)
+        );
+    var canViewAttendance = !isSubscriptionRestricted
+        && tenantServices.Gate
+        && (
+            User.HasPermission(AppPermissions.ViewDashboard)
+            || User.HasPermission(AppPermissions.ScanOperations)
+            || canViewPermits
+            || canViewVisits
+        );
     var canApproveDetainedVisits = !isSubscriptionRestricted && tenantServices.Visits && User.HasPermission(AppPermissions.ApproveDetainedVisit);
     var canManageDepartments = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDepartments);
     var canManageAdministration = !isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageAdministration);
@@ -177,95 +194,13 @@
         ? DisplayDeviceService.GetPendingCount()
         : 0;
     var canViewSecurityAlerts = canApprovePermits || canReviewUnauthorizedExit || canStopPermit;
+    var shellNotificationCenter = isAuthenticated && !requiresPasswordChange
+        ? NotificationCenterService.GetCenter(User, state: "unread", limit: 8)
+        : new NotificationCenterPageViewModel { IsEnabled = false };
     var canViewNotificationCenter = isAuthenticated
         && !requiresPasswordChange
-        && (canViewSecurityAlerts || canViewVisits);
-    var notificationCenter = canViewSecurityAlerts
-        ? ReportsDashboardService.BuildNotificationCenterModel(4, currentUsername)
-        : new NotificationCenterViewModel();
-    var pendingWorkflowSection = notificationCenter.Sections.FirstOrDefault(section =>
-        string.Equals(section.Key, "PendingWorkflow", StringComparison.OrdinalIgnoreCase)
-    );
-    var underReviewSection = notificationCenter.Sections.FirstOrDefault(section =>
-        string.Equals(section.Key, "UnderReview", StringComparison.OrdinalIgnoreCase)
-    );
-    var stoppedPermitsSection = notificationCenter.Sections.FirstOrDefault(section =>
-        string.Equals(section.Key, "StoppedPermits", StringComparison.OrdinalIgnoreCase)
-    );
-    var pendingPermitsSection = notificationCenter.Sections.FirstOrDefault(section =>
-        string.Equals(section.Key, "PendingPermits", StringComparison.OrdinalIgnoreCase)
-    );
-    var underReviewItems = canReviewUnauthorizedExit
-        ? underReviewSection?.Items ?? new List<NotificationItemViewModel>()
-        : new List<NotificationItemViewModel>();
-    var stoppedPermits = (canApprovePermits || canStopPermit)
-        ? stoppedPermitsSection?.Items ?? new List<NotificationItemViewModel>()
-        : new List<NotificationItemViewModel>();
-    var pendingPermits = canApprovePermits
-        ? pendingPermitsSection?.Items ?? new List<NotificationItemViewModel>()
-        : new List<NotificationItemViewModel>();
-    var pendingWorkflowCount = canReviewUnauthorizedExit ? pendingWorkflowSection?.Count ?? 0 : 0;
-    var underReviewCount = canReviewUnauthorizedExit ? underReviewSection?.Count ?? 0 : 0;
-    var stoppedPermitCount = (canApprovePermits || canStopPermit)
-        ? stoppedPermitsSection?.Count ?? 0
-        : 0;
-    var pendingPermitCount = canApprovePermits ? pendingPermitsSection?.Count ?? 0 : 0;
-    var securityAlertCount = pendingWorkflowCount + underReviewCount + stoppedPermitCount;
-    var stoppedPermitsReturnUrl = Url.Action("StoppedPermits", "Reports");
-    var pendingPermitsReturnUrl = $"{Url.Action("Permits", "Reports")}#pending-permit-requests";
-    var recentActivities = canViewSecurityAlerts
-        ? PermitService.GetRecentPermitActivities(120, currentUsername).ToList()
-        : new List<PermitActivity>();
-    var violationItems = recentActivities
-        .Where(activity =>
-            activity.OccurredAt >= DateTime.Today
-            && (
-                string.Equals(activity.ActionType, "SecurityViolation", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(activity.ActionType, "NoReturnViolation", StringComparison.OrdinalIgnoreCase)
-            )
-        )
-        .OrderByDescending(activity => activity.OccurredAt)
-        .Take(4)
-        .ToList();
-    var violationCount = recentActivities.Count(activity =>
-        activity.OccurredAt >= DateTime.Today
-        && (
-            string.Equals(activity.ActionType, "SecurityViolation", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(activity.ActionType, "NoReturnViolation", StringComparison.OrdinalIgnoreCase)
-        )
-    );
-    var visitAlertCandidates = canViewVisits
-        ? VisitService
-            .GetAllVisits()
-            .Where(visit =>
-                (
-                    string.Equals(visit.ApprovalStatus, "Pending", StringComparison.OrdinalIgnoreCase)
-                    && AccessControlService.CanApproveVisit(visit, currentUser)
-                )
-                || (
-                    string.Equals(visit.Status, "Suspended", StringComparison.OrdinalIgnoreCase)
-                    && AccessControlService.CanAccessVisit(visit, currentUser)
-                )
-            )
-            .OrderByDescending(visit => visit.VisitDate)
-            .ToList()
-        : new List<Visit>();
-    var visitNotificationCount = visitAlertCandidates.Count;
-    var visitAlerts = visitAlertCandidates.Take(4).ToList();
-    var securityAlertItems = new List<NotificationItemViewModel>();
-    if (canReviewUnauthorizedExit)
-    {
-        securityAlertItems.AddRange(
-            pendingWorkflowSection?.Items ?? Enumerable.Empty<NotificationItemViewModel>()
-        );
-        securityAlertItems.AddRange(underReviewItems);
-    }
-    if (canApprovePermits || canStopPermit)
-    {
-        securityAlertItems.AddRange(stoppedPermits);
-    }
-    securityAlertItems = securityAlertItems.Take(4).ToList();
-    var notificationCenterTotalCount = violationCount + pendingPermitCount + visitNotificationCount + securityAlertCount;
+        && shellNotificationCenter.IsEnabled;
+    var notificationCenterTotalCount = shellNotificationCenter.UnreadCount;
     var hideShell = ViewData["HideShell"] as bool? ?? false;
     var pageBodyClass = ViewData["BodyClass"] as string;
     var currentController = ViewContext.RouteData.Values["Controller"]?.ToString() ?? string.Empty;
@@ -327,6 +262,33 @@
     var isControllerActive = new Func<string, bool>(controller =>
         string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
     );
+
+    var isManagementNavigationActive = new[]
+    {
+        "Attendance",
+        "Queue",
+        "Display",
+        "ScanConsole",
+        "Monitoring",
+        "Users",
+        "Sites",
+        "Tenants",
+        "PlatformSettings",
+        "Pricing",
+        "Delegations",
+        "VisitorWorkflow",
+        "Administration",
+    }.Any(isControllerActive);
+    var canUseManagementNavigation = canViewAttendance
+        || canManageVisitQueue
+        || (tenantServices.Gate && (User.HasPermission(AppPermissions.ViewDisplays) || canManageAdministration))
+        || (tenantServices.Gate && User.HasPermission(AppPermissions.ScanOperations))
+        || (tenantServices.Permits && User.HasPermission(AppPermissions.ViewDashboard))
+        || User.HasPermission(AppPermissions.ManageUsers)
+        || User.HasPermission(AppPermissions.ManageDelegations)
+        || canManageDepartments
+        || canManageAdministration
+        || User.IsSuperAdmin();
 }
 
 <!DOCTYPE html>
@@ -411,6 +373,7 @@
     <link rel="stylesheet" href="~/css/sidebar-actions.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/public-marketing.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/public-content.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/operational-ui.css" asp-append-version="true" />
 </head>
 
 <body class="@bodyClass">
@@ -458,6 +421,130 @@
                     </span>
                 </a>
 
+                <nav class="portal-primary-nav" aria-label="التنقل الرئيسي">
+                    @if (isSubscriptionRestricted)
+                    {
+                        <a class="portal-primary-link @(isControllerActive("Account") ? "active" : string.Empty)"
+                           asp-controller="Account" asp-action="Profile">حسابي</a>
+                        <a class="portal-primary-link @(isControllerActive("Subscription") ? "active" : string.Empty)"
+                           asp-controller="Subscription" asp-action="Plans">الاشتراك</a>
+                    }
+                    else
+                    {
+                        <a class="portal-primary-link @(isActive("Home", "Index") ? "active" : string.Empty)"
+                           asp-controller="Home" asp-action="Index">الرئيسية</a>
+
+                        @if (canViewPeople)
+                        {
+                            <a class="portal-primary-link @(isControllerActive("People") ? "active" : string.Empty)"
+                               asp-controller="People" asp-action="Index">الأشخاص</a>
+                        }
+                        @if (canViewAttendance)
+                        {
+                            <a class="portal-primary-link @(isControllerActive("Attendance") ? "active" : string.Empty)"
+                               asp-controller="Attendance" asp-action="Index">الحضور</a>
+                        }
+                        @if (canViewPermits)
+                        {
+                            <a class="portal-primary-link @(isControllerActive("Permits") ? "active" : string.Empty)"
+                               asp-controller="Permits" asp-action="Index">التصاريح</a>
+                        }
+                        @if (canViewVisits)
+                        {
+                            <a class="portal-primary-link @(isControllerActive("Visits") ? "active" : string.Empty)"
+                               asp-controller="Visits" asp-action="Index">الزيارات</a>
+                        }
+                        @if (canViewPermits || canViewVisits)
+                        {
+                            <a class="portal-primary-link @(isControllerActive("Reports") ? "active" : string.Empty)"
+                               asp-controller="Reports" asp-action="Index">التقارير</a>
+                        }
+
+                        @if (canUseManagementNavigation)
+                        {
+                        <div class="dropdown portal-manage-menu">
+                            <button class="portal-primary-link portal-primary-menu-trigger @(isManagementNavigationActive ? "active" : string.Empty)"
+                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                الإدارة
+                                <span class="portal-primary-chevron" aria-hidden="true">⌄</span>
+                            </button>
+                            <div class="dropdown-menu portal-manage-dropdown">
+                                @if (canManageVisitQueue)
+                                {
+                                    <a class="dropdown-item @(isControllerActive("Queue") ? "active" : string.Empty)"
+                                       asp-controller="Queue" asp-action="Index">تنظيم الطابور</a>
+                                }
+                                @if (!isSubscriptionRestricted && tenantServices.Gate && (User.HasPermission(AppPermissions.ViewDisplays) || canManageAdministration))
+                                {
+                                    var portalDisplayController = canManageAdministration ? "Administration" : "Display";
+                                    var portalDisplayAction = canManageAdministration ? "DisplaySettings" : "Access";
+                                    var portalDisplayActive =
+                                        (isControllerActive("Display") && !string.Equals(currentAction, "Gate", StringComparison.OrdinalIgnoreCase))
+                                        || (isControllerActive("Administration")
+                                            && (string.Equals(currentAction, "DisplaySettings", StringComparison.OrdinalIgnoreCase)
+                                                || string.Equals(currentAction, "DisplayDeviceDetails", StringComparison.OrdinalIgnoreCase)));
+                                    <a class="dropdown-item @(portalDisplayActive ? "active" : string.Empty)"
+                                       asp-controller="@portalDisplayController" asp-action="@portalDisplayAction">
+                                        شاشات العرض
+                                        @if (pendingDisplayDeviceCount > 0)
+                                        {
+                                            <span class="badge bg-danger">@pendingDisplayDeviceCount</span>
+                                        }
+                                    </a>
+                                }
+                                @if (!isSubscriptionRestricted && tenantServices.Gate && User.HasPermission(AppPermissions.ScanOperations))
+                                {
+                                    <a class="dropdown-item @(isControllerActive("ScanConsole") || (isControllerActive("Display") && string.Equals(currentAction, "Gate", StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty)"
+                                       asp-controller="Display" asp-action="Gate">مركز البوابة</a>
+                                }
+                                @if (!isSubscriptionRestricted && tenantServices.Permits && User.HasPermission(AppPermissions.ViewDashboard))
+                                {
+                                    <a class="dropdown-item @(isControllerActive("Monitoring") ? "active" : string.Empty)"
+                                       asp-controller="Monitoring" asp-action="Index">المراقبة</a>
+                                }
+                                @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageUsers))
+                                {
+                                    <a class="dropdown-item @(isControllerActive("Users") ? "active" : string.Empty)"
+                                       asp-controller="Users" asp-action="Index">فريق التشغيل</a>
+                                }
+                                @if (!isSubscriptionRestricted && canManageAdministration)
+                                {
+                                    <a class="dropdown-item @(isControllerActive("Sites") ? "active" : string.Empty)"
+                                       asp-controller="Sites" asp-action="Index">المواقع</a>
+                                }
+                                @if (!isSubscriptionRestricted && User.IsSuperAdmin())
+                                {
+                                    <a class="dropdown-item @(isControllerActive("Tenants") ? "active" : string.Empty)"
+                                       asp-controller="Tenants" asp-action="Index">الجهات</a>
+                                    <a class="dropdown-item @(isControllerActive("PlatformSettings") ? "active" : string.Empty)"
+                                       asp-controller="PlatformSettings" asp-action="Index">بيانات المنصة</a>
+                                    <a class="dropdown-item @(isControllerActive("Pricing") ? "active" : string.Empty)"
+                                       asp-controller="Pricing" asp-action="Index">الأسعار والعروض</a>
+                                }
+                                @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDelegations))
+                                {
+                                    <a class="dropdown-item @(isControllerActive("Delegations") ? "active" : string.Empty)"
+                                       asp-controller="Delegations" asp-action="Index">التفويضات</a>
+                                }
+                                @if (canManageAdministration && tenantServices.SelfService)
+                                {
+                                    <a class="dropdown-item @(isControllerActive("VisitorWorkflow") ? "active" : string.Empty)"
+                                       asp-controller="VisitorWorkflow" asp-action="Index">مسار الزيارة</a>
+                                }
+                                @if (canManageDepartments || canManageAdministration)
+                                {
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item @(isActive("Administration", "Edit") ? "active" : string.Empty)"
+                                       asp-controller="Administration" asp-action="Edit">بيانات الإدارة</a>
+                                    <a class="dropdown-item @(isActive("Administration", "Backup") ? "active" : string.Empty)"
+                                       asp-controller="Administration" asp-action="Backup">النسخ الاحتياطي</a>
+                                }
+                            </div>
+                        </div>
+                        }
+                    }
+                </nav>
+
                 <div class="app-topbar-actions">
                     <button class="btn icon-only-trigger" type="button" data-pwa-install hidden
                             aria-label="تثبيت التطبيق" title="تثبيت التطبيق">
@@ -490,92 +577,47 @@
                             <div class="dropdown-menu dropdown-menu-end notif-dd" aria-labelledby="notificationBellDropdown">
                                 <div class="notif-dd-head">
                                     <span class="notif-dd-title">الإشعارات</span>
-                                    <a class="notif-dd-viewall" asp-controller="Reports" asp-action="Index">عرض الكل</a>
+                                    <a class="notif-dd-viewall" asp-controller="Notifications" asp-action="Index">عرض الكل</a>
                                 </div>
 
                                 @if (notificationCenterTotalCount > 0)
                                 {
                                     <div class="notif-dd-body">
-                                        @foreach (var item in violationItems)
+                                        @foreach (var item in shellNotificationCenter.Items)
                                         {
-                                            <a class="notif-dd-row" asp-controller="Reports" asp-action="PermitActivity"
-                                                   asp-route-activityQuery="@item.PermitNumber">
-                                                <span class="notif-dd-ic notif-ic-red">
-                                                    <img src="~/icons/violation.svg" alt="" />
-                                                </span>
-                                                <span class="notif-dd-dot"></span>
-                                                <div class="notif-dd-info">
-                                                    <span class="notif-dd-name">@item.ActionLabel</span>
-                                                    <span class="notif-dd-time">@item.Message</span>
-                                                </div>
-                                            </a>
-                                        }
-                                        @foreach (var permit in pendingPermits.Take(4))
-                                        {
-                                            <a class="notif-dd-row" asp-controller="Permits" asp-action="Details"
-                                                   asp-route-id="@permit.PermitNumber" asp-route-returnUrl="@pendingPermitsReturnUrl"
-                                                   asp-route-focusActions="true">
-                                                <span class="notif-dd-ic notif-ic-green">
-                                                    <img src="~/icons/approvals.svg" alt="" />
-                                                </span>
-                                                <span class="notif-dd-dot"></span>
-                                                <div class="notif-dd-info">
-                                                    <span class="notif-dd-name">طلب اعتماد</span>
-                                                    <span class="notif-dd-time">@permit.DriverName · @permit.Subtitle</span>
-                                                </div>
-                                            </a>
-                                        }
-                                        @foreach (var visit in visitAlerts)
-                                        {
-                                            <a class="notif-dd-row" asp-controller="Visits" asp-action="Details"
-                                                   asp-route-id="@visit.VisitId">
-                                                <span class="notif-dd-ic notif-ic-blue">
-                                                    <img src="~/icons/visit.svg" alt="" />
-                                                </span>
-                                                <span class="notif-dd-dot"></span>
-                                                <div class="notif-dd-info">
-                                                    <span class="notif-dd-name">@visit.VisitorName</span>
-                                                    <span class="notif-dd-time">زيارة · @visit.ApprovalStatusDisplay</span>
-                                                </div>
-                                            </a>
-                                        }
-                                        @foreach (var item in securityAlertItems)
-                                        {
-                                            var secHref = !string.IsNullOrWhiteSpace(item.SequenceId);
-                                            if (secHref)
+                                            var iconClass = item.Category switch
                                             {
-                                                <a class="notif-dd-row" asp-controller="Reports" asp-action="PermitActivity"
-                                                       asp-route-activityQuery="@item.PermitNumber"
-                                                       asp-route-selectedSequenceId="@item.SequenceId">
-                                                    <span class="notif-dd-ic notif-ic-purple">
-                                                        <img src="~/icons/notifications.svg" alt="" />
+                                                NotificationCategories.Security => "notif-ic-red",
+                                                NotificationCategories.Visit => "notif-ic-blue",
+                                                NotificationCategories.Permit => "notif-ic-green",
+                                                _ => "notif-ic-purple",
+                                            };
+                                            var iconFile = item.Category switch
+                                            {
+                                                NotificationCategories.Security => "violation.svg",
+                                                NotificationCategories.Visit => "visit.svg",
+                                                NotificationCategories.Permit => "approvals.svg",
+                                                _ => "notifications.svg",
+                                            };
+                                            <form class="notif-dd-row-form" asp-controller="Notifications" asp-action="MarkRead" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="returnUrl" value="@item.ActionUrl" />
+                                                <button class="notif-dd-row" type="submit">
+                                                    <span class="notif-dd-ic @iconClass">
+                                                        <img src="~/icons/@iconFile" alt="" />
                                                     </span>
                                                     <span class="notif-dd-dot"></span>
-                                                    <div class="notif-dd-info">
-                                                        <span class="notif-dd-name">تنبيه أمني</span>
-                                                        <span class="notif-dd-time">@item.DriverName · @item.Subtitle</span>
-                                                    </div>
-                                                </a>
-                                            }
-                                            else
-                                            {
-                                                <a class="notif-dd-row" asp-controller="Permits" asp-action="Details"
-                                                       asp-route-id="@item.PermitNumber" asp-route-returnUrl="@stoppedPermitsReturnUrl"
-                                                       asp-route-focusActions="true">
-                                                    <span class="notif-dd-ic notif-ic-purple">
-                                                        <img src="~/icons/notifications.svg" alt="" />
+                                                    <span class="notif-dd-info">
+                                                        <span class="notif-dd-name">@item.Title</span>
+                                                        <span class="notif-dd-time">@item.Message</span>
                                                     </span>
-                                                    <span class="notif-dd-dot"></span>
-                                                    <div class="notif-dd-info">
-                                                        <span class="notif-dd-name">تنبيه أمني</span>
-                                                        <span class="notif-dd-time">@item.DriverName · @item.Subtitle</span>
-                                                    </div>
-                                                </a>
-                                            }
+                                                </button>
+                                            </form>
                                         }
                                     </div>
                                     <div class="notif-dd-foot">
-                                        <a asp-controller="Reports" asp-action="Index">
+                                        <a asp-controller="Notifications" asp-action="Index">
                                             <img src="~/icons/bell.svg" alt="" class="notif-dd-foot-ic" />
                                             عرض جميع الإشعارات
                                         </a>
@@ -684,12 +726,12 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Account") ? "active" : string.Empty)"
                                                            asp-controller="Account" asp-action="Profile">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#users")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#users")"></use></svg>
                                                         <span>حسابي</span>
                                                     </a>
                                                     <a class="app-sidebar-link @(isControllerActive("Subscription") ? "active" : string.Empty)"
                                                            asp-controller="Subscription" asp-action="Plans">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#permit")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#permit")"></use></svg>
                                                         <span>إكمال الاشتراك</span>
                                                     </a>
                                                 }
@@ -697,15 +739,31 @@
                                                 {
                                                     <a class="app-sidebar-link @(isActive("Home", "Index") ? "active" : string.Empty)"
                                                            asp-controller="Home" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#home")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#home")"></use></svg>
                                                         <span>الرئيسة</span>
+                                                    </a>
+                                                }
+                                                @if (canViewPeople)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("People") ? "active" : string.Empty)"
+                                                           asp-controller="People" asp-action="Index">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#users")"></use></svg>
+                                                        <span>الأشخاص</span>
+                                                    </a>
+                                                }
+                                                @if (canViewAttendance)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Attendance") ? "active" : string.Empty)"
+                                                           asp-controller="Attendance" asp-action="Index">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#attendance")"></use></svg>
+                                                        <span>الحضور</span>
                                                     </a>
                                                 }
                                                 @if (canViewPermits)
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Permits") ? "active" : string.Empty)"
                                                            asp-controller="Permits" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#permit")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#permit")"></use></svg>
                                                         <span>التصاريح</span>
                                                     </a>
                                                 }
@@ -713,7 +771,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Visits") ? "active" : string.Empty)"
                                                            asp-controller="Visits" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#visit")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#visit")"></use></svg>
                                                         <span>الزيارات</span>
                                                     </a>
                                                 }
@@ -721,7 +779,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Queue") ? "active" : string.Empty)"
                                                            asp-controller="Queue" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#monitoring")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#queue")"></use></svg>
                                                         <span>تنظيم الطابور</span>
                                                     </a>
                                                 }
@@ -730,7 +788,10 @@
                                                     var displayLinkController = canManageAdministration ? "Administration" : "Display";
                                                     var displayLinkAction = canManageAdministration ? "DisplaySettings" : "Access";
                                                     var displayLinkActive =
-                                                        isControllerActive("Display")
+                                                        (
+                                                            isControllerActive("Display")
+                                                            && !string.Equals(currentAction, "Gate", StringComparison.OrdinalIgnoreCase)
+                                                        )
                                                         || (
                                                             string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase)
                                                             && (
@@ -740,7 +801,7 @@
                                                         );
                                                     <a class="app-sidebar-link @(displayLinkActive ? "active" : string.Empty)"
                                                            asp-controller="@displayLinkController" asp-action="@displayLinkAction">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#display")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#display")"></use></svg>
                                                         <span>شاشات العرض</span>
                                                         @if (pendingDisplayDeviceCount > 0)
                                                         {
@@ -752,7 +813,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("ScanConsole") || (isControllerActive("Display") && string.Equals(currentAction, "Gate", StringComparison.OrdinalIgnoreCase)) ? "active" : string.Empty)"
                                                            asp-controller="Display" asp-action="Gate">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#scan")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#scan")"></use></svg>
                                                         <span>مركز البوابة</span>
                                                     </a>
                                                 }
@@ -760,7 +821,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Reports") ? "active" : string.Empty)"
                                                            asp-controller="Reports" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#reports")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#reports")"></use></svg>
                                                         <span>التقارير</span>
                                                     </a>
                                                 }
@@ -768,7 +829,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Monitoring") ? "active" : string.Empty)"
                                                            asp-controller="Monitoring" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#monitoring")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#monitoring")"></use></svg>
                                                         <span>المراقبة</span>
                                                     </a>
                                                 }
@@ -776,25 +837,33 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Users") ? "active" : string.Empty)"
                                                            asp-controller="Users" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#users")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#users")"></use></svg>
                                                         <span>فريق التشغيل</span>
+                                                    </a>
+                                                }
+                                                @if (!isSubscriptionRestricted && canManageAdministration)
+                                                {
+                                                    <a class="app-sidebar-link @(isControllerActive("Sites") ? "active" : string.Empty)"
+                                                           asp-controller="Sites" asp-action="Index">
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#sites")"></use></svg>
+                                                        <span>المواقع</span>
                                                     </a>
                                                 }
                                                 @if (!isSubscriptionRestricted && User.IsSuperAdmin())
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Tenants") ? "active" : string.Empty)"
                                                            asp-controller="Tenants" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#tenant")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#tenant")"></use></svg>
                                                         <span>الجهات والشركات</span>
                                                     </a>
                                                     <a class="app-sidebar-link @(isControllerActive("PlatformSettings") ? "active" : string.Empty)"
                                                            asp-controller="PlatformSettings" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#administration")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#administration")"></use></svg>
                                                         <span>بيانات مالك المنصة</span>
                                                     </a>
                                                     <a class="app-sidebar-link @(isControllerActive("Pricing") ? "active" : string.Empty)"
                                                            asp-controller="Pricing" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#reports")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#reports")"></use></svg>
                                                         <span>الأسعار والعروض</span>
                                                     </a>
                                                 }
@@ -802,7 +871,7 @@
                                                 {
                                                     <a class="app-sidebar-link @(isControllerActive("Delegations") ? "active" : string.Empty)"
                                                            asp-controller="Delegations" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#delegation")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#delegation")"></use></svg>
                                                         <span>التفويضات</span>
                                                     </a>
                                                 }
@@ -812,18 +881,18 @@
                                                     {
                                                         <a class="app-sidebar-link @(isControllerActive("VisitorWorkflow") ? "active" : string.Empty)"
                                                                asp-controller="VisitorWorkflow" asp-action="Index">
-                                                            <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#visit")"></use></svg>
+                                                            <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#visit")"></use></svg>
                                                             <span>مسار الزيارة</span>
                                                         </a>
                                                     }
                                                     <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Edit", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
                                                            asp-controller="Administration" asp-action="Edit">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#administration")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#administration")"></use></svg>
                                                         <span>بيانات الإدارة</span>
                                                     </a>
                                                     <a class="app-sidebar-link @(string.Equals(currentController, "Administration", StringComparison.OrdinalIgnoreCase) && string.Equals(currentAction, "Backup", StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)"
                                                            asp-controller="Administration" asp-action="Backup">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg#backup")"></use></svg>
+                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#backup")"></use></svg>
                                                         <span>النسخ الاحتياطي</span>
                                                     </a>
                                                 }

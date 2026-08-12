@@ -114,7 +114,7 @@ function dateTimeLocal(minutesFromNow) {
 
 async function expectHomePage(page) {
   await expect(page).toHaveURL(/\/($|Home(\/Index)?$|Dashboard$)/i);
-  await expect(page.getByText("تسجيل الدخول")).toHaveCount(0);
+  await expect(page.getByText("تسجيل الدخول", { exact: true })).toHaveCount(0);
 }
 
 async function completeInitialSetup(page) {

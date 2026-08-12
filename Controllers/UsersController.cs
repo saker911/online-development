@@ -1976,8 +1976,20 @@ namespace VehiclePermitSystemWeb.Controllers
         private void PopulateTenantOptions(UserEditViewModel model)
         {
             ApplyTenantScope(model);
-            model.TenantOptions = _userAdminService
-                .GetTenants(includeInactive: User.IsSuperAdmin())
+            var canChooseTenant = User.IsSuperAdmin();
+            var tenants = _userAdminService.GetTenants(includeInactive: canChooseTenant);
+            if (!canChooseTenant)
+            {
+                tenants = tenants.Where(tenant =>
+                    string.Equals(
+                        tenant.TenantId,
+                        model.TenantId,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
+            }
+
+            model.TenantOptions = tenants
                 .Select(tenant => new UserTenantOptionViewModel
                 {
                     TenantId = tenant.TenantId,

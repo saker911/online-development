@@ -1030,6 +1030,7 @@
     background: var(--t-surface, #fff);
     scrollbar-width: thin;
     scrollbar-color: rgba(100, 116, 139, 0.48) transparent;
+    direction: ltr;
 }
 
 .report-scroll-table .report-table {
@@ -1040,6 +1041,7 @@
     border-collapse: separate;
     border-spacing: 0;
     background: var(--t-surface, #fff);
+    direction: rtl;
 }
 
 .report-scroll-table .report-table:has(thead th:nth-child(5)) {

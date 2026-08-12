@@ -1,0 +1,91 @@
+@model AttendanceDashboardViewModel
+<section class="workplace-metrics workplace-attendance-metrics" aria-label="ملخص الحضور">
+    <article class="is-live"><span>الموجودون الآن</span><strong>@Model.TotalOnSite</strong></article>
+    <article><span>موظفون</span><strong>@Model.EmployeesOnSite</strong></article>
+    <article><span>زوار</span><strong>@Model.VisitorsOnSite</strong></article>
+    <article><span>متعاقدون</span><strong>@Model.ContractorsOnSite</strong></article>
+    <article><span>مواقع نشطة</span><strong>@Model.ActiveSiteCount</strong></article>
+</section>
+
+<form method="get" class="workplace-filterbar workplace-attendance-filters" aria-label="تصفية الحضور">
+    <input type="search" name="query" value="@Model.Query" placeholder="ابحث بالاسم أو الموقع" />
+    <select name="personType" aria-label="نوع الشخص">
+        <option value="">كل الموجودين</option>
+        <option value="Employee" selected="@(Model.PersonType == PersonTypes.Employee)">الموظفون</option>
+        <option value="Visitor" selected="@(Model.PersonType == PersonTypes.Visitor)">الزوار</option>
+        <option value="Contractor" selected="@(Model.PersonType == PersonTypes.Contractor)">المتعاقدون</option>
+    </select>
+    <button class="btn btn-dark" type="submit">تطبيق</button>
+</form>
+
+<div class="workplace-dashboard-grid">
+    <section class="workplace-panel workplace-presence-panel">
+        <header>
+            <div><span class="workplace-eyebrow">داخل المنشأة</span><h2>الموجودون الآن</h2></div>
+            <span class="workplace-count">@Model.PresentPeople.Count</span>
+        </header>
+        @if (Model.PresentPeople.Count == 0)
+        {
+            <div class="workplace-empty compact">
+                <strong>لا يوجد حضور مطابق</strong>
+                <span>ستظهر الحركة فور تسجيل الدخول من مركز البوابة.</span>
+            </div>
+        }
+        else
+        {
+            <div class="workplace-presence-list">
+                @foreach (var item in Model.PresentPeople)
+                {
+                    <article>
+                        <span class="workplace-avatar" aria-hidden="true">
+                            @if (item.HasPhoto && item.PersonId > 0)
+                            {
+                                <img src="@Url.Action("Photo", "People", new { id = item.PersonId })" alt="" />
+                            }
+                            else
+                            {
+                                @item.FullName.Trim().FirstOrDefault()
+                            }
+                        </span>
+                        <div class="workplace-presence-copy">
+                            @if (item.PersonId > 0)
+                            {
+                                <a class="workplace-person-link" asp-controller="People" asp-action="Details" asp-route-id="@item.PersonId">@item.FullName</a>
+                            }
+                            else
+                            {
+                                <strong>@item.FullName</strong>
+                            }
+                            <small>@item.PersonTypeDisplay · @(string.IsNullOrWhiteSpace(item.Destination) ? item.Reference : item.Destination)</small>
+                        </div>
+                        <div class="workplace-presence-location">
+                            <strong>@(string.IsNullOrWhiteSpace(item.Location) ? "الموقع الرئيسي" : item.Location)</strong>
+                            <small>@(item.EnteredAt.HasValue ? HijriDateFormatter.Format(item.EnteredAt) : "الوقت غير متاح")</small>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="workplace-panel workplace-activity-panel">
+        <header><div><span class="workplace-eyebrow">السجل الحي</span><h2>آخر الحركات</h2></div></header>
+        <div class="workplace-timeline">
+            @foreach (var activity in Model.RecentActivity)
+            {
+                <article>
+                    <i class="@(activity.IsEntry ? "entry" : "exit")" aria-hidden="true"></i>
+                    <div>
+                        <strong>@activity.FullName</strong>
+                        <span>@activity.Action</span>
+                        <small>@activity.OccurredAt.ToString("HH:mm") · @(string.IsNullOrWhiteSpace(activity.Location) ? activity.Reference : activity.Location)</small>
+                    </div>
+                </article>
+            }
+            @if (Model.RecentActivity.Count == 0)
+            {
+                <div class="workplace-empty compact"><span>لا توجد حركة مسجلة حتى الآن.</span></div>
+            }
+        </div>
+    </section>
+</div>

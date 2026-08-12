@@ -35,6 +35,10 @@ namespace VehiclePermitSystemWeb.Services.Display
         );
         bool TryActivateApprovedRequest(HttpContext context);
         bool RecordHeartbeat(HttpContext context);
+        DisplayHeartbeatResultViewModel RecordHealth(
+            HttpContext context,
+            DisplayDeviceHeartbeatViewModel model
+        );
         DisplayDeviceManagementViewModel BuildManagementViewModel();
         int GetPendingCount();
         void RecordRejectedAccess(HttpContext context, string reason);
