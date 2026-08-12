@@ -511,7 +511,7 @@ app.Use(
             if (!headers.ContainsKey("Content-Security-Policy"))
             {
                 headers["Content-Security-Policy"] =
-                    $"default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'nonce-{cspScriptNonce}'; script-src 'self' 'nonce-{cspScriptNonce}'; connect-src 'self';";
+                    $"default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob: https://tile.openstreetmap.org; font-src 'self' data:; style-src 'self' 'nonce-{cspScriptNonce}'; script-src 'self' 'nonce-{cspScriptNonce}'; connect-src 'self';";
             }
 
             if (!headers.ContainsKey("X-Frame-Options"))

@@ -6,6 +6,7 @@
 }
 
 @section Styles {
+    <link rel="stylesheet" href="~/lib/leaflet/leaflet.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/workplace.css" asp-append-version="true" />
 }
 
@@ -66,9 +67,13 @@
                     <label><span>خط العرض</span><input asp-for="Input.Latitude" inputmode="decimal" /></label>
                     <label><span>خط الطول</span><input asp-for="Input.Longitude" inputmode="decimal" /></label>
                 </div>
+                <div class="workplace-location-picker">
+                    <div id="siteLocationMap" class="workplace-location-map" aria-label="اختر الموقع من الخريطة"></div>
+                    <p>اضغط على الخريطة أو اسحب العلامة لتحديد الموقع.</p>
+                </div>
                 <div class="workplace-location-actions">
                     <button class="btn btn-outline-secondary" type="button" id="detectSiteLocation">
-                        تحديد موقعي الحالي
+                        استخدام موقعي الحالي
                     </button>
                     <a class="workplace-map-link d-none" id="siteLocationPreview" target="_blank" rel="noopener noreferrer">
                         فتح النقطة في خرائط Google
@@ -106,6 +111,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/leaflet/leaflet.js" asp-append-version="true"></script>
     <script nonce="@(Context.Items["CspScriptNonce"])">
         (function () {
             const detectButton = document.getElementById('detectSiteLocation');
@@ -113,6 +119,9 @@
             const longitudeInput = document.getElementById('Input_Longitude');
             const previewLink = document.getElementById('siteLocationPreview');
             const status = document.getElementById('siteLocationStatus');
+            const mapElement = document.getElementById('siteLocationMap');
+            let map;
+            let marker;
 
             function updatePreview() {
                 const latitude = Number.parseFloat(latitudeInput?.value || '');
@@ -131,6 +140,61 @@
                 status.classList.toggle('is-error', Boolean(isError));
             }
 
+            function readCoordinates() {
+                const latitude = Number.parseFloat(latitudeInput?.value || '');
+                const longitude = Number.parseFloat(longitudeInput?.value || '');
+                return Number.isFinite(latitude) && Number.isFinite(longitude)
+                    ? { latitude, longitude }
+                    : null;
+            }
+
+            function updateMarker(latitude, longitude, centerMap) {
+                if (!map) return;
+                if (!marker) {
+                    marker = L.marker([latitude, longitude], { draggable: true }).addTo(map);
+                    marker.on('dragend', function () {
+                        const position = marker.getLatLng();
+                        setCoordinates(position.lat, position.lng, false);
+                    });
+                } else {
+                    marker.setLatLng([latitude, longitude]);
+                }
+
+                if (centerMap) {
+                    map.setView([latitude, longitude], Math.max(map.getZoom(), 16));
+                }
+            }
+
+            function setCoordinates(latitude, longitude, centerMap) {
+                if (latitudeInput) latitudeInput.value = latitude.toFixed(7);
+                if (longitudeInput) longitudeInput.value = longitude.toFixed(7);
+                updateMarker(latitude, longitude, centerMap);
+                updatePreview();
+                setStatus('تم تحديد الموقع.', false);
+            }
+
+            if (mapElement && typeof L !== 'undefined') {
+                const initialCoordinates = readCoordinates();
+                const initialCenter = initialCoordinates
+                    ? [initialCoordinates.latitude, initialCoordinates.longitude]
+                    : [24.7136, 46.6753];
+                map = L.map(mapElement, { scrollWheelZoom: false }).setView(
+                    initialCenter,
+                    initialCoordinates ? 16 : 6
+                );
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+                map.on('click', function (event) {
+                    setCoordinates(event.latlng.lat, event.latlng.lng, false);
+                });
+                if (initialCoordinates) {
+                    updateMarker(initialCoordinates.latitude, initialCoordinates.longitude, false);
+                }
+                window.setTimeout(function () { map.invalidateSize(); }, 100);
+            }
+
             detectButton?.addEventListener('click', function () {
                 if (!navigator.geolocation) {
                     setStatus('تحديد الموقع غير مدعوم في هذا المتصفح.', true);
@@ -141,12 +205,7 @@
                 setStatus('جارٍ تحديد الموقع...', false);
                 navigator.geolocation.getCurrentPosition(
                     function (position) {
-                        latitudeInput.value = position.coords.latitude.toFixed(7);
-                        longitudeInput.value = position.coords.longitude.toFixed(7);
-                        latitudeInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        longitudeInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        updatePreview();
-                        setStatus('تم تحديد الموقع.', false);
+                        setCoordinates(position.coords.latitude, position.coords.longitude, true);
                         detectButton.disabled = false;
                     },
                     function (error) {
@@ -160,8 +219,16 @@
                 );
             });
 
-            latitudeInput?.addEventListener('input', updatePreview);
-            longitudeInput?.addEventListener('input', updatePreview);
+            function syncManualCoordinates() {
+                const coordinates = readCoordinates();
+                updatePreview();
+                if (coordinates) {
+                    updateMarker(coordinates.latitude, coordinates.longitude, false);
+                }
+            }
+
+            latitudeInput?.addEventListener('input', syncManualCoordinates);
+            longitudeInput?.addEventListener('input', syncManualCoordinates);
             updatePreview();
         })();
     </script>
