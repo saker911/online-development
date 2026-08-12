@@ -237,6 +237,12 @@
 .workplace-form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 .workplace-site-editor .workplace-switch { display: flex; align-items: center; gap: .55rem; }
 .workplace-site-editor .workplace-switch input { width: 1.05rem; min-height: 1.05rem; }
+.workplace-location-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; }
+.workplace-location-actions .btn { min-height: 2.45rem; }
+.workplace-map-link { color: #0e8b70; font-size: .76rem; font-weight: 800; text-decoration: none; }
+.workplace-map-link:hover { text-decoration: underline; }
+.workplace-location-status { color: var(--app-muted, #667085); font-size: .73rem; }
+.workplace-location-status.is-error { color: #b42318; }
 
 .workplace-site-breadcrumb { display: flex; align-items: center; gap: .4rem; margin-bottom: .45rem; }
 .workplace-site-breadcrumb .workplace-eyebrow::before { margin-inline-end: .4rem; color: var(--app-muted, #667085); content: "/"; }

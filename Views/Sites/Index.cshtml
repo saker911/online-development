@@ -66,6 +66,15 @@
                     <label><span>خط العرض</span><input asp-for="Input.Latitude" inputmode="decimal" /></label>
                     <label><span>خط الطول</span><input asp-for="Input.Longitude" inputmode="decimal" /></label>
                 </div>
+                <div class="workplace-location-actions">
+                    <button class="btn btn-outline-secondary" type="button" id="detectSiteLocation">
+                        تحديد موقعي الحالي
+                    </button>
+                    <a class="workplace-map-link d-none" id="siteLocationPreview" target="_blank" rel="noopener noreferrer">
+                        فتح النقطة في خرائط Google
+                    </a>
+                    <span class="workplace-location-status" id="siteLocationStatus" role="status" aria-live="polite"></span>
+                </div>
                 @if (!editing && Model.Sites.Count > 0)
                 {
                     <label>
@@ -95,3 +104,65 @@
         </section>
     </div>
 </div>
+
+@section Scripts {
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        (function () {
+            const detectButton = document.getElementById('detectSiteLocation');
+            const latitudeInput = document.getElementById('Input_Latitude');
+            const longitudeInput = document.getElementById('Input_Longitude');
+            const previewLink = document.getElementById('siteLocationPreview');
+            const status = document.getElementById('siteLocationStatus');
+
+            function updatePreview() {
+                const latitude = Number.parseFloat(latitudeInput?.value || '');
+                const longitude = Number.parseFloat(longitudeInput?.value || '');
+                const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+                previewLink?.classList.toggle('d-none', !hasCoordinates);
+                if (previewLink && hasCoordinates) {
+                    previewLink.href = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                }
+            }
+
+            function setStatus(message, isError) {
+                if (!status) return;
+                status.textContent = message;
+                status.classList.toggle('is-error', Boolean(isError));
+            }
+
+            detectButton?.addEventListener('click', function () {
+                if (!navigator.geolocation) {
+                    setStatus('تحديد الموقع غير مدعوم في هذا المتصفح.', true);
+                    return;
+                }
+
+                detectButton.disabled = true;
+                setStatus('جارٍ تحديد الموقع...', false);
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        latitudeInput.value = position.coords.latitude.toFixed(7);
+                        longitudeInput.value = position.coords.longitude.toFixed(7);
+                        latitudeInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        longitudeInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        updatePreview();
+                        setStatus('تم تحديد الموقع.', false);
+                        detectButton.disabled = false;
+                    },
+                    function (error) {
+                        const message = error.code === error.PERMISSION_DENIED
+                            ? 'يلزم السماح للموقع من إعدادات المتصفح.'
+                            : 'تعذر تحديد الموقع حالياً.';
+                        setStatus(message, true);
+                        detectButton.disabled = false;
+                    },
+                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+                );
+            });
+
+            latitudeInput?.addEventListener('input', updatePreview);
+            longitudeInput?.addEventListener('input', updatePreview);
+            updatePreview();
+        })();
+    </script>
+}
