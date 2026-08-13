@@ -5,6 +5,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.VehicleScan)]
 public sealed class ScanVisitIdentifierTests
 {
     [Theory]

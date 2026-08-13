@@ -16,10 +16,8 @@ Model.ManagerDisplayName;
     var loginPasswordStatus = Model.MustChangePassword
         ? "مطلوب تغيير كلمة المرور عند الدخول التالي."
         : "يمكن تغيير كلمة المرور من صفحة مستقلة دون التأثير على بقية الصلاحيات.";
-    var gatePinStatus = Model.CanScanOperations
-        ? (Model.MustChangeOperatorPin
-            ? "مطلوب تغيير PIN البوابة عند الدخول التشغيلي التالي."
-            : "يمكن تغيير PIN البوابة من شاشة الدخول التشغيلي عند الحاجة.")
+    var gateAccessStatus = Model.CanScanOperations
+        ? "يعمل مركز البوابة بنفس حسابك وصلاحياتك، دون رمز إضافي."
         : "غير متاح لأن الحساب لا يملك صلاحية المسح والتشغيل.";
 }
 
@@ -160,21 +158,13 @@ Model.ManagerDisplayName;
 
                             <div class="account-profile-credential-box @(Model.CanScanOperations ? string.Empty : "is-disabled")">
                                 <span class="account-profile-mini-kicker">صلاحية المسح والبوابة</span>
-                                <strong>@(Model.CanScanOperations ? "PIN البوابة مفعل" : "غير متاح")</strong>
-                                <p>@gatePinStatus</p>
+                                <strong>@(Model.CanScanOperations ? "الدخول بالحساب" : "غير متاح")</strong>
+                                <p>@gateAccessStatus</p>
                                 <div class="account-profile-credential-meta">
                                     <span>باركود المشغل</span>
                                     <strong class="ltr-field">@(string.IsNullOrWhiteSpace(Model.OperatorBadgeCode) ? "-" :
                                                                                                                                                                                                                                     Model.OperatorBadgeCode)</strong>
                                     </div>
-                                    @if (Model.CanScanOperations)
-                                    {
-                                        <form asp-controller="Account" asp-action="ResetMyTemporaryOperatorPin" method="post"
-                                              class="account-profile-inline-form">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-outline-warning btn-sm">إعادة تعيين PIN المؤقت</button>
-                                        </form>
-                                    }
                                 </div>
                             </div>
                         </article>

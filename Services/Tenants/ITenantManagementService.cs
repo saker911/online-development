@@ -19,7 +19,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         TenantOperationResult ActivatePaidSubscription(string tenantId);
     }
 
-    public sealed record TenantOperationResult(bool Succeeded, string Message);
+    public sealed record TenantOperationResult(
+        bool Succeeded,
+        string Message,
+        string TenantId = "",
+        string OwnerUsername = ""
+    );
 
     public sealed record TenantSignupResult(
         bool Succeeded,

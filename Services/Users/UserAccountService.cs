@@ -234,36 +234,12 @@ namespace VehiclePermitSystemWeb.Services.Users
                     : NormalizeOperatorBadgeCode(badgeCode)
             );
             existing.OperatorBadgeCode = normalizedBadge;
-
-            var effectivePin = string.IsNullOrWhiteSpace(temporaryPin)
-                ? string.Empty
-                : temporaryPin.Trim();
-            if (!string.IsNullOrWhiteSpace(effectivePin) && !IsOperatorPinValid(effectivePin))
-            {
-                effectivePin = string.Empty;
-            }
-            if (
-                string.IsNullOrWhiteSpace(effectivePin)
-                && existing.CanScanOperations
-                && string.IsNullOrWhiteSpace(existing.OperatorPinHash)
-            )
-            {
-                effectivePin = GenerateTemporaryOperatorPin();
-                requirePinChange = true;
-            }
-
-            if (!string.IsNullOrWhiteSpace(effectivePin))
-            {
-                SetOperatorPin(existing, effectivePin);
-                existing.MustChangeOperatorPin = requirePinChange;
-            }
-            else if (requirePinChange && !string.IsNullOrWhiteSpace(existing.OperatorPinHash))
-            {
-                existing.MustChangeOperatorPin = true;
-            }
+            existing.OperatorPinHash = string.Empty;
+            existing.OperatorPinSalt = string.Empty;
+            existing.MustChangeOperatorPin = false;
 
             db.SaveChanges();
-            return string.IsNullOrWhiteSpace(effectivePin) ? null : effectivePin;
+            return null;
         }
 
         public static void SetPassword(UserAccount user, string password)

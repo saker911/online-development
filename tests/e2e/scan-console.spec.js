@@ -464,10 +464,8 @@ test("display gate preserves QR verification URL punctuation when scanning", asy
   await expect.poll(() => submittedBody?.identifier).toBe(scannedUrl);
 });
 
-test("display gate refreshes stale security token and retries operator login after recovery", async ({ page }) => {
+test("display gate uses the signed-in account without a temporary operator PIN", async ({ page }) => {
   await ensureOwnerSignedIn(page);
-
-  let activeDisplayOperator = null;
 
   await page.route("**/Display/GateStatus**", (route) =>
     route.fulfill({
@@ -478,7 +476,12 @@ test("display gate refreshes stale security token and retries operator login aft
         employeesOutCount: 0,
         recentActivitiesCount: 0,
         latestActivityId: 0,
-        activeOperator: activeDisplayOperator,
+        activeOperator: {
+          username: "1234567890",
+          displayName: "مالك النظام",
+          signedInAtText: "10:30:00",
+          mustChangePin: false,
+        },
         approvedEmployees: [],
         employeesOut: [],
         recentActivities: [],
@@ -486,72 +489,10 @@ test("display gate refreshes stale security token and retries operator login aft
       }),
     })
   );
-  await page.route("**/Display/GateOperatorStatus**", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ operatorSession: activeDisplayOperator }),
-    })
-  );
-
   await page.goto("/Display/Gate?operatorMode=true");
   await expect(page.locator("#unifiedGateRoot")).toBeVisible();
-  await expect(page.locator("#scanConsoleSubmitButton")).toBeDisabled();
-  await expect(page.locator("#scanConsoleCameraButton")).toBeDisabled();
-
-  let refreshedPageRequests = 0;
-  await page.route("**/Display/Gate*", (route) => {
-    refreshedPageRequests += 1;
-    return route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: '<!doctype html><input name="__RequestVerificationToken" value="RECOVERED-TOKEN" />',
-    });
-  });
-
-  const switchTokens = [];
-  await page.route("**/Display/SwitchOperator", (route) => {
-    switchTokens.push(route.request().headers()["requestverificationtoken"] || "");
-    if (switchTokens.length === 1) {
-      return route.fulfill({
-        status: 400,
-        contentType: "text/html",
-        body: "stale antiforgery token",
-      });
-    }
-
-    activeDisplayOperator = {
-      username: "gate-recovered",
-      displayName: "مشغل التعافي",
-      signedInAtText: "10:30:00",
-      mustChangePin: false,
-    };
-
-    return route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        success: true,
-        errorCode: null,
-        message: "تم تسجيل دخول المشغل.",
-        requiresPinChange: false,
-        previousOperator: null,
-        currentOperator: activeDisplayOperator,
-      }),
-    });
-  });
-
-  await expect(page.locator("#operatorModal")).toBeVisible();
-  await page.evaluate(() => {
-    document.querySelector("#operatorBadgeInput").value = "GATE-RECOVERY";
-    document.querySelector("#operatorPinInput").value = "123456";
-  });
-  await page.locator("#submitOperatorLoginButton").click();
-
-  await expect(page.locator("#activeOperatorName")).toHaveText("مشغل التعافي");
   await expect(page.locator("#scanConsoleSubmitButton")).toBeEnabled();
   await expect(page.locator("#scanConsoleCameraButton")).toBeEnabled();
-  expect(refreshedPageRequests).toBe(1);
-  expect(switchTokens).toHaveLength(2);
-  expect(switchTokens[1]).toBe("RECOVERED-TOKEN");
+  await expect(page.locator("#operatorModal")).toHaveCount(0);
+  await expect(page.getByText("الرقم المؤقت", { exact: false })).toHaveCount(0);
 });

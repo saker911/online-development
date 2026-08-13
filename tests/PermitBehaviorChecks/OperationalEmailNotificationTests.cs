@@ -12,6 +12,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Notifications)]
 public sealed class OperationalEmailNotificationTests
 {
     [Fact]

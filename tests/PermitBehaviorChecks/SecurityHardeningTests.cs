@@ -19,6 +19,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Security)]
 public sealed class SecurityHardeningTests
 {
     [Fact]
@@ -225,6 +226,7 @@ public sealed class SecurityHardeningTests
                 PlanCode = "monthly",
                 CompanyName = "جهة اختبار التسجيل",
                 TenantId = "secure-signup",
+                OrganizationReference = "7001234567",
                 OwnerFullName = "مالك الاختبار",
                 OwnerUsername = "1023456789",
                 OwnerPhoneNumber = "0501234567",
@@ -236,11 +238,16 @@ public sealed class SecurityHardeningTests
         );
 
         Assert.True(result.Succeeded, result.Message);
+        Assert.StartsWith("org-", result.TenantId);
         using (var db = factory.CreateDbContext())
         {
-            Assert.True(db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
+            var tenant = db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
+            Assert.True(tenant.IsActive);
+            Assert.StartsWith("workspace-", tenant.Slug);
+            Assert.NotEqual("secure-signup", tenant.Slug);
+            Assert.Equal("7001234567", tenant.OrganizationReference);
             var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
-            var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup");
+            var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
             Assert.True(owner.IsActive);
             Assert.False(owner.IsEmailConfirmed);
             Assert.Empty(AppPermissions.GetGrantedPermissions(owner));
@@ -249,13 +256,13 @@ public sealed class SecurityHardeningTests
             Assert.Equal("مالك الحساب", settings.ManagerTitle);
             Assert.Contains(
                 db.Departments.IgnoreQueryFilters(),
-                department => department.TenantId == "secure-signup" && department.Name == "الإدارة العامة"
+                department => department.TenantId == result.TenantId && department.Name == "الإدارة العامة"
             );
         }
 
-        Assert.True(service.ActivatePaidSubscription("secure-signup").Succeeded);
+        Assert.True(service.ActivatePaidSubscription(result.TenantId).Succeeded);
         using var verifiedDb = factory.CreateDbContext();
-        Assert.True(verifiedDb.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == "secure-signup").IsActive);
+        Assert.True(verifiedDb.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId).IsActive);
         var activatedOwner = verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
         Assert.True(activatedOwner.IsActive);
         Assert.NotEmpty(AppPermissions.GetGrantedPermissions(activatedOwner));
@@ -360,6 +367,10 @@ public sealed class SecurityHardeningTests
                 Name = "جهة مهيأة",
                 Slug = "seeded-tenant",
                 DepartmentName = string.Empty,
+                OwnerUsername = "1023456789",
+                OwnerFullName = "مسؤول الجهة",
+                OwnerEmail = "seeded-owner@example.com",
+                OwnerPhoneNumber = "0501234567",
             }
         );
 
@@ -390,6 +401,10 @@ public sealed class SecurityHardeningTests
                 TenantId = "deletable-tenant",
                 Name = "جهة قابلة للحذف",
                 Slug = "deletable-tenant",
+                OwnerUsername = "1023456789",
+                OwnerFullName = "مسؤول الجهة",
+                OwnerEmail = "delete-owner@example.com",
+                OwnerPhoneNumber = "0501234567",
             }
         );
         Assert.True(created.Succeeded, created.Message);

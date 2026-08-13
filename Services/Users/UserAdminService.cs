@@ -762,17 +762,9 @@ namespace VehiclePermitSystemWeb.Services.Users
                 UserAccountService.SetPassword(existing, generatedTempPassword);
                 existing.MustChangePassword = true;
 
-                if (
-                    existing.CanScanOperations
-                    && string.IsNullOrWhiteSpace(existing.OperatorPinHash)
-                )
-                {
-                    UserAccountService.SetOperatorPin(
-                        existing,
-                        UserAccountService.GenerateTemporaryOperatorPin()
-                    );
-                    existing.MustChangeOperatorPin = true;
-                }
+                existing.OperatorPinHash = string.Empty;
+                existing.OperatorPinSalt = string.Empty;
+                existing.MustChangeOperatorPin = false;
             }
 
             db.SaveChanges();

@@ -332,6 +332,12 @@ internal static partial class ScenarioCatalog
             string? username = null
         ) => Array.Empty<PermitActivity>();
 
+        public IEnumerable<PermitActivity> GetRecentPermitActivitiesForDevice(
+            string deviceId,
+            int take = 20,
+            string? username = null
+        ) => Array.Empty<PermitActivity>();
+
         public PermitActivity? GetLatestPermitActivity() => null;
 
         public IEnumerable<PermitActivity> GetPermitActivities(

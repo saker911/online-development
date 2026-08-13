@@ -55,13 +55,13 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         [StringLength(256, ErrorMessage = "اسم الجهة أو الموقع يجب ألا يتجاوز 256 حرفًا.")]
         public string CompanyName { get; set; } = string.Empty;
 
-        [Display(Name = "الرابط المختصر")]
-        [StringLength(64, ErrorMessage = "الرابط المختصر يجب ألا يتجاوز 64 حرفًا.")]
-        [RegularExpression(
-            "^[a-zA-Z0-9][a-zA-Z0-9-_]{1,63}$",
-            ErrorMessage = "استخدم حروفًا إنجليزية أو أرقامًا أو شرطة فقط، ويجب أن يبدأ بحرف أو رقم."
-        )]
+        // Kept for backwards-compatible form binding. Public links are generated server-side.
         public string TenantId { get; set; } = string.Empty;
+
+        [Display(Name = "رقم الجهة (اختياري)")]
+        [StringLength(32, ErrorMessage = "رقم الجهة يجب ألا يتجاوز 32 رقمًا.")]
+        [RegularExpression("^[0-9]*$", ErrorMessage = "رقم الجهة يقبل الأرقام فقط.")]
+        public string OrganizationReference { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "اسم المسؤول مطلوب.")]
         [Display(Name = "اسم مسؤول الحساب")]

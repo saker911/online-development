@@ -1645,11 +1645,8 @@ internal static partial class ScenarioCatalog
             true
         );
         Require(
-            !string.IsNullOrWhiteSpace(provisionedPin)
-                && provisionedPin.Length == 6
-                && provisionedPin.All(char.IsDigit)
-                && !string.IsNullOrWhiteSpace(provisionedPin),
-            "scan-capable user should receive the initial temporary operator PIN"
+            string.IsNullOrWhiteSpace(provisionedPin),
+            "scan-capable user should not receive a separate operator PIN"
         );
 
         using (var db = dbFactory.CreateDbContext())
@@ -1660,109 +1657,22 @@ internal static partial class ScenarioCatalog
                 "login password hash should be stored"
             );
             Require(
-                !string.IsNullOrWhiteSpace(storedUser.OperatorPinHash),
-                "operator PIN hash should be stored"
-            );
-            Require(
-                !string.Equals(
-                    storedUser.PasswordHash,
-                    storedUser.OperatorPinHash,
-                    StringComparison.Ordinal
-                ),
-                "login password and operator PIN must use separate hashes"
+                string.IsNullOrWhiteSpace(storedUser.OperatorPinHash)
+                    && string.IsNullOrWhiteSpace(storedUser.OperatorPinSalt)
+                    && !storedUser.MustChangeOperatorPin,
+                "operator PIN credentials should remain removed"
             );
         }
 
         var signInResult = userAdminService.SwitchDisplayOperator(
             "gate-default",
             badgeCode,
-            provisionedPin!,
+            "123456",
             "test-user"
         );
         Require(
-            signInResult.Success,
-            "generated operator PIN should be accepted for display login"
-        );
-        Require(
-            signInResult.RequiresPinChange,
-            "default operator PIN should force first-time change"
-        );
-
-        var unchangedPinResult = userAdminService.ChangeDisplayOperatorPin(
-            "gate-default",
-            provisionedPin!,
-            provisionedPin!,
-            out var unchangedPinErrorCode
-        );
-        Require(!unchangedPinResult, "operator PIN change should reject reusing the same PIN");
-        Require(
-            string.Equals(
-                unchangedPinErrorCode,
-                "operator_pin_unchanged",
-                StringComparison.Ordinal
-            ),
-            "operator PIN change should return an unchanged error code when the new PIN matches the current PIN"
-        );
-
-        var changeResult = userAdminService.ChangeDisplayOperatorPin(
-            "gate-default",
-            provisionedPin!,
-            "654321",
-            out var errorCode
-        );
-        Require(changeResult, "operator PIN should be changeable after first login");
-        Require(
-            string.IsNullOrWhiteSpace(errorCode),
-            "operator PIN change should not return an error"
-        );
-
-        var oldPinResult = userAdminService.SwitchDisplayOperator(
-            "gate-default-2",
-            badgeCode,
-            provisionedPin!,
-            "test-user"
-        );
-        Require(
-            !oldPinResult.Success,
-            "old generated operator PIN should stop working after change"
-        );
-
-        var newPinResult = userAdminService.SwitchDisplayOperator(
-            "gate-default-2",
-            badgeCode,
-            "654321",
-            "test-user"
-        );
-        Require(newPinResult.Success, "new operator PIN should work after change");
-
-        using (var db = dbFactory.CreateDbContext())
-        {
-            var storedUser = db.UserAccounts.Single(user => user.Username == username);
-            storedUser.IsActive = false;
-            db.SaveChanges();
-        }
-        Require(
-            userAdminService.GetDisplayOperatorSession("gate-default-2") == null,
-            "disabling an operator should revoke the active display session immediately"
-        );
-
-        using (var db = dbFactory.CreateDbContext())
-        {
-            var storedUser = db.UserAccounts.Single(user => user.Username == username);
-            storedUser.IsActive = true;
-            db.SaveChanges();
-        }
-        var expiringSession = userAdminService.SwitchDisplayOperator(
-            "gate-expiring",
-            badgeCode,
-            "654321",
-            "test-user"
-        );
-        Require(expiringSession.Success, "operator should sign in before expiry validation");
-        clock.Advance(TimeSpan.FromMinutes(31));
-        Require(
-            userAdminService.GetDisplayOperatorSession("gate-expiring") == null,
-            "display operator session should expire after the configured lifetime"
+            !signInResult.Success,
+            "legacy badge and PIN display login should remain disabled"
         );
 
         return Task.CompletedTask;

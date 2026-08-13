@@ -1583,9 +1583,8 @@ namespace VehiclePermitSystemWeb.Controllers
             model.OperatorBadgeCode = (model.OperatorBadgeCode ?? string.Empty)
                 .Trim()
                 .ToUpperInvariant();
-            model.TemporaryOperatorPin = new string(
-                (model.TemporaryOperatorPin ?? string.Empty).Where(char.IsDigit).ToArray()
-            );
+            model.TemporaryOperatorPin = string.Empty;
+            model.MustChangeOperatorPin = false;
             model.Role = (model.Role ?? string.Empty).Trim();
 
             if (IsGeneralManagerRole(model.Role))
@@ -1732,15 +1731,15 @@ namespace VehiclePermitSystemWeb.Controllers
                 model.OperatorBadgeCode,
                 User.IsSuperAdmin()
             );
-            var temporaryPin = _userAdminService.ConfigureOperatorCredentials(
+            _userAdminService.ConfigureOperatorCredentials(
                 model.Username,
                 badgeCode,
-                model.TemporaryOperatorPin,
-                model.MustChangeOperatorPin,
+                null,
+                false,
                 User.IsSuperAdmin()
             );
 
-            return (badgeCode, temporaryPin);
+            return (badgeCode, null);
         }
 
         private void ApplyUsernameValidation(UserEditViewModel model)

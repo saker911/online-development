@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "e2e": "playwright test"
+    "e2e": "dotnet build --configuration Release && playwright test"
   },
   "keywords": [],
   "author": "",

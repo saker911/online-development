@@ -124,6 +124,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Tenant>().Property(x => x.TenantId).HasMaxLength(64);
             modelBuilder.Entity<Tenant>().Property(x => x.Name).HasMaxLength(256);
             modelBuilder.Entity<Tenant>().Property(x => x.Slug).HasMaxLength(256);
+            modelBuilder.Entity<Tenant>().Property(x => x.OrganizationReference).HasMaxLength(32);
             modelBuilder.Entity<Tenant>().Property(x => x.SubscriptionStatus).HasMaxLength(32);
             modelBuilder.Entity<Tenant>().Property(x => x.PlanName).HasMaxLength(128);
             modelBuilder.Entity<Tenant>().Property(x => x.SignupPlanCode).HasMaxLength(64);

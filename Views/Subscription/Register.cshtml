@@ -68,10 +68,10 @@
                         <span asp-validation-for="CompanyName" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">
-                        <label asp-for="TenantId" class="form-label"></label>
-                        <input asp-for="TenantId" class="form-control" dir="ltr" placeholder="company-name" autocomplete="off" />
-                        <div class="form-text">سيكون رابط الدخول بهذا الشكل: /o/company-name</div>
-                        <span asp-validation-for="TenantId" class="field-validation-error"></span>
+                        <label asp-for="OrganizationReference" class="form-label"></label>
+                        <input asp-for="OrganizationReference" class="form-control" inputmode="numeric" maxlength="32" autocomplete="off" />
+                        <div class="form-text">يمكن إدخال سجل تجاري أو رقم مقر حكومي أو رقم مدرسة. سننشئ رابطاً آمناً تلقائياً.</div>
+                        <span asp-validation-for="OrganizationReference" class="field-validation-error"></span>
                     </div>
                 </div>
             </div>

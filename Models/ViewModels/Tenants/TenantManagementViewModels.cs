@@ -19,6 +19,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public string TenantId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Slug { get; set; } = string.Empty;
+        public string OrganizationReference { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public int UserCount { get; set; }
@@ -72,6 +73,34 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
             ErrorMessage = "استخدم حروفًا أو أرقامًا أو شرطة فقط، ويجب أن يبدأ الرابط بحرف أو رقم."
         )]
         public string Slug { get; set; } = string.Empty;
+
+        [Display(Name = "رقم الجهة (اختياري)")]
+        [StringLength(32, ErrorMessage = "رقم الجهة يجب ألا يتجاوز 32 رقمًا.")]
+        [RegularExpression("^[0-9]*$", ErrorMessage = "رقم الجهة يقبل الأرقام فقط.")]
+        public string OrganizationReference { get; set; } = string.Empty;
+
+        [Display(Name = "رقم هوية مسؤول الجهة")]
+        [RegularExpression(
+            SaudiNationalIdOrIqamaValidator.RegularExpressionPattern,
+            ErrorMessage = SaudiNationalIdOrIqamaValidator.ErrorMessage
+        )]
+        public string OwnerUsername { get; set; } = string.Empty;
+
+        [Display(Name = "اسم مسؤول الجهة")]
+        [StringLength(256)]
+        public string OwnerFullName { get; set; } = string.Empty;
+
+        [Display(Name = "البريد الإلكتروني لمسؤول الجهة")]
+        [EmailAddress(ErrorMessage = "أدخل بريدًا إلكترونيًا صحيحًا.")]
+        [StringLength(256)]
+        public string OwnerEmail { get; set; } = string.Empty;
+
+        [Display(Name = "جوال مسؤول الجهة")]
+        [RegularExpression(
+            SaudiMobileNumberValidator.RegularExpressionPattern,
+            ErrorMessage = SaudiMobileNumberValidator.ErrorMessage
+        )]
+        public string OwnerPhoneNumber { get; set; } = string.Empty;
 
         [Display(Name = "اسم الإدارة الافتراضي")]
         [StringLength(256, ErrorMessage = "اسم الإدارة يجب ألا يتجاوز 256 حرفًا.")]

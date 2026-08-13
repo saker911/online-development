@@ -681,7 +681,7 @@ internal static partial class ScenarioCatalog
                     )
             ),
             Scenario(
-                "Operator PIN provisioning stays separate from login password",
+                "Gate operators use account sessions without a separate PIN",
                 fixture =>
                     ScenarioOperatorPinProvisioning(
                         fixture.UserAdminService,
@@ -743,7 +743,7 @@ internal static partial class ScenarioCatalog
                     )
             ),
             Scenario(
-                "Display public links open registration for new browsers",
+                "Display boards register publicly while gate scanning requires an account",
                 fixture => ScenarioDisplayPublicLinksOpenRegistrationForNewBrowsers()
             ),
             Scenario(
@@ -1091,8 +1091,15 @@ internal static partial class ScenarioCatalog
         ];
     }
 
+    public static IReadOnlyList<TestScenario> GetScenarios(string area)
+    {
+        return GetAllScenarios()
+            .Where(scenario => string.Equals(scenario.Area, area, StringComparison.Ordinal))
+            .ToArray();
+    }
+
     private static TestScenario Scenario(string name, Func<TestFixture, Task> execute)
     {
-        return new TestScenario(name, execute);
+        return new TestScenario(name, TestAreaClassifier.Resolve(name), execute);
     }
 }

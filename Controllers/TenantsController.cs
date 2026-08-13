@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using VehiclePermitSystemWeb.Models.ViewModels.Tenants;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Tenants;
+using VehiclePermitSystemWeb.Services.Users;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -10,10 +11,15 @@ namespace VehiclePermitSystemWeb.Controllers
     public sealed class TenantsController : Controller
     {
         private readonly ITenantManagementService _tenantManagementService;
+        private readonly IAccountPasswordResetService? _passwordResetService;
 
-        public TenantsController(ITenantManagementService tenantManagementService)
+        public TenantsController(
+            ITenantManagementService tenantManagementService,
+            IAccountPasswordResetService? passwordResetService = null
+        )
         {
             _tenantManagementService = tenantManagementService;
+            _passwordResetService = passwordResetService;
         }
 
         public IActionResult Index(string? edit = null)
@@ -34,7 +40,10 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Create(TenantEditorViewModel editor)
+        public async Task<IActionResult> Create(
+            TenantEditorViewModel editor,
+            CancellationToken cancellationToken
+        )
         {
             if (!User.IsSuperAdmin())
             {
@@ -48,7 +57,48 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View(nameof(Index), model);
             }
 
+            if (_passwordResetService?.IsDeliveryConfigured != true)
+            {
+                var model = _tenantManagementService.GetDashboard();
+                model.Editor = editor;
+                ModelState.AddModelError(
+                    string.Empty,
+                    "يجب تهيئة بريد المنصة قبل إنشاء جهة حتى يصل رابط تعيين كلمة المرور لمسؤولها."
+                );
+                return View(nameof(Index), model);
+            }
+
             var result = _tenantManagementService.CreateTenant(editor);
+            if (
+                result.Succeeded
+                && !string.IsNullOrWhiteSpace(result.OwnerUsername)
+                && _passwordResetService?.IsDeliveryConfigured == true
+            )
+            {
+                var challenge = _passwordResetService.CreateChallenge(
+                    result.TenantId,
+                    result.OwnerUsername
+                );
+                var resetUrl = challenge == null
+                    ? string.Empty
+                    : Url.Action(
+                        "ResetPassword",
+                        "Account",
+                        new { token = challenge.Token },
+                        Request.Scheme
+                    );
+                if (challenge != null && !string.IsNullOrWhiteSpace(resetUrl))
+                {
+                    await _passwordResetService.SendAsync(
+                        challenge,
+                        resetUrl,
+                        cancellationToken
+                    );
+                    TempData["SuccessMessage"] =
+                        "تمت إضافة الجهة وإرسال رابط تعيين كلمة المرور لمسؤولها.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
             TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
@@ -61,6 +111,12 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 return RedirectToAction("AccessDenied", "Home");
             }
+
+            // Owner identity belongs to the creation workflow and is intentionally absent when editing.
+            ModelState.Remove(nameof(TenantEditorViewModel.OwnerUsername));
+            ModelState.Remove(nameof(TenantEditorViewModel.OwnerFullName));
+            ModelState.Remove(nameof(TenantEditorViewModel.OwnerEmail));
+            ModelState.Remove(nameof(TenantEditorViewModel.OwnerPhoneNumber));
 
             if (!ModelState.IsValid)
             {

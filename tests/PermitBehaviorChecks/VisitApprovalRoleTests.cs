@@ -5,6 +5,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Visits)]
 public sealed class VisitApprovalRoleTests
 {
     [Fact]

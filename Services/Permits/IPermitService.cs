@@ -24,6 +24,11 @@ namespace VehiclePermitSystemWeb.Services.Permits
             int take = 20,
             string? username = null
         );
+        IEnumerable<PermitActivity> GetRecentPermitActivitiesForDevice(
+            string deviceId,
+            int take = 20,
+            string? username = null
+        );
         PermitActivity? GetLatestPermitActivity();
         IEnumerable<PermitActivity> GetPermitActivities(
             string permitNumber,

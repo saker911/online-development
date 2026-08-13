@@ -67,6 +67,9 @@ namespace VehiclePermitSystemWeb.Models.Entities
         [StringLength(256)]
         public string Slug { get; set; } = TenantDefaults.DefaultTenantId;
 
+        [StringLength(32)]
+        public string OrganizationReference { get; set; } = string.Empty;
+
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

@@ -564,13 +564,19 @@
                         <div class="nav-item dropdown notification-bell-dropdown">
                             <button id="notificationBellDropdown" class="btn notification-bell-trigger icon-only-trigger"
                                     data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                                    data-notification-stream-url="@Url.Action("Stream", "Notifications")"
+                                    data-notification-snapshot-url="@Url.Action("Snapshot", "Notifications")"
                                     aria-label="الإشعارات" title="الإشعارات" type="button">
                                 <svg class="shell-action-icon" aria-hidden="true">
                                     <use href="@Url.Content("~/icons/shell-actions.svg#bell")"></use>
                                 </svg>
                                 @if (notificationCenterTotalCount > 0)
                                 {
-                                    <span class="notification-bell-badge">@notificationCenterTotalCount</span>
+                                    <span class="notification-bell-badge" data-notification-badge>@notificationCenterTotalCount</span>
+                                }
+                                else
+                                {
+                                    <span class="notification-bell-badge" data-notification-badge hidden>0</span>
                                 }
                             </button>
 
@@ -582,7 +588,7 @@
 
                                 @if (notificationCenterTotalCount > 0)
                                 {
-                                    <div class="notif-dd-body">
+                                    <div class="notif-dd-body" data-notification-list>
                                         @foreach (var item in shellNotificationCenter.Items)
                                         {
                                             var iconClass = item.Category switch
@@ -625,7 +631,7 @@
                                 }
                                 else
                                 {
-                                    <div class="notif-dd-empty">
+                                    <div class="notif-dd-empty" data-notification-empty>
                                         <img src="~/icons/bell.svg" alt="" class="notif-dd-empty-bell" />
                                         <div class="notif-dd-empty-msg">لا توجد إشعارات جديدة</div>
                                         <div class="notif-dd-empty-sub">ستظهر هنا إشعاراتك فور وصولها.</div>
@@ -940,6 +946,7 @@
 
                             <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
                             <script src="~/js/app-notifications.js" asp-append-version="true"></script>
+                            <script src="~/js/realtime-notifications.js" asp-append-version="true"></script>
                             <script src="~/js/app-validation.js" asp-append-version="true"></script>
                             <script src="~/js/app-date-fields.js" asp-append-version="true"></script>
                             <script src="~/js/app-combobox.js" asp-append-version="true"></script>

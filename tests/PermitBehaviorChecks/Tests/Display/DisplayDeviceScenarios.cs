@@ -307,7 +307,6 @@ internal static partial class ScenarioCatalog
         foreach (
             var actionName in new[]
             {
-                nameof(DisplayController.Gate),
                 nameof(DisplayController.Visits),
                 nameof(DisplayController.Access),
                 nameof(DisplayController.Register),
@@ -328,6 +327,18 @@ internal static partial class ScenarioCatalog
                 $"display action {actionName} should allow anonymous new display browsers to reach registration instead of login"
             );
         }
+
+        var gateMethods = displayControllerType
+            .GetMethods()
+            .Where(method => method.Name == nameof(DisplayController.Gate))
+            .ToList();
+        Require(
+            gateMethods.Count > 0
+                && gateMethods.All(method => !method
+                    .GetCustomAttributes(typeof(AllowAnonymousAttribute), inherit: false)
+                    .Any()),
+            "gate scanning should require an authenticated account with scan permission"
+        );
 
         var view = File.ReadAllText(
             Path.GetFullPath(

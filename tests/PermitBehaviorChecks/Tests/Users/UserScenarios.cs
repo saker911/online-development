@@ -1550,43 +1550,6 @@ internal static partial class ScenarioCatalog
             "gate operator should receive an operator badge code"
         );
 
-        var resetOperatorPinController = CreateUsersController(userAdminService, managerPrincipal);
-        var resetOperatorPinResult = resetOperatorPinController.ResetTemporaryOperatorPin(
-            gateOperatorUsername
-        );
-        Require(
-            resetOperatorPinResult
-                is RedirectToActionResult
-                {
-                    ActionName: nameof(UsersController.Edit),
-                    RouteValues: not null,
-                },
-            "operator PIN reset should redirect back to the user edit screen"
-        );
-        Require(
-            ExtractTemporaryPin(resetOperatorPinController.TempData) is { } resetOperatorPin
-                && HasQueuedToast(resetOperatorPinController.TempData, resetOperatorPin, "success"),
-            "operator PIN reset should publish the temporary PIN message"
-        );
-
-        var generatedOperatorPin =
-            ExtractTemporaryPin(resetOperatorPinController.TempData)
-            ?? throw new InvalidOperationException("operator PIN reset did not publish a PIN");
-        var switchOperatorResult = userAdminService.SwitchDisplayOperator(
-            "DEVICE-TEST-01",
-            gateOperator.OperatorBadgeCode,
-            generatedOperatorPin,
-            actorUsername
-        );
-        Require(
-            switchOperatorResult.Success,
-            "reset operator PIN should allow login with the generated PIN"
-        );
-        Require(
-            switchOperatorResult.RequiresPinChange,
-            "reset operator PIN should force a PIN change on the next login"
-        );
-
         var gateOperatorWithResetPin =
             userAdminService.GetUserAccount(gateOperatorUsername)
             ?? throw new InvalidOperationException(
@@ -1636,7 +1599,7 @@ internal static partial class ScenarioCatalog
                     operatorPinSaltBeforeBlankEdit,
                     StringComparison.Ordinal
                 ),
-            "gate operator edit with a blank PIN should preserve the existing PIN hash"
+            "gate operator edit should keep operator PIN credentials removed"
         );
         Require(
             string.Equals(
@@ -1646,15 +1609,11 @@ internal static partial class ScenarioCatalog
             ),
             "gate operator edit with a blank PIN should still persist other user changes"
         );
-        var preservedPinSwitchResult = userAdminService.SwitchDisplayOperator(
-            "DEVICE-TEST-02",
-            gateOperatorAfterBlankPinEdit.OperatorBadgeCode,
-            generatedOperatorPin,
-            actorUsername
-        );
         Require(
-            preservedPinSwitchResult.Success,
-            "gate operator edit with a blank PIN should keep the previous PIN usable"
+            string.IsNullOrWhiteSpace(gateOperatorAfterBlankPinEdit.OperatorPinHash)
+                && string.IsNullOrWhiteSpace(gateOperatorAfterBlankPinEdit.OperatorPinSalt)
+                && !gateOperatorAfterBlankPinEdit.MustChangeOperatorPin,
+            "gate operator should use the account session without separate PIN credentials"
         );
 
         if (OperatingSystem.IsWindows())

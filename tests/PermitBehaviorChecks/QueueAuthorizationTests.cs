@@ -7,6 +7,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Security)]
 public sealed class QueueAuthorizationTests
 {
     [Fact]

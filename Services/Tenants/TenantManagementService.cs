@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.DataProtection;
@@ -64,6 +65,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                         TenantId = tenant.TenantId,
                         Name = tenant.Name,
                         Slug = tenant.Slug,
+                        OrganizationReference = tenant.OrganizationReference,
                         IsActive = tenant.IsActive,
                         CreatedAtUtc = tenant.CreatedAtUtc,
                         SubscriptionStatus = tenant.SubscriptionStatus,
@@ -118,6 +120,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 TenantId = tenant.TenantId,
                 Name = tenant.Name,
                 Slug = tenant.Slug,
+                OrganizationReference = tenant.OrganizationReference,
                 DepartmentName = settings?.DepartmentName ?? string.Empty,
                 SubscriptionStatus = TenantSubscriptionStatuses.Normalize(
                     tenant.SubscriptionStatus
@@ -153,6 +156,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             var tenantId = NormalizeKey(model.TenantId);
             var name = NormalizeText(model.Name);
             var slug = NormalizeKey(model.Slug);
+            var organizationReference = NormalizeNumericReference(model.OrganizationReference);
             var departmentName = NormalizeText(model.DepartmentName);
             if (string.IsNullOrWhiteSpace(departmentName))
             {
@@ -169,17 +173,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
 
             if (string.IsNullOrWhiteSpace(tenantId))
             {
-                tenantId = NormalizeKey(slug);
-            }
-
-            if (string.IsNullOrWhiteSpace(tenantId))
-            {
-                tenantId = NormalizeKey(name);
+                tenantId = GenerateTenantKey(db, "org");
             }
 
             if (string.IsNullOrWhiteSpace(slug))
             {
-                slug = tenantId;
+                slug = GenerateTenantKey(db, "workspace");
             }
 
             if (string.IsNullOrWhiteSpace(tenantId) || string.IsNullOrWhiteSpace(slug))
@@ -206,6 +205,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                     TenantId = tenantId,
                     Name = name,
                     Slug = slug,
+                    OrganizationReference = organizationReference,
                     IsActive = true,
                     CreatedAtUtc = DateTime.UtcNow,
                     SubscriptionStatus = subscriptionStatus,
@@ -256,8 +256,80 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 }
             );
 
+            var ownerUsername = NormalizeText(model.OwnerUsername);
+            var ownerFullName = NormalizeText(model.OwnerFullName);
+            var ownerEmail = NormalizeText(model.OwnerEmail).ToLowerInvariant();
+            var ownerPhone = NormalizeText(model.OwnerPhoneNumber);
+            var ownerRequested = !string.IsNullOrWhiteSpace(ownerUsername)
+                || !string.IsNullOrWhiteSpace(ownerFullName)
+                || !string.IsNullOrWhiteSpace(ownerEmail)
+                || !string.IsNullOrWhiteSpace(ownerPhone);
+            if (!ownerRequested)
+            {
+                return new TenantOperationResult(false, "بيانات مسؤول الجهة مطلوبة عند إنشاء جهة جديدة.");
+            }
+            if (ownerRequested)
+            {
+                if (!SaudiNationalIdOrIqamaValidator.IsValid(ownerUsername))
+                {
+                    return new TenantOperationResult(false, SaudiNationalIdOrIqamaValidator.ErrorMessage);
+                }
+                if (string.IsNullOrWhiteSpace(ownerFullName))
+                {
+                    return new TenantOperationResult(false, "اسم مسؤول الجهة مطلوب.");
+                }
+                if (!new EmailAddressAttribute().IsValid(ownerEmail))
+                {
+                    return new TenantOperationResult(false, "البريد الإلكتروني لمسؤول الجهة غير صحيح.");
+                }
+                if (!SaudiMobileNumberValidator.IsValidRequired(ownerPhone))
+                {
+                    return new TenantOperationResult(false, SaudiMobileNumberValidator.ErrorMessage);
+                }
+                if (db.UserAccounts.IgnoreQueryFilters().Any(user => user.Username == ownerUsername))
+                {
+                    return new TenantOperationResult(false, "رقم هوية مسؤول الجهة مستخدم في حساب آخر.");
+                }
+
+                var owner = new UserAccount
+                {
+                    TenantId = tenantId,
+                    Username = ownerUsername,
+                    DisplayName = ownerFullName,
+                    FullName = ownerFullName,
+                    Department = departmentName,
+                    JobTitle = "مسؤول الجهة",
+                    PhoneNumber = ownerPhone,
+                    Email = ownerEmail,
+                    IsEmailConfirmed = true,
+                    IsActive = true,
+                    Role = AppRoles.GeneralManager,
+                };
+                AppPermissions.ApplyRoleDefaults(owner);
+                UserAccountService.SetPassword(
+                    owner,
+                    $"Aa1!{Convert.ToHexString(RandomNumberGenerator.GetBytes(16))}"
+                );
+                db.UserAccounts.Add(owner);
+
+                var settings = db.ChangeTracker.Entries<AdministrationSettings>()
+                    .Select(entry => entry.Entity)
+                    .First(item => item.TenantId == tenantId);
+                settings.GeneralManagerUsername = ownerUsername;
+                settings.ManagerName = ownerFullName;
+                settings.ManagerTitle = "مسؤول الجهة";
+                settings.ManagerPhoneNumber = ownerPhone;
+                settings.Email = ownerEmail;
+                settings.IsInitialSetupCompleted = true;
+            }
+
             db.SaveChanges();
-            return new TenantOperationResult(true, "تمت إضافة الجهة بنجاح.");
+            return new TenantOperationResult(
+                true,
+                "تمت إضافة الجهة وربط حساب المسؤول بها.",
+                tenantId,
+                ownerUsername
+            );
         }
 
         public TenantSignupResult CreateSignup(
@@ -273,7 +345,9 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             }
 
             var companyName = NormalizeText(model.CompanyName);
-            var tenantId = NormalizeKey(model.TenantId);
+            var tenantId = GenerateTenantKey(db, "org");
+            var slug = GenerateTenantKey(db, "workspace");
+            var organizationReference = NormalizeNumericReference(model.OrganizationReference);
             var ownerUsername = NormalizeText(model.OwnerUsername);
             var ownerFullName = NormalizeText(model.OwnerFullName);
             var ownerPhone = NormalizeText(model.OwnerPhoneNumber);
@@ -283,16 +357,6 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             if (string.IsNullOrWhiteSpace(companyName))
             {
                 return new TenantSignupResult(false, "اسم الجهة أو الموقع مطلوب.");
-            }
-
-            if (string.IsNullOrWhiteSpace(tenantId))
-            {
-                tenantId = NormalizeKey(companyName);
-            }
-
-            if (string.IsNullOrWhiteSpace(tenantId))
-            {
-                return new TenantSignupResult(false, "أدخل رابطًا مختصرًا صالحًا للجهة أو الموقع.");
             }
 
             if (!SaudiNationalIdOrIqamaValidator.IsValid(ownerUsername))
@@ -321,11 +385,6 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             var now = DateTime.UtcNow;
             PurgeExpiredPendingSignups(db, now);
 
-            if (db.Tenants.Any(tenant => tenant.TenantId == tenantId || tenant.Slug == tenantId))
-            {
-                return new TenantSignupResult(false, "الرابط المختصر مستخدم مسبقًا.");
-            }
-
             if (db.UserAccounts.IgnoreQueryFilters().Any(user => user.Username == ownerUsername))
             {
                 return new TenantSignupResult(false, "اسم المستخدم مستخدم مسبقًا.");
@@ -336,7 +395,8 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 {
                     TenantId = tenantId,
                     Name = companyName,
-                    Slug = tenantId,
+                    Slug = slug,
+                    OrganizationReference = organizationReference,
                     IsActive = true,
                     CreatedAtUtc = now,
                     SubscriptionStatus = TenantSubscriptionStatuses.PendingPayment,
@@ -604,6 +664,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
 
             var name = NormalizeText(model.Name);
             var slug = NormalizeKey(model.Slug);
+            var organizationReference = NormalizeNumericReference(model.OrganizationReference);
             var departmentName = NormalizeText(model.DepartmentName);
             var subscriptionStatus = TenantSubscriptionStatuses.Normalize(model.SubscriptionStatus);
             var planName = NormalizeText(model.PlanName);
@@ -630,6 +691,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
 
             tenant.Name = name;
             tenant.Slug = slug;
+            tenant.OrganizationReference = organizationReference;
             tenant.SubscriptionStatus = subscriptionStatus;
             tenant.PlanName = string.IsNullOrWhiteSpace(planName)
                 ? TenantDefaults.DefaultPlanName
@@ -1022,6 +1084,22 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             }
 
             return normalized.Length <= 64 ? normalized : normalized[..64].Trim('-', '_');
+        }
+
+        private static string NormalizeNumericReference(string? value)
+        {
+            return new string((value ?? string.Empty).Where(char.IsDigit).Take(32).ToArray());
+        }
+
+        private static string GenerateTenantKey(ApplicationDbContext db, string prefix)
+        {
+            string key;
+            do
+            {
+                key = $"{prefix}-{Convert.ToHexString(RandomNumberGenerator.GetBytes(6)).ToLowerInvariant()}";
+            } while (db.Tenants.Any(tenant => tenant.TenantId == key || tenant.Slug == key));
+
+            return key;
         }
     }
 }

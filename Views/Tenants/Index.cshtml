@@ -62,15 +62,20 @@
                     <input asp-for="Editor.Name" name="Name" class="form-control" />
                     <span asp-validation-for="Editor.Name" class="field-validation-error"></span>
                 </div>
+                @if (isEditMode)
+                {
+                    <input asp-for="Editor.TenantId" name="TenantId" type="hidden" />
+                    <div class="tenant-field">
+                        <label asp-for="Editor.Slug">رابط الجهة</label>
+                        <input asp-for="Editor.Slug" name="Slug" class="form-control ltr-field" />
+                        <span asp-validation-for="Editor.Slug" class="field-validation-error"></span>
+                    </div>
+                }
                 <div class="tenant-field">
-                    <label asp-for="Editor.TenantId"></label>
-                    <input asp-for="Editor.TenantId" name="TenantId" class="form-control ltr-field" readonly="@isEditMode" />
-                    <span asp-validation-for="Editor.TenantId" class="field-validation-error"></span>
-                </div>
-                <div class="tenant-field">
-                    <label asp-for="Editor.Slug"></label>
-                    <input asp-for="Editor.Slug" name="Slug" class="form-control ltr-field" />
-                    <span asp-validation-for="Editor.Slug" class="field-validation-error"></span>
+                    <label asp-for="Editor.OrganizationReference"></label>
+                    <input asp-for="Editor.OrganizationReference" name="OrganizationReference" class="form-control ltr-field" inputmode="numeric" maxlength="32" />
+                    <small>سجل تجاري، رقم مقر حكومي، أو رقم مدرسة. لا يظهر في رابط الدخول.</small>
+                    <span asp-validation-for="Editor.OrganizationReference" class="field-validation-error"></span>
                 </div>
                 <div class="tenant-field">
                     <label asp-for="Editor.DepartmentName"></label>
@@ -140,6 +145,38 @@
                     </div>
                 </div>
             </div>
+
+            @if (!isEditMode)
+            {
+                <fieldset class="tenant-services-editor">
+                    <legend>
+                        <span>مسؤول الجهة</span>
+                        <small>يُنشأ حساب الإدارة مرتبطًا بهذه الجهة فقط، ويصل رابط تعيين كلمة المرور إلى بريده.</small>
+                    </legend>
+                    <div class="tenant-form-grid">
+                        <div class="tenant-field">
+                            <label asp-for="Editor.OwnerFullName"></label>
+                            <input asp-for="Editor.OwnerFullName" name="OwnerFullName" class="form-control" required autocomplete="name" />
+                            <span asp-validation-for="Editor.OwnerFullName" class="field-validation-error"></span>
+                        </div>
+                        <div class="tenant-field">
+                            <label asp-for="Editor.OwnerUsername"></label>
+                            <input asp-for="Editor.OwnerUsername" name="OwnerUsername" class="form-control ltr-field" required inputmode="numeric" maxlength="10" autocomplete="off" />
+                            <span asp-validation-for="Editor.OwnerUsername" class="field-validation-error"></span>
+                        </div>
+                        <div class="tenant-field">
+                            <label asp-for="Editor.OwnerEmail"></label>
+                            <input asp-for="Editor.OwnerEmail" name="OwnerEmail" class="form-control ltr-field" required type="email" autocomplete="email" />
+                            <span asp-validation-for="Editor.OwnerEmail" class="field-validation-error"></span>
+                        </div>
+                        <div class="tenant-field">
+                            <label asp-for="Editor.OwnerPhoneNumber"></label>
+                            <input asp-for="Editor.OwnerPhoneNumber" name="OwnerPhoneNumber" class="form-control ltr-field" required inputmode="tel" autocomplete="tel" />
+                            <span asp-validation-for="Editor.OwnerPhoneNumber" class="field-validation-error"></span>
+                        </div>
+                    </div>
+                </fieldset>
+            }
 
             <fieldset class="tenant-services-editor" id="tenantServices">
                 <legend>
@@ -295,13 +332,16 @@
                     @foreach (var tenant in Model.Tenants)
                     {
                         var isDefault = string.Equals(tenant.TenantId, TenantDefaults.DefaultTenantId, StringComparison.OrdinalIgnoreCase);
-                        var searchValue = $"{tenant.Name} {tenant.OrganizationName} {tenant.TenantId} {tenant.Slug}".ToLowerInvariant();
+                        var searchValue = $"{tenant.Name} {tenant.OrganizationName} {tenant.OrganizationReference} {tenant.Slug}".ToLowerInvariant();
                         <tr data-tenant-row data-search="@searchValue" data-state="@(tenant.IsActive ? "active" : "inactive")">
                             <td data-label="الجهة">
                                 <div class="tenant-identity">
                                     <strong>@tenant.Name</strong>
                                     <span>@(string.IsNullOrWhiteSpace(tenant.OrganizationName) ? "بدون اسم تشغيلي" : tenant.OrganizationName)</span>
-                                    <code>@tenant.TenantId</code>
+                                    @if (!string.IsNullOrWhiteSpace(tenant.OrganizationReference))
+                                    {
+                                        <code>رقم الجهة: @tenant.OrganizationReference</code>
+                                    }
                                 </div>
                             </td>
                             <td data-label="الاشتراك">

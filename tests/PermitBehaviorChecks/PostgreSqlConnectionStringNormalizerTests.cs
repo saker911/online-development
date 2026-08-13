@@ -4,6 +4,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Database)]
 public sealed class PostgreSqlConnectionStringNormalizerTests
 {
     [Fact]

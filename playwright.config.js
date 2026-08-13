@@ -27,7 +27,7 @@ module.exports = defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `dotnet run --project "${path.join(__dirname, "VehiclePermitSystemWeb.csproj")}" --no-build --no-launch-profile`,
+    command: `dotnet run --project "${path.join(__dirname, "VehiclePermitSystemWeb.csproj")}" --configuration Release --no-build --no-launch-profile`,
     env: {
       ASPNETCORE_ENVIRONMENT: "Development",
       App__Urls: e2eBaseUrl,
@@ -39,6 +39,11 @@ module.exports = defineConfig({
       Security__CookieSecurePolicy: "SameAsRequest",
       Security__LoginPermitLimit: "100",
       Security__LoginWindowSeconds: "1",
+      Email__Smtp__Host: "127.0.0.1",
+      Email__Smtp__Port: "1",
+      Email__Smtp__Username: "e2e-user",
+      Email__Smtp__Password: "e2e-password",
+      Email__Smtp__FromAddress: "e2e@example.test",
       VehiclePermitSystemWeb__StorageRoot: e2eStorageRoot,
     },
     url: e2eBaseUrl,

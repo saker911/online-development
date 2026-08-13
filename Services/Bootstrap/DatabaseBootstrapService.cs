@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -72,6 +73,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
 
             EnsureSqliteSchemaUpgrades(db);
             EnsureDefaultTenant(db);
+            NormalizeLegacyTenantAccess(db);
 
             var existingUsers = db.UserAccounts.ToList();
 
@@ -121,6 +123,60 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureDepartmentCatalog(db);
 
             db.SaveChanges();
+        }
+
+        private static void NormalizeLegacyTenantAccess(ApplicationDbContext db)
+        {
+            var tenants = db.Tenants.IgnoreQueryFilters().ToList();
+            var occupiedSlugs = tenants
+                .Select(tenant => tenant.Slug)
+                .Where(slug => !string.IsNullOrWhiteSpace(slug))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tenant in tenants.Where(tenant =>
+                !string.IsNullOrWhiteSpace(tenant.Slug) && tenant.Slug.All(char.IsDigit)))
+            {
+                string slug;
+                do
+                {
+                    slug = $"workspace-{Convert.ToHexString(RandomNumberGenerator.GetBytes(6)).ToLowerInvariant()}";
+                } while (!occupiedSlugs.Add(slug));
+
+                tenant.Slug = slug;
+            }
+
+            foreach (var tenant in tenants)
+            {
+                var settings = db.AdministrationSettings.IgnoreQueryFilters()
+                    .FirstOrDefault(item => item.TenantId == tenant.TenantId);
+                if (settings == null || !string.IsNullOrWhiteSpace(settings.GeneralManagerUsername))
+                {
+                    continue;
+                }
+
+                var users = db.UserAccounts.IgnoreQueryFilters()
+                    .Where(user => user.TenantId == tenant.TenantId && user.IsActive && !user.IsSuperAdmin)
+                    .Take(2)
+                    .ToList();
+                if (users.Count != 1)
+                {
+                    continue;
+                }
+
+                var owner = users[0];
+                owner.Role = AppRoles.GeneralManager;
+                owner.JobTitle = "مسؤول الجهة";
+                owner.ManagerUsername = string.Empty;
+                AppPermissions.ApplyRoleDefaults(owner);
+                settings.GeneralManagerUsername = owner.Username;
+                settings.ManagerName = string.IsNullOrWhiteSpace(owner.FullName)
+                    ? owner.DisplayName
+                    : owner.FullName;
+                settings.ManagerTitle = "مسؤول الجهة";
+                settings.ManagerPhoneNumber = owner.PhoneNumber;
+                settings.Email = owner.Email;
+                settings.IsInitialSetupCompleted = true;
+            }
         }
 
         private static void EnsureInitialSetupCompletionState(
@@ -219,6 +275,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "GateServiceEnabled",
                 "INTEGER NOT NULL DEFAULT 1"
             );
+            EnsureSqliteColumn(db, "Tenants", "OrganizationReference", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "Tenants", "NotificationCenterEnabled", "INTEGER NOT NULL DEFAULT 1");
             EnsureSqliteColumn(db, "Tenants", "PermitNotificationsEnabled", "INTEGER NOT NULL DEFAULT 1");
             EnsureSqliteColumn(db, "Tenants", "VisitNotificationsEnabled", "INTEGER NOT NULL DEFAULT 1");

@@ -199,6 +199,33 @@ namespace VehiclePermitSystemWeb.Services.Permits
             return activity;
         }
 
+        public IEnumerable<PermitActivity> GetRecentPermitActivitiesForDevice(
+            string deviceId,
+            int take = 20,
+            string? username = null
+        )
+        {
+            var normalizedDeviceId = (deviceId ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalizedDeviceId))
+            {
+                return Array.Empty<PermitActivity>();
+            }
+
+            using var db = _dbContextFactory.CreateDbContext();
+            var scopedPermitNumbers = GetVisiblePermits(username)
+                .Select(permit => permit.PermitNumber)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            return db.PermitActivities.AsNoTracking()
+                .Where(activity =>
+                    activity.DeviceId == normalizedDeviceId
+                    && scopedPermitNumbers.Contains(activity.PermitNumber)
+                )
+                .OrderByDescending(activity => activity.OccurredAt)
+                .ThenByDescending(activity => activity.Id)
+                .Take(Math.Clamp(take, 1, 100))
+                .ToList();
+        }
+
         public IEnumerable<PermitActivity> GetPermitActivities(
             string permitNumber,
             string? username = null

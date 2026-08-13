@@ -39,3 +39,6 @@ global using VehiclePermitSystemWeb.Utilities.Permits;
 global using VehiclePermitSystemWeb.Utilities.Reports;
 global using VehiclePermitSystemWeb.Utilities.Security;
 global using VehiclePermitSystemWeb.Utilities.Users;
+global using Xunit;
+
+[assembly: CollectionBehavior(DisableTestParallelization = true)]

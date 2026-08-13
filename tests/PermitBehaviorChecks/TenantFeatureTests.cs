@@ -12,8 +12,39 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Administration)]
 public sealed class TenantFeatureTests
 {
+    [Fact]
+    public void TenantCreationCanAtomicallyCreateItsGeneralManager()
+    {
+        using var provider = CreateProvider("tenant-owner-create");
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+
+        var result = service.CreateTenant(new TenantEditorViewModel
+        {
+            Name = "مدرسة الاختبار",
+            OrganizationReference = "123456",
+            OwnerUsername = "1023456789",
+            OwnerFullName = "مدير المدرسة",
+            OwnerEmail = "school-owner@example.com",
+            OwnerPhoneNumber = "0501234567",
+        });
+
+        Assert.True(result.Succeeded, result.Message);
+        using var db = factory.CreateDbContext();
+        var tenant = db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
+        var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
+        var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
+        Assert.StartsWith("workspace-", tenant.Slug);
+        Assert.Equal("123456", tenant.OrganizationReference);
+        Assert.Equal(tenant.TenantId, owner.TenantId);
+        Assert.Equal(AppRoles.GeneralManager, owner.Role);
+        Assert.True(owner.CanManageAdministration);
+        Assert.Equal(owner.Username, settings.GeneralManagerUsername);
+    }
+
     [Fact]
     public void TenantCreationNormalizesDependentServices()
     {
@@ -32,6 +63,10 @@ public sealed class TenantFeatureTests
                 SelfServiceEnabled = true,
                 QueueServiceEnabled = true,
                 GateServiceEnabled = true,
+                OwnerUsername = "1023456789",
+                OwnerFullName = "مسؤول الجهة",
+                OwnerEmail = "feature-owner@example.com",
+                OwnerPhoneNumber = "0501234567",
             }
         );
 

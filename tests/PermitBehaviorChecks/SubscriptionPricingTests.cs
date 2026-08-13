@@ -9,6 +9,7 @@ using Xunit;
 
 namespace PermitBehaviorChecks;
 
+[Trait("Area", TestAreas.Administration)]
 public sealed class SubscriptionPricingTests
 {
     [Fact]

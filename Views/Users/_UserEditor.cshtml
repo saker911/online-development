@@ -614,32 +614,23 @@
                             </div>
                             @if (canEditAdministrativeFields)
                             {
-                                <div class="ue-fields-row ue-fields-3">
+                                <div class="ue-fields-row ue-fields-2">
                                     <div class="ue-field">
                                         <label asp-for="OperatorBadgeCode" class="form-label">باركود المشغل</label>
                                         <input asp-for="OperatorBadgeCode" class="form-control ltr-field" placeholder="GATE-1234567890" />
                                         <span asp-validation-for="OperatorBadgeCode" class="field-validation-error small"></span>
                                     </div>
                                     <div class="ue-field">
-                                        <label asp-for="TemporaryOperatorPin" class="form-label">PIN مؤقت</label>
-                                        <input asp-for="TemporaryOperatorPin" class="form-control ltr-field" inputmode="numeric"
-                                               maxlength="6" placeholder="مثال: 482913" />
-                                        <span asp-validation-for="TemporaryOperatorPin" class="field-validation-error small"></span>
-                                    </div>
-                                    <div class="ue-field">
-                                        <label class="ue-compact-switch ue-toggle-card">
-                                            <span class="ue-toggle-card-copy">
-                                                <strong>إجبار تغيير PIN</strong>
-                                                <small>عند أول دخول لمشغل البوابة.</small>
-                                            </span>
-                                            <input asp-for="MustChangeOperatorPin" class="form-check-input" id="users-must-change-pin" />
-                                        </label>
+                                        <div class="ue-readonly-info-card">
+                                            <strong>الدخول بحساب المستخدم</strong>
+                                            <small>لا يحتاج مأمور البوابة إلى PIN أو كلمة مرور تشغيلية إضافية.</small>
+                                        </div>
                                     </div>
                                 </div>
                             }
                             else
                             {
-                                <div class="ue-fields-row ue-fields-3">
+                                <div class="ue-fields-row ue-fields-2">
                                     <div class="ue-field">
                                         <label class="form-label">باركود المشغل</label>
                                         <div class="ue-readonly-info-card">
@@ -649,31 +640,16 @@
                                         </div>
                                     </div>
                                     <div class="ue-field">
-                                        <label asp-for="TemporaryOperatorPin" class="form-label">PIN مؤقت جديد</label>
-                                        <input asp-for="TemporaryOperatorPin" class="form-control ltr-field" inputmode="numeric"
-                                               maxlength="6" placeholder="مثال: 482913" />
-                                        <span asp-validation-for="TemporaryOperatorPin" class="field-validation-error small"></span>
-                                    </div>
-                                    <div class="ue-field">
-                                        <label class="ue-compact-switch ue-toggle-card">
-                                            <span class="ue-toggle-card-copy">
-                                                <strong>إجبار تغيير PIN</strong>
-                                                <small>يُطبق على دخول مشغل البوابة التالي لهذا الحساب.</small>
-                                            </span>
-                                            <input asp-for="MustChangeOperatorPin" class="form-check-input" id="users-must-change-pin" />
-                                        </label>
+                                        <div class="ue-readonly-info-card">
+                                            <strong>الدخول بحساب المستخدم</strong>
+                                            <small>صلاحية المسح هي التي تتحكم في الوصول إلى مركز البوابة.</small>
+                                        </div>
                                     </div>
                                 </div>
                             }
                             @if (canManageOperatorBadge)
                             {
                                 <div class="ue-perm-toolbar">
-                                        <button type="submit"
-                                            formaction="@resetTemporaryOperatorPinUrl"
-                                            formmethod="post"
-                                            formnovalidate
-                                            data-skip-validation="true"
-                                            class="btn btn-outline-warning btn-sm">إعادة تعيين PIN المؤقت</button>
                                     <a asp-action="PrintOperatorBadge" asp-route-id="@Model.Username"
                                        class="btn btn-outline-secondary btn-sm" target="_blank">طباعة بطاقة مشغل البوابة</a>
                                 </div>

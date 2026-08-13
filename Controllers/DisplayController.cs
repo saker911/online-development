@@ -190,46 +190,20 @@ namespace VehiclePermitSystemWeb.Controllers
             return View();
         }
 
-        [AllowAnonymous]
         public IActionResult Gate(string? id = null, bool operatorMode = false)
         {
-            var authorizationResult = EnsureDisplayPageAccess();
-            if (authorizationResult != null)
+            if (
+                User.Identity?.IsAuthenticated != true
+                || !User.HasPermission(AppPermissions.ScanOperations)
+            )
             {
-                return authorizationResult;
+                return Challenge();
             }
-
-            var configuredModeRedirect = RedirectApprovedDeviceToConfiguredMode(nameof(Gate));
-            if (configuredModeRedirect != null)
-            {
-                return configuredModeRedirect;
-            }
-
-            var isAccountScanner =
-                User.Identity?.IsAuthenticated == true
-                && User.HasPermission(AppPermissions.ScanOperations)
-                && !operatorMode;
-            var username = isAccountScanner ? User.Identity?.Name ?? string.Empty : string.Empty;
+            var username = User.Identity?.Name ?? string.Empty;
             var model = new ScanTestViewModel
             {
                 ScannerUserName = username,
-                RecentActivities = _permitService
-                    .GetRecentPermitActivities(50, username)
-                    .Where(activity =>
-                        !isAccountScanner
-                        || string.Equals(
-                            activity.GateOperatorAccount,
-                            username,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                        || string.Equals(
-                            activity.RecordedBy,
-                            username,
-                            StringComparison.OrdinalIgnoreCase
-                        )
-                    )
-                    .Take(6)
-                    .ToList(),
+                RecentActivities = [],
             };
 
             if (!string.IsNullOrWhiteSpace(id))
@@ -260,7 +234,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             ViewBag.IsUnifiedDisplayMode = true;
-            ViewBag.RequiresOperator = !isAccountScanner;
+            ViewBag.RequiresOperator = false;
             ViewBag.ScannerDisplayName =
                 User.Claims.FirstOrDefault(claim => claim.Type == "DisplayName")?.Value
                 ?? username;
@@ -269,10 +243,8 @@ namespace VehiclePermitSystemWeb.Controllers
             ViewBag.SwitchOperatorEndpoint = Url.Action(nameof(SwitchOperator));
             ViewBag.SignOutOperatorEndpoint = Url.Action(nameof(SignOutOperator));
             ViewBag.ChangeOperatorPinEndpoint = Url.Action(nameof(ChangeOperatorPin));
-            ViewData["HideShell"] = !isAccountScanner;
-            ViewData["BodyClass"] = isAccountScanner
-                ? "unified-gate-account-body"
-                : "unified-gate-kiosk-body";
+            ViewData["HideShell"] = false;
+            ViewData["BodyClass"] = "unified-gate-account-body";
 
             return View("~/Views/ScanConsole/Index.cshtml", model);
         }
@@ -319,11 +291,18 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var approvedEmployees = _permitService.GetApprovedPermitsForDisplay().Take(4).ToList();
             var employeesOut = _permitService.GetEmployeesOutForDisplay().Take(4).ToList();
-            var recentActivities = _permitService.GetRecentPermitActivities(10).ToList();
-            var latestActivity = _permitService.GetLatestPermitActivity();
             var deviceId = (Request.Query["deviceId"].ToString() ?? string.Empty).Trim();
+            var resolvedDeviceId = ResolveDisplaySessionKey(deviceId);
+            var recentActivities = _permitService
+                .GetRecentPermitActivitiesForDevice(
+                    resolvedDeviceId,
+                    10,
+                    User.Identity?.Name
+                )
+                .ToList();
+            var latestActivity = recentActivities.FirstOrDefault();
             var activeOperator = _userAdminService.GetDisplayOperatorSession(
-                ResolveDisplaySessionKey(deviceId)
+                resolvedDeviceId
             );
             return Json(
                 new
@@ -801,18 +780,28 @@ namespace VehiclePermitSystemWeb.Controllers
                 return BuildDisplayMutationDeniedResult();
             }
 
-            operatorSession = _userAdminService.GetDisplayOperatorSession(normalizedDeviceId);
-            if (operatorSession == null)
+            if (
+                User.Identity?.IsAuthenticated == true
+                && User.HasPermission(AppPermissions.ScanOperations)
+            )
             {
-                return BuildDisplayMutationDeniedResult();
+                var username = User.Identity.Name ?? string.Empty;
+                operatorSession = new DisplayOperatorSessionInfo
+                {
+                    Username = username,
+                    DisplayName = User.Claims
+                        .FirstOrDefault(claim => claim.Type == "DisplayName")?.Value ?? username,
+                    DeviceId = normalizedDeviceId,
+                    SignedInAtUtc = DateTime.UtcNow,
+                    MustChangePin = false,
+                };
+                return null;
             }
 
-            return operatorSession.MustChangePin
-                ? BuildDisplayMutationDeniedResult(
-                    "operator_pin_change_required",
-                    "يجب تغيير PIN المؤقت قبل تنفيذ عمليات البوابة."
-                )
-                : null;
+            return BuildDisplayMutationDeniedResult(
+                "account_sign_in_required",
+                "سجّل الدخول بحساب مأمور البوابة لتنفيذ العملية."
+            );
         }
 
         private string ResolvePostedDeviceId(string? deviceId)
