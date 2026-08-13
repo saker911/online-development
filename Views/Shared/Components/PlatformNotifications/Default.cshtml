@@ -1,0 +1,55 @@
+@model PlatformNotificationCenterViewModel
+
+<div class="platform-notifications" data-platform-notifications>
+    <button class="platform-notification-trigger"
+            type="button"
+            data-platform-notification-trigger
+            aria-label="تنبيهات المنصة"
+            aria-expanded="false"
+            title="تنبيهات المنصة">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        <span class="platform-notification-count" data-platform-notification-count>@Model.Items.Count</span>
+    </button>
+    <section class="platform-notification-panel" data-platform-notification-panel hidden aria-label="آخر تنبيهات المنصة">
+        <header>
+            <div>
+                <strong>تنبيهات المنصة</strong>
+                <small>التسجيلات والاشتراكات التي تحتاج متابعة</small>
+            </div>
+            @if (Model.Items.Count > 0)
+            {
+                <button type="button" data-platform-notification-read-all>تحديد الكل كمشاهد</button>
+            }
+        </header>
+        <div class="platform-notification-list">
+            @if (Model.Items.Count == 0)
+            {
+                <div class="platform-notification-empty">
+                    <span aria-hidden="true">✓</span>
+                    <strong>لا توجد تنبيهات جديدة</strong>
+                    <small>ستظهر تسجيلات الجهات والطلبات المهمة هنا.</small>
+                </div>
+            }
+            else
+            {
+                @foreach (var item in Model.Items)
+                {
+                    <a href="@item.ActionUrl"
+                       class="platform-notification-item is-@item.Tone"
+                       data-platform-notification-id="@item.Id">
+                        <span class="platform-notification-dot" aria-hidden="true"></span>
+                        <span>
+                            <strong>@item.Title</strong>
+                            <small>@item.Message</small>
+                            <time datetime="@item.OccurredAtUtc.ToString("O")">@DateHelper.ToGregorianDateTime12(item.OccurredAtUtc)</time>
+                        </span>
+                        <em>@item.Category</em>
+                    </a>
+                }
+            }
+        </div>
+        <footer><a asp-controller="Tenants" asp-action="Index">عرض سجل الجهات</a></footer>
+    </section>
+</div>

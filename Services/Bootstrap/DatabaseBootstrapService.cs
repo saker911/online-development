@@ -301,12 +301,6 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(
                 db,
                 "AdministrationSettings",
-                "AllowedClientIpRanges",
-                "TEXT NOT NULL DEFAULT ''"
-            );
-            EnsureSqliteColumn(
-                db,
-                "AdministrationSettings",
                 "IsInitialSetupCompleted",
                 "INTEGER NOT NULL DEFAULT 0"
             );
@@ -381,6 +375,12 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "INTEGER NOT NULL DEFAULT 0"
             );
             EnsureSqliteColumn(db, "UserAccounts", "IsSuperAdmin", "INTEGER NOT NULL DEFAULT 0");
+            EnsureSqliteColumn(
+                db,
+                "UserAccounts",
+                "IsEmailConfirmed",
+                "INTEGER NOT NULL DEFAULT 1"
+            );
             EnsureSqliteColumn(db, "UserAccounts", "EmployeeNumber", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "UserAccounts", "OperatorBadgeCode", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "UserAccounts", "OperatorPinHash", "TEXT NOT NULL DEFAULT ''");
@@ -2018,7 +2018,6 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 DisplayAccessKey =
                     _configuration["Security:DisplayAccessKey"]
                     ?? DisplayAccessDefaults.CreateAccessKey(),
-                AllowedClientIpRanges = string.Empty,
                 WorkStartTime = new TimeOnly(8, 0),
                 WorkEndTime = new TimeOnly(16, 0),
                 AttendanceGraceMinutes = 15,
@@ -2038,31 +2037,6 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 || secret.Contains("change_this", StringComparison.OrdinalIgnoreCase)
                 || secret.Contains("secure", StringComparison.OrdinalIgnoreCase)
                 || secret.Contains("2026", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string NormalizeAllowedClientIpRanges(string? allowedClientIpRanges)
-        {
-            var entries = ParseAllowedClientIpRanges(allowedClientIpRanges)
-                .Select(NormalizeAllowedClientIpRange)
-                .Where(entry => !string.IsNullOrWhiteSpace(entry))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            return entries.Count == 0 ? string.Empty : string.Join(Environment.NewLine, entries);
-        }
-
-        private static string NormalizeAllowedClientIpRange(string range)
-        {
-            return range.Trim().Replace(" ", string.Empty);
-        }
-
-        private static List<string> ParseAllowedClientIpRanges(string? allowedClientIpRanges)
-        {
-            return (allowedClientIpRanges ?? string.Empty)
-                .Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(entry => entry.Trim())
-                .Where(entry => !string.IsNullOrWhiteSpace(entry))
-                .ToList();
         }
 
         private static void NormalizeAdministrationSettings(AdministrationSettings settings)
@@ -2159,10 +2133,6 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             {
                 settings.Phone = string.Empty;
             }
-
-            settings.AllowedClientIpRanges = NormalizeAllowedClientIpRanges(
-                settings.AllowedClientIpRanges
-            );
 
             if (
                 string.IsNullOrWhiteSpace(settings.DisplayAccessKey)

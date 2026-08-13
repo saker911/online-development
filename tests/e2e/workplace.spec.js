@@ -1,5 +1,9 @@
 const { expect, test } = require("@playwright/test");
-const { createTestPngBuffer, ensureOwnerSignedIn } = require("./helpers/e2e-helpers");
+const {
+  createTestPngBuffer,
+  ensureOwnerSignedIn,
+  ensureOperationalAdminSignedIn,
+} = require("./helpers/e2e-helpers");
 
 test("workplace navigation exposes activity people attendance and sites", async ({ page }) => {
   await ensureOwnerSignedIn(page);
@@ -188,7 +192,7 @@ test("workplace pages stay responsive and use neutral black in dark mode", async
 });
 
 test("home exposes flat permission-aware application cards in light and dark modes", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureOperationalAdminSignedIn(page);
 
   for (const theme of ["light", "dark"]) {
     await page.goto("/");
@@ -238,7 +242,7 @@ test("home exposes flat permission-aware application cards in light and dark mod
 });
 
 test("application launcher stacks cleanly on mobile", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureOperationalAdminSignedIn(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
@@ -260,7 +264,7 @@ test("application launcher stacks cleanly on mobile", async ({ page }) => {
 });
 
 test("application shell keeps document scrolling available on desktop and mobile", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureOperationalAdminSignedIn(page);
 
   for (const viewport of [
     { width: 1440, height: 900 },
@@ -289,7 +293,7 @@ test("application shell keeps document scrolling available on desktop and mobile
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/Tenants");
+  await page.goto("/Users");
   const menuButton = page.getByRole("button", { name: "فتح القائمة" });
   await menuButton.click();
   await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).overflowY)).toBe("hidden");
@@ -310,7 +314,7 @@ test("display and gate sidebar routes never appear active together", async ({ pa
 });
 
 test("desktop shell uses a compact horizontal portal navigation", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureOperationalAdminSignedIn(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
 

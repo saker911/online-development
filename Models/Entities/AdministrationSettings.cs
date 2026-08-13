@@ -21,7 +21,6 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public string SignatureImageContentType { get; set; } = string.Empty;
         public string DisplayBaseUrl { get; set; } = string.Empty;
         public string DisplayAccessKey { get; set; } = string.Empty;
-        public string AllowedClientIpRanges { get; set; } = string.Empty;
         public TimeOnly WorkStartTime { get; set; } = new(8, 0);
         public TimeOnly WorkEndTime { get; set; } = new(16, 0);
         public int AttendanceGraceMinutes { get; set; } = 15;

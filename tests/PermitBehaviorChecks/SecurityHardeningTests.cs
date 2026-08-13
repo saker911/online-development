@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Buffers.Binary;
@@ -633,9 +634,152 @@ public sealed class SecurityHardeningTests
         Assert.Null(tenantA.UserAccounts.SingleOrDefault(item => item.Username == "1000000002"));
     }
 
+    [Fact]
+    public void TenantUserCreationAndUpdateCannotCrossTenantBoundary()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"tenant-user-writes-{Guid.NewGuid():N}")
+            .Options;
+        var tenantContext = new FixedTenantContext("tenant-a");
+        var factory = new FixedTenantDbContextFactory(options, tenantContext);
+
+        using (var seed = factory.CreateDbContext())
+        {
+            seed.Tenants.AddRange(
+                new Tenant
+                {
+                    TenantId = "tenant-a",
+                    Name = "جهة ألف",
+                    Slug = "tenant-a",
+                    IsActive = true,
+                },
+                new Tenant
+                {
+                    TenantId = "tenant-b",
+                    Name = "جهة باء",
+                    Slug = "tenant-b",
+                    IsActive = true,
+                }
+            );
+            seed.SaveChanges();
+        }
+
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var clock = new SystemClock();
+        var service = new UserAdminService(
+            factory,
+            new ConfigurationBuilder().Build(),
+            cache,
+            clock,
+            new PermitAuditService(),
+            new UserSessionService(factory, clock)
+        );
+        var user = new UserAccount
+        {
+            TenantId = "tenant-b",
+            Username = "1000000011",
+            DisplayName = "موظف جهة ألف",
+            FullName = "موظف جهة ألف",
+            PhoneNumber = "0500000011",
+            Role = AppRoles.Employee,
+            IsActive = true,
+        };
+        AppPermissions.ApplyRoleDefaults(user);
+
+        Assert.True(service.CreateUser(user, "TenantBoundary2026!"));
+
+        using (var assertCreate = factory.CreateDbContext())
+        {
+            var stored = assertCreate.UserAccounts.Single(item => item.Username == user.Username);
+            Assert.Equal("tenant-a", stored.TenantId);
+        }
+
+        user.TenantId = "tenant-b";
+        user.JobTitle = "موظف محدث";
+        Assert.True(service.UpdateUser(user));
+
+        using var assertUpdate = factory.CreateDbContext();
+        var updated = assertUpdate.UserAccounts.Single(item => item.Username == user.Username);
+        Assert.Equal("tenant-a", updated.TenantId);
+        Assert.Equal("موظف محدث", updated.JobTitle);
+        Assert.Empty(
+            assertUpdate.UserAccounts.IgnoreQueryFilters().Where(item => item.TenantId == "tenant-b")
+        );
+    }
+
+    [Fact]
+    public void PlatformOwnerCanExplicitlyCreateUserInSelectedTenant()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseInMemoryDatabase($"platform-user-writes-{Guid.NewGuid():N}")
+            .Options;
+        var factory = new FixedTenantDbContextFactory(
+            options,
+            new FixedTenantContext(TenantDefaults.DefaultTenantId)
+        );
+        using (var seed = factory.CreateDbContext())
+        {
+            seed.Tenants.AddRange(
+                new Tenant
+                {
+                    TenantId = TenantDefaults.DefaultTenantId,
+                    Name = TenantDefaults.DefaultTenantName,
+                    Slug = TenantDefaults.DefaultTenantId,
+                    IsActive = true,
+                },
+                new Tenant
+                {
+                    TenantId = "tenant-b",
+                    Name = "جهة باء",
+                    Slug = "tenant-b",
+                    IsActive = true,
+                }
+            );
+            seed.SaveChanges();
+        }
+
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var clock = new SystemClock();
+        var service = new UserAdminService(
+            factory,
+            new ConfigurationBuilder().Build(),
+            cache,
+            clock,
+            new PermitAuditService(),
+            new UserSessionService(factory, clock)
+        );
+        var user = new UserAccount
+        {
+            TenantId = "tenant-b",
+            Username = "1000000012",
+            DisplayName = "مدير جهة باء",
+            FullName = "مدير جهة باء",
+            PhoneNumber = "0500000012",
+            Role = AppRoles.GeneralManager,
+            IsActive = true,
+        };
+        AppPermissions.ApplyRoleDefaults(user);
+
+        Assert.True(service.CreateUser(user, "PlatformSelection2026!", allowTenantSelection: true));
+
+        using var assertDb = factory.CreateDbContext();
+        var stored = assertDb
+            .UserAccounts.IgnoreQueryFilters()
+            .Single(item => item.Username == user.Username);
+        Assert.Equal("tenant-b", stored.TenantId);
+    }
+
     private sealed class FixedTenantContext(string tenantId) : ITenantContext
     {
         public string TenantId { get; } = tenantId;
+    }
+
+    private sealed class FixedTenantDbContextFactory(
+        DbContextOptions<ApplicationDbContext> options,
+        ITenantContext tenantContext
+    ) : IDbContextFactory<ApplicationDbContext>
+    {
+        public ApplicationDbContext CreateDbContext() => new(options, tenantContext);
     }
 
     private static async Task ServeClamAvResponseAsync(

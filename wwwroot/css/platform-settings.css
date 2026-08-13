@@ -86,17 +86,58 @@
 
 .pricing-plan-head {
     align-items: center;
+    min-height: 86px;
+    margin: 0;
+    padding: 18px 0;
+    cursor: pointer;
+    list-style: none;
+}
+
+.pricing-plan-head::-webkit-details-marker {
+    display: none;
 }
 
 .pricing-plan-head > div:nth-child(2) {
     min-width: 190px;
 }
 
+.pricing-plan-summary {
+    width: auto !important;
+    height: auto !important;
+    margin-inline-start: auto;
+    padding: 0 !important;
+    color: var(--t-text-muted) !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    font-size: .78rem;
+    font-weight: 500 !important;
+}
+
+.pricing-plan-chevron {
+    width: 32px !important;
+    height: 32px !important;
+    flex: 0 0 32px !important;
+    color: var(--t-primary) !important;
+    background: var(--t-primary-soft) !important;
+    border-color: color-mix(in srgb, var(--t-primary) 25%, var(--t-border)) !important;
+    transition: transform .16s ease;
+}
+
+.pricing-plan-editor[open] .pricing-plan-chevron {
+    transform: rotate(180deg);
+}
+
+.pricing-plan-body {
+    padding: 0 0 30px;
+}
+
 .pricing-plan-toggles {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-inline-start: auto;
+    justify-content: flex-end;
+    margin-bottom: 20px;
 }
 
 .pricing-toggle {
@@ -158,14 +199,10 @@
 }
 
 .pricing-settings-actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 4;
-    margin-inline: -12px;
-    padding: 18px 12px;
-    background: color-mix(in srgb, var(--t-surface) 94%, transparent);
+    margin-top: 8px;
+    padding: 22px 0;
+    background: transparent;
     border-top: 1px solid var(--t-border);
-    backdrop-filter: blur(10px);
 }
 
 .establishment-page-shell {
@@ -225,8 +262,20 @@
     }
 
     .pricing-plan-head {
-        align-items: flex-start;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .pricing-plan-summary {
+        grid-column: 2;
+        margin: 0;
+    }
+
+    .pricing-plan-chevron {
+        grid-column: 3;
+        grid-row: 1 / span 2;
     }
 
     .pricing-plan-toggles {

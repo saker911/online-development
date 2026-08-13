@@ -2,9 +2,18 @@
 @using VehiclePermitSystemWeb.Models.Entities
 
 @{
+    Layout = "_PlatformLayout";
     ViewData["Title"] = "إدارة الجهات";
     var isEditMode = !string.IsNullOrWhiteSpace(Model.Editor.TenantId);
     var forceEditorOpen = isEditMode || !ViewData.ModelState.IsValid;
+    var recentCutoffUtc = DateTime.UtcNow.AddDays(-7);
+    var recentTenantCount = Model.Tenants.Count(tenant => tenant.CreatedAtUtc >= recentCutoffUtc);
+    var pendingPaymentCount = Model.Tenants.Count(tenant => string.Equals(
+        tenant.SubscriptionStatus,
+        TenantSubscriptionStatuses.PendingPayment,
+        StringComparison.Ordinal
+    ));
+    var inactiveTenantCount = Model.Tenants.Count(tenant => !tenant.IsActive);
 
     string GetSubscriptionClass(string status) => status switch
     {
@@ -290,6 +299,16 @@
             <div>
                 <span class="tenants-kicker">السجل</span>
                 <h2 id="tenantRegistryTitle">الجهات المسجلة</h2>
+                <p>راجع التسجيلات والاشتراكات ونشاط كل جهة من سجل واحد.</p>
+            </div>
+            <span class="tenant-record-total"><strong>@Model.Tenants.Count</strong> جهة</span>
+        </div>
+        <div class="tenant-registry-controls">
+            <div class="tenant-registry-tabs" role="group" aria-label="عروض سجل الجهات">
+                <button type="button" class="is-active" data-tenant-view="all" aria-pressed="true">الكل <span>@Model.Tenants.Count</span></button>
+                <button type="button" data-tenant-view="recent" aria-pressed="false">الجديدة <span>@recentTenantCount</span></button>
+                <button type="button" data-tenant-view="pending" aria-pressed="false">بانتظار الدفع <span>@pendingPaymentCount</span></button>
+                <button type="button" data-tenant-view="inactive" aria-pressed="false">الموقوفة <span>@inactiveTenantCount</span></button>
             </div>
             <div class="tenant-registry-tools">
                 <label class="tenant-search">
@@ -304,8 +323,18 @@
                         <option value="inactive">الموقوفة</option>
                     </select>
                 </label>
-                <span class="tenant-visible-count"><strong id="tenantVisibleCount">@Model.Tenants.Count</strong> جهة</span>
+                <label>
+                    <span class="visually-hidden">ترتيب السجل</span>
+                    <select id="tenantSort" class="form-select">
+                        <option value="newest">الأحدث تسجيلًا</option>
+                        <option value="oldest">الأقدم تسجيلًا</option>
+                        <option value="name">الاسم</option>
+                        <option value="usage">الأكثر استخدامًا</option>
+                    </select>
+                </label>
+                <button type="button" class="tenant-clear-filters" id="tenantClearFilters" hidden>مسح المرشحات</button>
             </div>
+            <span class="tenant-visible-count">النتائج: <strong id="tenantVisibleCount">@Model.Tenants.Count</strong></span>
         </div>
 
         <div class="tenant-table-wrap">
@@ -333,11 +362,21 @@
                     {
                         var isDefault = string.Equals(tenant.TenantId, TenantDefaults.DefaultTenantId, StringComparison.OrdinalIgnoreCase);
                         var searchValue = $"{tenant.Name} {tenant.OrganizationName} {tenant.OrganizationReference} {tenant.Slug}".ToLowerInvariant();
-                        <tr data-tenant-row data-search="@searchValue" data-state="@(tenant.IsActive ? "active" : "inactive")">
+                        var usageTotal = tenant.UserCount + tenant.PermitCount + tenant.VisitCount;
+                        var createdAtUnix = new DateTimeOffset(DateTime.SpecifyKind(tenant.CreatedAtUtc, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
+                        <tr data-tenant-row
+                            data-search="@searchValue"
+                            data-state="@(tenant.IsActive ? "active" : "inactive")"
+                            data-subscription="@tenant.SubscriptionStatus"
+                            data-recent="@(tenant.CreatedAtUtc >= recentCutoffUtc ? "true" : "false")"
+                            data-created="@createdAtUnix"
+                            data-usage="@usageTotal"
+                            data-name="@tenant.Name">
                             <td data-label="الجهة">
                                 <div class="tenant-identity">
                                     <strong>@tenant.Name</strong>
                                     <span>@(string.IsNullOrWhiteSpace(tenant.OrganizationName) ? "بدون اسم تشغيلي" : tenant.OrganizationName)</span>
+                                    <span>سُجلت @DateHelper.ToGregorianDateTime12(tenant.CreatedAtUtc)</span>
                                     @if (!string.IsNullOrWhiteSpace(tenant.OrganizationReference))
                                     {
                                         <code>رقم الجهة: @tenant.OrganizationReference</code>
@@ -488,7 +527,11 @@
 
             const search = document.getElementById('tenantSearch');
             const stateFilter = document.getElementById('tenantStateFilter');
+            const sortControl = document.getElementById('tenantSort');
+            const clearFilters = document.getElementById('tenantClearFilters');
+            const viewButtons = Array.from(document.querySelectorAll('[data-tenant-view]'));
             const rows = Array.from(document.querySelectorAll('[data-tenant-row]'));
+            const tableBody = document.querySelector('.tenant-table tbody');
             const visibleCount = document.getElementById('tenantVisibleCount');
             const emptyState = document.getElementById('tenantEmptyState');
             const paginationShell = document.getElementById('tenantPaginationShell');
@@ -499,6 +542,8 @@
             const pageSize = 10;
             let currentPage = 1;
             let currentTotalPages = 1;
+            let activeView = 'all';
+            const arabicCollator = new Intl.Collator('ar', { sensitivity: 'base' });
 
             const createPageButton = (pageNumber) => {
                 const button = document.createElement('button');
@@ -562,11 +607,23 @@
             const applyFilters = (resetPage = false) => {
                 const query = (search?.value || '').trim().toLowerCase();
                 const state = stateFilter?.value || 'all';
+                const sort = sortControl?.value || 'newest';
                 const matchingRows = rows.filter((row) => {
                     const matchesSearch = !query || (row.dataset.search || '').includes(query);
                     const matchesState = state === 'all' || row.dataset.state === state;
-                    return matchesSearch && matchesState;
+                    const matchesView = activeView === 'all'
+                        || (activeView === 'recent' && row.dataset.recent === 'true')
+                        || (activeView === 'pending' && row.dataset.subscription === '@TenantSubscriptionStatuses.PendingPayment')
+                        || (activeView === 'inactive' && row.dataset.state === 'inactive');
+                    return matchesSearch && matchesState && matchesView;
                 });
+                matchingRows.sort((first, second) => {
+                    if (sort === 'oldest') return Number(first.dataset.created || 0) - Number(second.dataset.created || 0);
+                    if (sort === 'name') return arabicCollator.compare(first.dataset.name || '', second.dataset.name || '');
+                    if (sort === 'usage') return Number(second.dataset.usage || 0) - Number(first.dataset.usage || 0);
+                    return Number(second.dataset.created || 0) - Number(first.dataset.created || 0);
+                });
+                matchingRows.forEach((row) => tableBody?.appendChild(row));
                 const totalMatches = matchingRows.length;
                 const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
                 currentTotalPages = totalPages;
@@ -585,10 +642,35 @@
 
                 if (visibleCount) visibleCount.textContent = String(totalMatches);
                 if (emptyState) emptyState.hidden = totalMatches !== 0;
+                if (clearFilters) clearFilters.hidden = !query && state === 'all' && sort === 'newest' && activeView === 'all';
                 renderPagination(totalPages, totalMatches, startIndex, endIndex);
             };
             search?.addEventListener('input', () => applyFilters(true));
             stateFilter?.addEventListener('change', () => applyFilters(true));
+            sortControl?.addEventListener('change', () => applyFilters(true));
+            viewButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    activeView = button.dataset.tenantView || 'all';
+                    viewButtons.forEach((candidate) => {
+                        const isActive = candidate === button;
+                        candidate.classList.toggle('is-active', isActive);
+                        candidate.setAttribute('aria-pressed', String(isActive));
+                    });
+                    applyFilters(true);
+                });
+            });
+            clearFilters?.addEventListener('click', () => {
+                if (search) search.value = '';
+                if (stateFilter) stateFilter.value = 'all';
+                if (sortControl) sortControl.value = 'newest';
+                activeView = 'all';
+                viewButtons.forEach((button) => {
+                    const isActive = button.dataset.tenantView === 'all';
+                    button.classList.toggle('is-active', isActive);
+                    button.setAttribute('aria-pressed', String(isActive));
+                });
+                applyFilters(true);
+            });
             previousPage?.addEventListener('click', () => {
                 if (currentPage <= 1) return;
                 currentPage -= 1;

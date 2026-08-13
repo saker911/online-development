@@ -49,6 +49,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View("Landing");
             }
 
+            if (User.IsSuperAdmin())
+            {
+                return RedirectToAction("Index", "Platform");
+            }
+
             var username = User.Identity?.Name;
             var permitsTask = Task.Run(() => _permitService.GetVisiblePermits(username).ToList());
             var visitsTask = Task.Run(() => _visitService.GetAllVisits().ToList());

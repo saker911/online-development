@@ -474,21 +474,6 @@ if (cookieSecurePolicy == CookieSecurePolicy.Always)
     );
 }
 
-app.Use(
-    async (context, next) =>
-    {
-        if (userAdminService.IsClientIpAllowed(context))
-        {
-            await next();
-            return;
-        }
-
-        context.Response.StatusCode = StatusCodes.Status403Forbidden;
-        context.Response.ContentType = "text/plain; charset=utf-8";
-        await context.Response.WriteAsync("هذا العنوان غير مسموح له بالوصول إلى النظام.");
-    }
-);
-
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

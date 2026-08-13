@@ -1,5 +1,3 @@
-using System.Net;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using VehiclePermitSystemWeb.Data;
 using VehiclePermitSystemWeb.Models.DTOs;
@@ -124,37 +122,5 @@ namespace VehiclePermitSystemWeb.Services.Users
             db.SaveChanges();
         }
 
-        public bool IsClientIpAllowed(HttpContext context)
-        {
-            using var db = _dbContextFactory.CreateDbContext();
-            var settings = db
-                .AdministrationSettings.AsNoTracking()
-                .OrderByDescending(item => item.Id == 1)
-                .ThenBy(item => item.Id)
-                .FirstOrDefault();
-            var allowedRanges = ClientIpRangeMatcher.ParseAllowedClientIpRanges(
-                settings?.AllowedClientIpRanges
-            );
-
-            if (!allowedRanges.Any())
-            {
-                return true;
-            }
-
-            var clientIp = ClientIpRangeMatcher.ResolveClientIpAddress(context);
-            if (clientIp == null)
-            {
-                return false;
-            }
-
-            if (IPAddress.IsLoopback(clientIp))
-            {
-                return true;
-            }
-
-            return allowedRanges.Any(range =>
-                ClientIpRangeMatcher.IsClientIpInRange(clientIp, range)
-            );
-        }
     }
 }

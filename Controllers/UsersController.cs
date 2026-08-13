@@ -634,7 +634,13 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             var tempPassword = UserAccountService.GenerateTemporaryPassword();
-            if (!_userAdminService.CreateUser(MapToUser(model), tempPassword))
+            if (
+                !_userAdminService.CreateUser(
+                    MapToUser(model),
+                    tempPassword,
+                    User.IsSuperAdmin()
+                )
+            )
             {
                 ModelState.AddModelError(string.Empty, "اسم المستخدم موجود مسبقًا.");
                 return View("Create", model);

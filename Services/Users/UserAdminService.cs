@@ -210,7 +210,6 @@ namespace VehiclePermitSystemWeb.Services.Users
                 existing.SignatureImageContentType = settings.SignatureImageContentType;
                 existing.DisplayBaseUrl = settings.DisplayBaseUrl;
                 existing.DisplayAccessKey = settings.DisplayAccessKey;
-                existing.AllowedClientIpRanges = settings.AllowedClientIpRanges;
                 existing.WorkStartTime = settings.WorkStartTime;
                 existing.WorkEndTime = settings.WorkEndTime;
                 existing.AttendanceGraceMinutes = settings.AttendanceGraceMinutes;
@@ -440,7 +439,11 @@ namespace VehiclePermitSystemWeb.Services.Users
                 ?? 1;
         }
 
-        public bool CreateUser(UserAccount user, string password)
+        public bool CreateUser(
+            UserAccount user,
+            string password,
+            bool allowTenantSelection = false
+        )
         {
             using var db = _dbContextFactory.CreateDbContext();
             if (db.UserAccounts.IgnoreQueryFilters().Any(u => u.Username == user.Username))
@@ -448,7 +451,10 @@ namespace VehiclePermitSystemWeb.Services.Users
                 return false;
             }
 
-            var normalizedTenantId = ResolveActiveTenantId(db, user.TenantId);
+            var normalizedTenantId = ResolveActiveTenantId(
+                db,
+                allowTenantSelection ? user.TenantId : db.CurrentTenantId
+            );
             if (string.IsNullOrWhiteSpace(normalizedTenantId))
             {
                 return false;
@@ -569,7 +575,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                 return false;
             }
 
-            var normalizedTenantId = isProtectedSuperAdmin
+            var normalizedTenantId = isProtectedSuperAdmin || !ignoreTenantFilters
                 ? existing.TenantId
                 : ResolveActiveTenantId(db, user.TenantId);
             if (string.IsNullOrWhiteSpace(normalizedTenantId))
@@ -1506,11 +1512,6 @@ namespace VehiclePermitSystemWeb.Services.Users
         public void RemoveSession(string sessionId)
         {
             _userSessionService.RemoveSession(sessionId);
-        }
-
-        public bool IsClientIpAllowed(HttpContext context)
-        {
-            return _userSessionService.IsClientIpAllowed(context);
         }
 
         public void RecordUserActivity(

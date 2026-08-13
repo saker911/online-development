@@ -188,7 +188,6 @@ internal static partial class ScenarioCatalog
 
             settings.DisplayBaseUrl = "http://127.0.0.1:5001";
             settings.DisplayAccessKey = oldKey;
-            settings.AllowedClientIpRanges = "10.3.25.x";
             db.SaveChanges();
         }
 

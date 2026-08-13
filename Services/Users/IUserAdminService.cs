@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using VehiclePermitSystemWeb.Models.DTOs;
 using VehiclePermitSystemWeb.Models.Entities;
 using VehiclePermitSystemWeb.Models.ViewModels.Account;
@@ -37,7 +36,11 @@ namespace VehiclePermitSystemWeb.Services.Users
         bool HasAnyUsers();
         UserAccount? GetUserAccount(string username, bool ignoreTenantFilters = false);
         bool CompleteInitialSetup(InitialSetupViewModel model);
-        bool CreateUser(UserAccount user, string password);
+        bool CreateUser(
+            UserAccount user,
+            string password,
+            bool allowTenantSelection = false
+        );
         bool UpdateUser(
             UserAccount user,
             string? newPassword = null,
@@ -117,7 +120,6 @@ namespace VehiclePermitSystemWeb.Services.Users
         bool ValidateSession(string sessionId, out string? username);
         bool RefreshSession(string sessionId);
         void RemoveSession(string sessionId);
-        bool IsClientIpAllowed(HttpContext context);
         void RecordUserActivity(
             string username,
             string displayName,

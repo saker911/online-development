@@ -1,0 +1,167 @@
+@using VehiclePermitSystemWeb.Services.Administration
+@{
+    var currentController = ViewContext.RouteData.Values["Controller"]?.ToString() ?? string.Empty;
+    var title = ViewData["Title"]?.ToString() ?? "لوحة المنصة";
+    var successMessage = TempData["SuccessMessage"] as string;
+    var errorMessage = TempData["ErrorMessage"] as string;
+    bool IsActive(string controller) => string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase);
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>@title - @ProductIdentity.DisplayName</title>
+    <link rel="icon" href="~/@ProductIdentity.MarkPath" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/theme-vars.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-forms.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/date-fields.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/notification-toasts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/platform-shell.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="platform-body">
+    <div class="app-notify-container" role="region" aria-label="الإشعارات">
+        @if (!string.IsNullOrWhiteSpace(successMessage))
+        {
+            <div class="app-notify app-notify-success" role="alert" aria-live="polite">
+                <div class="app-notify-icon" aria-hidden="true">✓</div>
+                <div class="app-notify-text">@successMessage</div>
+                <button class="app-notify-close" type="button" aria-label="إغلاق">×</button>
+                <div class="app-notify-bar" aria-hidden="true"></div>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="app-notify app-notify-danger" role="alert" aria-live="polite">
+                <div class="app-notify-icon" aria-hidden="true">!</div>
+                <div class="app-notify-text">@errorMessage</div>
+                <button class="app-notify-close" type="button" aria-label="إغلاق">×</button>
+                <div class="app-notify-bar" aria-hidden="true"></div>
+            </div>
+        }
+    </div>
+    <div class="modal fade" id="confirmActionModal" tabindex="-1" aria-hidden="true" aria-labelledby="confirmActionModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content platform-confirm-modal">
+                <h2 id="confirmActionModalLabel">تأكيد العملية</h2>
+                <p id="confirmActionModalMessage">هل تريد المتابعة؟</p>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionModalConfirm">متابعة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="platform-shell">
+        <aside class="platform-sidebar">
+            <a class="platform-brand" asp-controller="Platform" asp-action="Index">
+                <span><img src="~/@ProductIdentity.MarkPath" alt="" /></span>
+                <div><strong>لوحة المنصة</strong><small>@ProductIdentity.DisplayName</small></div>
+            </a>
+            <nav aria-label="إدارة المنصة">
+                <a class="@(IsActive("Platform") ? "active" : string.Empty)" asp-controller="Platform" asp-action="Index"><span>01</span>الرئيسية</a>
+                <a class="@(IsActive("Tenants") ? "active" : string.Empty)" asp-controller="Tenants" asp-action="Index"><span>02</span>الجهات والاشتراكات</a>
+                <a class="@(IsActive("Pricing") ? "active" : string.Empty)" asp-controller="Pricing" asp-action="Index"><span>03</span>الأسعار والعروض</a>
+                <a class="@(IsActive("PlatformSettings") ? "active" : string.Empty)" asp-controller="PlatformSettings" asp-action="Index"><span>04</span>بيانات المنصة</a>
+            </nav>
+            <div class="platform-sidebar-footer">
+                <a asp-controller="Home" asp-action="Landing" target="_blank" rel="noopener">عرض الموقع العام</a>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit">تسجيل الخروج</button>
+                </form>
+            </div>
+        </aside>
+        <section class="platform-content">
+            <header class="platform-topbar">
+                <button class="platform-menu-toggle" type="button" data-platform-menu aria-label="فتح القائمة">☰</button>
+                <nav class="platform-breadcrumb" aria-label="مسار الصفحة">
+                    <a asp-controller="Platform" asp-action="Index">لوحة المنصة</a>
+                    <span aria-hidden="true">/</span>
+                    <strong>@title</strong>
+                </nav>
+                <div class="platform-topbar-tools">
+                    @await Component.InvokeAsync("PlatformNotifications")
+                    <div class="platform-owner">
+                        <span class="platform-owner-avatar" aria-hidden="true">م</span>
+                        <span><strong>مالك المنصة</strong><small>حساب الإدارة العليا</small></span>
+                    </div>
+                </div>
+            </header>
+            <div class="platform-page">@RenderBody()</div>
+        </section>
+        <button class="platform-backdrop" type="button" data-platform-close aria-label="إغلاق القائمة" hidden></button>
+    </div>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/toast-notifications.js" asp-append-version="true"></script>
+    <script src="~/js/confirm-action-modal.js" asp-append-version="true"></script>
+    <script src="~/js/app-date-fields.js" asp-append-version="true"></script>
+    <script nonce="@(Context.Items["CspScriptNonce"])">
+        (function () {
+            var body = document.body;
+            var backdrop = document.querySelector('[data-platform-close]');
+            function closeMenu() { body.classList.remove('platform-menu-open'); if (backdrop) backdrop.hidden = true; }
+            document.querySelector('[data-platform-menu]')?.addEventListener('click', function () { body.classList.add('platform-menu-open'); if (backdrop) backdrop.hidden = false; });
+            backdrop?.addEventListener('click', closeMenu);
+
+            var notificationRoot = document.querySelector('[data-platform-notifications]');
+            var notificationTrigger = notificationRoot?.querySelector('[data-platform-notification-trigger]');
+            var notificationPanel = notificationRoot?.querySelector('[data-platform-notification-panel]');
+            var notificationBadge = notificationRoot?.querySelector('[data-platform-notification-count]');
+            var notificationItems = Array.from(notificationRoot?.querySelectorAll('[data-platform-notification-id]') || []);
+            var notificationStorageKey = 'tasareeh_platform_notifications_seen_v1';
+            var readSeenIds = function () {
+                try { return new Set(JSON.parse(localStorage.getItem(notificationStorageKey) || '[]')); }
+                catch (_) { return new Set(); }
+            };
+            var saveSeenIds = function (seenIds) {
+                localStorage.setItem(notificationStorageKey, JSON.stringify(Array.from(seenIds).slice(-100)));
+            };
+            var refreshNotifications = function () {
+                var seenIds = readSeenIds();
+                var unseenCount = 0;
+                notificationItems.forEach(function (item) {
+                    var isSeen = seenIds.has(item.dataset.platformNotificationId || '');
+                    item.classList.toggle('is-seen', isSeen);
+                    if (!isSeen) unseenCount += 1;
+                });
+                if (notificationBadge) {
+                    notificationBadge.textContent = String(unseenCount);
+                    notificationBadge.hidden = unseenCount === 0;
+                }
+            };
+            notificationTrigger?.addEventListener('click', function (event) {
+                event.stopPropagation();
+                var shouldOpen = notificationPanel?.hidden !== false;
+                if (notificationPanel) notificationPanel.hidden = !shouldOpen;
+                notificationTrigger.setAttribute('aria-expanded', String(shouldOpen));
+            });
+            notificationItems.forEach(function (item) {
+                item.addEventListener('click', function () {
+                    var seenIds = readSeenIds();
+                    seenIds.add(item.dataset.platformNotificationId || '');
+                    saveSeenIds(seenIds);
+                });
+            });
+            notificationRoot?.querySelector('[data-platform-notification-read-all]')?.addEventListener('click', function () {
+                var seenIds = readSeenIds();
+                notificationItems.forEach(function (item) { seenIds.add(item.dataset.platformNotificationId || ''); });
+                saveSeenIds(seenIds);
+                refreshNotifications();
+            });
+            document.addEventListener('click', function (event) {
+                if (!notificationRoot || notificationRoot.contains(event.target)) return;
+                if (notificationPanel) notificationPanel.hidden = true;
+                notificationTrigger?.setAttribute('aria-expanded', 'false');
+            });
+            refreshNotifications();
+        })();
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

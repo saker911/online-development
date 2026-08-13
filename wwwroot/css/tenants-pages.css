@@ -276,26 +276,124 @@
     justify-content: space-between;
     gap: 20px;
     padding: 18px 20px;
-    border-bottom: 1px solid var(--app-border, #dbe4ec);
 }
 
 .tenant-registry h2 {
     font-size: 1.15rem;
 }
 
+.tenant-registry-head p {
+    margin: 5px 0 0;
+    color: var(--app-muted, #65778d);
+    font-size: .75rem;
+}
+
+.tenant-record-total {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    color: var(--app-muted, #65778d);
+    font-size: .74rem;
+}
+
+.tenant-record-total strong {
+    color: var(--app-text, #122438);
+    font-size: 1.05rem;
+}
+
+.tenant-registry-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid var(--app-border, #dbe4ec);
+}
+
+.tenant-registry-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tenant-registry-tabs button {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    color: var(--app-muted, #65778d);
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    font-size: .76rem;
+    font-weight: 700;
+}
+
+.tenant-registry-tabs button:hover {
+    color: var(--app-text, #122438);
+}
+
+.tenant-registry-tabs button.is-active {
+    color: var(--platform-accent-strong, #0b6f52);
+    border-bottom-color: var(--platform-accent, #118563);
+}
+
+.tenant-registry-tabs button span {
+    min-width: 21px;
+    height: 21px;
+    display: grid;
+    place-items: center;
+    padding-inline: 5px;
+    color: inherit;
+    background: var(--platform-accent-soft, #ecf7f2);
+    border-radius: 4px;
+    font-size: .64rem;
+}
+
 .tenant-registry-tools {
     display: grid;
-    grid-template-columns: minmax(220px, 320px) 150px auto;
+    grid-template-columns: minmax(190px, 290px) 140px 155px auto;
     align-items: center;
     gap: 10px;
 }
 
+.tenant-registry-tools :is(.form-control, .form-select) {
+    min-height: 40px;
+    font-size: .77rem;
+}
+
+.tenant-clear-filters {
+    min-height: 40px;
+    padding: 7px 10px;
+    color: var(--platform-accent-strong, #0b6f52);
+    background: transparent;
+    border: 1px solid var(--app-border, #dbe4ec);
+    border-radius: 5px;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.tenant-clear-filters:hover {
+    background: var(--platform-accent-soft, #ecf7f2);
+    border-color: #9ccfbd;
+}
+
+.tenant-clear-filters[hidden] { display: none; }
+
 .tenant-visible-count {
+    grid-column: 1 / -1;
     min-width: 72px;
     color: var(--app-muted, #65778d);
     font-size: 0.78rem;
-    text-align: center;
+    text-align: start;
 }
+
+.tenant-visible-count strong { color: var(--app-text, #122438); }
 
 .tenant-table-wrap {
     overflow-x: auto;
@@ -303,7 +401,7 @@
 
 .tenant-table {
     width: 100%;
-    min-width: 1050px;
+    min-width: 960px;
     table-layout: fixed;
     border-collapse: collapse;
 }
@@ -596,7 +694,8 @@
     }
 
     .tenant-registry-head,
-    .tenant-registry-tools {
+    .tenant-registry-tools,
+    .tenant-registry-controls {
         align-items: stretch;
     }
 
@@ -605,8 +704,12 @@
     }
 
     .tenant-registry-tools {
-        grid-template-columns: minmax(0, 1fr) 150px auto;
+        grid-template-columns: minmax(0, 1fr) 150px 160px;
     }
+
+    .tenant-registry-controls { grid-template-columns: 1fr; }
+
+    .tenant-clear-filters { grid-column: 1 / -1; }
 }
 
 @media (max-width: 700px) {
@@ -628,6 +731,22 @@
     .tenant-registry-tools {
         grid-template-columns: 1fr;
     }
+
+    .tenant-registry-controls { padding-inline: 14px; }
+
+    .tenant-registry-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-inline: 0;
+        overflow: visible;
+    }
+
+    .tenant-registry-tabs button {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .tenant-clear-filters { grid-column: auto; }
 
     .tenant-field-wide {
         grid-column: auto;

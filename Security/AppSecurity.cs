@@ -130,7 +130,7 @@ namespace VehiclePermitSystemWeb.Security
                     PermitReviewer => "مدقق التصاريح",
                     GeneralManager => "مدير عام",
                     Manager or DepartmentManager => "مدير قسم",
-                    Employee => "مستخدم قديم",
+                    Employee => "موظف",
                     SystemAdmin => "مشرف النظام",
                     GateSecurity => "مأمور بوابة",
                     Receptionist => "موظف إدخال",

@@ -982,6 +982,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private IActionResult RedirectToDefaultAuthorizedPage(UserAccount? user)
         {
+            if (user?.IsSuperAdmin == true)
+            {
+                return RedirectToAction("Index", "Platform");
+            }
+
             if (
                 user != null
                 && string.Equals(user.Role, AppRoles.GateSecurity, StringComparison.Ordinal)

@@ -1251,7 +1251,6 @@ namespace VehiclePermitSystemWeb.Services.Permits
                 SignatureImagePath =
                     _configuration["Administration:SignatureImagePath"] ?? string.Empty,
                 DisplayBaseUrl = _configuration["Security:DisplayBaseUrl"] ?? string.Empty,
-                AllowedClientIpRanges = string.Empty,
                 WorkStartTime = new TimeOnly(8, 0),
                 WorkEndTime = new TimeOnly(16, 0),
                 AttendanceGraceMinutes = 15,

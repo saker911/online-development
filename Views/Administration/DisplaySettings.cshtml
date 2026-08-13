@@ -60,24 +60,18 @@
 
         <div class="col-12">
             <div class="app-card-surface p-3">
-                <div class="fw-bold mb-3">إعدادات الشبكة</div>
-                <form asp-action="DisplaySettings" method="post" data-confirm-message="هل تريد حفظ إعدادات الشبكة وشاشات العرض؟">
+                <div class="fw-bold mb-3">عنوان تشغيل الشاشات</div>
+                <form asp-action="DisplaySettings" method="post" data-confirm-message="هل تريد حفظ عنوان تشغيل شاشات العرض؟">
                     @Html.AntiForgeryToken()
                     <input asp-for="Id" type="hidden" />
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label asp-for="DisplayBaseUrl" class="form-label">عنوان الوصول الخارجي</label>
-                            <input asp-for="DisplayBaseUrl" class="form-control" dir="ltr" placeholder="http://10.3.25.1:5001" />
+                            <label asp-for="DisplayBaseUrl" class="form-label">رابط النظام المستخدم في الشاشات</label>
+                            <input asp-for="DisplayBaseUrl" class="form-control" dir="ltr" placeholder="https://tasareehapp.com" />
                             <span asp-validation-for="DisplayBaseUrl" class="text-danger"></span>
                         </div>
-                        <div class="col-md-12">
-                            <label asp-for="AllowedClientIpRanges" class="form-label">عناوين IP المسموح بها</label>
-                            <textarea asp-for="AllowedClientIpRanges" class="form-control" rows="3" dir="ltr"
-                                      placeholder="10.3.25.x&#10;10.3.100.x"></textarea>
-                            <span asp-validation-for="AllowedClientIpRanges" class="text-danger"></span>
-                        </div>
                         <div class="col-12">
-                            <button type="submit" class="btn btn-primary">حفظ إعدادات الشبكة</button>
+                            <button type="submit" class="btn btn-primary">حفظ عنوان الشاشات</button>
                         </div>
                     </div>
                 </form>

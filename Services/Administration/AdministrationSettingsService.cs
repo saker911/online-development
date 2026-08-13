@@ -65,7 +65,6 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 SignatureImageContentType = settings.SignatureImageContentType,
                 DisplayBaseUrl = settings.DisplayBaseUrl,
                 DisplayAccessKey = settings.DisplayAccessKey,
-                AllowedClientIpRanges = settings.AllowedClientIpRanges,
                 WorkStartTime = settings.WorkStartTime,
                 WorkEndTime = settings.WorkEndTime,
                 AttendanceGraceMinutes = settings.AttendanceGraceMinutes,
@@ -96,9 +95,6 @@ namespace VehiclePermitSystemWeb.Services.Administration
                 || DisplayAccessDefaults.LooksLikePlaceholder(settings.DisplayAccessKey)
                     ? DisplayAccessKeyHasher.Hash(DisplayAccessDefaults.CreateAccessKey())
                     : DisplayAccessKeyHasher.Hash(settings.DisplayAccessKey.Trim());
-            settings.AllowedClientIpRanges = (
-                settings.AllowedClientIpRanges ?? string.Empty
-            ).Trim();
             settings.OfficialWorkDaysCsv = AdministrationWorkSchedule.NormalizeOfficialWorkDaysCsv(
                 settings.OfficialWorkDaysCsv
             );

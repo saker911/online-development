@@ -8,6 +8,8 @@ using VehiclePermitSystemWeb.Controllers;
 using VehiclePermitSystemWeb.Data;
 using VehiclePermitSystemWeb.Models.Entities;
 using VehiclePermitSystemWeb.Models.ViewModels.Platform;
+using VehiclePermitSystemWeb.Models.ViewModels.Tenants;
+using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Administration;
 using VehiclePermitSystemWeb.Services.Tenants;
 using Xunit;
@@ -77,6 +79,45 @@ public sealed class PlatformSettingsTests
         Assert.False(service.UpdateCalled);
     }
 
+    [Fact]
+    public void PlatformControllerAllowsOnlyThePlatformOwner()
+    {
+        var service = new RecordingTenantManagementService();
+        var regularController = new PlatformController(service)
+        {
+            ControllerContext = BuildControllerContext(isSuperAdmin: false),
+        };
+        var ownerController = new PlatformController(service)
+        {
+            ControllerContext = BuildControllerContext(isSuperAdmin: true),
+        };
+
+        var denied = Assert.IsType<RedirectToActionResult>(regularController.Index());
+        Assert.Equal("AccessDenied", denied.ActionName);
+        Assert.Equal("Home", denied.ControllerName);
+
+        var allowed = Assert.IsType<ViewResult>(ownerController.Index());
+        Assert.IsType<TenantManagementViewModel>(allowed.Model);
+        Assert.True(service.DashboardRequested);
+    }
+
+    private static ControllerContext BuildControllerContext(bool isSuperAdmin)
+    {
+        var claims = new List<Claim> { new(ClaimTypes.Name, "platform-test") };
+        if (isSuperAdmin)
+        {
+            claims.Add(new Claim(AppClaimTypes.SuperAdmin, "true"));
+        }
+
+        return new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test")),
+            },
+        };
+    }
+
     private sealed class RecordingPlatformSettingsService : IPlatformSettingsService
     {
         public bool UpdateCalled { get; private set; }
@@ -87,5 +128,26 @@ public sealed class PlatformSettingsTests
         {
             UpdateCalled = true;
         }
+    }
+
+    private sealed class RecordingTenantManagementService : ITenantManagementService
+    {
+        public bool DashboardRequested { get; private set; }
+
+        public TenantManagementViewModel GetDashboard()
+        {
+            DashboardRequested = true;
+            return new TenantManagementViewModel();
+        }
+
+        public TenantEditorViewModel? GetEditor(string tenantId) => null;
+        public TenantOperationResult CreateTenant(TenantEditorViewModel model) => throw new NotSupportedException();
+        public TenantSignupResult CreateSignup(TenantSignupViewModel model, bool emailConfirmed = false) => throw new NotSupportedException();
+        public TenantSignupResult CreateGoogleTrial(string fullName, string email) => throw new NotSupportedException();
+        public TenantCheckoutViewModel? GetCheckout(string tenantId, string checkoutToken) => null;
+        public TenantOperationResult UpdateTenant(string tenantId, TenantEditorViewModel model) => throw new NotSupportedException();
+        public TenantOperationResult SetTenantActive(string tenantId, bool isActive) => throw new NotSupportedException();
+        public TenantOperationResult DeleteTenant(string tenantId, string confirmationName) => throw new NotSupportedException();
+        public TenantOperationResult ActivatePaidSubscription(string tenantId) => throw new NotSupportedException();
     }
 }

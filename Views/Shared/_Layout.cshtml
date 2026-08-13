@@ -512,15 +512,6 @@
                                     <a class="dropdown-item @(isControllerActive("Sites") ? "active" : string.Empty)"
                                        asp-controller="Sites" asp-action="Index">المواقع</a>
                                 }
-                                @if (!isSubscriptionRestricted && User.IsSuperAdmin())
-                                {
-                                    <a class="dropdown-item @(isControllerActive("Tenants") ? "active" : string.Empty)"
-                                       asp-controller="Tenants" asp-action="Index">الجهات</a>
-                                    <a class="dropdown-item @(isControllerActive("PlatformSettings") ? "active" : string.Empty)"
-                                       asp-controller="PlatformSettings" asp-action="Index">بيانات المنصة</a>
-                                    <a class="dropdown-item @(isControllerActive("Pricing") ? "active" : string.Empty)"
-                                       asp-controller="Pricing" asp-action="Index">الأسعار والعروض</a>
-                                }
                                 @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDelegations))
                                 {
                                     <a class="dropdown-item @(isControllerActive("Delegations") ? "active" : string.Empty)"
@@ -853,24 +844,6 @@
                                                            asp-controller="Sites" asp-action="Index">
                                                         <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#sites")"></use></svg>
                                                         <span>المواقع</span>
-                                                    </a>
-                                                }
-                                                @if (!isSubscriptionRestricted && User.IsSuperAdmin())
-                                                {
-                                                    <a class="app-sidebar-link @(isControllerActive("Tenants") ? "active" : string.Empty)"
-                                                           asp-controller="Tenants" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#tenant")"></use></svg>
-                                                        <span>الجهات والشركات</span>
-                                                    </a>
-                                                    <a class="app-sidebar-link @(isControllerActive("PlatformSettings") ? "active" : string.Empty)"
-                                                           asp-controller="PlatformSettings" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#administration")"></use></svg>
-                                                        <span>بيانات مالك المنصة</span>
-                                                    </a>
-                                                    <a class="app-sidebar-link @(isControllerActive("Pricing") ? "active" : string.Empty)"
-                                                           asp-controller="Pricing" asp-action="Index">
-                                                        <svg class="app-sidebar-icon" aria-hidden="true"><use href="@Url.Content("~/icons/sidebar-actions.svg?v=20260812#reports")"></use></svg>
-                                                        <span>الأسعار والعروض</span>
                                                     </a>
                                                 }
                                                 @if (!isSubscriptionRestricted && User.HasPermission(AppPermissions.ManageDelegations))

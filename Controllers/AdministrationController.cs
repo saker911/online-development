@@ -1228,12 +1228,6 @@ namespace VehiclePermitSystemWeb.Controllers
                 model.DisplayBaseUrl = string.Empty;
             }
 
-            if (string.IsNullOrWhiteSpace(model.AllowedClientIpRanges))
-            {
-                ModelState.Remove(nameof(model.AllowedClientIpRanges));
-                model.AllowedClientIpRanges = string.Empty;
-            }
-
             if (!string.IsNullOrWhiteSpace(model.DisplayBaseUrl))
             {
                 if (
@@ -1260,10 +1254,9 @@ namespace VehiclePermitSystemWeb.Controllers
             var settings = currentSettings;
             settings.DisplayBaseUrl = model.DisplayBaseUrl.Trim().TrimEnd('/');
             settings.DisplayAccessKey = currentSettings.DisplayAccessKey;
-            settings.AllowedClientIpRanges = model.AllowedClientIpRanges.Trim();
 
             _userAdminService.UpdateAdministrationSettings(settings);
-            this.ToastSuccess("تم تحديث إعدادات الشبكة وشاشات العرض بنجاح");
+            this.ToastSuccess("تم تحديث عنوان شاشات العرض بنجاح");
             return RedirectToAction(nameof(DisplaySettings));
         }
 
@@ -1293,7 +1286,6 @@ namespace VehiclePermitSystemWeb.Controllers
                 Id = settings.Id,
                 DisplayBaseUrl = settings.DisplayBaseUrl,
                 DisplayAccessKey = oneTimeAccessKey,
-                AllowedClientIpRanges = settings.AllowedClientIpRanges,
                 GateDisplayUrl = BuildDisplayManagementUrl(
                     nameof(DisplayController.Gate),
                     includeSetupKey: false
@@ -1371,7 +1363,6 @@ namespace VehiclePermitSystemWeb.Controllers
                 SignatureImageContentType = currentSettings.SignatureImageContentType,
                 DisplayBaseUrl = currentSettings.DisplayBaseUrl,
                 DisplayAccessKey = currentSettings.DisplayAccessKey,
-                AllowedClientIpRanges = currentSettings.AllowedClientIpRanges,
                 WorkStartTime = postedSettings.WorkStartTime,
                 WorkEndTime = postedSettings.WorkEndTime,
                 AttendanceGraceMinutes = postedSettings.AttendanceGraceMinutes,

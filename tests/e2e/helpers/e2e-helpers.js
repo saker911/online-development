@@ -44,6 +44,7 @@ const allPermissionFlags = [
 ];
 
 let sequence = 0;
+let operationalAdmin = null;
 
 const crcTable = Array.from({ length: 256 }, (_, index) => {
   let value = index;
@@ -113,7 +114,7 @@ function dateTimeLocal(minutesFromNow) {
 }
 
 async function expectHomePage(page) {
-  await expect(page).toHaveURL(/\/($|Home(\/Index)?$|Dashboard$)/i);
+  await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$|Platform$)/i);
   await expect(page.getByText("تسجيل الدخول", { exact: true })).toHaveCount(0);
 }
 
@@ -295,6 +296,30 @@ async function createUser(page, options = {}) {
   await submitForm(page, "/Users/Create", form);
   const temporaryPassword = await readTemporaryPassword(page);
   return { username, fullName, role, temporaryPassword };
+}
+
+async function ensureOperationalAdminSignedIn(page) {
+  if (!operationalAdmin) {
+    const account = await createUser(page, {
+      role: roles.systemAdmin,
+      applyRoleDefaults: false,
+      permissions: allPermissionFlags,
+      fullName: "مشرف تشغيل اختبار المتصفح",
+      jobTitle: "مشرف التشغيل",
+    });
+    const password = "OperationalTest2026!";
+    await page.context().clearCookies();
+    await signIn(page, account.username, account.temporaryPassword);
+    if (/\/Account\/ChangePassword/i.test(page.url())) {
+      await changePassword(page, account.temporaryPassword, password);
+    }
+    operationalAdmin = { username: account.username, password };
+    return;
+  }
+
+  await page.context().clearCookies();
+  await signIn(page, operationalAdmin.username, operationalAdmin.password);
+  await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$)/i);
 }
 
 async function changePassword(page, currentPassword, newPassword) {
@@ -491,6 +516,7 @@ module.exports = {
   signIn,
   signOut,
   ensureOwnerSignedIn,
+  ensureOperationalAdminSignedIn,
   updateAdministrationBranding,
   createUser,
   changePassword,

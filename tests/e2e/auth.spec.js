@@ -7,7 +7,7 @@ const owner = {
 let permitSequence = 0;
 
 async function expectHomePage(page) {
-  await expect(page).toHaveURL(/\/($|Home(\/Index)?$)/i);
+  await expect(page).toHaveURL(/\/Platform$/i);
   await expect(page.locator('form[action*="/Account/Login"]')).toHaveCount(0);
 }
 
@@ -126,7 +126,7 @@ test("initial setup creates owner", async ({ page }) => {
   await expectHomePage(page);
 });
 
-test("owner can sign in normally and open home page", async ({ page }) => {
+test("owner can sign in normally and open platform workspace", async ({ page }) => {
   await completeInitialSetup(page);
 
   await page.locator('form[action*="/Account/Logout"]').evaluate((form) => form.requestSubmit());

@@ -1,0 +1,78 @@
+@model TenantManagementViewModel
+
+@{
+    Layout = "_PlatformLayout";
+    ViewData["Title"] = "لوحة المنصة";
+    var expiringSoon = Model.Tenants.Count(tenant =>
+        tenant.SubscriptionEndsAtUtc.HasValue
+        && tenant.SubscriptionEndsAtUtc.Value >= DateTime.UtcNow
+        && tenant.SubscriptionEndsAtUtc.Value <= DateTime.UtcNow.AddDays(30));
+}
+
+<main class="platform-dashboard">
+    <header class="platform-page-heading">
+        <div>
+            <span class="platform-eyebrow">إدارة المنصة</span>
+            <h1>نظرة عامة</h1>
+            <p>متابعة الجهات والاشتراكات وإعدادات الخدمة من مساحة مستقلة.</p>
+        </div>
+        <a class="btn btn-primary" asp-controller="Tenants" asp-action="Index">إضافة جهة</a>
+    </header>
+
+    <section class="platform-metrics" aria-label="ملخص المنصة">
+        <article><span>الجهات</span><strong>@Model.TotalTenants</strong><small>@Model.ActiveTenants نشطة</small></article>
+        <article><span>الحسابات</span><strong>@Model.TotalUsers</strong><small>في جميع الجهات</small></article>
+        <article><span>الموقوفة</span><strong>@Model.BlockedTenants</strong><small>تحتاج متابعة</small></article>
+        <article><span>تنتهي قريباً</span><strong>@expiringSoon</strong><small>خلال 30 يوماً</small></article>
+    </section>
+
+    <section class="platform-section">
+        <div class="platform-section-heading">
+            <div><span class="platform-eyebrow">التحكم</span><h2>إدارة الخدمة</h2></div>
+        </div>
+        <div class="platform-action-grid">
+            <a asp-controller="Tenants" asp-action="Index">
+                <span class="platform-action-icon" aria-hidden="true">01</span>
+                <strong>الجهات والاشتراكات</strong>
+                <small>إنشاء الجهات، تعيين المدير، وتفعيل الخدمات.</small>
+            </a>
+            <a asp-controller="Pricing" asp-action="Index">
+                <span class="platform-action-icon" aria-hidden="true">02</span>
+                <strong>الأسعار والعروض</strong>
+                <small>إدارة الباقات المنشورة ومدد الاشتراك.</small>
+            </a>
+            <a asp-controller="PlatformSettings" asp-action="Index">
+                <span class="platform-action-icon" aria-hidden="true">03</span>
+                <strong>بيانات المنصة</strong>
+                <small>الهوية النظامية وقنوات الدعم والاستضافة.</small>
+            </a>
+        </div>
+    </section>
+
+    <section class="platform-section">
+        <div class="platform-section-heading">
+            <div><span class="platform-eyebrow">آخر النشاط</span><h2>أحدث الجهات</h2></div>
+            <a asp-controller="Tenants" asp-action="Index">عرض جميع الجهات</a>
+        </div>
+        <div class="platform-tenant-list">
+            @if (Model.Tenants.Count == 0)
+            {
+                <div class="platform-empty">لم تُنشأ جهات بعد.</div>
+            }
+            else
+            {
+                @foreach (var tenant in Model.Tenants.OrderByDescending(item => item.CreatedAtUtc).Take(6))
+                {
+                    <a class="platform-tenant-row" asp-controller="Tenants" asp-action="Index" asp-route-edit="@tenant.TenantId">
+                        <span class="platform-tenant-name"><strong>@tenant.Name</strong><small>@tenant.Slug</small></span>
+                        <span>@tenant.PlanName</span>
+                        <span>@tenant.UserCount حساب</span>
+                        <span class="platform-status @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "is-active" : "is-blocked")">
+                            @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "نشطة" : "متوقفة")
+                        </span>
+                    </a>
+                }
+            }
+        </div>
+    </section>
+</main>

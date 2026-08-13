@@ -1,6 +1,7 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Platform.SubscriptionPricingViewModel
 
 @{
+    Layout = "_PlatformLayout";
     ViewData["Title"] = "الأسعار والعروض";
 }
 
@@ -27,14 +28,19 @@
             var plan = Model.Plans[index];
             var offerStartInputId = $"Plans_{index}__OfferStartsAtUtc";
             var offerEndInputId = $"Plans_{index}__OfferEndsAtUtc";
-            <section class="platform-settings-section pricing-plan-editor" aria-labelledby="plan-title-@index">
+            <details class="platform-settings-section pricing-plan-editor" open="@(index == 0 ? "open" : null)">
                 <input asp-for="Plans[index].Code" type="hidden" />
-                <div class="platform-settings-section-head pricing-plan-head">
+                <summary class="platform-settings-section-head pricing-plan-head">
                     <span>@(index + 1)</span>
                     <div>
                         <h2 id="plan-title-@index">@plan.Name</h2>
                         <p class="ltr-field">@plan.Code</p>
                     </div>
+                    <span class="pricing-plan-summary">@plan.DurationMonths شهر · @plan.Price.ToString("0.##") ر.س</span>
+                    <span class="pricing-plan-chevron" aria-hidden="true">⌄</span>
+                </summary>
+
+                <div class="pricing-plan-body" aria-labelledby="plan-title-@index">
                     <div class="pricing-plan-toggles">
                         <label class="pricing-toggle">
                             <input asp-for="Plans[index].IsActive" type="checkbox" />
@@ -45,9 +51,8 @@
                             <span>الباقة المميزة</span>
                         </label>
                     </div>
-                </div>
 
-                <div class="platform-settings-grid pricing-settings-grid">
+                    <div class="platform-settings-grid pricing-settings-grid">
                     <div class="field-group">
                         <label asp-for="Plans[index].Name" class="form-label">اسم الباقة</label>
                         <input asp-for="Plans[index].Name" class="form-control" />
@@ -124,8 +129,9 @@
                         <textarea asp-for="Plans[index].FeaturesText" class="form-control" rows="5" placeholder="ميزة واحدة في كل سطر"></textarea>
                         <span asp-validation-for="Plans[index].FeaturesText" class="field-validation-error"></span>
                     </div>
+                    </div>
                 </div>
-            </section>
+            </details>
         }
 
         <footer class="platform-settings-actions pricing-settings-actions">
