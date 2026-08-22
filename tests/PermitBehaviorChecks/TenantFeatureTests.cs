@@ -69,6 +69,8 @@ public sealed class TenantFeatureTests
 
         var riyadh = Assert.Single(dashboard.Tenants, tenant => tenant.TenantId == "riyadh");
         Assert.Equal(2, riyadh.UserCount);
+        Assert.Equal(1, riyadh.ActiveUserCount);
+        Assert.Equal(1, riyadh.InactiveUserCount);
         Assert.Equal("مدير فرع الرياض", riyadh.Users[0].FullName);
         Assert.True(riyadh.Users[0].IsTenantManager);
         Assert.Contains(

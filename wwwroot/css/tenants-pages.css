@@ -551,6 +551,130 @@
     font-size: 0.92rem;
 }
 
+.tenant-users-directory {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.tenant-users-directory summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    padding: 6px 9px;
+    border: 1px solid var(--app-border, #dbe4ec);
+    border-radius: 5px;
+    color: var(--platform-accent-strong, #0b6f52);
+    background: var(--app-surface, #fff);
+    font-size: 0.7rem;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+}
+
+.tenant-users-directory summary::-webkit-details-marker {
+    display: none;
+}
+
+.tenant-users-directory summary::after {
+    content: "+";
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.tenant-users-directory[open] summary::after {
+    content: "−";
+}
+
+.tenant-users-directory summary small {
+    margin-inline-start: auto;
+    color: var(--app-muted, #65778d);
+    font-size: 0.62rem;
+    font-weight: 600;
+}
+
+.tenant-users-list {
+    display: grid;
+    gap: 0;
+    max-height: 260px;
+    margin-top: 6px;
+    overflow-y: auto;
+    border: 1px solid var(--app-border, #dbe4ec);
+    border-radius: 5px;
+    background: var(--app-surface, #fff);
+}
+
+.tenant-user-item {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    padding: 8px;
+    border-bottom: 1px solid var(--app-border, #e4eaf0);
+}
+
+.tenant-user-item:last-child {
+    border-bottom: 0;
+}
+
+.tenant-user-avatar {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--platform-accent-strong, #0b6f52);
+    background: var(--platform-accent-soft, #ecf7f2);
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.tenant-user-identity {
+    display: grid;
+    min-width: 0;
+}
+
+.tenant-user-identity strong,
+.tenant-user-identity code,
+.tenant-user-identity small {
+    max-width: 155px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tenant-user-identity strong {
+    color: var(--app-text, #122438);
+    font-size: 0.68rem;
+}
+
+.tenant-user-status {
+    font-size: 0.61rem;
+    white-space: nowrap;
+}
+
+.tenant-user-identity small {
+    color: var(--app-muted, #65778d);
+    font-size: 0.61rem;
+}
+
+.tenant-user-status {
+    color: #12643f;
+}
+
+.tenant-user-status.is-inactive {
+    color: #9c2837;
+}
+
+.tenant-users-empty {
+    margin: 0;
+    padding: 14px 10px;
+    color: var(--app-muted, #65778d);
+    font-size: 0.68rem;
+    text-align: center;
+}
+
 .tenant-entry-link {
     width: fit-content;
     color: #14727c;

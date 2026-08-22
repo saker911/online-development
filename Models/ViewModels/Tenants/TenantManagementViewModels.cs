@@ -26,6 +26,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public int PermitCount { get; set; }
         public int VisitCount { get; set; }
         public List<TenantUserSummaryViewModel> Users { get; set; } = new();
+        public int ActiveUserCount => Users.Count(user => user.IsActive);
+        public int InactiveUserCount => Users.Count(user => !user.IsActive);
         public string OrganizationName { get; set; } = string.Empty;
         public string SubscriptionStatus { get; set; } = TenantDefaults.DefaultSubscriptionStatus;
         public string SubscriptionStatusDisplayName =>

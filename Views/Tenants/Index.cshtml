@@ -363,7 +363,8 @@
                     @foreach (var tenant in Model.Tenants)
                     {
                         var isDefault = string.Equals(tenant.TenantId, TenantDefaults.DefaultTenantId, StringComparison.OrdinalIgnoreCase);
-                        var searchValue = $"{tenant.Name} {tenant.OrganizationName} {tenant.OrganizationReference} {tenant.Slug}".ToLowerInvariant();
+                        var tenantUserSearch = string.Join(" ", tenant.Users.Select(user => $"{user.FullName} {user.Username} {user.RoleDisplayName}"));
+                        var searchValue = $"{tenant.Name} {tenant.OrganizationName} {tenant.OrganizationReference} {tenant.Slug} {tenantUserSearch}".ToLowerInvariant();
                         var usageTotal = tenant.UserCount + tenant.PermitCount + tenant.VisitCount;
                         var createdAtUnix = new DateTimeOffset(DateTime.SpecifyKind(tenant.CreatedAtUtc, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
                         <tr data-tenant-row
@@ -383,6 +384,35 @@
                                     {
                                         <code>رقم الجهة: @tenant.OrganizationReference</code>
                                     }
+                                    <details class="tenant-users-directory">
+                                        <summary>
+                                            <span>@tenant.UserCount مستخدم</span>
+                                            <small>@tenant.ActiveUserCount نشط · @tenant.InactiveUserCount موقوف</small>
+                                        </summary>
+                                        <div class="tenant-users-list">
+                                            @if (tenant.Users.Count == 0)
+                                            {
+                                                <p class="tenant-users-empty">لا توجد حسابات مرتبطة بهذه الجهة.</p>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var account in tenant.Users)
+                                                {
+                                                    <div class="tenant-user-item">
+                                                        <span class="tenant-user-avatar" aria-hidden="true">@account.FullName.Trim()[0]</span>
+                                                        <span class="tenant-user-identity">
+                                                            <strong>@account.FullName</strong>
+                                                            <code>@account.Username</code>
+                                                            <small>@account.RoleDisplayName</small>
+                                                        </span>
+                                                        <span class="tenant-user-status @(account.IsActive ? "is-active" : "is-inactive")">
+                                                            @(account.IsActive ? "نشط" : "موقوف")
+                                                        </span>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </details>
                                 </div>
                             </td>
                             <td data-label="الاشتراك">
@@ -398,7 +428,7 @@
                             </td>
                             <td data-label="الاستخدام">
                                 <div class="tenant-usage">
-                                    <span><strong>@tenant.UserCount</strong> حساب</span>
+                                    <span class="tenant-user-total"><strong>@tenant.UserCount</strong> مستخدم</span>
                                     <span><strong>@tenant.PermitCount</strong> تصريح</span>
                                     <span><strong>@tenant.VisitCount</strong> زيارة</span>
                                 </div>
