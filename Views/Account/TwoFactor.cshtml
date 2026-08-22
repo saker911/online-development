@@ -10,7 +10,7 @@
     <header class="login-page-topbar">
         <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
             <img src="~/@ProductIdentity.MarkPath" asp-append-version="true" alt="" data-product-mark />
-            <span><strong>@ProductIdentity.DisplayName</strong><small>حماية الحساب الإداري</small></span>
+            <span><strong>@ProductIdentity.DisplayName</strong><small>حماية الحساب</small></span>
         </a>
     </header>
 
@@ -19,7 +19,7 @@
         @if (Model.RequiresEnrollment)
         {
             <h1 class="login-page-title">احمِ حسابك</h1>
-            <p class="login-page-subtitle">اربط تطبيق المصادقة مرة واحدة لإضافة طبقة حماية لحسابك الإداري.</p>
+            <p class="login-page-subtitle">اربط تطبيق المصادقة مرة واحدة لإضافة طبقة حماية لحسابك.</p>
 
             <div class="mfa-setup-step">
                 <div class="mfa-step-heading">

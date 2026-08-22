@@ -18,33 +18,18 @@ namespace PermitBehaviorChecks;
 public sealed class MultiFactorAuthenticationTests
 {
     [Fact]
-    public void MfaIsRequiredOnlyForPrivilegedAdministrativeAccounts()
+    public void MfaIsOptionalAndOnlyChallengesAccountsThatEnabledIt()
     {
-        Assert.True(
-            MultiFactorAuthenticationRequirement.IsRequired(
-                new UserAccount { IsSuperAdmin = true, Role = AppRoles.Employee }
-            )
-        );
-        Assert.True(
-            MultiFactorAuthenticationRequirement.IsRequired(
-                new UserAccount { Role = AppRoles.SystemAdmin }
-            )
-        );
-        Assert.True(
-            MultiFactorAuthenticationRequirement.IsRequired(
-                new UserAccount { Role = AppRoles.GeneralManager }
-            )
-        );
-        Assert.False(
-            MultiFactorAuthenticationRequirement.IsRequired(
-                new UserAccount { Role = AppRoles.GateSecurity }
-            )
-        );
-        Assert.False(
-            MultiFactorAuthenticationRequirement.IsRequired(
-                new UserAccount { Role = AppRoles.Employee }
-            )
-        );
+        var admin = new UserAccount { IsSuperAdmin = true, Role = AppRoles.SystemAdmin };
+        var employee = new UserAccount { Role = AppRoles.Employee };
+        Assert.False(MultiFactorAuthenticationRequirement.IsRequired(admin));
+        Assert.False(MultiFactorAuthenticationRequirement.IsRequired(employee));
+        admin.IsActive = true;
+        employee.IsActive = true;
+        admin.MfaEnabled = true;
+        employee.MfaEnabled = true;
+        Assert.True(MultiFactorAuthenticationRequirement.IsRequired(admin));
+        Assert.True(MultiFactorAuthenticationRequirement.IsRequired(employee));
     }
 
     [Fact]
@@ -88,7 +73,8 @@ public sealed class MultiFactorAuthenticationTests
             user = db.UserAccounts.AsNoTracking().Single();
         }
 
-        var enrollmentChallengeId = service.BeginChallenge(user, "/Administration");
+        Assert.False(service.IsRequired(user));
+        var enrollmentChallengeId = service.BeginEnrollment(user, "/Administration");
         var enrollment = service.GetChallenge(enrollmentChallengeId);
         Assert.NotNull(enrollment);
         Assert.True(enrollment!.RequiresEnrollment);
@@ -99,6 +85,7 @@ public sealed class MultiFactorAuthenticationTests
         Assert.True(enrolled.Succeeded, enrolled.Message);
         Assert.True(enrolled.WasEnrollment);
         Assert.Equal(8, enrolled.RecoveryCodes?.Count);
+        Assert.True(service.IsRequired(enrolled.User));
 
         using (var assertDb = factory.CreateDbContext())
         {

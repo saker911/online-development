@@ -50,6 +50,7 @@ namespace VehiclePermitSystemWeb.Data
         public DbSet<UserAccount> UserAccounts => Set<UserAccount>();
         public DbSet<UserActivity> UserActivities => Set<UserActivity>();
         public DbSet<SessionRecord> SessionRecords => Set<SessionRecord>();
+        public DbSet<TrustedLoginDevice> TrustedLoginDevices => Set<TrustedLoginDevice>();
         public DbSet<Delegation> Delegations => Set<Delegation>();
         public DbSet<DelegationPermission> DelegationPermissions => Set<DelegationPermission>();
         public DbSet<AdministrationSettings> AdministrationSettings =>
@@ -97,6 +98,7 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<UserAccount>().HasKey(x => x.Username);
             modelBuilder.Entity<UserActivity>().HasKey(x => x.Id);
             modelBuilder.Entity<SessionRecord>().HasKey(x => x.SessionId);
+            modelBuilder.Entity<TrustedLoginDevice>().HasKey(x => x.Id);
             modelBuilder.Entity<Delegation>().HasKey(x => x.Id);
             modelBuilder.Entity<DelegationPermission>().HasKey(x => x.Id);
             modelBuilder.Entity<AdministrationSettings>().HasKey(x => x.Id);
@@ -203,6 +205,7 @@ namespace VehiclePermitSystemWeb.Data
             ConfigureTenantScopedEntity<UserAccount>(modelBuilder);
             ConfigureTenantScopedEntity<UserActivity>(modelBuilder);
             ConfigureTenantScopedEntity<SessionRecord>(modelBuilder);
+            ConfigureTenantScopedEntity<TrustedLoginDevice>(modelBuilder);
             ConfigureTenantScopedEntity<Delegation>(modelBuilder);
             ConfigureTenantScopedEntity<DelegationPermission>(modelBuilder);
             ConfigureTenantScopedEntity<AdministrationSettings>(modelBuilder);
@@ -560,6 +563,12 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Permit>().Property(x => x.CreatedBy).HasMaxLength(128);
             modelBuilder.Entity<SessionRecord>().Property(x => x.SessionId).HasMaxLength(128);
             modelBuilder.Entity<SessionRecord>().Property(x => x.Username).HasMaxLength(64);
+            modelBuilder.Entity<TrustedLoginDevice>().Property(x => x.Username).HasMaxLength(64);
+            modelBuilder.Entity<TrustedLoginDevice>().Property(x => x.TokenHash).HasMaxLength(64);
+            modelBuilder.Entity<TrustedLoginDevice>().Property(x => x.DeviceDescription).HasMaxLength(160);
+            modelBuilder.Entity<TrustedLoginDevice>().HasIndex(x => x.TokenHash).IsUnique();
+            modelBuilder.Entity<TrustedLoginDevice>()
+                .HasIndex(x => new { x.TenantId, x.Username, x.ExpiresAtUtc });
             modelBuilder
                 .Entity<AdministrationSettings>()
                 .Property(x => x.OrganizationName)

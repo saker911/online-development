@@ -629,13 +629,7 @@ app.Use(
                 }
 
                 if (
-                    MultiFactorAuthenticationRequirement.IsRequired(
-                        currentUser,
-                        app.Configuration.GetValue(
-                            "Security:Mfa:RequiredForPrivilegedAccounts",
-                            true
-                        )
-                    )
+                    currentUser.MfaEnabled
                     && !context.User.HasClaim(
                         MultiFactorAuthenticationRequirement.AuthenticationMethodClaimType,
                         MultiFactorAuthenticationRequirement.AuthenticationMethodClaimValue
@@ -646,8 +640,8 @@ app.Use(
                         currentUser.Username,
                         currentUser.DisplayName,
                         "MfaSessionRejected",
-                        "جلسة إدارية دون تحقق إضافي",
-                        "تم إنهاء جلسة إدارية لم تمر بالمصادقة الثنائية.",
+                        "جلسة دون تحقق إضافي",
+                        "تم إنهاء جلسة لم تمر بالمصادقة الثنائية المفعلة للحساب.",
                         "SessionValidationMiddleware",
                         currentUser.Username
                     );

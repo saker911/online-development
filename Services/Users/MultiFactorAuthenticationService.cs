@@ -18,18 +18,15 @@ public static class MultiFactorAuthenticationRequirement
     public const string AuthenticationMethodClaimValue = "mfa";
 
     public static bool IsRequired(UserAccount? user, bool enabled = true) =>
-        enabled
-        && (
-            user?.IsSuperAdmin == true
-            || string.Equals(user?.Role, AppRoles.SystemAdmin, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(user?.Role, AppRoles.GeneralManager, StringComparison.OrdinalIgnoreCase)
-        );
+        enabled && user?.IsActive == true && user.MfaEnabled;
 }
 
 public interface IMultiFactorAuthenticationService
 {
     bool IsRequired(UserAccount? user);
     string BeginChallenge(UserAccount user, string? returnUrl);
+    string BeginEnrollment(UserAccount user, string? returnUrl);
+    bool Disable(UserAccount user);
     MfaChallengeView? GetChallenge(string challengeId);
     MfaVerificationResult Verify(string challengeId, string code);
 }
@@ -63,7 +60,6 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
     private readonly IDataProtector _secretProtector;
     private readonly ISystemClock _clock;
     private readonly ILogger<MultiFactorAuthenticationService> _logger;
-    private readonly bool _requiredForPrivilegedAccounts;
 
     public MultiFactorAuthenticationService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
@@ -81,21 +77,50 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
         );
         _clock = clock;
         _logger = logger;
-        _requiredForPrivilegedAccounts = configuration?.GetValue(
-            "Security:Mfa:RequiredForPrivilegedAccounts",
-            true
-        ) ?? true;
     }
 
-    public bool IsRequired(UserAccount? user) =>
-        MultiFactorAuthenticationRequirement.IsRequired(user, _requiredForPrivilegedAccounts);
+    public bool IsRequired(UserAccount? user) => user?.IsActive == true && user.MfaEnabled;
 
     public string BeginChallenge(UserAccount user, string? returnUrl)
     {
-        if (!IsRequired(user) || !user.IsActive)
+        if (!IsRequired(user))
         {
-            throw new InvalidOperationException("MFA challenge is only available to active privileged accounts.");
+            throw new InvalidOperationException("MFA challenge is only available when it is enabled for the account.");
         }
+
+        return CreateChallenge(user, returnUrl, enrollment: false);
+    }
+
+    public string BeginEnrollment(UserAccount user, string? returnUrl)
+    {
+        if (!user.IsActive || user.MfaEnabled)
+        {
+            throw new InvalidOperationException("MFA enrollment is only available to active accounts without MFA.");
+        }
+
+        return CreateChallenge(user, returnUrl, enrollment: true);
+    }
+
+    public bool Disable(UserAccount user)
+    {
+        using var db = _dbContextFactory.CreateDbContext();
+        var stored = FindUser(db, user.TenantId, user.Username, tracking: true);
+        if (stored == null || !stored.MfaEnabled)
+        {
+            return false;
+        }
+
+        stored.MfaEnabled = false;
+        stored.MfaSecretProtected = string.Empty;
+        stored.MfaRecoveryCodeHashesJson = string.Empty;
+        stored.MfaEnrolledAtUtc = null;
+        stored.MfaLastVerifiedStep = null;
+        db.SaveChanges();
+        return true;
+    }
+
+    private string CreateChallenge(UserAccount user, string? returnUrl, bool enrollment)
+    {
 
         var challengeId = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
         var challenge = new PendingMfaChallenge
@@ -103,6 +128,7 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
             TenantId = user.TenantId,
             Username = user.Username,
             ReturnUrl = returnUrl ?? string.Empty,
+            Enrollment = enrollment,
             ExpiresAtUtc = _clock.UtcNow.Add(ChallengeLifetime),
         };
         _cache.Set(challengeId, challenge, challenge.ExpiresAtUtc);
@@ -118,13 +144,13 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
 
         using var db = _dbContextFactory.CreateDbContext();
         var user = FindUser(db, challenge.TenantId, challenge.Username);
-        if (user == null || !user.IsActive || !IsRequired(user))
+        if (user == null || !user.IsActive || (!user.MfaEnabled && !challenge.Enrollment))
         {
             _cache.Remove(challengeId);
             return null;
         }
 
-        if (user.MfaEnabled)
+        if (user.MfaEnabled && !challenge.Enrollment)
         {
             return new MfaChallengeView(
                 challengeId,
@@ -173,7 +199,7 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
 
             using var db = _dbContextFactory.CreateDbContext();
             var user = FindUser(db, challenge.TenantId, challenge.Username, tracking: true);
-            if (user == null || !user.IsActive || !IsRequired(user))
+            if (user == null || !user.IsActive || (!user.MfaEnabled && !challenge.Enrollment))
             {
                 _cache.Remove(challengeId);
                 return Failed("تعذر إكمال التحقق لهذا الحساب.");
@@ -185,7 +211,7 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
                 return Failed("أدخل رمز التحقق.");
             }
 
-            var wasEnrollment = !user.MfaEnabled;
+            var wasEnrollment = challenge.Enrollment && !user.MfaEnabled;
             IReadOnlyList<string>? recoveryCodes = null;
             if (wasEnrollment)
             {
@@ -388,6 +414,7 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
         public string TenantId { get; init; } = string.Empty;
         public string Username { get; init; } = string.Empty;
         public string ReturnUrl { get; init; } = string.Empty;
+        public bool Enrollment { get; init; }
         public DateTime ExpiresAtUtc { get; init; }
         public byte[]? PendingSecret { get; set; }
         public int Attempts { get; set; }

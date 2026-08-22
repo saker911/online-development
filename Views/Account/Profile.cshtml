@@ -156,20 +156,40 @@ Model.ManagerDisplayName;
                                 كلمة المرور</a>
                             </div>
 
-                            @if (Model.MfaRequired)
-                            {
-                                <div class="account-profile-credential-box">
-                                    <span class="account-profile-mini-kicker">المصادقة الثنائية</span>
-                                    <strong>@(Model.MfaEnabled ? "مفعلة" : "مطلوبة")</strong>
-                                    <p>@(Model.MfaEnabled
-                                        ? "الحساب الإداري محمي بتطبيق Authenticator."
-                                        : "سيطلب النظام ربط تطبيق Authenticator عند الدخول التالي.")</p>
-                                    @if (Model.MfaEnrolledAtUtc.HasValue)
-                                    {
-                                        <span class="account-profile-credential-meta">فُعلت في @Model.MfaEnrolledAtUtc.Value.ToLocalTime().ToString("yyyy/MM/dd")</span>
-                                    }
-                                </div>
-                            }
+                            <div class="account-profile-credential-box">
+                                <span class="account-profile-mini-kicker">تطبيق المصادقة</span>
+                                <strong>@(Model.MfaEnabled ? "مفعل" : "اختياري")</strong>
+                                <p>@(Model.MfaEnabled
+                                    ? "سيُطلب رمز Authenticator عند كل تسجيل دخول."
+                                    : "يمكنك إضافة طبقة حماية مستقلة لحسابك في أي وقت.")</p>
+                                @if (Model.MfaEnrolledAtUtc.HasValue)
+                                {
+                                    <span class="account-profile-credential-meta">فُعلت في @Model.MfaEnrolledAtUtc.Value.ToLocalTime().ToString("yyyy/MM/dd")</span>
+                                }
+                                @if (Model.MfaEnabled)
+                                {
+                                    <form asp-controller="Account" asp-action="DisableMfa" method="post" class="mt-3">
+                                        @Html.AntiForgeryToken()
+                                        <label for="disableMfaPassword" class="form-label">كلمة المرور للتأكيد</label>
+                                        <input id="disableMfaPassword" name="currentPassword" type="password"
+                                               class="form-control" autocomplete="current-password" required />
+                                        <button type="submit" class="btn btn-outline-danger btn-sm mt-2">إيقاف المصادقة</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-controller="Account" asp-action="EnableMfa" method="post" class="mt-3">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-primary btn-sm">تفعيل تطبيق المصادقة</button>
+                                    </form>
+                                }
+                            </div>
+
+                            <div class="account-profile-credential-box">
+                                <span class="account-profile-mini-kicker">الأجهزة الجديدة</span>
+                                <strong>تأكيد تلقائي بالبريد</strong>
+                                <p>عند تسجيل الدخول من متصفح جديد، نرسل رمزاً إلى البريد المسجل ثم نتذكر الجهاز لمدة 90 يوماً.</p>
+                            </div>
 
                             <div class="account-profile-credential-box @(Model.CanScanOperations ? string.Empty : "is-disabled")">
                                 <span class="account-profile-mini-kicker">صلاحية المسح والبوابة</span>

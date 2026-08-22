@@ -47,6 +47,7 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IAccountPasswordResetService? _passwordResetService;
         private readonly IInitialSetupAccessPolicy? _initialSetupAccessPolicy;
         private readonly IMultiFactorAuthenticationService? _multiFactorAuthenticationService;
+        private readonly ILoginDeviceTrustService? _loginDeviceTrustService;
 
         private IToastNotificationService ToastNotifications =>
             HttpContext.RequestServices.GetRequiredService<IToastNotificationService>();
@@ -63,7 +64,8 @@ namespace VehiclePermitSystemWeb.Controllers
             ITenantManagementService? tenantManagementService = null,
             IAccountPasswordResetService? passwordResetService = null,
             IInitialSetupAccessPolicy? initialSetupAccessPolicy = null,
-            IMultiFactorAuthenticationService? multiFactorAuthenticationService = null
+            IMultiFactorAuthenticationService? multiFactorAuthenticationService = null,
+            ILoginDeviceTrustService? loginDeviceTrustService = null
         )
         {
             _userAdminService = userAdminService;
@@ -73,6 +75,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _passwordResetService = passwordResetService;
             _initialSetupAccessPolicy = initialSetupAccessPolicy;
             _multiFactorAuthenticationService = multiFactorAuthenticationService;
+            _loginDeviceTrustService = loginDeviceTrustService;
         }
 
         private IAccountPasswordResetService PasswordResetService =>
@@ -82,6 +85,10 @@ namespace VehiclePermitSystemWeb.Controllers
         private IMultiFactorAuthenticationService? MultiFactorAuthenticationService =>
             _multiFactorAuthenticationService
             ?? HttpContext.RequestServices.GetService<IMultiFactorAuthenticationService>();
+
+        private ILoginDeviceTrustService? LoginDeviceTrustService =>
+            _loginDeviceTrustService
+            ?? HttpContext.RequestServices.GetService<ILoginDeviceTrustService>();
 
         [HttpGet]
         public IActionResult Login(string? returnUrl = null, string? tenant = null)
@@ -191,6 +198,25 @@ namespace VehiclePermitSystemWeb.Controllers
                 }
 
                 var accountUsername = user?.Username ?? username;
+                if (user != null && RequiresDeviceVerification(user))
+                {
+                    var deviceChallenge = LoginDeviceTrustService!.BeginChallenge(
+                        user,
+                        returnUrl,
+                        Request.Headers.UserAgent.ToString()
+                    );
+                    if (!deviceChallenge.Succeeded)
+                    {
+                        ViewData["SubmittedUsername"] = username;
+                        ToastNotifications.Error(deviceChallenge.Message);
+                        return View();
+                    }
+                    return RedirectToAction(
+                        nameof(VerifyDevice),
+                        new { challenge = deviceChallenge.ChallengeId }
+                    );
+                }
+
                 if (
                     user != null
                     && MultiFactorAuthenticationService?.IsRequired(user) == true
@@ -230,6 +256,93 @@ namespace VehiclePermitSystemWeb.Controllers
             _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
             ToastNotifications.Error("اسم المستخدم أو كلمة المرور غير صحيحة");
             return View();
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [EnableRateLimiting("mfa")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult VerifyDevice(string challenge)
+        {
+            var pending = LoginDeviceTrustService?.GetChallenge(challenge);
+            if (pending == null)
+            {
+                ToastNotifications.Warning("انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+                return RedirectToAction(nameof(Login));
+            }
+
+            ConfigureDeviceVerificationView();
+            return View(
+                new DeviceVerificationViewModel
+                {
+                    ChallengeId = pending.ChallengeId,
+                    MaskedEmail = pending.MaskedEmail,
+                }
+            );
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("mfa")]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> VerifyDevice(DeviceVerificationViewModel model)
+        {
+            ConfigureDeviceVerificationView();
+            var pending = LoginDeviceTrustService?.GetChallenge(model.ChallengeId);
+            if (pending == null)
+            {
+                ToastNotifications.Warning("انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+                return RedirectToAction(nameof(Login));
+            }
+            model.MaskedEmail = pending.MaskedEmail;
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var result = LoginDeviceTrustService?.Verify(model.ChallengeId, model.Code);
+            if (result?.Succeeded != true || result.User == null || string.IsNullOrWhiteSpace(result.DeviceToken))
+            {
+                ModelState.AddModelError(nameof(model.Code), result?.Message ?? "تعذر إكمال التحقق.");
+                return View(model);
+            }
+
+            RememberTrustedDevice(result.User, result.DeviceToken);
+            _userAdminService.RecordUserActivity(
+                result.User.Username,
+                result.User.DisplayName,
+                "NewDeviceVerified",
+                "تأكيد جهاز جديد",
+                "تم تأكيد جهاز جديد بالبريد الإلكتروني.",
+                nameof(AccountController),
+                result.User.Username
+            );
+
+            if (MultiFactorAuthenticationService?.IsRequired(result.User) == true)
+            {
+                var mfaChallenge = MultiFactorAuthenticationService.BeginChallenge(
+                    result.User,
+                    result.ReturnUrl
+                );
+                return RedirectToAction(nameof(TwoFactor), new { challenge = mfaChallenge });
+            }
+
+            await SignInUserAsync(
+                result.User,
+                result.User.Username,
+                result.User.DisplayName,
+                result.User.Role
+            );
+            if (result.User.MustChangePassword)
+            {
+                return RedirectToAction(nameof(ChangePassword), new { forced = true });
+            }
+            if (!string.IsNullOrWhiteSpace(result.ReturnUrl) && Url.IsLocalUrl(result.ReturnUrl))
+            {
+                return Redirect(result.ReturnUrl);
+            }
+            return RedirectToDefaultAuthorizedPage(result.User);
         }
 
         [HttpGet]
@@ -288,7 +401,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 result.WasEnrollment ? "MfaEnrolled" : "MfaVerified",
                 result.WasEnrollment ? "تفعيل المصادقة الثنائية" : "تحقق المصادقة الثنائية",
                 result.WasEnrollment
-                    ? "تم ربط تطبيق المصادقة بالحساب الإداري."
+                    ? "تم ربط تطبيق المصادقة بالحساب."
                     : "تم التحقق من العامل الثاني وتسجيل الدخول.",
                 nameof(AccountController),
                 user.Username
@@ -618,6 +731,24 @@ namespace VehiclePermitSystemWeb.Controllers
                 return RedirectToAction(nameof(Login), new { tenant, returnUrl });
             }
 
+            if (RequiresDeviceVerification(user))
+            {
+                var deviceChallenge = LoginDeviceTrustService!.BeginChallenge(
+                    user,
+                    returnUrl,
+                    Request.Headers.UserAgent.ToString()
+                );
+                if (!deviceChallenge.Succeeded)
+                {
+                    ToastNotifications.Error(deviceChallenge.Message);
+                    return RedirectToAction(nameof(Login), new { tenant, returnUrl });
+                }
+                return RedirectToAction(
+                    nameof(VerifyDevice),
+                    new { challenge = deviceChallenge.ChallengeId }
+                );
+            }
+
             if (MultiFactorAuthenticationService?.IsRequired(user) == true)
             {
                 var challengeId = MultiFactorAuthenticationService.BeginChallenge(user, returnUrl);
@@ -819,11 +950,6 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet]
         public IActionResult Profile()
         {
-            if (User.IsSuperAdmin())
-            {
-                return RedirectToAction("Index", "Platform");
-            }
-
             var user = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
             if (user == null)
             {
@@ -883,6 +1009,74 @@ namespace VehiclePermitSystemWeb.Controllers
             };
 
             return View(model);
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EnableMfa()
+        {
+            var user = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (user == null)
+            {
+                return RedirectToAction(nameof(Login));
+            }
+            if (user.MfaEnabled)
+            {
+                ToastNotifications.Info("المصادقة الثنائية مفعلة بالفعل.");
+                return RedirectToAction(nameof(Profile));
+            }
+
+            var challenge = MultiFactorAuthenticationService?.BeginEnrollment(
+                user,
+                Url.Action(nameof(Profile))
+            );
+            return string.IsNullOrWhiteSpace(challenge)
+                ? RedirectToAction(nameof(Profile))
+                : RedirectToAction(nameof(TwoFactor), new { challenge });
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DisableMfa(string currentPassword)
+        {
+            var username = User.Identity?.Name ?? string.Empty;
+            var user = _userAdminService.GetUserAccount(username);
+            if (
+                user == null
+                || string.IsNullOrWhiteSpace(currentPassword)
+                || !_userAdminService.ValidateCredentials(
+                    username,
+                    currentPassword,
+                    out _,
+                    out _
+                )
+            )
+            {
+                ToastNotifications.Error("كلمة المرور غير صحيحة. لم يتغير إعداد المصادقة.");
+                return RedirectToAction(nameof(Profile));
+            }
+
+            if (MultiFactorAuthenticationService?.Disable(user) == true)
+            {
+                _userAdminService.RecordUserActivity(
+                    user.Username,
+                    user.DisplayName,
+                    "MfaDisabled",
+                    "إيقاف المصادقة الثنائية",
+                    "أوقف المستخدم المصادقة الثنائية لحسابه بعد تأكيد كلمة المرور.",
+                    nameof(AccountController),
+                    user.Username
+                );
+                _userAdminService.RemoveSessionsForUser(user.Username);
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                ToastNotifications.Success("تم إيقاف المصادقة الثنائية. سجل الدخول من جديد.");
+                return RedirectToAction(nameof(Login));
+            }
+
+            ToastNotifications.Info("المصادقة الثنائية غير مفعلة على الحساب.");
+            return RedirectToAction(nameof(Profile));
         }
 
         [Authorize]
@@ -1276,6 +1470,47 @@ namespace VehiclePermitSystemWeb.Controllers
             ViewData["Title"] = "التحقق بخطوتين";
             ViewData["HideShell"] = true;
             ViewData["BodyClass"] = "login-page-body";
+        }
+
+        private void ConfigureDeviceVerificationView()
+        {
+            ViewData["Title"] = "تأكيد الجهاز";
+            ViewData["HideShell"] = true;
+            ViewData["BodyClass"] = "login-page-body";
+        }
+
+        private bool RequiresDeviceVerification(UserAccount user)
+        {
+            if (
+                LoginDeviceTrustService == null
+                || !user.IsEmailConfirmed
+                || string.IsNullOrWhiteSpace(user.Email)
+            )
+            {
+                return false;
+            }
+
+            var cookieName = LoginDeviceTrustService.GetCookieName(user);
+            return !LoginDeviceTrustService.IsTrusted(
+                user,
+                Request.Cookies.TryGetValue(cookieName, out var token) ? token : null
+            );
+        }
+
+        private void RememberTrustedDevice(UserAccount user, string token)
+        {
+            Response.Cookies.Append(
+                LoginDeviceTrustService!.GetCookieName(user),
+                token,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = Request.IsHttps,
+                    SameSite = SameSiteMode.Lax,
+                    IsEssential = true,
+                    Expires = DateTimeOffset.UtcNow.AddDays(90),
+                }
+            );
         }
 
         private Tenant? ResolveTenantReference(string? tenantReference)

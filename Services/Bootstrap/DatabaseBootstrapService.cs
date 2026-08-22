@@ -380,6 +380,25 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "UserAccounts", "MfaRecoveryCodeHashesJson", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "UserAccounts", "MfaEnrolledAtUtc", "TEXT NULL");
             EnsureSqliteColumn(db, "UserAccounts", "MfaLastVerifiedStep", "INTEGER NULL");
+            db.Database.ExecuteSqlRaw(
+                @"CREATE TABLE IF NOT EXISTS ""TrustedLoginDevices"" (
+                    ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_TrustedLoginDevices"" PRIMARY KEY AUTOINCREMENT,
+                    ""TenantId"" TEXT NOT NULL,
+                    ""Username"" TEXT NOT NULL,
+                    ""TokenHash"" TEXT NOT NULL,
+                    ""DeviceDescription"" TEXT NOT NULL,
+                    ""CreatedAtUtc"" TEXT NOT NULL,
+                    ""LastUsedAtUtc"" TEXT NOT NULL,
+                    ""ExpiresAtUtc"" TEXT NOT NULL,
+                    ""RevokedAtUtc"" TEXT NULL
+                );"
+            );
+            db.Database.ExecuteSqlRaw(
+                @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_TrustedLoginDevices_TokenHash"" ON ""TrustedLoginDevices"" (""TokenHash"");"
+            );
+            db.Database.ExecuteSqlRaw(
+                @"CREATE INDEX IF NOT EXISTS ""IX_TrustedLoginDevices_TenantId_Username_ExpiresAtUtc"" ON ""TrustedLoginDevices"" (""TenantId"", ""Username"", ""ExpiresAtUtc"");"
+            );
             EnsureSqliteColumn(
                 db,
                 "UserAccounts",

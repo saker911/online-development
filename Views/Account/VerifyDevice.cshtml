@@ -1,0 +1,29 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Account.DeviceVerificationViewModel
+@{
+    Layout = "_Layout";
+}
+
+<main class="login-stage auth-security-stage" dir="rtl">
+    <section class="login-card auth-security-card">
+        <div class="login-card-heading">
+            <span class="login-eyebrow">حماية الحساب</span>
+            <h1>تأكيد الجهاز الجديد</h1>
+            <p>أرسلنا رمزاً من 6 أرقام إلى <strong class="ltr-field">@Model.MaskedEmail</strong></p>
+        </div>
+
+        <form asp-action="VerifyDevice" method="post" class="login-form" autocomplete="one-time-code">
+            @Html.AntiForgeryToken()
+            <input asp-for="ChallengeId" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Code">رمز التحقق</label>
+                <input asp-for="Code" class="form-control ltr-field text-center" inputmode="numeric"
+                       maxlength="6" autocomplete="one-time-code" placeholder="000000" autofocus />
+                <span asp-validation-for="Code" class="text-danger"></span>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">تأكيد هذا الجهاز والمتابعة</button>
+        </form>
+
+        <p class="login-card-note">إذا لم تكن أنت من حاول الدخول، لا تشارك الرمز وغيّر كلمة المرور.</p>
+    </section>
+</main>

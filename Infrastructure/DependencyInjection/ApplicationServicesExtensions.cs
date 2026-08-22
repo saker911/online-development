@@ -55,7 +55,8 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddSingleton<IPlatformSettingsService, PlatformSettingsService>();
             services.AddSingleton<ISubscriptionPlanService, SubscriptionPlanService>();
             services.AddSingleton<LoginAttemptGuard>();
-            services.AddSingleton<IMultiFactorAuthenticationService, MultiFactorAuthenticationService>();
+              services.AddSingleton<IMultiFactorAuthenticationService, MultiFactorAuthenticationService>();
+              services.AddSingleton<ILoginDeviceTrustService, LoginDeviceTrustService>();
             services.AddSingleton<SignupAttemptGuard>();
             services.AddSingleton<IExternalLoginService, ExternalLoginService>();
             services.AddSingleton<
