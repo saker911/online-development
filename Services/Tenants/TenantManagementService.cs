@@ -38,6 +38,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             var usersByTenant = db
                 .UserAccounts.IgnoreQueryFilters()
                 .AsNoTracking()
+                .Where(user => !user.IsSuperAdmin)
                 .Select(user => new
                 {
                     user.TenantId,

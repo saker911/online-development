@@ -193,6 +193,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
         public IActionResult Index()
         {
+            if (User.IsSuperAdmin())
+            {
+                return Redirect("/Platform#accounts");
+            }
+
             PopulateCredentialNoticeViewData();
 
             var users = GetVisibleUsers().ToList();

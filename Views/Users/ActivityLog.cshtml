@@ -2,6 +2,11 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Reports.UserActivityReportViewModel
 
 @{
+    if (User.IsSuperAdmin())
+    {
+        Layout = "_PlatformLayout";
+    }
+
     ViewData["Title"] = "سجل عمليات المستخدمين";
     var activityPagination = new VehiclePermitSystemWeb.Models.ViewModels.Reports.ReportPaginationViewModel
     {

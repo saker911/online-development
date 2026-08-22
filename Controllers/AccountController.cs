@@ -819,6 +819,11 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet]
         public IActionResult Profile()
         {
+            if (User.IsSuperAdmin())
+            {
+                return RedirectToAction("Index", "Platform");
+            }
+
             var user = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
             if (user == null)
             {

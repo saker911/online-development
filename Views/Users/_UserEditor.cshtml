@@ -9,6 +9,7 @@
         StringComparison.OrdinalIgnoreCase
     );
     var isNew = isCreateRoute || string.IsNullOrWhiteSpace(Model.OriginalUsername);
+    var isPlatformOwnerWorkspace = User.IsSuperAdmin();
     var isSimplifiedCreate = isNew && !Model.IsSuperAdmin;
     var editedUsername = string.IsNullOrWhiteSpace(Model.OriginalUsername)
         ? Model.Username
@@ -17,7 +18,8 @@
         && string.Equals(editedUsername, User.Identity?.Name, StringComparison.OrdinalIgnoreCase);
     var canEditAdministrativeFields = isNew || !isEditingCurrentUser;
     var canManageOwnGateSettings = isEditingCurrentUser && Model.CanScanOperations;
-    var showGateSettingsSection = canEditAdministrativeFields || canManageOwnGateSettings;
+    var showGateSettingsSection = !isPlatformOwnerWorkspace
+        && (canEditAdministrativeFields || canManageOwnGateSettings);
     var usernameLabel = Model.IsSuperAdmin ? "معرف مالك النظام" : "اسم المستخدم";
     var resetTemporaryPasswordUrl = Url.Action("ResetTemporaryPassword", "Users", new { id = Model.Username }) ?? string.Empty;
     var resetTemporaryOperatorPinUrl = Url.Action("ResetTemporaryOperatorPin", "Users", new { id = Model.Username }) ?? string.Empty;
@@ -28,8 +30,12 @@
     var currentTenantDisplay = selectedTenant?.Name
         ?? (string.IsNullOrWhiteSpace(Model.TenantId) ? "الجهة الحالية" : Model.TenantId);
     var administrativeFieldCount = Model.CanChooseTenant ? "4" : Model.IsSuperAdmin ? "2" : "3";
-    var canPrintUserBadge = !isNew && !string.IsNullOrWhiteSpace(Model.Username);
-    var canManageOperatorBadge = !isNew && Model.CanScanOperations;
+    var canPrintUserBadge = !isPlatformOwnerWorkspace
+        && !isNew
+        && !string.IsNullOrWhiteSpace(Model.Username);
+    var canManageOperatorBadge = !isPlatformOwnerWorkspace
+        && !isNew
+        && Model.CanScanOperations;
     var createFlowReturnUrl = ViewData["CreateFlowReturnUrl"] as string;
     var cancelUrl = isNew && !string.IsNullOrWhiteSpace(createFlowReturnUrl)
         ? createFlowReturnUrl
@@ -70,7 +76,7 @@
         {
             new { Number = 1, Title = "الحساب", Description = "الاسم، المعرف، وبيانات التواصل" },
             new { Number = 2, Title = "الإدارة", Description = "الدور، القسم، والربط الإداري" },
-            new { Number = 3, Title = "الاعتماد", Description = "كلمة المرور وإعدادات البوابة" },
+            new { Number = 3, Title = "الاعتماد", Description = isPlatformOwnerWorkspace ? "كلمة المرور وحالة الحساب" : "كلمة المرور وإعدادات البوابة" },
             new { Number = 4, Title = "الصلاحيات", Description = "الصلاحيات والمراجعة النهائية" },
         };
     var activeWizardStep = Model.WizardStep < 1

@@ -50,6 +50,15 @@ public sealed class TenantFeatureTests
                     FullName = "مدير فرع جدة",
                     Role = AppRoles.GeneralManager,
                     IsActive = true,
+                },
+                new UserAccount
+                {
+                    TenantId = "riyadh",
+                    Username = "platform.owner",
+                    FullName = "مالك المنصة",
+                    Role = AppRoles.SystemAdmin,
+                    IsActive = true,
+                    IsSuperAdmin = true,
                 }
             );
             db.SaveChanges();
@@ -70,6 +79,11 @@ public sealed class TenantFeatureTests
         var jeddah = Assert.Single(dashboard.Tenants, tenant => tenant.TenantId == "jeddah");
         Assert.Single(jeddah.Users);
         Assert.Equal("مدير فرع جدة", jeddah.Users[0].FullName);
+        Assert.Equal(3, dashboard.TotalUsers);
+        Assert.DoesNotContain(
+            dashboard.Tenants.SelectMany(tenant => tenant.Users),
+            account => account.Username == "platform.owner"
+        );
     }
 
     [Fact]

@@ -170,7 +170,8 @@ body { min-height: 100%; }
 .platform-directory-meta { color: var(--platform-muted); font-size: .7rem; }
 .platform-directory-row > header .platform-status { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
 .platform-directory-users { display: flex; flex-wrap: wrap; gap: 8px; }
-.platform-directory-user { min-width: min(210px, 100%); display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 8px 10px; background: var(--platform-surface); border: 1px solid var(--platform-border); border-radius: 5px; }
+.platform-directory-user { min-width: min(210px, 100%); display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 8px 10px; color: inherit; background: var(--platform-surface); border: 1px solid var(--platform-border); border-radius: 5px; text-decoration: none; transition: border-color .15s ease, background-color .15s ease; }
+.platform-directory-user:hover { color: inherit; background: #fbfdfc; border-color: #8fc7b4; }
 .platform-directory-user.is-manager { border-color: #add9c9; }
 .platform-directory-user.is-inactive { opacity: .62; }
 .platform-directory-avatar { width: 34px; height: 34px; display: grid; place-items: center; color: var(--platform-accent-strong); background: var(--platform-accent-soft); border-radius: 50%; font-size: .76rem; font-weight: 700; }

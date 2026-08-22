@@ -1,6 +1,11 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Users.UserEditViewModel
 
 @{
+    if (User.IsSuperAdmin())
+    {
+        Layout = "_PlatformLayout";
+    }
+
     var isCreateRoute = Context.Request.Path.Value?.EndsWith("/Create", StringComparison.OrdinalIgnoreCase) == true;
     var editedUsername = string.IsNullOrWhiteSpace(Model.OriginalUsername)
         ? Model.Username

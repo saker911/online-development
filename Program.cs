@@ -685,6 +685,8 @@ app.Use(
     }
 );
 
+app.UseMiddleware<PlatformOwnerIsolationMiddleware>();
+
 app.UseMiddleware<OrganizationOnboardingMiddleware>();
 
 app.UseMiddleware<SubscriptionAccessMiddleware>();

@@ -18,10 +18,12 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/theme-vars.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/theme-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site-primitives.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/theme-forms.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/date-fields.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/notification-toasts.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/platform-shell.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/users-pages.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body class="platform-body">
@@ -66,10 +68,12 @@
             <nav aria-label="إدارة المنصة">
                 <a class="@(IsActive("Platform") ? "active" : string.Empty)" asp-controller="Platform" asp-action="Index"><span>01</span>الرئيسية</a>
                 <a class="@(IsActive("Tenants") ? "active" : string.Empty)" asp-controller="Tenants" asp-action="Index"><span>02</span>الجهات والاشتراكات</a>
-                <a class="@(IsActive("Pricing") ? "active" : string.Empty)" asp-controller="Pricing" asp-action="Index"><span>03</span>الأسعار والعروض</a>
-                <a class="@(IsActive("PlatformSettings") ? "active" : string.Empty)" asp-controller="PlatformSettings" asp-action="Index"><span>04</span>بيانات المنصة</a>
+                <a class="@(IsActive("Users") ? "active" : string.Empty)" asp-controller="Platform" asp-action="Index" asp-fragment="accounts"><span>03</span>إدارة الحسابات</a>
+                <a class="@(IsActive("Pricing") ? "active" : string.Empty)" asp-controller="Pricing" asp-action="Index"><span>04</span>الأسعار والعروض</a>
+                <a class="@(IsActive("PlatformSettings") ? "active" : string.Empty)" asp-controller="PlatformSettings" asp-action="Index"><span>05</span>بيانات المنصة</a>
             </nav>
             <div class="platform-sidebar-footer">
+                <a asp-controller="Account" asp-action="ChangePassword">أمان الحساب</a>
                 <a asp-controller="Home" asp-action="Landing" target="_blank" rel="noopener">عرض الموقع العام</a>
                 <form asp-controller="Account" asp-action="Logout" method="post">
                     @Html.AntiForgeryToken()
@@ -101,6 +105,8 @@
     <script src="~/js/toast-notifications.js" asp-append-version="true"></script>
     <script src="~/js/confirm-action-modal.js" asp-append-version="true"></script>
     <script src="~/js/app-date-fields.js" asp-append-version="true"></script>
+    <script src="~/js/app-validation.js" asp-append-version="true"></script>
+    <script src="~/js/app-combobox.js" asp-append-version="true"></script>
     <script nonce="@(Context.Items["CspScriptNonce"])">
         (function () {
             var body = document.body;

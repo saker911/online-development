@@ -29,6 +29,7 @@ test("platform owner lands in an independent administration workspace", async ({
   await expect(page.locator(".platform-sidebar").getByRole("link", { name: /الجهات والاشتراكات/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "التصاريح", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "الزيارات", exact: true })).toHaveCount(0);
+  await expect(page.locator(".platform-sidebar").getByRole("link", { name: /إدارة الحسابات/ })).toBeVisible();
   const shellGeometry = await page.evaluate(() => {
     const brand = document.querySelector(".platform-brand")?.getBoundingClientRect();
     const topbar = document.querySelector(".platform-topbar")?.getBoundingClientRect();
@@ -49,6 +50,24 @@ test("platform owner lands in an independent administration workspace", async ({
   await page.getByRole("button", { name: "تنبيهات المنصة" }).click();
   await expect(page.getByRole("region", { name: "آخر تنبيهات المنصة" })).toBeVisible();
   await capturePlatform(page, "platform-desktop-light.png");
+});
+
+test("platform owner cannot enter operational application routes", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+
+  for (const route of ["/", "/People", "/Attendance", "/Permits", "/Visits", "/Display/Gate", "/Users"]) {
+    await page.goto(route);
+    await expect(page).toHaveURL(/\/Platform(?:#accounts)?$/i);
+    await expect(page.locator(".platform-sidebar")).toBeVisible();
+  }
+});
+
+test("platform owner account is not mixed with subscriber accounts", async ({ page }) => {
+  await ensureOwnerSignedIn(page);
+
+  await expect(page.locator(".platform-directory-user")).toHaveCount(0);
+  await expect(page.getByText("لا توجد حسابات مرتبطة بهذه الجهة.", { exact: true })).toBeVisible();
+  await expect(page.locator(".platform-metrics article").filter({ hasText: "الحسابات" }).locator("strong")).toHaveText("0");
 });
 
 test("platform workspace remains usable on mobile", async ({ page }) => {

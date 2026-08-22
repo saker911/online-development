@@ -49,7 +49,7 @@
         </div>
     </section>
 
-    <section class="platform-section" aria-labelledby="platform-directory-title">
+    <section class="platform-section" id="accounts" aria-labelledby="platform-directory-title">
         <div class="platform-section-heading">
             <div>
                 <span class="platform-eyebrow">دليل الحسابات</span>
@@ -87,7 +87,9 @@
                             {
                                 @foreach (var account in tenant.Users)
                                 {
-                                    <span class="platform-directory-user @(account.IsTenantManager ? "is-manager" : string.Empty) @(!account.IsActive ? "is-inactive" : string.Empty)">
+                                    <a class="platform-directory-user @(account.IsTenantManager ? "is-manager" : string.Empty) @(!account.IsActive ? "is-inactive" : string.Empty)"
+                                       asp-controller="Users" asp-action="Edit" asp-route-id="@account.Username"
+                                       aria-label="إدارة حساب @account.FullName">
                                         <span class="platform-directory-avatar" aria-hidden="true">@account.FullName.Trim().Substring(0, 1)</span>
                                         <span>
                                             <strong>@account.FullName</strong>
@@ -97,7 +99,7 @@
                                         {
                                             <em>موقوف</em>
                                         }
-                                    </span>
+                                    </a>
                                 }
                             }
                         </div>
