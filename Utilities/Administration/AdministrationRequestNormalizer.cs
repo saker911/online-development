@@ -31,9 +31,7 @@ namespace VehiclePermitSystemWeb.Utilities.Administration
             handover.ExistingManagerUsername = (
                 handover.ExistingManagerUsername ?? string.Empty
             ).Trim();
-            handover.NewManagerUsername = new string(
-                (handover.NewManagerUsername ?? string.Empty).Where(char.IsDigit).ToArray()
-            );
+            handover.NewManagerUsername = (handover.NewManagerUsername ?? string.Empty).Trim();
             handover.NewManagerFullName = (handover.NewManagerFullName ?? string.Empty).Trim();
             handover.NewManagerPhoneNumber = new string(
                 (handover.NewManagerPhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray()

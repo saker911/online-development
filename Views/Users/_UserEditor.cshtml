@@ -146,7 +146,7 @@
                     <strong data-users-summary-full-name>غير مُدخل</strong>
                 </div>
                 <div class="ue-summary-item">
-                    <span>المعرف الداخلي</span>
+                    <span>اسم المستخدم</span>
                     <strong class="ltr-field" data-users-summary-username>غير مُدخل</strong>
                 </div>
                 <div class="ue-summary-item">
@@ -202,10 +202,10 @@
                         <span asp-validation-for="FullName" class="field-validation-error small"></span>
                     </div>
                     <div class="ue-field ue-field-required">
-                        <label asp-for="Username" class="form-label">المعرف الداخلي</label>
+                        <label asp-for="Username" class="form-label">اسم المستخدم</label>
                         <input asp-for="Username" class="form-control ltr-field" autocomplete="username" minlength="4"
-                               maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}" placeholder="employee.01"
-                               title="استخدم 4 إلى 64 حرفًا أو رقمًا، ويمكن استخدام النقطة والشرطة." required />
+                               maxlength="64" pattern="[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]" placeholder="employee.01"
+                               title="ابدأ بحرف إنجليزي وأنهِ الاسم بحرف أو رقم." required />
                         <span asp-validation-for="Username" class="field-validation-error small"></span>
                     </div>
                     <div class="ue-field">
@@ -296,9 +296,9 @@
                         <div class="ue-field ue-field-required">
                             <label asp-for="Username" class="form-label">@usernameLabel</label>
                             <input asp-for="Username" class="form-control ltr-field" autocomplete="username" minlength="4"
-                                maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}" placeholder="owner.main"
-                                title="استخدم 4 إلى 64 حرفًا أو رقمًا، ويمكن استخدام النقطة والشرطة." required />
-                            <div class="form-text">معرف فريد للحساب، ولا يُستخدم فيه رقم الهوية.</div>
+                                maxlength="64" pattern="[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]" placeholder="owner.main"
+                                title="ابدأ بحرف إنجليزي وأنهِ الاسم بحرف أو رقم." required />
+                            <div class="form-text">اسم فريد للحساب. ويمكن تسجيل الدخول كذلك بالبريد أو الجوال.</div>
                             <span asp-validation-for="Username" class="field-validation-error small"></span>
                         </div>
                     }
@@ -1392,8 +1392,8 @@
 
                                                                                                                             var usernameInput = form.querySelector("#Username");
                                                                                                                             var username = usernameInput ? usernameInput.value.trim() : "";
-                                                                                                                            if (!/^[12]\d{9}$/.test(username)) {
-                                                                                                                                setLookupResult("invalid", "المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2.");
+                                                                                                                            if (!/^[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]$/.test(username)) {
+                                                                                                                                setLookupResult("invalid", "اسم المستخدم يجب أن يبدأ بحرف إنجليزي وينتهي بحرف أو رقم.");
                                                                                                                                 if (usernameInput) {
                                                                                                                                     usernameInput.focus();
                                                                                                                                 }

@@ -38,14 +38,14 @@
             new ExternalAuthActionsViewModel { Mode = "Login", Tenant = tenant }
         )
 
-        <form method="post" asp-controller="Account" asp-action="Login" class="login-form-grid">
+        <form method="post" asp-controller="Account" asp-action="Login" class="login-form-grid" data-no-form-persist>
             @Html.AntiForgeryToken()
             <input type="hidden" name="tenant" value="@tenant" />
             <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] as string ?? string.Empty)" />
             <div class="login-field">
-                <label for="login-username" class="form-label">اسم المستخدم</label>
+                <label for="login-username" class="form-label">بيانات الدخول</label>
                 <input id="login-username" name="username" class="form-control" autocomplete="username"
-                       inputmode="email" maxlength="256" placeholder="معرف الحساب أو البريد الإلكتروني"
+                       inputmode="text" maxlength="256" placeholder="اسم المستخدم أو البريد الإلكتروني أو الجوال"
                        value="@submittedUsername" />
             </div>
             <div class="login-field">
@@ -76,10 +76,6 @@
         const usernameInput = document.getElementById('login-username');
         const passwordInput = document.getElementById('login-password');
         const passwordToggle = document.querySelector('.login-password-toggle');
-
-        usernameInput?.addEventListener('input', () => {
-            usernameInput.value = usernameInput.value.replace(/\D/g, '').slice(0, 10);
-        });
 
         passwordToggle?.addEventListener('click', () => {
             const showPassword = passwordInput.type === 'password';

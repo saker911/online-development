@@ -372,6 +372,7 @@ namespace VehiclePermitSystemWeb.Services.Users
 
             if (
                 string.IsNullOrWhiteSpace(normalizedUsername)
+                || !NewAccountUsernameValidator.IsValid(normalizedUsername)
                 || string.IsNullOrWhiteSpace(normalizedFullName)
                 || !SaudiMobileNumberValidator.IsValidRequired(normalizedPhoneNumber)
                 || string.IsNullOrWhiteSpace(normalizedJobTitle)
@@ -1303,6 +1304,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                 var newPassword = request.NewUserPassword ?? string.Empty;
                 if (
                     string.IsNullOrWhiteSpace(newUsername)
+                    || !NewAccountUsernameValidator.IsValid(newUsername)
                     || string.IsNullOrWhiteSpace(newFullName)
                     || !ManagerTransitionService.IsSaudiMobileNumber(newPhoneNumber)
                     || string.IsNullOrWhiteSpace(newPassword)

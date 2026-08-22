@@ -153,7 +153,7 @@ User.IsInRole(AppRoles.SystemAdmin);
                     </div>
                     <div class="users-inline-actions users-inline-actions-grow @(canViewTenantScope ? "users-inline-actions-with-tenant" : string.Empty)">
                         <input type="search" class="form-control form-control-sm" id="users-table-search"
-                               placeholder="ابحث بالاسم أو المعرف الداخلي أو القسم أو الجهة" />
+                               placeholder="ابحث بالاسم أو اسم المستخدم أو القسم أو الجهة" />
                         @if (canViewTenantScope)
                         {
                             <select class="form-select form-select-sm" id="users-tenant-filter" aria-label="تصفية حسب الجهة">

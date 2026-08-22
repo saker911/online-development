@@ -4,8 +4,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Account
 {
     public sealed class ForgotPasswordViewModel
     {
-        [Required(ErrorMessage = "أدخل اسم المستخدم أو البريد الإلكتروني.")]
-        [Display(Name = "اسم المستخدم أو البريد الإلكتروني")]
+        [Required(ErrorMessage = "أدخل اسم المستخدم أو البريد الإلكتروني أو الجوال.")]
+        [Display(Name = "اسم المستخدم أو البريد الإلكتروني أو الجوال")]
         public string AccountIdentifier { get; set; } = string.Empty;
 
         public string Tenant { get; set; } = string.Empty;

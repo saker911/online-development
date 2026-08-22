@@ -223,6 +223,7 @@ namespace VehiclePermitSystemWeb.Utilities.Administration
                 var newManagerPhoneNumber = (request.NewManagerPhoneNumber ?? string.Empty).Trim();
                 if (
                     string.IsNullOrWhiteSpace(newManagerUsername)
+                    || !NewAccountUsernameValidator.IsValid(newManagerUsername)
                     || string.IsNullOrWhiteSpace(newManagerFullName)
                     || !ManagerTransitionService.IsSaudiMobileNumber(newManagerPhoneNumber)
                     || db.UserAccounts.Any(user => user.Username == newManagerUsername)

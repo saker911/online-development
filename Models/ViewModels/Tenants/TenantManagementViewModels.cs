@@ -89,7 +89,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         [RegularExpression("^[0-9]*$", ErrorMessage = "رقم الجهة يقبل الأرقام فقط.")]
         public string OrganizationReference { get; set; } = string.Empty;
 
-        [Display(Name = "معرف حساب مسؤول الجهة")]
+        [Display(Name = "اسم مستخدم مسؤول الجهة")]
         [RegularExpression(
             AccountUsernameValidator.RegularExpressionPattern,
             ErrorMessage = AccountUsernameValidator.ErrorMessage

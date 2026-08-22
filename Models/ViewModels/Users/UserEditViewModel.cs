@@ -5,8 +5,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
 {
     public class UserEditViewModel : IValidatableObject
     {
-        [Display(Name = "معرف الحساب")]
-        [Required(ErrorMessage = "معرف الحساب مطلوب.")]
+        [Display(Name = "اسم المستخدم")]
+        [Required(ErrorMessage = "اسم المستخدم مطلوب.")]
         public string Username { get; set; } = string.Empty;
 
         public string? OriginalUsername { get; set; }
@@ -137,10 +137,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
 
             if (string.IsNullOrWhiteSpace(normalizedOriginalUsername))
             {
-                if (!AccountUsernameValidator.IsValid(normalizedUsername))
+                if (!NewAccountUsernameValidator.IsValid(normalizedUsername))
                 {
                     yield return new ValidationResult(
-                        AccountUsernameValidator.ErrorMessage,
+                        NewAccountUsernameValidator.ErrorMessage,
                         new[] { nameof(Username) }
                     );
                 }
@@ -150,20 +150,19 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
 
             if (IsSuperAdmin)
             {
-                if (string.IsNullOrWhiteSpace(normalizedUsername))
+                if (string.Equals(
+                    normalizedUsername,
+                    normalizedOriginalUsername,
+                    StringComparison.OrdinalIgnoreCase
+                ))
                 {
-                    yield return new ValidationResult(
-                        "اسم مستخدم مالك النظام مطلوب.",
-                        new[] { nameof(Username) }
-                    );
+                    yield break;
                 }
-                else if (
-                    normalizedUsername.Length > 64
-                    || normalizedUsername.Any(character => char.IsWhiteSpace(character))
-                )
+
+                if (!NewAccountUsernameValidator.IsValid(normalizedUsername))
                 {
                     yield return new ValidationResult(
-                        "اسم مستخدم مالك النظام يجب أن يكون بدون مسافات وبحد أقصى 64 حرفًا.",
+                        NewAccountUsernameValidator.ErrorMessage,
                         new[] { nameof(Username) }
                     );
                 }

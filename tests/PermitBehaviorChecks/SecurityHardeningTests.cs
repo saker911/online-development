@@ -229,7 +229,7 @@ public sealed class SecurityHardeningTests
                 TenantId = "secure-signup",
                 OrganizationReference = "7001234567",
                 OwnerFullName = "مالك الاختبار",
-                OwnerUsername = "1023456789",
+                OwnerUsername = "signup.owner",
                 OwnerPhoneNumber = "0501234567",
                 OwnerEmail = "owner@example.com",
                 Password = "StrongSignup1!",
@@ -247,7 +247,7 @@ public sealed class SecurityHardeningTests
             Assert.StartsWith("workspace-", tenant.Slug);
             Assert.NotEqual("secure-signup", tenant.Slug);
             Assert.Equal("7001234567", tenant.OrganizationReference);
-            var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
+            var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "signup.owner");
             var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
             Assert.True(owner.IsActive);
             Assert.False(owner.IsEmailConfirmed);
@@ -264,7 +264,7 @@ public sealed class SecurityHardeningTests
         Assert.True(service.ActivatePaidSubscription(result.TenantId).Succeeded);
         using var verifiedDb = factory.CreateDbContext();
         Assert.True(verifiedDb.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId).IsActive);
-        var activatedOwner = verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
+        var activatedOwner = verifiedDb.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "signup.owner");
         Assert.True(activatedOwner.IsActive);
         Assert.NotEmpty(AppPermissions.GetGrantedPermissions(activatedOwner));
     }
@@ -368,7 +368,7 @@ public sealed class SecurityHardeningTests
                 Name = "جهة مهيأة",
                 Slug = "seeded-tenant",
                 DepartmentName = string.Empty,
-                OwnerUsername = "1023456789",
+                OwnerUsername = "seeded.owner",
                 OwnerFullName = "مسؤول الجهة",
                 OwnerEmail = "seeded-owner@example.com",
                 OwnerPhoneNumber = "0501234567",
@@ -402,7 +402,7 @@ public sealed class SecurityHardeningTests
                 TenantId = "deletable-tenant",
                 Name = "جهة قابلة للحذف",
                 Slug = "deletable-tenant",
-                OwnerUsername = "1023456789",
+                OwnerUsername = "delete.owner",
                 OwnerFullName = "مسؤول الجهة",
                 OwnerEmail = "delete-owner@example.com",
                 OwnerPhoneNumber = "0501234567",

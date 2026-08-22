@@ -83,7 +83,7 @@ public static class ServerInitialSetupCommand
     private static List<string> Validate(InitialSetupViewModel model)
     {
         var invalid = new List<string>();
-        if (!AccountUsernameValidator.IsValid(model.Username))
+        if (!NewAccountUsernameValidator.IsValid(model.Username))
             invalid.Add("Bootstrap__OwnerUsername");
         if (string.IsNullOrWhiteSpace(model.FullName))
             invalid.Add("Bootstrap__OwnerFullName");

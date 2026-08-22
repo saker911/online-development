@@ -36,6 +36,8 @@
                 و<a asp-controller="Home" asp-action="Privacy" target="_blank" rel="noopener">الخصوصية</a>.
             </p>
         }
-        <div class="external-auth-divider"><span>أو سجّل بالبريد الإلكتروني</span></div>
+        <div class="external-auth-divider">
+            <span>@(isLogin ? "أو استخدم بيانات حسابك" : "أو سجّل بالبريد الإلكتروني")</span>
+        </div>
     </section>
 }

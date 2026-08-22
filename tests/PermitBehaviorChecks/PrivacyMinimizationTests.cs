@@ -25,6 +25,26 @@ public sealed class PrivacyMinimizationTests
         Assert.False(AccountUsernameValidator.IsValid(username));
     }
 
+    [Theory]
+    [InlineData("owner.main")]
+    [InlineData("employee-01")]
+    [InlineData("Admin_2026")]
+    public void NewAccountUsernameUsesEnglishAccountNames(string username)
+    {
+        Assert.True(NewAccountUsernameValidator.IsValid(username));
+    }
+
+    [Theory]
+    [InlineData("1024722918")]
+    [InlineData("0501234567")]
+    [InlineData("user@example.com")]
+    [InlineData("abc")]
+    [InlineData("-employee")]
+    public void NewAccountUsernameRejectsIdentityAndContactValues(string username)
+    {
+        Assert.False(NewAccountUsernameValidator.IsValid(username));
+    }
+
     [Fact]
     public void InternalReferencesAreRandomAndCannotBeMistakenForNationalIdentity()
     {

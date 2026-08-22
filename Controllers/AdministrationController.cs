@@ -533,11 +533,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (request.CreateNewManager)
             {
-                if (!AccountUsernameValidator.IsValid(request.NewManagerUsername))
+                if (!NewAccountUsernameValidator.IsValid(request.NewManagerUsername))
                 {
                     ModelState.AddModelError(
                         HandoverModelKey(nameof(request.NewManagerUsername)),
-                        AccountUsernameValidator.ErrorMessage
+                        NewAccountUsernameValidator.ErrorMessage
                     );
                 }
 
@@ -697,11 +697,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (normalizedSelectionMode == GeneralManagerSelectionModes.CreateNew)
             {
-                if (!AccountUsernameValidator.IsValid(request.NewUserUsername))
+                if (!NewAccountUsernameValidator.IsValid(request.NewUserUsername))
                 {
                     ModelState.AddModelError(
                         GeneralManagerModelKey(nameof(request.NewUserUsername)),
-                        AccountUsernameValidator.ErrorMessage
+                        NewAccountUsernameValidator.ErrorMessage
                     );
                 }
 

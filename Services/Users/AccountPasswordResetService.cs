@@ -125,12 +125,24 @@ namespace VehiclePermitSystemWeb.Services.Users
                     )
                     .Take(2)
                     .ToList();
-                if (emailMatches.Count != 1)
+                if (emailMatches.Count == 1)
+                {
+                    user = emailMatches[0];
+                }
+            }
+
+            if (user == null)
+            {
+                var phoneMatches = eligibleUsers
+                    .Where(item => item.PhoneNumber == normalizedIdentifier)
+                    .Take(2)
+                    .ToList();
+                if (phoneMatches.Count != 1)
                 {
                     return null;
                 }
 
-                user = emailMatches[0];
+                user = phoneMatches[0];
             }
 
             var normalizedEmail = user.Email.Trim().ToLowerInvariant();

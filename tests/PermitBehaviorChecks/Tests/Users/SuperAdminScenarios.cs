@@ -45,7 +45,7 @@ internal static partial class ScenarioCatalog
     {
         using var harness = new SuperAdminScenarioHarness();
 
-        const string initialUsername = "1234567890";
+        const string initialUsername = "owner.initial";
         const string initialPassword = "Owner2026!";
         var weakPasswordRejected = harness.UserAdminService.CompleteInitialSetup(
             new InitialSetupViewModel
@@ -418,8 +418,8 @@ internal static partial class ScenarioCatalog
 
         const string originalPassword = "Owner14011401!";
         const string updatedPassword = "Bb15011501!";
-        const string originalUsername = "1099999999";
-        const string renamedUsername = "1234567890";
+        const string originalUsername = "owner.primary";
+        const string renamedUsername = "owner.renamed";
 
         Require(
             harness.UserAdminService.CompleteInitialSetup(
@@ -451,7 +451,7 @@ internal static partial class ScenarioCatalog
 
         Require(
             harness.UserAdminService.UpdateUser(systemOwner, updatedPassword, originalUsername),
-            "super admin should be able to rename the protected account to a real 10-digit national id and set a new password"
+            "super admin should be able to rename the protected account to a valid English username and set a new password"
         );
 
         var renamedOwner =
@@ -719,7 +719,7 @@ internal static partial class ScenarioCatalog
         var initialSetup = harness.UserAdminService.CompleteInitialSetup(
             new InitialSetupViewModel
             {
-                Username = "1999999999",
+                Username = "owner.admin.sync",
                 FullName = "مالك النظام للاختبار",
                 PhoneNumber = "0509999999",
                 Password = "Owner2026!",

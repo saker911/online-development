@@ -793,8 +793,8 @@
                             <div class="login-field setup-form-input">
                                 <label asp-for="Username" class="form-label"></label>
                                 <input asp-for="Username" class="form-control ltr-field" autocomplete="username"
-                                        required minlength="4" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}"
-                                        placeholder="owner.main" title="استخدم 4 إلى 64 حرفًا أو رقمًا، ويمكن استخدام النقطة والشرطة." />
+                                        required minlength="4" maxlength="64" pattern="[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]"
+                                        placeholder="owner.main" title="ابدأ بحرف إنجليزي وأنهِ الاسم بحرف أو رقم." />
                                 <span asp-validation-for="Username" class="field-validation-error small"></span>
                             </div>
 
@@ -914,7 +914,7 @@
                                     <article class="setup-confirm-card">
                                         <strong>الحساب الرئيسي</strong>
                                         <div class="setup-confirm-list">
-                                            <div class="setup-confirm-item"><span>المعرف الداخلي</span><b data-summary="Username"></b></div>
+                                            <div class="setup-confirm-item"><span>اسم المستخدم</span><b data-summary="Username"></b></div>
                                             <div class="setup-confirm-item"><span>الاسم الكامل</span><b data-summary="FullName"></b>
                                             </div>
                                             <div class="setup-confirm-item"><span>الجوال</span><b data-summary="PhoneNumber"></b></div>
@@ -1060,7 +1060,7 @@
 
                                                 if (field.hasAttribute('required') && trimmedValue.length === 0) {
                                                     if (name === 'Username') {
-                                                        message = 'المعرف الداخلي مطلوب.';
+                                                        message = 'اسم المستخدم مطلوب.';
                                                     } else if (name === 'JobTitle') {
                                                         message = 'المسمى الوظيفي مطلوب.';
                                                     } else if (name === 'FullName') {
@@ -1082,8 +1082,8 @@
                                                     }
                                                 }
 
-                                                if (!message && name === 'Username' && !/^[12]\d{9}$/.test(trimmedValue)) {
-                                                    message = 'المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2.';
+                                                if (!message && name === 'Username' && !/^[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]$/.test(trimmedValue)) {
+                                                    message = 'اسم المستخدم يجب أن يبدأ بحرف إنجليزي وينتهي بحرف أو رقم.';
                                                 }
 
                                                 if (!message && name === 'PhoneNumber' && !/^05\d{8}$/.test(trimmedValue)) {

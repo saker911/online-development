@@ -540,7 +540,7 @@
                                                         <input type="text"
                                                                class="form-control general-manager-user-picker-input"
                                                                id="GeneralManagerAssignment_ExistingUserUsernameSearch"
-                                                               placeholder="ابحث بالاسم أو المعرف الداخلي أو القسم"
+                                                               placeholder="ابحث بالاسم أو اسم المستخدم أو القسم"
                                                                autocomplete="off"
                                                                role="combobox"
                                                                aria-autocomplete="list"
@@ -617,7 +617,7 @@
                                                                                                                                                                         ?? "غير محدد")</strong>
                                                         </div>
                                                         <div class="general-manager-wizard-details-item">
-                                                            <span>المعرف الداخلي</span>
+                                                            <span>اسم المستخدم</span>
                                                             <strong
                                                                 data-general-manager-existing-detail="username">@(selectedExistingUser?.Username
                                                                                                                                                                                 ?? "غير محدد")</strong>
@@ -652,12 +652,11 @@
                                                             <div id="generalManagerCreateUserFields">
                                                                 <div class="row g-3">
                                                                     <div class="col-md-4">
-                                                                        <label asp-for="GeneralManagerAssignment.NewUserUsername" class="form-label">المعرف
-                                                                            الداخلي</label>
+                                                                        <label asp-for="GeneralManagerAssignment.NewUserUsername" class="form-label">اسم المستخدم</label>
                                                                             <input asp-for="GeneralManagerAssignment.NewUserUsername"
                                                                                    class="form-control ltr-field" id="GeneralManagerAssignment_NewUserUsername"
-                                                                                      inputmode="numeric" maxlength="10" pattern="[12][0-9]{9}"
-                                                                                      placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" />
+                                                                                      maxlength="64" pattern="[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]"
+                                                                                      placeholder="manager.main" title="ابدأ بحرف إنجليزي وأنهِ الاسم بحرف أو رقم" />
                                                                             <span asp-validation-for="GeneralManagerAssignment.NewUserUsername"
                                                                                   class="field-validation-error small"></span>
                                                                         </div>
@@ -740,7 +739,7 @@
                                                                             <strong>@currentGeneralManagerDisplay</strong>
                                                                         </div>
                                                                         <div class="general-manager-wizard-details-item">
-                                                                            <span>المعرف الداخلي</span>
+                                                                            <span>اسم المستخدم</span>
                                                                             <strong>@Model.CurrentGeneralManagerUsername</strong>
                                                                         </div>
                                                                         <div class="general-manager-wizard-details-item">
@@ -1399,8 +1398,8 @@
                                                                     return true;
                                                                 }
 
-                                                                if (!newUserUsernameInput || !/^[12]\d{9}$/.test(newUserUsernameInput.value.trim())) {
-                                                                    return showValidationState(newUserUsernameInput, "المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2.");
+                                                                if (!newUserUsernameInput || !/^[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]$/.test(newUserUsernameInput.value.trim())) {
+                                                                    return showValidationState(newUserUsernameInput, "اسم المستخدم يجب أن يبدأ بحرف إنجليزي وينتهي بحرف أو رقم.");
                                                                 }
 
                                                                 if (!newUserFullNameInput || !newUserFullNameInput.value.trim()) {

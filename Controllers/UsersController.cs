@@ -1599,7 +1599,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             model.OriginalUsername = (model.OriginalUsername ?? string.Empty).Trim();
             model.Username = string.IsNullOrWhiteSpace(model.OriginalUsername)
-                ? new string((model.Username ?? string.Empty).Where(char.IsDigit).ToArray())
+                ? (model.Username ?? string.Empty).Trim()
                 : (model.Username ?? string.Empty).Trim();
             model.FullName = (model.FullName ?? string.Empty).Trim();
             model.Email = (model.Email ?? string.Empty).Trim();
@@ -1781,11 +1781,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (string.IsNullOrWhiteSpace(normalizedOriginalUsername))
             {
-                if (!AccountUsernameValidator.IsValid(normalizedUsername))
+                if (!NewAccountUsernameValidator.IsValid(normalizedUsername))
                 {
                     ModelState.AddModelError(
                         nameof(model.Username),
-                        AccountUsernameValidator.ErrorMessage
+                        NewAccountUsernameValidator.ErrorMessage
                     );
                 }
 
@@ -1794,11 +1794,18 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (model.IsSuperAdmin)
             {
-                if (!AccountUsernameValidator.IsValid(normalizedUsername))
+                if (
+                    !string.Equals(
+                        normalizedUsername,
+                        normalizedOriginalUsername,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    && !NewAccountUsernameValidator.IsValid(normalizedUsername)
+                )
                 {
                     ModelState.AddModelError(
                         nameof(model.Username),
-                        AccountUsernameValidator.ErrorMessage
+                        NewAccountUsernameValidator.ErrorMessage
                     );
                 }
 

@@ -83,7 +83,7 @@ public sealed class TenantFeatureTests
         {
             Name = "مدرسة الاختبار",
             OrganizationReference = "123456",
-            OwnerUsername = "1023456789",
+            OwnerUsername = "school.owner",
             OwnerFullName = "مدير المدرسة",
             OwnerEmail = "school-owner@example.com",
             OwnerPhoneNumber = "0501234567",
@@ -92,7 +92,7 @@ public sealed class TenantFeatureTests
         Assert.True(result.Succeeded, result.Message);
         using var db = factory.CreateDbContext();
         var tenant = db.Tenants.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
-        var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "1023456789");
+        var owner = db.UserAccounts.IgnoreQueryFilters().Single(x => x.Username == "school.owner");
         var settings = db.AdministrationSettings.IgnoreQueryFilters().Single(x => x.TenantId == result.TenantId);
         Assert.StartsWith("workspace-", tenant.Slug);
         Assert.Equal("123456", tenant.OrganizationReference);
@@ -120,7 +120,7 @@ public sealed class TenantFeatureTests
                 SelfServiceEnabled = true,
                 QueueServiceEnabled = true,
                 GateServiceEnabled = true,
-                OwnerUsername = "1023456789",
+                OwnerUsername = "feature.owner",
                 OwnerFullName = "مسؤول الجهة",
                 OwnerEmail = "feature-owner@example.com",
                 OwnerPhoneNumber = "0501234567",

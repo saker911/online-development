@@ -722,10 +722,10 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
 
                                                                             <div id="handoverNewManagerFields" class="row g-3">
                                                                                 <div class="col-md-4">
-                                                                                    <label asp-for="Handover.NewManagerUsername" class="form-label">المعرف الداخلي</label>
+                                                                                    <label asp-for="Handover.NewManagerUsername" class="form-label">اسم المستخدم</label>
                                                                                     <input asp-for="Handover.NewManagerUsername" class="form-control ltr-field"
-                                                                                        inputmode="numeric" maxlength="10" pattern="[12][0-9]{9}"
-                                                                                        placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" />
+                                                                                        maxlength="64" pattern="[A-Za-z][A-Za-z0-9._-]{2,62}[A-Za-z0-9]"
+                                                                                        placeholder="manager.main" title="ابدأ بحرف إنجليزي وأنهِ الاسم بحرف أو رقم" />
                                                                                     <span asp-validation-for="Handover.NewManagerUsername"
                                                                                           class="field-validation-error small"></span>
                                                                                 </div>

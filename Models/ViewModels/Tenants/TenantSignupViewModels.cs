@@ -69,10 +69,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public string OwnerFullName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "اسم المستخدم مطلوب.")]
-        [Display(Name = "معرف الحساب")]
+        [Display(Name = "اسم المستخدم")]
         [RegularExpression(
-            AccountUsernameValidator.RegularExpressionPattern,
-            ErrorMessage = AccountUsernameValidator.ErrorMessage
+            NewAccountUsernameValidator.RegularExpressionPattern,
+            ErrorMessage = NewAccountUsernameValidator.ErrorMessage
         )]
         public string OwnerUsername { get; set; } = string.Empty;
 

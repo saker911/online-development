@@ -2187,7 +2187,7 @@ internal static partial class ScenarioCatalog
         IUserAdminService userAdminService
     )
     {
-        var newGeneralManagerUsername = "2111111111";
+        var newGeneralManagerUsername = "general.manager.new";
         var currentGeneralManagerUsername = "2111111110";
         var strayGeneralManagerUsername = "2111111109";
         var seedDepartmentName = $"قسم إنشاء المدير العام {Guid.NewGuid():N}";
@@ -2505,7 +2505,7 @@ internal static partial class ScenarioCatalog
     )
     {
         var currentGeneralManagerUsername = "2200000001";
-        var newGeneralManagerUsername = "2200000002";
+        var newGeneralManagerUsername = "general.manager.wizard";
         var newGeneralManagerFullName = "مدير عام جديد من المعالج";
         var newGeneralManagerPhone = "0556666666";
         var targetDepartmentId = 0;

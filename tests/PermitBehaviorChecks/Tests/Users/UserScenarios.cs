@@ -15,7 +15,7 @@ internal static partial class ScenarioCatalog
     )
     {
         const string tenantId = "selected-gm-tenant";
-        const string username = "2699999998";
+        const string username = "selected.general.manager";
         var departmentName = $"إدارة جهة مختارة {Guid.NewGuid():N}";
         string defaultManagerUsername;
 
@@ -290,7 +290,7 @@ internal static partial class ScenarioCatalog
     {
         var departmentName = $"قسم إعادة توجيه المدراء {Guid.NewGuid():N}";
         var previousManagerUsername = $"users-manager-current-{Guid.NewGuid():N}";
-        var newManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var newManagerUsername = $"manager.{Guid.NewGuid():N}";
         var departmentId = 0;
 
         using (var db = dbFactory.CreateDbContext())
@@ -403,7 +403,7 @@ internal static partial class ScenarioCatalog
     )
     {
         var departmentName = $"قسم بلا مدير {Guid.NewGuid():N}";
-        var newManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var newManagerUsername = $"manager.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {
@@ -645,7 +645,7 @@ internal static partial class ScenarioCatalog
             db.SaveChanges();
         }
 
-        var newGeneralManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var newGeneralManagerUsername = $"general.{Guid.NewGuid():N}";
         var controller = CreateUsersController(
             userAdminService,
             BuildPrincipal("system-owner", AppRoles.SystemAdmin, true, AppPermissions.ManageUsers)
@@ -690,7 +690,7 @@ internal static partial class ScenarioCatalog
         IUserAdminService userAdminService
     )
     {
-        var newGeneralManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var newGeneralManagerUsername = $"general.{Guid.NewGuid():N}";
         using (var db = dbFactory.CreateDbContext())
         {
             foreach (
@@ -788,8 +788,8 @@ internal static partial class ScenarioCatalog
         IUserAdminService userAdminService
     )
     {
-        var currentGeneralManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
-        var newGeneralManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var currentGeneralManagerUsername = $"general.current.{Guid.NewGuid():N}";
+        var newGeneralManagerUsername = $"general.next.{Guid.NewGuid():N}";
         using (var db = dbFactory.CreateDbContext())
         {
             var currentGeneralManager = new UserAccount
@@ -887,8 +887,8 @@ internal static partial class ScenarioCatalog
     )
     {
         var departmentName = $"قسم صلاحية إنشاء مدير {Guid.NewGuid():N}";
-        var departmentManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
-        var generalManagerUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var departmentManagerUsername = $"department.manager.{Guid.NewGuid():N}";
+        var generalManagerUsername = $"general.manager.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {
@@ -987,7 +987,7 @@ internal static partial class ScenarioCatalog
     )
     {
         var departmentName = $"قسم البريد {Guid.NewGuid():N}";
-        var username = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var username = $"employee.{Guid.NewGuid():N}";
         using (var db = dbFactory.CreateDbContext())
         {
             db.Departments.Add(
@@ -1080,7 +1080,7 @@ internal static partial class ScenarioCatalog
     )
     {
         var departmentName = $"قسم صلاحيات الدور {Guid.NewGuid():N}";
-        var username = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var username = $"employee.{Guid.NewGuid():N}";
         using (var db = dbFactory.CreateDbContext())
         {
             db.Departments.Add(
@@ -1158,7 +1158,7 @@ internal static partial class ScenarioCatalog
         const string actorUsername = "tester";
         var departmentName = $"قسم مستخدمين {Guid.NewGuid():N}";
         var scenarioToken = Guid.NewGuid().ToString("N")[..6];
-        var targetUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var targetUsername = $"employee.{Guid.NewGuid():N}";
         var originalFullName = $"موظف اختبار {scenarioToken}";
         var updatedFullName = $"{originalFullName} محدث";
         const string originalPhoneNumber = "0501234567";
@@ -1535,7 +1535,7 @@ internal static partial class ScenarioCatalog
             "user badge print should render the employee badge view"
         );
 
-        var gateOperatorUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var gateOperatorUsername = $"gate.operator.{Guid.NewGuid():N}";
         var gateOperatorName = $"مشغل بوابة {scenarioToken}";
         var gateCreateController = CreateUsersController(userAdminService, managerPrincipal);
         var gateCreateResult = gateCreateController.Create(
@@ -1723,9 +1723,9 @@ internal static partial class ScenarioCatalog
     {
         const string actorUsername = "tester";
         var departmentName = $"قسم معالج المستخدمين {Guid.NewGuid():N}";
-        var activeUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
-        var inactiveUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
-        var missingUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var activeUsername = $"active.user.{Guid.NewGuid():N}";
+        var inactiveUsername = $"inactive.user.{Guid.NewGuid():N}";
+        var missingUsername = $"missing.user.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {
@@ -1905,7 +1905,7 @@ internal static partial class ScenarioCatalog
         const string actorUsername = "tester";
         const string replacementPassword = "OnlineTest2026!";
         var departmentName = $"قسم تحرير يدوي {Guid.NewGuid():N}";
-        var targetUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var targetUsername = $"employee.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {
@@ -1949,7 +1949,20 @@ internal static partial class ScenarioCatalog
 
         Require(
             createResult is RedirectToActionResult { ActionName: nameof(UsersController.Index) },
-            "manual edit scenario should create the initial user"
+            "manual edit scenario should create the initial user; result="
+                + createResult.GetType().Name
+                + "; username="
+                + targetUsername
+                + "; normalized="
+                + createController.ModelState[nameof(UserEditViewModel.Username)]?.AttemptedValue
+                + "; errors="
+                + string.Join(
+                    " | ",
+                    createController.ModelState.SelectMany(entry =>
+                        entry.Value?.Errors.Select(error => $"{entry.Key}:{error.ErrorMessage}")
+                            ?? []
+                    )
+                )
         );
 
         var editController = CreateUsersController(userAdminService, managerPrincipal);
@@ -2128,7 +2141,7 @@ internal static partial class ScenarioCatalog
         IUserAdminService userAdminService
     )
     {
-        var username = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var username = $"employee.{Guid.NewGuid():N}";
         var user = new UserAccount
         {
             Username = username,
@@ -2372,8 +2385,8 @@ internal static partial class ScenarioCatalog
     )
     {
         var departmentName = $"قسم منع التصعيد {Guid.NewGuid():N}";
-        var privilegedTargetUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
-        var editableUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var privilegedTargetUsername = $"privileged.user.{Guid.NewGuid():N}";
+        var editableUsername = $"editable.user.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {

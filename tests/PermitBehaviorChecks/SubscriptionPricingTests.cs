@@ -54,7 +54,7 @@ public sealed class SubscriptionPricingTests
                 CompanyName = "جهة اختبار السعر",
                 TenantId = "pricing-snapshot",
                 OwnerFullName = "مالك اختبار السعر",
-                OwnerUsername = "1023456789",
+                OwnerUsername = "pricing.owner",
                 OwnerPhoneNumber = "0501234567",
                 OwnerEmail = "pricing@example.com",
                 Password = "StrongSignup1!",

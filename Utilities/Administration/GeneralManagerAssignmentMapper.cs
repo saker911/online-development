@@ -105,9 +105,7 @@ namespace VehiclePermitSystemWeb.Utilities.Administration
             assignment.ExistingUserUsername = (
                 assignment.ExistingUserUsername ?? string.Empty
             ).Trim();
-            assignment.NewUserUsername = new string(
-                (assignment.NewUserUsername ?? string.Empty).Where(char.IsDigit).ToArray()
-            );
+            assignment.NewUserUsername = (assignment.NewUserUsername ?? string.Empty).Trim();
             assignment.NewUserFullName = (assignment.NewUserFullName ?? string.Empty).Trim();
             assignment.NewUserPhoneNumber = new string(
                 (assignment.NewUserPhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray()

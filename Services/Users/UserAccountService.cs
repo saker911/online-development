@@ -340,10 +340,20 @@ namespace VehiclePermitSystemWeb.Services.Users
 
             var normalizedLogin = username.Trim();
             var normalizedEmail = normalizedLogin.ToLowerInvariant();
-            var user = db.UserAccounts.FirstOrDefault(u =>
-                u.Username == normalizedLogin
-                || (!string.IsNullOrWhiteSpace(u.Email) && u.Email.ToLower() == normalizedEmail)
-            );
+            var user = db.UserAccounts.FirstOrDefault(u => u.Username == normalizedLogin);
+            if (user == null)
+            {
+                var contactMatches = db
+                    .UserAccounts.Where(u =>
+                        (!string.IsNullOrWhiteSpace(u.Email)
+                            && u.Email.ToLower() == normalizedEmail)
+                        || (!string.IsNullOrWhiteSpace(u.PhoneNumber)
+                            && u.PhoneNumber == normalizedLogin)
+                    )
+                    .Take(2)
+                    .ToList();
+                user = contactMatches.Count == 1 ? contactMatches[0] : null;
+            }
             if (user == null || !user.IsActive)
             {
                 return false;

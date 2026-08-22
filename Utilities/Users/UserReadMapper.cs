@@ -41,11 +41,23 @@ namespace VehiclePermitSystemWeb.Utilities.Users
 
             var normalized = (username ?? string.Empty).Trim();
             var normalizedEmail = normalized.ToLowerInvariant();
-            return users.AsNoTracking().FirstOrDefault(user =>
-                user.Username == normalized
-                || (!string.IsNullOrWhiteSpace(user.Email)
-                    && user.Email.ToLower() == normalizedEmail)
-            );
+            var exactUser = users.AsNoTracking().FirstOrDefault(user => user.Username == normalized);
+            if (exactUser != null)
+            {
+                return exactUser;
+            }
+
+            var contactMatches = users
+                .AsNoTracking()
+                .Where(user =>
+                    (!string.IsNullOrWhiteSpace(user.Email)
+                        && user.Email.ToLower() == normalizedEmail)
+                    || (!string.IsNullOrWhiteSpace(user.PhoneNumber)
+                        && user.PhoneNumber == normalized)
+                )
+                .Take(2)
+                .ToList();
+            return contactMatches.Count == 1 ? contactMatches[0] : null;
         }
 
         public static bool HasAnyUsers(ApplicationDbContext db)

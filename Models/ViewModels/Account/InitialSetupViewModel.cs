@@ -4,11 +4,11 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Account
 {
     public class InitialSetupViewModel
     {
-        [Display(Name = "معرف الحساب")]
-        [Required(ErrorMessage = "معرف الحساب مطلوب.")]
+        [Display(Name = "اسم المستخدم")]
+        [Required(ErrorMessage = "اسم المستخدم مطلوب.")]
         [RegularExpression(
-            AccountUsernameValidator.RegularExpressionPattern,
-            ErrorMessage = AccountUsernameValidator.ErrorMessage
+            NewAccountUsernameValidator.RegularExpressionPattern,
+            ErrorMessage = NewAccountUsernameValidator.ErrorMessage
         )]
         public string Username { get; set; } = string.Empty;
 

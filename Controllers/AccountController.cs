@@ -166,7 +166,7 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
                 ViewData["SubmittedUsername"] = username;
-                ToastNotifications.Error("أدخل معرف الحساب أو البريد الإلكتروني.");
+                ToastNotifications.Error("أدخل اسم المستخدم أو البريد الإلكتروني أو الجوال.");
                 return View();
             }
 
@@ -685,11 +685,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View(model);
             }
 
-            if (!AccountUsernameValidator.IsValid(model.Username))
+            if (!NewAccountUsernameValidator.IsValid(model.Username))
             {
                 ModelState.AddModelError(
                     nameof(model.Username),
-                    AccountUsernameValidator.ErrorMessage
+                    NewAccountUsernameValidator.ErrorMessage
                 );
             }
 
