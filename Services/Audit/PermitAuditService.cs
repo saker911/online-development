@@ -38,7 +38,7 @@ namespace VehiclePermitSystemWeb.Services.Audit
                 {
                     PermitNumber = permit.PermitNumber,
                     DriverName = permit.DriverName,
-                    NationalId = permit.NationalId,
+                    NationalId = string.Empty,
                     DepartmentName = permit.DepartmentName,
                     ActionType = actionType,
                     ActionLabel = actionLabel,

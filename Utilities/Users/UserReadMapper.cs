@@ -39,7 +39,13 @@ namespace VehiclePermitSystemWeb.Utilities.Users
                 ? db.UserAccounts.IgnoreQueryFilters()
                 : db.UserAccounts;
 
-            return users.AsNoTracking().FirstOrDefault(user => user.Username == username);
+            var normalized = (username ?? string.Empty).Trim();
+            var normalizedEmail = normalized.ToLowerInvariant();
+            return users.AsNoTracking().FirstOrDefault(user =>
+                user.Username == normalized
+                || (!string.IsNullOrWhiteSpace(user.Email)
+                    && user.Email.ToLower() == normalizedEmail)
+            );
         }
 
         public static bool HasAnyUsers(ApplicationDbContext db)

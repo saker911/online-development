@@ -43,6 +43,13 @@ var runSchemaUpgradeOnly = args.Any(arg =>
     string.Equals(arg, "--upgrade-db", StringComparison.OrdinalIgnoreCase)
     || string.Equals(arg, "--schema-upgrade", StringComparison.OrdinalIgnoreCase)
 );
+var runOwnerBootstrapOnly = args.Any(arg =>
+    string.Equals(
+        arg,
+        ServerInitialSetupCommand.CommandArgument,
+        StringComparison.OrdinalIgnoreCase
+    )
+);
 
 if (InstallerDataProbe.TryHandle(args))
 {
@@ -172,6 +179,23 @@ builder.Services.AddRateLimiter(options =>
                 {
                     PermitLimit = 5,
                     Window = TimeSpan.FromMinutes(15),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }
+            );
+        }
+    );
+    options.AddPolicy<string>(
+        "mfa",
+        context =>
+        {
+            var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: remoteIp,
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(5),
                     QueueLimit = 0,
                     AutoReplenishment = true,
                 }
@@ -380,7 +404,7 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
         options.UseInMemoryDatabase("VehiclePermitSystemWeb");
     }
 });
-builder.Services.AddVehiclePermitApplicationServices(runSchemaUpgradeOnly);
+builder.Services.AddVehiclePermitApplicationServices(runSchemaUpgradeOnly || runOwnerBootstrapOnly);
 builder.Services.AddVehiclePermitAuthorization();
 builder.Services.AddVehiclePermitCookieAuthentication(cookieSecurePolicy, builder.Configuration);
 
@@ -410,6 +434,17 @@ if (string.Equals(dataProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 }
 var databaseBootstrap = app.Services.GetRequiredService<IDatabaseBootstrapService>();
 databaseBootstrap.EnsureInitialized();
+
+if (runOwnerBootstrapOnly)
+{
+    var bootstrapResult = ServerInitialSetupCommand.Execute(
+        app.Services.GetRequiredService<IUserAdminService>(),
+        app.Configuration,
+        app.Logger
+    );
+    Environment.ExitCode = bootstrapResult;
+    return;
+}
 
 if (runSchemaUpgradeOnly)
 {
@@ -593,6 +628,29 @@ app.Use(
                     return;
                 }
 
+                if (
+                    MultiFactorAuthenticationRequirement.IsRequired(currentUser)
+                    && !context.User.HasClaim(
+                        MultiFactorAuthenticationRequirement.AuthenticationMethodClaimType,
+                        MultiFactorAuthenticationRequirement.AuthenticationMethodClaimValue
+                    )
+                )
+                {
+                    userAdminService.RecordUserActivity(
+                        currentUser.Username,
+                        currentUser.DisplayName,
+                        "MfaSessionRejected",
+                        "جلسة إدارية دون تحقق إضافي",
+                        "تم إنهاء جلسة إدارية لم تمر بالمصادقة الثنائية.",
+                        "SessionValidationMiddleware",
+                        currentUser.Username
+                    );
+                    userAdminService.RemoveSession(sessionId);
+                    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    context.Response.Redirect("/Account/Login");
+                    return;
+                }
+
                 // refresh sliding expiration after confirming the account is still valid
                 userAdminService.RefreshSession(sessionId);
 
@@ -621,13 +679,44 @@ app.Use(
     }
 );
 
+app.UseMiddleware<OrganizationOnboardingMiddleware>();
+
 app.UseMiddleware<SubscriptionAccessMiddleware>();
 
 app.UseMiddleware<TenantFeatureAccessMiddleware>();
 
 app.UseAuthorization();
 
-app.MapGet("/healthz", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+app.MapGet("/healthz/live", () => Results.Ok(new { status = "ok" }))
+    .AllowAnonymous();
+app.MapGet(
+        "/healthz",
+        async (
+            IDbContextFactory<ApplicationDbContext> dbContextFactory,
+            CancellationToken cancellationToken
+        ) =>
+        {
+            try
+            {
+                await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+                var databaseReady = await db.Database.CanConnectAsync(cancellationToken);
+                return databaseReady
+                    ? Results.Ok(new { status = "ready" })
+                    : Results.Json(
+                        new { status = "unavailable" },
+                        statusCode: StatusCodes.Status503ServiceUnavailable
+                    );
+            }
+            catch
+            {
+                return Results.Json(
+                    new { status = "unavailable" },
+                    statusCode: StatusCodes.Status503ServiceUnavailable
+                );
+            }
+        }
+    )
+    .AllowAnonymous();
 app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

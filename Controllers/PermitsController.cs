@@ -376,6 +376,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             ModelState.Clear();
             ValidateAndApplyLocation(permit);
+            ValidateOptionalIdentity(permit.NationalId);
             TryValidateModel(permit);
 
             if (ModelState.IsValid)
@@ -457,6 +458,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 return Forbid();
             }
             ModelState.Clear();
+            ValidateOptionalIdentity(permit.NationalId);
             TryValidateModel(permit);
 
             if (ModelState.IsValid)
@@ -633,16 +635,16 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private void PopulateLocationOptions()
         {
-            ViewData["WorkplaceLocations"] = _workplaceDirectoryService?.GetLocationOptions()
+            ViewData["WorkplaceLocations"] = GetScopedLocationOptions()
                 .Where(item => item.PermitsEnabled)
-                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+                .ToList();
         }
 
         private void ValidateAndApplyLocation(Permit permit)
         {
-            var options = _workplaceDirectoryService?.GetLocationOptions()
+            var options = GetScopedLocationOptions()
                 .Where(item => item.PermitsEnabled)
-                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+                .ToList();
             if (options.Count == 0 && !permit.WorkplaceSiteId.HasValue)
             {
                 return;
@@ -678,20 +680,33 @@ namespace VehiclePermitSystemWeb.Controllers
             }
         }
 
+        private IReadOnlyList<WorkplaceLocationOptionViewModel> GetScopedLocationOptions()
+        {
+            var options = _workplaceDirectoryService?.GetLocationOptions()
+                ?? Array.Empty<WorkplaceLocationOptionViewModel>();
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (
+                currentUser == null
+                || currentUser.IsSuperAdmin
+                || string.Equals(currentUser.Role, AppRoles.GeneralManager, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return currentUser == null ? Array.Empty<WorkplaceLocationOptionViewModel>() : options;
+            }
+
+            return currentUser.WorkplaceSiteId.HasValue
+                ? options.Where(item => item.SiteId == currentUser.WorkplaceSiteId.Value).ToList()
+                : Array.Empty<WorkplaceLocationOptionViewModel>();
+        }
+
         private void NormalizePermitInput(Permit permit, bool isCreate)
         {
             permit.DriverName = (permit.DriverName ?? string.Empty).Trim();
             permit.NationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
                 ? (
-                    string.IsNullOrWhiteSpace(permit.NationalId)
-                        ? OnlineEditionSettings.BuildSyntheticNationalId(
-                            permit.DriverName,
-                            permit.EmployeePhone,
-                            permit.PlateNumber,
-                            permit.VisitLocation,
-                            permit.DepartmentName
-                        )
-                        : new string(permit.NationalId.Where(char.IsDigit).ToArray())
+                    PersonalDataSanitizer.IsInternalReference(permit.NationalId)
+                        ? permit.NationalId.Trim()
+                        : OnlineEditionSettings.BuildInternalReference()
                 )
                 : new string((permit.NationalId ?? string.Empty).Where(char.IsDigit).ToArray());
             permit.DepartmentName = (permit.DepartmentName ?? string.Empty).Trim();
@@ -1082,6 +1097,22 @@ namespace VehiclePermitSystemWeb.Controllers
             return File(bytes, "image/png");
         }
 
+        private void ValidateOptionalIdentity(string? identity)
+        {
+            if (OnlineEditionSettings.HideSensitiveIdentityFields(_configuration))
+            {
+                return;
+            }
+
+            if (!SaudiNationalIdOrIqamaValidator.IsValid(identity))
+            {
+                ModelState.AddModelError(
+                    nameof(Permit.NationalId),
+                    SaudiNationalIdOrIqamaValidator.ErrorMessage
+                );
+            }
+        }
+
         [AllowAnonymous]
         [HttpGet("/o/{tenant}/permit/{token}")]
         [HttpGet("/Permits/Verify")]
@@ -1386,7 +1417,10 @@ namespace VehiclePermitSystemWeb.Controllers
                                             permit.IsVisitorPermit ? "اسم الزائر" : "اسم المصرح له",
                                             permit.DriverName
                                         );
-                                        AddDetailRow(table, "رقم الهوية", permit.NationalId);
+                                        if (!OnlineEditionSettings.HideSensitiveIdentityFields(_configuration))
+                                        {
+                                            AddDetailRow(table, "رقم الهوية", permit.NationalId);
+                                        }
                                         AddDetailRow(
                                             table,
                                             permit.RequiresVisitLocation

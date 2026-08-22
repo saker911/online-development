@@ -71,9 +71,10 @@ namespace VehiclePermitSystemWeb.Controllers
         }
 
         [Authorize(Policy = AppPolicies.ManageAdministration)]
-        public IActionResult Edit()
+        public IActionResult Edit(bool onboarding = false)
         {
             var settings = _userAdminService.GetAdministrationSettings();
+            ViewData["OrganizationOnboarding"] = onboarding;
             return View(settings);
         }
 
@@ -532,11 +533,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (request.CreateNewManager)
             {
-                if (!SaudiNationalIdOrIqamaValidator.IsValid(request.NewManagerUsername))
+                if (!AccountUsernameValidator.IsValid(request.NewManagerUsername))
                 {
                     ModelState.AddModelError(
                         HandoverModelKey(nameof(request.NewManagerUsername)),
-                        SaudiNationalIdOrIqamaValidator.ErrorMessage
+                        AccountUsernameValidator.ErrorMessage
                     );
                 }
 
@@ -696,11 +697,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (normalizedSelectionMode == GeneralManagerSelectionModes.CreateNew)
             {
-                if (!SaudiNationalIdOrIqamaValidator.IsValid(request.NewUserUsername))
+                if (!AccountUsernameValidator.IsValid(request.NewUserUsername))
                 {
                     ModelState.AddModelError(
                         GeneralManagerModelKey(nameof(request.NewUserUsername)),
-                        SaudiNationalIdOrIqamaValidator.ErrorMessage
+                        AccountUsernameValidator.ErrorMessage
                     );
                 }
 
@@ -1116,9 +1117,11 @@ namespace VehiclePermitSystemWeb.Controllers
             AdministrationSettings settings,
             IFormFile? logoFile,
             IFormFile? signatureFile,
-            bool removeLogo = false
+            bool removeLogo = false,
+            bool onboarding = false
         )
         {
+            ViewData["OrganizationOnboarding"] = onboarding;
             var currentSettings = _userAdminService.GetAdministrationSettings();
             var effectiveSettings = BuildAdministrationEditSettings(settings, currentSettings);
 
@@ -1178,7 +1181,19 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             this.ToastSuccess("تم تحديث بيانات الإدارة بنجاح");
-            return RedirectToAction(nameof(Edit));
+            var setupCompleted = !string.IsNullOrWhiteSpace(effectiveSettings.LogoPath)
+                && (effectiveSettings.SignatureImageData is { Length: > 0 }
+                    || !string.IsNullOrWhiteSpace(effectiveSettings.SignatureImagePath)
+                    || !string.IsNullOrWhiteSpace(effectiveSettings.SignatureText));
+            if (onboarding && !setupCompleted)
+            {
+                this.ToastWarning("أكمل الشعار والتوقيع قبل متابعة تشغيل الجهة.");
+                return RedirectToAction(nameof(Edit), new { onboarding = true });
+            }
+
+            return onboarding
+                ? RedirectToAction("Index", "Home")
+                : RedirectToAction(nameof(Edit));
         }
 
         [HttpGet]

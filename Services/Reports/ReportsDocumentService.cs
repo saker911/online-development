@@ -43,6 +43,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
         {
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
+            var hideSensitiveIdentity = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration);
             var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
@@ -85,7 +86,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                     columns.RelativeColumn(0.75f);
                                                     columns.RelativeColumn(1.35f);
                                                     columns.RelativeColumn(1.1f);
-                                                    columns.RelativeColumn(0.95f);
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        columns.RelativeColumn(0.95f);
+                                                    }
                                                     columns.RelativeColumn(1.05f);
                                                     columns.RelativeColumn(1.1f);
                                                     columns.RelativeColumn(0.75f);
@@ -101,7 +105,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                     AddHeaderCell(header, "رقم الزيارة");
                                                     AddHeaderCell(header, "الزائر الرئيسي");
                                                     AddHeaderCell(header, "المرافقون");
-                                                    AddHeaderCell(header, identityLabel);
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        AddHeaderCell(header, identityLabel);
+                                                    }
                                                     AddHeaderCell(header, "الغرض");
                                                     AddHeaderCell(header, "الشخص المُزار");
                                                     AddHeaderCell(header, "الاعتماد");
@@ -117,10 +124,13 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                     AddBodyCell(table, item.VisitId);
                                                     AddBodyCell(table, item.VisitorName);
                                                     AddBodyCell(table, item.CompanionSummary);
-                                                    AddBodyCell(
-                                                        table,
-                                                        FormatVisitNationalId(item.NationalId)
-                                                    );
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        AddBodyCell(
+                                                            table,
+                                                            FormatVisitNationalId(item.NationalId)
+                                                        );
+                                                    }
                                                     AddBodyCell(table, item.Purpose);
                                                     AddBodyCell(table, item.SubjectDisplay);
                                                     AddBodyCell(table, item.ApprovalStatusDisplay);
@@ -287,6 +297,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
         {
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
+            var hideSensitiveIdentity = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration);
             var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
@@ -328,7 +339,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                 {
                                                     columns.RelativeColumn(1f);
                                                     columns.RelativeColumn(1.5f);
-                                                    columns.RelativeColumn(1.3f);
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        columns.RelativeColumn(1.3f);
+                                                    }
                                                     columns.RelativeColumn(1.4f);
                                                     columns.RelativeColumn(1.2f);
                                                     columns.RelativeColumn(1.3f);
@@ -385,6 +399,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
             var permitNotice = BuildPermitUsageNotice(administration);
+            var hideSensitiveIdentity = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration);
             var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
@@ -431,7 +446,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                             details
                                                 .Item()
                                                 .Text($"اسم المصرح له: {permit.DriverName}");
-                                            details.Item().Text($"{identityLabel}: {permit.NationalId}");
+                                            if (!hideSensitiveIdentity)
+                                            {
+                                                details.Item().Text($"{identityLabel}: {permit.NationalId}");
+                                            }
                                             details
                                                 .Item()
                                                 .Text(
@@ -549,6 +567,7 @@ namespace VehiclePermitSystemWeb.Services.Reports
         {
             var administration = _userAdminService.GetAdministrationSettings();
             var logoBytes = ResolveLogoBytes(administration.LogoPath);
+            var hideSensitiveIdentity = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration);
             var identityLabel = OnlineEditionSettings.IdentityDisplayLabel(_configuration);
 
             return BuildPdfResult(
@@ -592,7 +611,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                 {
                                                     columns.RelativeColumn(0.8f);
                                                     columns.RelativeColumn(1.6f);
-                                                    columns.RelativeColumn(1.35f);
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        columns.RelativeColumn(1.35f);
+                                                    }
                                                     columns.RelativeColumn(1.2f);
                                                     columns.RelativeColumn(1.2f);
                                                     columns.RelativeColumn(1.25f);
@@ -603,7 +625,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                 {
                                                     AddHeaderCell(header, "رقم التصريح");
                                                     AddHeaderCell(header, "اسم المصرح له");
-                                                    AddHeaderCell(header, identityLabel);
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        AddHeaderCell(header, identityLabel);
+                                                    }
                                                     AddHeaderCell(header, "الموقع");
                                                     AddHeaderCell(header, "رقم الجوال");
                                                     AddHeaderCell(header, "الحالة");
@@ -614,7 +639,10 @@ namespace VehiclePermitSystemWeb.Services.Reports
                                                 {
                                                     AddBodyCell(table, item.PermitNumber);
                                                     AddBodyCell(table, item.DriverName);
-                                                    AddBodyCell(table, item.NationalId);
+                                                    if (!hideSensitiveIdentity)
+                                                    {
+                                                        AddBodyCell(table, item.NationalId);
+                                                    }
                                                     AddBodyCell(table, FormatPermitLocation(item));
                                                     AddBodyCell(table, item.EmployeePhone);
                                                     AddBodyCell(table, item.ApprovalStatusDisplay);

@@ -792,8 +792,9 @@
                         <div class="setup-stage-grid">
                             <div class="login-field setup-form-input">
                                 <label asp-for="Username" class="form-label"></label>
-                                <input asp-for="Username" class="form-control" inputmode="numeric" autocomplete="username"
-                                        required pattern="[12][0-9]{9}" maxlength="10" placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" />
+                                <input asp-for="Username" class="form-control ltr-field" autocomplete="username"
+                                        required minlength="4" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}"
+                                        placeholder="owner.main" title="استخدم 4 إلى 64 حرفًا أو رقمًا، ويمكن استخدام النقطة والشرطة." />
                                 <span asp-validation-for="Username" class="field-validation-error small"></span>
                             </div>
 

@@ -32,13 +32,16 @@
                 <div>@Model.VisitorName</div>
             </div>
             <div class="col-md-6">
-                <strong>الشخص المُزار</strong>
+                <strong>@Model.SubjectLabel</strong>
                 <div>@Model.SubjectDisplay</div>
             </div>
-            <div class="col-md-6">
-                <strong>صفة الشخص المُزار</strong>
-                <div>@Model.VisitedPersonTypeDisplay</div>
-            </div>
+            @if (!Model.DepartmentId.HasValue)
+            {
+                <div class="col-md-6">
+                    <strong>صفة الشخص المُزار</strong>
+                    <div>@Model.VisitedPersonTypeDisplay</div>
+                </div>
+            }
             <div class="col-md-6">
                 <strong>مكان الزيارة</strong>
                 <div>@Model.VisitLocation</div>

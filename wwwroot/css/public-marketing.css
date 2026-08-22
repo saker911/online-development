@@ -7,6 +7,88 @@
     font-display: swap;
 }
 
+.mfa-auth-card {
+    width: min(100%, 620px);
+}
+
+.mfa-enrollment-grid {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+    margin: 24px 0;
+}
+
+.mfa-qr {
+    display: grid;
+    place-items: center;
+    padding: 10px;
+    border: 1px solid #dbe4e1;
+    background: #fff;
+}
+
+.mfa-qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.mfa-manual-key {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.mfa-manual-key span {
+    color: #60706b;
+    font-size: .9rem;
+}
+
+.mfa-manual-key code {
+    overflow-wrap: anywhere;
+    padding: 12px;
+    border: 1px solid #dbe4e1;
+    background: #f7faf9;
+    color: #111816;
+    font-size: .95rem;
+    letter-spacing: 0;
+}
+
+.mfa-code-input {
+    text-align: center;
+    font-size: 1.2rem;
+    letter-spacing: 0;
+}
+
+.mfa-recovery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 24px 0;
+}
+
+.mfa-recovery-grid code {
+    padding: 12px;
+    border: 1px solid #dbe4e1;
+    background: #f7faf9;
+    color: #111816;
+    text-align: center;
+    font-size: .95rem;
+    letter-spacing: 0;
+}
+
+@media (max-width: 640px) {
+    .mfa-enrollment-grid,
+    .mfa-recovery-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mfa-qr {
+        width: min(100%, 240px);
+        margin-inline: auto;
+    }
+}
+
 @font-face {
     font-family: 'Tajawal';
     src: url('/fonts/Tajawal-Medium.ttf') format('truetype');

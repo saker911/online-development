@@ -44,9 +44,9 @@
             <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] as string ?? string.Empty)" />
             <div class="login-field">
                 <label for="login-username" class="form-label">اسم المستخدم</label>
-                <input id="login-username" name="username" class="form-control" autocomplete="username" inputmode="numeric"
-                       pattern="[12][0-9]{9}" minlength="10" maxlength="10"
-                       title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" value="@submittedUsername" />
+                <input id="login-username" name="username" class="form-control" autocomplete="username"
+                       inputmode="email" maxlength="256" placeholder="معرف الحساب أو البريد الإلكتروني"
+                       value="@submittedUsername" />
             </div>
             <div class="login-field">
                 <label for="login-password" class="form-label">كلمة المرور</label>

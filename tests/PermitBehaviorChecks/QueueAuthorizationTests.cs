@@ -11,7 +11,7 @@ namespace PermitBehaviorChecks;
 public sealed class QueueAuthorizationTests
 {
     [Fact]
-    public async Task QueueManagementRequiresApprovalOrGatePermission()
+    public async Task QueueManagementAllowsApprovalGateOrReceptionPermission()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -22,6 +22,7 @@ public sealed class QueueAuthorizationTests
         var viewer = CreatePrincipal(AppPermissions.ViewVisits);
         var approver = CreatePrincipal(AppPermissions.ApproveVisits);
         var gateOperator = CreatePrincipal(AppPermissions.ScanOperations);
+        var receptionist = CreatePrincipal(AppPermissions.CreateVisit);
 
         Assert.False(
             (await authorization.AuthorizeAsync(viewer, null, AppPolicies.ManageVisitQueue))
@@ -33,6 +34,10 @@ public sealed class QueueAuthorizationTests
         );
         Assert.True(
             (await authorization.AuthorizeAsync(gateOperator, null, AppPolicies.ManageVisitQueue))
+                .Succeeded
+        );
+        Assert.True(
+            (await authorization.AuthorizeAsync(receptionist, null, AppPolicies.ManageVisitQueue))
                 .Succeeded
         );
     }

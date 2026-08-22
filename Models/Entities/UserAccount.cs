@@ -10,6 +10,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public string PasswordSalt { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+        public int? WorkplaceSiteId { get; set; }
+        public WorkplaceSite? WorkplaceSite { get; set; }
         public string Department { get; set; } = string.Empty;
         public string EmployeeNumber { get; set; } = string.Empty;
         public string JobTitle { get; set; } = string.Empty;
@@ -29,6 +31,11 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public bool IsActive { get; set; } = true;
         public bool IsSuperAdmin { get; set; }
         public bool MustChangePassword { get; set; }
+        public bool MfaEnabled { get; set; }
+        public string MfaSecretProtected { get; set; } = string.Empty;
+        public string MfaRecoveryCodeHashesJson { get; set; } = string.Empty;
+        public DateTime? MfaEnrolledAtUtc { get; set; }
+        public long? MfaLastVerifiedStep { get; set; }
         public string Role { get; set; } = string.Empty;
         public bool CanViewDashboard { get; set; }
         public bool CanViewPermits { get; set; }

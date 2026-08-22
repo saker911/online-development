@@ -8,6 +8,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
         public Dictionary<string, int> PermissionDistribution { get; set; } = new();
         public Dictionary<string, string> ManagedDepartmentNamesByUsername { get; set; } = new();
         public Dictionary<string, int> ManagedDepartmentIdsByUsername { get; set; } = new();
+        public Dictionary<int, string> WorkplaceSiteNamesById { get; set; } = new();
         public Dictionary<string, string> TenantNamesById { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);
     }

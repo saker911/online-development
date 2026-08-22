@@ -30,6 +30,7 @@ using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
 using VehiclePermitSystemWeb.Services.Workplace;
+using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -53,13 +54,15 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IVisitService _visitService;
         private readonly IDisplayDeviceService _displayDeviceService;
         private readonly IWorkplaceDirectoryService? _workplaceDirectoryService;
+        private readonly IConfiguration _configuration;
 
         public DisplayController(
             IUserAdminService userAdminService,
             IPermitService permitService,
             IVisitService visitService,
             IDisplayDeviceService displayDeviceService,
-            IWorkplaceDirectoryService? workplaceDirectoryService = null
+            IWorkplaceDirectoryService? workplaceDirectoryService = null,
+            IConfiguration? configuration = null
         )
         {
             _userAdminService = userAdminService;
@@ -67,6 +70,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _visitService = visitService;
             _displayDeviceService = displayDeviceService;
             _workplaceDirectoryService = workplaceDirectoryService;
+            _configuration = configuration ?? new ConfigurationBuilder().Build();
         }
 
         [AllowAnonymous]
@@ -959,7 +963,7 @@ namespace VehiclePermitSystemWeb.Controllers
             };
         }
 
-        private static object SerializeVisitForDisplay(Visit visit)
+        private object SerializeVisitForDisplay(Visit visit)
         {
             return new
             {
@@ -968,7 +972,9 @@ namespace VehiclePermitSystemWeb.Controllers
                 companionCount = visit.CompanionCount,
                 companionSummary = visit.CompanionSummary,
                 visitLocation = visit.VisitLocation,
-                nationalId = MaskSensitiveValue(visit.NationalId, 4),
+                nationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                    ? string.Empty
+                    : MaskSensitiveValue(visit.NationalId, 4),
                 phoneNumber = MaskSensitiveValue(visit.PhoneNumber, 4),
                 purpose = visit.Purpose,
                 hostName = visit.SubjectDisplay,

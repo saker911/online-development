@@ -161,9 +161,12 @@ document.addEventListener("DOMContentLoaded", function () {
         "visit_not_found": "رقم الزيارة غير موجود.",
         "visit_expired": "الزيارة منتهية.",
         "visit_not_approved": "الزيارة ما زالت بانتظار الاعتماد أو تم رفضها.",
+        "visit_not_started": "موعد الزيارة لم يبدأ بعد. يسمح بالدخول قبل الموعد بـ 30 دقيقة.",
+        "visit_no_show": "انتهت مهلة حضور الزيارة. يلزم تنسيق موعد جديد.",
         "entry_recorded": "تم تسجيل دخول الزيارة بنجاح.",
         "exit_recorded": "تم تسجيل خروج الزيارة بنجاح.",
         "operator_not_signed_in": "سجّل دخول مأمور البوابة أولاً.",
+        "site_access_denied": "هذا التصريح أو الطلب تابع لموقع آخر.",
         "operator_pin_change_required": "يجب تغيير الرقم السري المؤقت قبل بدء المسح.",
         "forbidden": "لا تملك صلاحية تنفيذ المسح من هذا الجهاز.",
         "invalid_request": "تعذر تنفيذ القراءة. تأكد من القيمة المقروءة ثم أعد المحاولة."
@@ -729,7 +732,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     <strong class="ltr-field">${escapeHtml(visit.visitId || "-")}</strong>
                 </div>
                 <div class="gate-mobile-detail">
-                    <span>المضيف</span>
+                    <span>وجهة الزيارة</span>
                     <strong>${escapeHtml(visit.hostName || visit.visitedPersonName || "-")}</strong>
                 </div>
                 <div class="gate-mobile-detail">

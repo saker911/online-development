@@ -17,6 +17,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         [StringLength(128, ErrorMessage = "اسم مدير القسم يجب ألا يتجاوز 128 حرفًا.")]
         public string ManagerDisplayName { get; set; } = string.Empty;
 
+        public bool AcceptsVisitors { get; set; } = true;
+
         public bool IsActive { get; set; } = true;
     }
 }

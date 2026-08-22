@@ -88,9 +88,12 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Visit>().HasKey(x => x.VisitId);
             modelBuilder.Entity<Visit>().Property(x => x.QueueStatus).HasMaxLength(24);
             modelBuilder.Entity<Visit>().HasIndex(x => new { x.TenantId, x.QueueStatus });
+            modelBuilder.Entity<Visit>().HasIndex(x => new { x.TenantId, x.DepartmentId, x.QueueStatus });
+            modelBuilder.Entity<Visit>().HasIndex(x => new { x.TenantId, x.DepartmentId, x.VisitDate });
             modelBuilder.Entity<VisitCompanion>().HasKey(x => x.Id);
             modelBuilder.Entity<PermitActivity>().HasKey(x => x.Id);
             modelBuilder.Entity<Department>().HasKey(x => x.Id);
+            modelBuilder.Entity<Department>().Property(x => x.AcceptsVisitors).HasDefaultValue(true);
             modelBuilder.Entity<UserAccount>().HasKey(x => x.Username);
             modelBuilder.Entity<UserActivity>().HasKey(x => x.Id);
             modelBuilder.Entity<SessionRecord>().HasKey(x => x.SessionId);
@@ -317,6 +320,8 @@ namespace VehiclePermitSystemWeb.Data
                 .HasForeignKey(x => x.WorkplaceSiteId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Visit>().HasOne(x => x.WorkplaceSiteEntrance).WithMany()
                 .HasForeignKey(x => x.WorkplaceSiteEntranceId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Visit>().HasOne(x => x.Department).WithMany()
+                .HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Visit>().Property(x => x.NationalId).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.PhoneNumber).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.VisitorEmail).HasMaxLength(256);
@@ -325,6 +330,9 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<Visit>().Property(x => x.VisitedPersonName).HasMaxLength(128);
             modelBuilder.Entity<Visit>().Property(x => x.VisitedPersonType).HasMaxLength(32);
             modelBuilder.Entity<Visit>().Property(x => x.ApprovalStatus).HasMaxLength(32);
+            modelBuilder.Entity<Visit>().Property(x => x.ServiceDurationMinutes).HasDefaultValue(30);
+            modelBuilder.Entity<Visit>().Property(x => x.ServiceOperatorUsername).HasMaxLength(64);
+            modelBuilder.Entity<Visit>().Property(x => x.ServiceOperatorDisplayName).HasMaxLength(128);
             modelBuilder
                 .Entity<Visit>()
                 .Property(x => x.RequestSource)
@@ -410,6 +418,12 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<UserAccount>().Property(x => x.Role).HasMaxLength(32);
             modelBuilder.Entity<UserAccount>().Property(x => x.DisplayName).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.FullName).HasMaxLength(128);
+            modelBuilder.Entity<UserAccount>().HasIndex(x => new { x.TenantId, x.WorkplaceSiteId });
+            modelBuilder.Entity<UserAccount>()
+                .HasOne(x => x.WorkplaceSite)
+                .WithMany(x => x.UserAccounts)
+                .HasForeignKey(x => x.WorkplaceSiteId)
+                .OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<UserAccount>().Property(x => x.Department).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.EmployeeNumber).HasMaxLength(64);
             modelBuilder.Entity<UserAccount>().Property(x => x.JobTitle).HasMaxLength(128);
@@ -419,6 +433,9 @@ namespace VehiclePermitSystemWeb.Data
             modelBuilder.Entity<UserAccount>().Property(x => x.PhoneNumber).HasMaxLength(32);
             modelBuilder.Entity<UserAccount>().Property(x => x.Email).HasMaxLength(256);
             modelBuilder.Entity<UserAccount>().Property(x => x.IsEmailConfirmed).HasDefaultValue(true);
+            modelBuilder.Entity<UserAccount>().Property(x => x.MfaEnabled).HasDefaultValue(false);
+            modelBuilder.Entity<UserAccount>().Property(x => x.MfaSecretProtected).HasMaxLength(2048);
+            modelBuilder.Entity<UserAccount>().Property(x => x.MfaRecoveryCodeHashesJson).HasMaxLength(4096);
             modelBuilder.Entity<UserAccount>().HasIndex(x => new { x.TenantId, x.Email });
             modelBuilder.Entity<UserAccount>().Property(x => x.Email).HasMaxLength(128);
             modelBuilder.Entity<UserAccount>().Property(x => x.ManagerUsername).HasMaxLength(64);

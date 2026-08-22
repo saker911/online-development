@@ -375,6 +375,11 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "INTEGER NOT NULL DEFAULT 0"
             );
             EnsureSqliteColumn(db, "UserAccounts", "IsSuperAdmin", "INTEGER NOT NULL DEFAULT 0");
+            EnsureSqliteColumn(db, "UserAccounts", "MfaEnabled", "INTEGER NOT NULL DEFAULT 0");
+            EnsureSqliteColumn(db, "UserAccounts", "MfaSecretProtected", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "UserAccounts", "MfaRecoveryCodeHashesJson", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "UserAccounts", "MfaEnrolledAtUtc", "TEXT NULL");
+            EnsureSqliteColumn(db, "UserAccounts", "MfaLastVerifiedStep", "INTEGER NULL");
             EnsureSqliteColumn(
                 db,
                 "UserAccounts",
@@ -382,6 +387,7 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
                 "INTEGER NOT NULL DEFAULT 1"
             );
             EnsureSqliteColumn(db, "UserAccounts", "EmployeeNumber", "TEXT NOT NULL DEFAULT ''");
+            EnsureSqliteColumn(db, "UserAccounts", "WorkplaceSiteId", "INTEGER NULL");
             EnsureSqliteColumn(db, "UserAccounts", "OperatorBadgeCode", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "UserAccounts", "OperatorPinHash", "TEXT NOT NULL DEFAULT ''");
             EnsureSqliteColumn(db, "UserAccounts", "OperatorPinSalt", "TEXT NOT NULL DEFAULT ''");
@@ -477,6 +483,26 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             EnsureSqliteColumn(db, "Permits", "WorkplaceSiteEntranceId", "INTEGER NULL");
             EnsureSqliteColumn(db, "Visits", "WorkplaceSiteId", "INTEGER NULL");
             EnsureSqliteColumn(db, "Visits", "WorkplaceSiteEntranceId", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Visits", "DepartmentId", "INTEGER NULL");
+            EnsureSqliteColumn(db, "Visits", "RequestedVisitDate", "TEXT NULL");
+            EnsureSqliteColumn(
+                db,
+                "Visits",
+                "ServiceDurationMinutes",
+                "INTEGER NOT NULL DEFAULT 30"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Visits",
+                "ServiceOperatorUsername",
+                "TEXT NOT NULL DEFAULT ''"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Visits",
+                "ServiceOperatorDisplayName",
+                "TEXT NOT NULL DEFAULT ''"
+            );
             EnsureSqliteColumn(db, "Permits", "PlateOrigin", "TEXT NOT NULL DEFAULT 'Saudi'");
             EnsureSqliteColumn(db, "Permits", "RequiresReturn", "INTEGER NOT NULL DEFAULT 1");
             EnsureSqliteColumn(db, "Permits", "AccessMode", "TEXT NOT NULL DEFAULT 'FullAccess'");
@@ -872,6 +898,18 @@ namespace VehiclePermitSystemWeb.Services.Bootstrap
             db.Database.ExecuteSqlRaw("DROP INDEX IF EXISTS IX_Departments_Name;");
             db.Database.ExecuteSqlRaw(
                 "CREATE UNIQUE INDEX IF NOT EXISTS IX_Departments_TenantId_Name ON Departments (TenantId, Name);"
+            );
+            EnsureSqliteColumn(
+                db,
+                "Departments",
+                "AcceptsVisitors",
+                "INTEGER NOT NULL DEFAULT 1"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_Visits_TenantId_DepartmentId_QueueStatus ON Visits (TenantId, DepartmentId, QueueStatus);"
+            );
+            db.Database.ExecuteSqlRaw(
+                "CREATE INDEX IF NOT EXISTS IX_Visits_TenantId_DepartmentId_VisitDate ON Visits (TenantId, DepartmentId, VisitDate);"
             );
         }
 

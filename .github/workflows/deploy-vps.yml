@@ -1,8 +1,11 @@
-name: Deploy to Hostinger VPS
+name: Deploy tested release to Hostinger VPS
 
-# Production automatically pulls this branch through tasareehapp-deploy.timer.
-# Keep this workflow as an explicit fallback when GitHub Actions is available.
 on:
+  workflow_run:
+    workflows:
+      - Full test suite
+    types:
+      - completed
   workflow_dispatch:
 
 concurrency:
@@ -10,15 +13,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  manual-tests:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: dotnet restore
+      - run: dotnet test --configuration Release --no-restore
+      - run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run e2e
+
+  deploy:
+    needs: manual-tests
+    if: >-
+      always() &&
+      (
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'push' &&
+         github.event.workflow_run.head_branch == 'online-development') ||
+        (github.event_name == 'workflow_dispatch' && needs.manual-tests.result == 'success')
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: production
+    env:
+      RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
     steps:
-      - name: Check out repository
+      - name: Check out the tested revision
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
 
-      - name: Create deployment archive
+      - name: Create immutable release archive
         run: |
           tar \
             --exclude=.git \
@@ -28,7 +66,7 @@ jobs:
             --exclude=.env \
             --exclude=output \
             --exclude=test-results \
-            -czf /tmp/tasareehapp.tar.gz .
+            -czf "/tmp/tasareehapp-${RELEASE_SHA}.tar.gz" .
 
       - name: Configure SSH
         env:
@@ -41,66 +79,20 @@ jobs:
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Upload release
+      - name: Upload tested release
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          scp \
-            -i ~/.ssh/tasareehapp \
-            /tmp/tasareehapp.tar.gz \
-            "$VPS_USER@$VPS_HOST:/tmp/tasareehapp.tar.gz"
+          scp -i ~/.ssh/tasareehapp \
+            "/tmp/tasareehapp-${RELEASE_SHA}.tar.gz" \
+            ops/deploy-release.sh \
+            "$VPS_USER@$VPS_HOST:/tmp/"
 
-      - name: Deploy containers
+      - name: Deploy, verify, and roll back on failure
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          ssh -i ~/.ssh/tasareehapp "$VPS_USER@$VPS_HOST" <<'REMOTE'
-            set -euo pipefail
-
-            install -d -m 755 /opt/tasareehapp/app
-            find /opt/tasareehapp/app -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-            tar -xzf /tmp/tasareehapp.tar.gz -C /opt/tasareehapp/app
-            rm -f /tmp/tasareehapp.tar.gz
-
-            cd /opt/tasareehapp/app
-            test -f /opt/tasareehapp/.env
-
-            docker compose \
-              --env-file /opt/tasareehapp/.env \
-              -f compose.production.yml \
-              up -d --build --remove-orphans
-
-            docker image prune -f
-          REMOTE
-
-      - name: Verify deployment
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-        run: |
-          ssh -i ~/.ssh/tasareehapp "$VPS_USER@$VPS_HOST" <<'REMOTE'
-            set -euo pipefail
-
-            for attempt in {1..24}; do
-              if curl --fail --silent --show-error \
-                -H 'Host: tasareehapp.com' \
-                -H 'X-Forwarded-Proto: https' \
-                http://127.0.0.1:10000/healthz >/dev/null; then
-                exit 0
-              fi
-              sleep 5
-            done
-
-            cd /opt/tasareehapp/app
-            docker compose \
-              --env-file /opt/tasareehapp/.env \
-              -f compose.production.yml \
-              ps
-            docker compose \
-              --env-file /opt/tasareehapp/.env \
-              -f compose.production.yml \
-              logs --tail=100
-            exit 1
-          REMOTE
+          ssh -i ~/.ssh/tasareehapp "$VPS_USER@$VPS_HOST" \
+            "bash /tmp/deploy-release.sh '/tmp/tasareehapp-${RELEASE_SHA}.tar.gz' '${RELEASE_SHA}'"

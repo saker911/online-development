@@ -1,0 +1,29 @@
+@model VehiclePermitSystemWeb.Models.ViewModels.Account.MfaRecoveryCodesViewModel
+
+@{
+    ViewData["Title"] = "رموز استرداد الحساب";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "login-page-body";
+}
+
+<div class="login-page-shell login-page-shell-light">
+    <header class="login-page-topbar">
+        <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
+            <img src="~/@ProductIdentity.MarkPath" asp-append-version="true" alt="" data-product-mark />
+            <span><strong>@ProductIdentity.DisplayName</strong><small>حماية الحساب الإداري</small></span>
+        </a>
+    </header>
+
+    <section class="login-page-card login-page-card-light mfa-auth-card">
+        <span class="login-page-kicker">تم تفعيل المصادقة</span>
+        <h1 class="login-page-title">احفظ رموز الاسترداد</h1>
+        <p class="login-page-subtitle">يُستخدم كل رمز مرة واحدة عند فقدان الوصول إلى تطبيق المصادقة. لن تظهر هذه الرموز مجددًا.</p>
+        <div class="mfa-recovery-grid" dir="ltr">
+            @foreach (var recoveryCode in Model.RecoveryCodes)
+            {
+                <code>@recoveryCode</code>
+            }
+        </div>
+        <a href="@Model.ContinueUrl" class="btn btn-primary login-submit-button">حفظتها، متابعة</a>
+    </section>
+</div>

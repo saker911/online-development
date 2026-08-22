@@ -1079,6 +1079,14 @@ internal static partial class ScenarioCatalog
                     )
             ),
             Scenario(
+                "Workplace site authorization isolates permits and visits",
+                fixture => ScenarioWorkplaceSiteScopeIsolatesPermitsAndVisits(fixture)
+            ),
+            Scenario(
+                "Permit lists exclude records from other workplace sites",
+                fixture => ScenarioPermitListsExcludeOtherWorkplaceSites(fixture)
+            ),
+            Scenario(
                 "Work end closure waits for checkout grace and marks late checkout",
                 fixture =>
                     ScenarioWorkEndClosureWaitsForCheckoutGraceAndMarksLateCheckout(

@@ -90,7 +90,7 @@ public sealed class ScenarioClassificationTests
     public void EveryScenarioBelongsToAKnownArea()
     {
         var scenarios = ScenarioCatalog.GetAllScenarios();
-        Assert.Equal(148, scenarios.Count);
+        Assert.Equal(150, scenarios.Count);
         Assert.All(scenarios, scenario => Assert.Contains(scenario.Area, TestAreas.All));
     }
 }

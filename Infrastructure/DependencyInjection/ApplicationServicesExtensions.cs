@@ -28,6 +28,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
         )
         {
             services.AddSingleton<IDatabaseBootstrapService, DatabaseBootstrapService>();
+            services.AddSingleton<IInitialSetupAccessPolicy, InitialSetupAccessPolicy>();
             services.AddSingleton<
                 VehiclePermitSystemWeb.Services.Common.ISystemClock,
                 VehiclePermitSystemWeb.Services.Common.SystemClock
@@ -53,6 +54,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddSingleton<IPlatformSettingsService, PlatformSettingsService>();
             services.AddSingleton<ISubscriptionPlanService, SubscriptionPlanService>();
             services.AddSingleton<LoginAttemptGuard>();
+            services.AddSingleton<IMultiFactorAuthenticationService, MultiFactorAuthenticationService>();
             services.AddSingleton<SignupAttemptGuard>();
             services.AddSingleton<IExternalLoginService, ExternalLoginService>();
             services.AddSingleton<

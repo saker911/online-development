@@ -34,5 +34,6 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public ICollection<DisplayDevice> DisplayDevices { get; set; } = new List<DisplayDevice>();
         public ICollection<Permit> Permits { get; set; } = new List<Permit>();
         public ICollection<Visit> Visits { get; set; } = new List<Visit>();
+        public ICollection<UserAccount> UserAccounts { get; set; } = new List<UserAccount>();
     }
 }

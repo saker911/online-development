@@ -128,6 +128,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
                         policy.RequireAssertion(context =>
                             context.User.HasPermission(AppPermissions.ApproveVisits)
                             || context.User.HasPermission(AppPermissions.ScanOperations)
+                            || context.User.HasPermission(AppPermissions.CreateVisit)
                         )
                 );
                 options.AddPolicy(

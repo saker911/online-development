@@ -203,8 +203,9 @@
                     </div>
                     <div class="ue-field ue-field-required">
                         <label asp-for="Username" class="form-label">المعرف الداخلي</label>
-                        <input asp-for="Username" class="form-control ltr-field" inputmode="numeric" autocomplete="username" minlength="10"
-                               maxlength="10" pattern="[12][0-9]{9}" placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" required />
+                        <input asp-for="Username" class="form-control ltr-field" autocomplete="username" minlength="4"
+                               maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}" placeholder="employee.01"
+                               title="استخدم 4 إلى 64 حرفًا أو رقمًا، ويمكن استخدام النقطة والشرطة." required />
                         <span asp-validation-for="Username" class="field-validation-error small"></span>
                     </div>
                     <div class="ue-field">
@@ -294,9 +295,10 @@
                     {
                         <div class="ue-field ue-field-required">
                             <label asp-for="Username" class="form-label">@usernameLabel</label>
-                            <input asp-for="Username" class="form-control ltr-field" inputmode="numeric" autocomplete="username" minlength="10"
-                                maxlength="10" pattern="[12][0-9]{9}" placeholder="1023456789" title="المعرف الداخلي يجب أن يكون 10 أرقام ويبدأ بـ 1 أو 2" required />
-                            <div class="form-text">يمكن تغييره لهذا الحساب فقط، بشرط أن يكون معرفًا داخليًا من 10 أرقام ويبدأ بـ 1 أو 2 وفريدًا.</div>
+                            <input asp-for="Username" class="form-control ltr-field" autocomplete="username" minlength="4"
+                                maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}" placeholder="owner.main"
+                                title="استخدم 4 إلى 64 حرفًا أو رقمًا، ويمكن استخدام النقطة والشرطة." required />
+                            <div class="form-text">معرف فريد للحساب، ولا يُستخدم فيه رقم الهوية.</div>
                             <span asp-validation-for="Username" class="field-validation-error small"></span>
                         </div>
                     }
@@ -419,8 +421,20 @@
                     </div>
                     @if (!Model.IsSuperAdmin)
                     {
+                        <div class="ue-field" id="users-workplace-site-field">
+                            <label asp-for="WorkplaceSiteId" class="form-label">الموقع / الفرع</label>
+                            <select asp-for="WorkplaceSiteId" class="form-select" id="users-workplace-site-select">
+                                <option value="">-- اختر الموقع --</option>
+                                @foreach (var site in Model.WorkplaceSiteOptions)
+                                {
+                                    <option value="@site.Id">@site.Name@(string.IsNullOrWhiteSpace(site.Code) ? string.Empty : $" ({site.Code})")</option>
+                                }
+                            </select>
+                            <div class="form-text">يحدد نطاق التصاريح والزيارات والطابور الذي يستطيع المستخدم الوصول إليه.</div>
+                            <span asp-validation-for="WorkplaceSiteId" class="field-validation-error small"></span>
+                        </div>
                         <div class="ue-field" id="users-department-field">
-                            <label for="users-department-select" class="form-label">الموقع أو القسم</label>
+                            <label for="users-department-select" class="form-label">القسم أو الخدمة</label>
                                 <select asp-for="Department" class="form-select" id="users-department-select"
                                     data-smart-select="true" data-smart-select-placeholder="ابحث عن القسم أو اختره">
                                 <option value="">-- اختر القسم --</option>

@@ -170,7 +170,9 @@
                         </div>
                         <div class="tenant-field">
                             <label asp-for="Editor.OwnerUsername"></label>
-                            <input asp-for="Editor.OwnerUsername" name="OwnerUsername" class="form-control ltr-field" required inputmode="numeric" maxlength="10" autocomplete="off" />
+                            <input asp-for="Editor.OwnerUsername" name="OwnerUsername" class="form-control ltr-field" required
+                                   minlength="4" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}"
+                                   autocomplete="username" placeholder="manager.main" />
                             <span asp-validation-for="Editor.OwnerUsername" class="field-validation-error"></span>
                         </div>
                         <div class="tenant-field">

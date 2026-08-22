@@ -24,12 +24,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         [Required(ErrorMessage = "يرجى إدخال اسم المصرح له.")]
         public string DriverName { get; set; } = string.Empty;
 
-        [Display(Name = "رقم الهوية")]
-        [Required(ErrorMessage = "رقم الهوية مطلوب.")]
-        [RegularExpression(
-            SaudiNationalIdOrIqamaValidator.RegularExpressionPattern,
-            ErrorMessage = SaudiNationalIdOrIqamaValidator.ErrorMessage
-        )]
+        [Display(Name = "المرجع الداخلي")]
+        [StringLength(32, ErrorMessage = "المرجع الداخلي يجب ألا يتجاوز 32 حرفًا.")]
         public string NationalId { get; set; } = string.Empty;
 
         [Display(Name = "نوع المركبة")]

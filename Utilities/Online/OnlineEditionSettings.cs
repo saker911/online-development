@@ -1,5 +1,4 @@
-using System.Security.Cryptography;
-using System.Text;
+using VehiclePermitSystemWeb.Utilities.Security;
 
 namespace VehiclePermitSystemWeb.Utilities.Online;
 
@@ -27,6 +26,42 @@ public static class OnlineEditionSettings
         return configuration.GetValue($"{SectionPrefix}:SimplifiedVisits", false);
     }
 
+    public static int CompletedVisitPersonalDataRetentionDays(IConfiguration configuration)
+    {
+        return Math.Clamp(
+            configuration.GetValue($"{SectionPrefix}:CompletedVisitPersonalDataRetentionDays", 180),
+            30,
+            2555
+        );
+    }
+
+    public static int ArchivedPermitPersonalDataRetentionDays(IConfiguration configuration)
+    {
+        return Math.Clamp(
+            configuration.GetValue($"{SectionPrefix}:ArchivedPermitPersonalDataRetentionDays", 365),
+            30,
+            2555
+        );
+    }
+
+    public static int InactivePersonPhotoRetentionDays(IConfiguration configuration)
+    {
+        return Math.Clamp(
+            configuration.GetValue($"{SectionPrefix}:InactivePersonPhotoRetentionDays", 30),
+            7,
+            365
+        );
+    }
+
+    public static int SecurityIpRetentionDays(IConfiguration configuration)
+    {
+        return Math.Clamp(
+            configuration.GetValue($"{SectionPrefix}:SecurityIpRetentionDays", 90),
+            7,
+            365
+        );
+    }
+
     public static string IdentityDisplayLabel(IConfiguration configuration)
     {
         return HideSensitiveIdentityFields(configuration) ? "المعرف الداخلي" : "رقم الهوية";
@@ -37,16 +72,8 @@ public static class OnlineEditionSettings
         return HideSensitiveIdentityFields(configuration) ? "المعرف الداخلي" : "الهوية";
     }
 
-    public static string BuildSyntheticNationalId(params string?[] seedParts)
+    public static string BuildInternalReference()
     {
-        var seed = string.Join("|", seedParts.Select(part => part?.Trim() ?? string.Empty));
-        if (string.IsNullOrWhiteSpace(seed))
-        {
-            seed = Guid.NewGuid().ToString("N");
-        }
-
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(seed));
-        var value = BitConverter.ToUInt32(hash, 0) % 1_000_000_000;
-        return $"2{value:D9}";
+        return PersonalDataSanitizer.CreateInternalReference();
     }
 }

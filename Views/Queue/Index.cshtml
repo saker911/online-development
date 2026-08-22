@@ -19,12 +19,54 @@
         <div class="queue-live"><i aria-hidden="true"></i><span>مباشر</span><time>@Model.UpdatedAt.ToString("HH:mm")</time></div>
     </header>
 
+    @if (Model.Destinations.Count > 0)
+    {
+        <form asp-action="Index" method="get" class="queue-destination-filter">
+            <label for="queueDepartment">القسم أو الخدمة</label>
+            <select id="queueDepartment" name="departmentId" class="form-select"
+                    disabled="@Model.IsDepartmentRestricted" onchange="this.form.submit()">
+                @if (!Model.IsDepartmentRestricted)
+                {
+                    <option value="">كل الأقسام</option>
+                }
+                @foreach (var destination in Model.Destinations)
+                {
+                    <option value="@destination.Id" selected="@(destination.Id == Model.SelectedDepartmentId)">@destination.Name</option>
+                }
+            </select>
+            @if (Model.IsDepartmentRestricted && Model.SelectedDepartmentId.HasValue)
+            {
+                <input type="hidden" name="departmentId" value="@Model.SelectedDepartmentId" />
+            }
+        </form>
+    }
+
     <section class="queue-summary" aria-label="ملخص الطابور">
         <div><span>بانتظار الاستدعاء</span><strong>@Model.Waiting.Count</strong></div>
         <div><span>تم استدعاؤهم</span><strong>@Model.Called.Count</strong></div>
         <div><span>قيد الخدمة</span><strong>@Model.Serving.Count</strong></div>
         <div><span>مكتملة مؤخراً</span><strong>@Model.Recent.Count</strong></div>
     </section>
+
+    @if (Model.Upcoming.Any())
+    {
+        <section class="queue-upcoming" aria-labelledby="upcomingTitle">
+            <header>
+                <div><span>الجدول المعتمد</span><h2 id="upcomingTitle">المواعيد القادمة</h2></div>
+                <strong>@Model.Upcoming.Count</strong>
+            </header>
+            <div class="queue-upcoming-list">
+                @foreach (var item in Model.Upcoming)
+                {
+                    <article>
+                        <time>@item.VisitDate.ToString("HH:mm")</time>
+                        <div><strong>@item.VisitorName</strong><span>@item.Destination</span></div>
+                        <small>@item.ServiceDurationMinutes دقيقة</small>
+                    </article>
+                }
+            </div>
+        </section>
+    }
 
     <div class="queue-workspace">
         <section class="queue-lane queue-lane-primary">
@@ -34,9 +76,10 @@
                 {
                     <article class="queue-row">
                         <div class="queue-number ltr-field">@item.TicketNumber</div>
-                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · موعد @item.VisitDate.ToString("HH:mm")</span></div>
                         <form asp-action="Update" method="post">
                             <input type="hidden" name="id" value="@item.VisitId" />
+                            <input type="hidden" name="departmentId" value="@Model.SelectedDepartmentId" />
                             <button type="submit" name="status" value="@Visit.QueueStatusCalled" class="btn btn-dark">استدعاء</button>
                             <button type="submit" name="status" value="@Visit.QueueStatusServing" class="btn btn-outline-secondary">بدء الخدمة</button>
                             <button type="submit" name="status" value="@Visit.QueueStatusSkipped" class="btn btn-link text-danger">تجاوز</button>
@@ -57,9 +100,10 @@
                 {
                     <article class="queue-row is-called">
                         <div class="queue-number ltr-field">@item.TicketNumber</div>
-                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · موعد @item.VisitDate.ToString("HH:mm")</span></div>
                         <form asp-action="Update" method="post">
                             <input type="hidden" name="id" value="@item.VisitId" />
+                            <input type="hidden" name="departmentId" value="@Model.SelectedDepartmentId" />
                             <button type="submit" name="status" value="@Visit.QueueStatusServing" class="btn btn-dark">بدء الخدمة</button>
                             <button type="submit" name="status" value="@Visit.QueueStatusSkipped" class="btn btn-link text-danger">تجاوز</button>
                         </form>
@@ -79,9 +123,10 @@
                 {
                     <article class="queue-row is-serving">
                         <div class="queue-number ltr-field">@item.TicketNumber</div>
-                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
+                        <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · الموظف: @item.ServiceOperatorDisplayName</span></div>
                         <form asp-action="Update" method="post">
                             <input type="hidden" name="id" value="@item.VisitId" />
+                            <input type="hidden" name="departmentId" value="@Model.SelectedDepartmentId" />
                             <button type="submit" name="status" value="@Visit.QueueStatusCompleted" class="btn btn-success">إنهاء الخدمة</button>
                         </form>
                     </article>
@@ -105,6 +150,7 @@
                             <div class="queue-person"><strong>@item.VisitorName</strong><span>@item.Destination · @item.Location</span></div>
                             <form asp-action="Update" method="post">
                                 <input type="hidden" name="id" value="@item.VisitId" />
+                                <input type="hidden" name="departmentId" value="@Model.SelectedDepartmentId" />
                                 <button type="submit" name="status" value="@Visit.QueueStatusWaiting" class="btn btn-outline-secondary">إضافة</button>
                             </form>
                         </article>

@@ -18,8 +18,12 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
         public bool RequirePurpose { get; set; } = true;
         public int? WorkplaceSiteId { get; set; }
         public int? WorkplaceSiteEntranceId { get; set; }
+        [Display(Name = "القسم أو الخدمة")]
+        public int? DepartmentId { get; set; }
         public IReadOnlyList<WorkplaceLocationOptionViewModel> Locations { get; set; } =
             Array.Empty<WorkplaceLocationOptionViewModel>();
+        public IReadOnlyList<VisitDestinationOptionViewModel> Destinations { get; set; } =
+            Array.Empty<VisitDestinationOptionViewModel>();
 
         [Display(Name = "الاسم الكامل")]
         [Required(ErrorMessage = "يرجى إدخال الاسم الكامل.")]
@@ -62,6 +66,12 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Visits
 
         [StringLength(200)]
         public string Website { get; set; } = string.Empty;
+    }
+
+    public sealed class VisitDestinationOptionViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     public sealed class PublicVisitStatusViewModel

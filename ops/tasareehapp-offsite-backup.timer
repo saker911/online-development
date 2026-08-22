@@ -1,0 +1,11 @@
+[Unit]
+Description=Create a daily encrypted off-site TasareehApp backup
+
+[Timer]
+OnCalendar=*-*-* 03:45:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=tasareehapp-offsite-backup.service
+
+[Install]
+WantedBy=timers.target

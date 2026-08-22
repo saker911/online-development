@@ -52,7 +52,7 @@
                 <div class="public-visit-fields">
                     <div class="public-visit-field public-visit-field-third">
                         <label asp-for="VisitorName"></label>
-                        <input asp-for="VisitorName" class="form-control" autocomplete="name" placeholder="الاسم كما في الهوية" />
+                        <input asp-for="VisitorName" class="form-control" autocomplete="name" placeholder="الاسم الكامل" />
                         <span asp-validation-for="VisitorName"></span>
                     </div>
                     <div class="public-visit-field public-visit-field-third">
@@ -100,6 +100,20 @@
                             <span asp-validation-for="VisitedPersonName"></span>
                         </div>
                     }
+                    @if (Model.Destinations.Count > 0)
+                    {
+                        <div class="public-visit-field public-visit-field-third">
+                            <label asp-for="DepartmentId">القسم أو الخدمة <small>مطلوب</small></label>
+                            <select asp-for="DepartmentId" class="form-select" required>
+                                <option value="">اختر الوجهة المطلوبة</option>
+                                @foreach (var destination in Model.Destinations)
+                                {
+                                    <option value="@destination.Id">@destination.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="DepartmentId"></span>
+                        </div>
+                    }
                     @if (Model.ShowVisitLocation)
                     {
                         <div class="public-visit-field public-visit-field-third">
@@ -145,7 +159,7 @@
                     {
                         <div class="public-visit-field public-visit-field-wide">
                             <label asp-for="Purpose">سبب الزيارة @if (Model.RequirePurpose) { <small>مطلوب</small> }</label>
-                            <input asp-for="Purpose" class="form-control" aria-required="@Model.RequirePurpose.ToString().ToLowerInvariant()" placeholder="اكتب سبب الزيارة باختصار" />
+                            <input asp-for="Purpose" class="form-control" aria-required="@Model.RequirePurpose.ToString().ToLowerInvariant()" placeholder="مثال: مراجعة معاملة مالية" />
                             <span asp-validation-for="Purpose"></span>
                         </div>
                     }

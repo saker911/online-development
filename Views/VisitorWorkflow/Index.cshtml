@@ -1,8 +1,15 @@
 @model VehiclePermitSystemWeb.Models.ViewModels.Visits.VisitorWorkflowSettingsViewModel
 @using VehiclePermitSystemWeb.Models.Entities
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
     ViewData["Title"] = "مسار الزيارة";
+    var hideSensitiveIdentityFields = OnlineEditionSettings.HideSensitiveIdentityFields(Configuration);
+    if (hideSensitiveIdentityFields)
+    {
+        Model.ShowNationalId = false;
+        Model.RequireNationalId = false;
+    }
 }
 
 @section Styles {
@@ -58,7 +65,7 @@
                 <label>
                     <input type="radio" asp-for="TemplateKey" value="@VisitorWorkflowTemplates.Secure" data-workflow-template="secure" />
                     <strong>مشدّد</strong>
-                    <span>هوية إلزامية ووقت تحضير أطول.</span>
+                    <span>مراجعة إضافية ووقت تحضير أطول.</span>
                 </label>
             </div>
         </section>
@@ -72,11 +79,19 @@
                 </div>
             </div>
             <div class="visitor-workflow-fields">
-                <article data-workflow-field="identity">
-                    <div><strong>رقم الهوية أو الإقامة</strong><span>قد يخفيه إعداد الخصوصية العام.</span></div>
-                    <label><input asp-for="ShowNationalId" data-workflow-show="identity" /> إظهار</label>
-                    <label><input asp-for="RequireNationalId" data-workflow-require="identity" /> إلزامي</label>
-                </article>
+                @if (hideSensitiveIdentityFields)
+                {
+                    <input asp-for="ShowNationalId" type="hidden" value="false" />
+                    <input asp-for="RequireNationalId" type="hidden" value="false" />
+                }
+                else
+                {
+                    <article data-workflow-field="identity">
+                        <div><strong>رقم الهوية أو الإقامة</strong><span>يُستخدم فقط عند وجود حاجة ومسوغ موثق.</span></div>
+                        <label><input asp-for="ShowNationalId" data-workflow-show="identity" /> إظهار</label>
+                        <label><input asp-for="RequireNationalId" data-workflow-require="identity" /> إلزامي</label>
+                    </article>
+                }
                 <article data-workflow-field="host">
                     <div><strong>المضيف</strong><span>الموظف أو الشخص المراد زيارته.</span></div>
                     <label><input asp-for="ShowHostName" data-workflow-show="host" /> إظهار</label>

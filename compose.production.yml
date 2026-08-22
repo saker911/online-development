@@ -24,6 +24,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      clamav:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       App__Urls: http://0.0.0.0:10000
@@ -31,6 +33,7 @@ services:
       Data__Provider: PostgreSql
       ConnectionStrings__PostgreSqlConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Security__CookieSecurePolicy: Always
+      Bootstrap__AllowWebInitialSetup: "false"
       Security__DataProtectionCertificatePath: /run/secrets/tasareehapp/data-protection.pfx
       Security__DataProtectionCertificatePassword: ${Security__DataProtectionCertificatePassword}
       AllowedHosts: ${APP_ALLOWED_HOSTS}
@@ -58,6 +61,10 @@ services:
       OnlineEdition__PrivacyMinimized: "true"
       OnlineEdition__CollectNationalId: "false"
       OnlineEdition__SimplifiedVisits: "true"
+      OnlineEdition__CompletedVisitPersonalDataRetentionDays: "180"
+      OnlineEdition__ArchivedPermitPersonalDataRetentionDays: "365"
+      OnlineEdition__InactivePersonPhotoRetentionDays: "30"
+      OnlineEdition__SecurityIpRetentionDays: "90"
       VehiclePermitSystemWeb__StorageRoot: /data
     volumes:
       - app_storage:/data
@@ -76,6 +83,12 @@ services:
       FRESHCLAM_CHECKS: "12"
     volumes:
       - clamav_data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 2m
     networks:
       - backend
       - web

@@ -37,15 +37,15 @@ namespace VehiclePermitSystemWeb.Models.Entities
         [Display(Name = "المدخل")]
         public int? WorkplaceSiteEntranceId { get; set; }
 
+        [Display(Name = "القسم أو الخدمة")]
+        public int? DepartmentId { get; set; }
+
         public WorkplaceSite? WorkplaceSite { get; set; }
         public WorkplaceSiteEntrance? WorkplaceSiteEntrance { get; set; }
+        public Department? Department { get; set; }
 
-        [Display(Name = "رقم الهوية")]
-        [Required(ErrorMessage = "يرجى إدخال رقم الهوية.")]
-        [RegularExpression(
-            SaudiNationalIdOrIqamaValidator.RegularExpressionPattern,
-            ErrorMessage = SaudiNationalIdOrIqamaValidator.ErrorMessage
-        )]
+        [Display(Name = "المرجع الداخلي")]
+        [StringLength(32, ErrorMessage = "المرجع الداخلي يجب ألا يتجاوز 32 حرفًا.")]
         public string NationalId { get; set; } = string.Empty;
 
         [Display(Name = "رقم الجوال")]
@@ -82,6 +82,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
 
         [Display(Name = "موعد الزيارة")]
         public DateTime VisitDate { get; set; }
+        public DateTime? RequestedVisitDate { get; set; }
+        public int ServiceDurationMinutes { get; set; } = 30;
         public DateTime? EntryTime { get; set; }
         public DateTime? ExitTime { get; set; }
         public DateTime? ExpiresAt { get; set; }
@@ -94,6 +96,8 @@ namespace VehiclePermitSystemWeb.Models.Entities
         public DateTime? CalledAtUtc { get; set; }
         public DateTime? ServiceStartedAtUtc { get; set; }
         public DateTime? QueueCompletedAtUtc { get; set; }
+        public string ServiceOperatorUsername { get; set; } = string.Empty;
+        public string ServiceOperatorDisplayName { get; set; } = string.Empty;
 
         public List<VisitCompanion> Companions { get; set; } = new();
 
@@ -111,10 +115,12 @@ namespace VehiclePermitSystemWeb.Models.Entities
 
         [NotMapped]
         public string SubjectDisplay =>
-            string.IsNullOrWhiteSpace(VisitedPersonName) ? HostName : VisitedPersonName;
+            !string.IsNullOrWhiteSpace(Department?.Name)
+                ? Department.Name
+                : string.IsNullOrWhiteSpace(VisitedPersonName) ? HostName : VisitedPersonName;
 
         [NotMapped]
-        public string SubjectLabel => IsDetainedVisit ? "الشخص المُزار" : "الشخص المُزار";
+        public string SubjectLabel => DepartmentId.HasValue ? "القسم أو الخدمة" : "الشخص المُزار";
 
         [NotMapped]
         public string VisitedPersonTypeDisplay =>

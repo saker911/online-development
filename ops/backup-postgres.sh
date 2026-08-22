@@ -2,9 +2,10 @@
 set -euo pipefail
 
 readonly APP_ROOT="/opt/tasareehapp"
-readonly REPOSITORY_DIR="${APP_ROOT}/repository"
+readonly APPLICATION_DIR="${APP_ROOT}/app"
 readonly ENV_FILE="${APP_ROOT}/.env"
 readonly COMPOSE_FILE="compose.production.yml"
+readonly COMPOSE_PROJECT="repository"
 readonly BACKUP_ROOT="${APP_ROOT}/backups/postgres"
 readonly RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 readonly CREATED_AT="$(date -u +%Y%m%d-%H%M%S)"
@@ -17,7 +18,7 @@ mkdir -p "${BACKUP_ROOT}"
 exec 9>"${APP_ROOT}/backup.lock"
 flock -n 9 || exit 0
 
-cd "${REPOSITORY_DIR}"
+cd "${APPLICATION_DIR}"
 
 cleanup() {
   rm -f "${TEMP_PATH}"
@@ -25,6 +26,7 @@ cleanup() {
 trap cleanup EXIT
 
 docker compose \
+  --project-name "${COMPOSE_PROJECT}" \
   --env-file "${ENV_FILE}" \
   -f "${COMPOSE_FILE}" \
   exec -T postgres \
@@ -34,6 +36,7 @@ docker compose \
 test -s "${TEMP_PATH}"
 
 docker compose \
+  --project-name "${COMPOSE_PROJECT}" \
   --env-file "${ENV_FILE}" \
   -f "${COMPOSE_FILE}" \
   exec -T postgres pg_restore --list \
@@ -41,7 +44,10 @@ docker compose \
   > /dev/null
 
 mv "${TEMP_PATH}" "${FINAL_PATH}"
-sha256sum "${FINAL_PATH}" > "${FINAL_PATH}.sha256"
+(
+  cd "${BACKUP_ROOT}"
+  sha256sum "$(basename "${FINAL_PATH}")" > "$(basename "${FINAL_PATH}").sha256"
+)
 
 find "${BACKUP_ROOT}" -type f \
   \( -name 'tasareehapp-*.dump' -o -name 'tasareehapp-*.dump.sha256' \) \

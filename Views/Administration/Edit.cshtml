@@ -24,9 +24,17 @@
     var workdaysSummary = selectedWorkdayLabels.Count > 0
         ? string.Join("، ", selectedWorkdayLabels)
         : "لم يتم التحديد بعد";
+    var organizationOnboarding = ViewData["OrganizationOnboarding"] as bool? == true;
 }
 
 <div class="administration-edit-shell compact-form-shell">
+    @if (organizationOnboarding)
+    {
+        <div class="app-inline-note app-inline-note-info mb-3" role="status">
+            <strong>إكمال إعداد الجهة</strong>
+            <span>أضف شعار الجهة وتوقيع الاعتماد مرة واحدة، ثم تابع إلى لوحة التشغيل.</span>
+        </div>
+    }
     <section class="administration-edit-hero card-permit app-card-surface">
         <div class="administration-edit-hero-copy">
             <h1 class="mb-2">تعديل بيانات الإدارة</h1>
@@ -64,6 +72,7 @@
           data-confirm-message="هل تريد حفظ تعديلات بيانات الإدارة؟">
         @Html.AntiForgeryToken()
         <input asp-for="Id" type="hidden" />
+        <input type="hidden" name="onboarding" value="@organizationOnboarding.ToString().ToLowerInvariant()" />
 
         <div class="administration-edit-grid">
             <section class="card-permit app-card-surface compact-form-card administration-edit-card administration-edit-card-main">
@@ -108,7 +117,7 @@
 
                 <div class="administration-brand-grid">
                     <div class="administration-media-panel">
-                        <label class="form-label">شعار الإدارة</label>
+                        <label class="form-label">شعار الإدارة @(organizationOnboarding && !hasLogo ? "(مطلوب)" : string.Empty)</label>
                         <div class="administration-media-preview @(hasLogo ? string.Empty : "is-empty")">
                             @if (hasLogo)
                             {
@@ -154,6 +163,10 @@
                     <label asp-for="SignatureText" class="form-label">نص التوقيع الإلكتروني</label>
                     <textarea asp-for="SignatureText" class="form-control" rows="3" placeholder="مثال: يعتمد إلكترونيًا من مدير الإدارة"></textarea>
                     <span asp-validation-for="SignatureText" class="field-validation-error"></span>
+                    @if (organizationOnboarding && !hasSignatureImage && !hasSignatureText)
+                    {
+                        <small class="form-text text-muted">أضف صورة التوقيع أو اكتب نص اعتماد إلكتروني.</small>
+                    }
                 </div>
             </section>
 

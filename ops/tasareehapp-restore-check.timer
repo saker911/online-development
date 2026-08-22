@@ -1,0 +1,11 @@
+[Unit]
+Description=Verify a TasareehApp off-site restore every week
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+RandomizedDelaySec=30min
+Persistent=true
+Unit=tasareehapp-restore-check.service
+
+[Install]
+WantedBy=timers.target

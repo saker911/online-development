@@ -242,6 +242,10 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
+            if (!MatchesWorkplaceSiteScope(permit.WorkplaceSiteId, user))
+            {
+                return false;
+            }
 
             var hasPermitAccess =
                 user.CanViewPermits
@@ -291,10 +295,19 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
+            if (!MatchesWorkplaceSiteScope(permit.WorkplaceSiteId, user))
+            {
+                return false;
+            }
 
             if (!user.CanApprovePermit)
             {
                 return false;
+            }
+
+            if (string.Equals(user.Role, AppRoles.SecurityManager, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
             }
 
             if (!TryGetCurrentManagedDepartment(user, out var dept))
@@ -318,6 +331,10 @@ namespace VehiclePermitSystemWeb.Services.Administration
             if (HasGlobalOperationalAccess(user))
             {
                 return true;
+            }
+            if (!MatchesWorkplaceSiteScope(visit.WorkplaceSiteId, user))
+            {
+                return false;
             }
 
             if (user.CanViewVisits)
@@ -373,6 +390,10 @@ namespace VehiclePermitSystemWeb.Services.Administration
             {
                 return true;
             }
+            if (!MatchesWorkplaceSiteScope(visit.WorkplaceSiteId, user))
+            {
+                return false;
+            }
 
             var canApproveCurrentVisit =
                 user.CanApproveVisits || (visit.IsDetainedVisit && user.CanApproveDetainedVisit);
@@ -380,6 +401,11 @@ namespace VehiclePermitSystemWeb.Services.Administration
             if (!canApproveCurrentVisit)
             {
                 return false;
+            }
+
+            if (string.Equals(user.Role, AppRoles.SecurityManager, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
             }
 
             if (!TryGetCurrentManagedDepartment(user, out var dept))
@@ -498,15 +524,17 @@ namespace VehiclePermitSystemWeb.Services.Administration
         private static bool HasGlobalOperationalAccess(UserAccount user)
         {
             return string.Equals(
-                    user.Role,
-                    AppRoles.GeneralManager,
-                    StringComparison.OrdinalIgnoreCase
-                )
-                || string.Equals(
-                    user.Role,
-                    AppRoles.SecurityManager,
-                    StringComparison.OrdinalIgnoreCase
-                );
+                user.Role,
+                AppRoles.GeneralManager,
+                StringComparison.OrdinalIgnoreCase
+            );
+        }
+
+        private static bool MatchesWorkplaceSiteScope(int? recordSiteId, UserAccount user)
+        {
+            return user.WorkplaceSiteId.HasValue
+                ? recordSiteId == user.WorkplaceSiteId
+                : !recordSiteId.HasValue;
         }
 
         private static bool PermitMatchesDepartmentScope(Permit permit, string department)

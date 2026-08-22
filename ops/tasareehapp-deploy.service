@@ -1,13 +1,13 @@
 [Unit]
-Description=Deploy TasareehApp from GitHub
+Description=Retired TasareehApp branch polling deployment
 After=docker.service network-online.target
 Wants=network-online.target
 Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/tasareehapp/repository/ops/pull-deploy.sh
-TimeoutStartSec=20min
+ExecStart=/opt/tasareehapp/app/ops/pull-deploy.sh
+TimeoutStartSec=1min
 
 [Install]
 WantedBy=multi-user.target

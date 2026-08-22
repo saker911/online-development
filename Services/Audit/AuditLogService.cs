@@ -58,7 +58,7 @@ namespace VehiclePermitSystemWeb.Services.Audit
                         ActionLabel = actionLabel,
                         EntityType = entityType,
                         EntityId = entityId,
-                        Message = message,
+                        Message = PersonalDataSanitizer.SanitizeAuditText(message),
                         Source = source,
                         RecordedBy = username,
                         OccurredAt = _systemClock.UtcNow,
@@ -68,8 +68,8 @@ namespace VehiclePermitSystemWeb.Services.Audit
                         ActedUnderDelegation = actedUnderDelegation,
                         DelegatedFromUsername = delegatedFromUsername ?? string.Empty,
                         DelegationId = delegationId,
-                        BeforeJson = beforeJson ?? string.Empty,
-                        AfterJson = afterJson ?? string.Empty,
+                        BeforeJson = PersonalDataSanitizer.SanitizeAuditJson(beforeJson),
+                        AfterJson = PersonalDataSanitizer.SanitizeAuditJson(afterJson),
                     }
                 );
                 db.SaveChanges();

@@ -270,9 +270,9 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             }
             if (ownerRequested)
             {
-                if (!SaudiNationalIdOrIqamaValidator.IsValid(ownerUsername))
+                if (!AccountUsernameValidator.IsValid(ownerUsername))
                 {
-                    return new TenantOperationResult(false, SaudiNationalIdOrIqamaValidator.ErrorMessage);
+                    return new TenantOperationResult(false, AccountUsernameValidator.ErrorMessage);
                 }
                 if (string.IsNullOrWhiteSpace(ownerFullName))
                 {
@@ -288,7 +288,7 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 }
                 if (db.UserAccounts.IgnoreQueryFilters().Any(user => user.Username == ownerUsername))
                 {
-                    return new TenantOperationResult(false, "رقم هوية مسؤول الجهة مستخدم في حساب آخر.");
+                    return new TenantOperationResult(false, "معرف حساب مسؤول الجهة مستخدم في حساب آخر.");
                 }
 
                 var owner = new UserAccount
@@ -359,9 +359,9 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantSignupResult(false, "اسم الجهة أو الموقع مطلوب.");
             }
 
-            if (!SaudiNationalIdOrIqamaValidator.IsValid(ownerUsername))
+            if (!AccountUsernameValidator.IsValid(ownerUsername))
             {
-                return new TenantSignupResult(false, SaudiNationalIdOrIqamaValidator.ErrorMessage);
+                return new TenantSignupResult(false, AccountUsernameValidator.ErrorMessage);
             }
 
             if (!SaudiMobileNumberValidator.IsValidRequired(ownerPhone))

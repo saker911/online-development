@@ -252,7 +252,21 @@ namespace VehiclePermitSystemWeb.Controllers
         private IEnumerable<UserAccount> GetVisibleUsers()
         {
             var users = _userAdminService.GetAllUsers(User.IsSuperAdmin());
-            return User.IsSuperAdmin() ? users : users.Where(user => !user.IsSuperAdmin);
+            if (User.IsSuperAdmin())
+            {
+                return users;
+            }
+
+            users = users.Where(user => !user.IsSuperAdmin);
+            if (User.IsInRole(AppRoles.GeneralManager))
+            {
+                return users;
+            }
+
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            return currentUser == null
+                ? Enumerable.Empty<UserAccount>()
+                : users.Where(user => user.WorkplaceSiteId == currentUser.WorkplaceSiteId);
         }
 
         private IEnumerable<AuditLog> FilterProtectedEntries(IEnumerable<AuditLog> entries)
@@ -302,6 +316,30 @@ namespace VehiclePermitSystemWeb.Controllers
             if (string.IsNullOrWhiteSpace(model.DelegateeUsername))
             {
                 ModelState.AddModelError(delegateeFieldKey, "اختر المفوَّض إليه.");
+            }
+
+            var visibleUsernames = GetVisibleUsers()
+                .Select(user => user.Username)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (
+                !string.IsNullOrWhiteSpace(model.DelegatorUsername)
+                && !visibleUsernames.Contains(model.DelegatorUsername)
+            )
+            {
+                ModelState.AddModelError(
+                    delegatorFieldKey,
+                    "المفوِّض لا يتبع موقعك التشغيلي."
+                );
+            }
+            if (
+                !string.IsNullOrWhiteSpace(model.DelegateeUsername)
+                && !visibleUsernames.Contains(model.DelegateeUsername)
+            )
+            {
+                ModelState.AddModelError(
+                    delegateeFieldKey,
+                    "المفوَّض إليه لا يتبع موقعك التشغيلي."
+                );
             }
 
             if (

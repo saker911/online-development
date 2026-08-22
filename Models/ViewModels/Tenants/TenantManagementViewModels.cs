@@ -79,10 +79,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         [RegularExpression("^[0-9]*$", ErrorMessage = "رقم الجهة يقبل الأرقام فقط.")]
         public string OrganizationReference { get; set; } = string.Empty;
 
-        [Display(Name = "رقم هوية مسؤول الجهة")]
+        [Display(Name = "معرف حساب مسؤول الجهة")]
         [RegularExpression(
-            SaudiNationalIdOrIqamaValidator.RegularExpressionPattern,
-            ErrorMessage = SaudiNationalIdOrIqamaValidator.ErrorMessage
+            AccountUsernameValidator.RegularExpressionPattern,
+            ErrorMessage = AccountUsernameValidator.ErrorMessage
         )]
         public string OwnerUsername { get; set; } = string.Empty;
 

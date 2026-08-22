@@ -148,13 +148,28 @@ Model.ManagerDisplayName;
                     </div>
 
                     <div class="account-profile-credential-grid">
-                        <div class="account-profile-credential-box">
-                            <span class="account-profile-mini-kicker">دخول الموقع</span>
+                            <div class="account-profile-credential-box">
+                                <span class="account-profile-mini-kicker">دخول الموقع</span>
                             <strong>••••••••••••</strong>
                             <p>@loginPasswordStatus</p>
                             <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-primary btn-sm">تغيير
                                 كلمة المرور</a>
                             </div>
+
+                            @if (Model.MfaRequired)
+                            {
+                                <div class="account-profile-credential-box">
+                                    <span class="account-profile-mini-kicker">المصادقة الثنائية</span>
+                                    <strong>@(Model.MfaEnabled ? "مفعلة" : "مطلوبة")</strong>
+                                    <p>@(Model.MfaEnabled
+                                        ? "الحساب الإداري محمي بتطبيق Authenticator."
+                                        : "سيطلب النظام ربط تطبيق Authenticator عند الدخول التالي.")</p>
+                                    @if (Model.MfaEnrolledAtUtc.HasValue)
+                                    {
+                                        <span class="account-profile-credential-meta">فُعلت في @Model.MfaEnrolledAtUtc.Value.ToLocalTime().ToString("yyyy/MM/dd")</span>
+                                    }
+                                </div>
+                            }
 
                             <div class="account-profile-credential-box @(Model.CanScanOperations ? string.Empty : "is-disabled")">
                                 <span class="account-profile-mini-kicker">صلاحية المسح والبوابة</span>

@@ -297,8 +297,12 @@ namespace VehiclePermitSystemWeb.Controllers
                 "visit_not_found" => "رقم الزيارة غير موجود.",
                 "visit_expired" => "الزيارة منتهية.",
                 "visit_not_approved" => "زيارة الموقوف ما زالت بانتظار الاعتماد أو تم رفضها.",
+                "visit_not_started" =>
+                    "موعد الزيارة لم يبدأ بعد. يسمح بالدخول قبل الموعد بـ 30 دقيقة.",
+                "visit_no_show" => "انتهت مهلة حضور الزيارة. يلزم تنسيق موعد جديد.",
                 "entry_recorded" => $"تم دخول {displayName}.",
                 "exit_recorded" => $"تم خروج {displayName}.",
+                "site_access_denied" => "هذا التصريح أو الطلب تابع لموقع آخر.",
                 "not_allowed" => mode == ScanTestViewModel.ModeVisit
                     ? "لا يمكن تنفيذ هذه العملية على الزيارة الحالية."
                     : "لا يمكن تنفيذ هذه العملية على التصريح الحالي.",

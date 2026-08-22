@@ -949,7 +949,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
 
             // Use centralized access control to filter visible permits
             return permits
-                .AsEnumerable()
+                .ToList()
                 .Where(p => _accessControl.CanAccessPermit(p, user))
                 .AsQueryable();
         }
@@ -972,7 +972,7 @@ namespace VehiclePermitSystemWeb.Services.Permits
 
             // Use centralized access control to determine which permits this user can approve
             return permits
-                .AsEnumerable()
+                .ToList()
                 .Where(p => _accessControl.CanApprovePermit(p, user))
                 .AsQueryable();
         }
@@ -997,17 +997,10 @@ namespace VehiclePermitSystemWeb.Services.Permits
         private static bool IsGeneralManager(UserAccount? user)
         {
             return user != null
-                && (
-                    string.Equals(
-                        user.Role,
-                        AppRoles.GeneralManager,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                    || string.Equals(
-                        user.Role,
-                        AppRoles.SecurityManager,
-                        StringComparison.OrdinalIgnoreCase
-                    )
+                && string.Equals(
+                    user.Role,
+                    AppRoles.GeneralManager,
+                    StringComparison.OrdinalIgnoreCase
                 );
         }
 

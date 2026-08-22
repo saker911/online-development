@@ -5,8 +5,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
 {
     public class UserEditViewModel : IValidatableObject
     {
-        [Display(Name = "رقم الهوية")]
-        [Required(ErrorMessage = "رقم الهوية مطلوب.")]
+        [Display(Name = "معرف الحساب")]
+        [Required(ErrorMessage = "معرف الحساب مطلوب.")]
         public string Username { get; set; } = string.Empty;
 
         public string? OriginalUsername { get; set; }
@@ -64,6 +64,11 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
         public string? Department { get; set; }
 
         public List<string> DepartmentOptions { get; set; } = new List<string>();
+
+        [Display(Name = "الموقع / الفرع")]
+        public int? WorkplaceSiteId { get; set; }
+
+        public List<UserWorkplaceSiteOptionViewModel> WorkplaceSiteOptions { get; set; } = new();
 
         [Display(Name = "الجهة")]
         public string TenantId { get; set; } = TenantDefaults.DefaultTenantId;
@@ -132,10 +137,10 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
 
             if (string.IsNullOrWhiteSpace(normalizedOriginalUsername))
             {
-                if (!SaudiNationalIdOrIqamaValidator.IsValid(normalizedUsername))
+                if (!AccountUsernameValidator.IsValid(normalizedUsername))
                 {
                     yield return new ValidationResult(
-                        SaudiNationalIdOrIqamaValidator.ErrorMessage,
+                        AccountUsernameValidator.ErrorMessage,
                         new[] { nameof(Username) }
                     );
                 }
@@ -187,5 +192,12 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Users
         public string TenantId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+    }
+
+    public sealed class UserWorkplaceSiteOptionViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
     }
 }

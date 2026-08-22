@@ -911,7 +911,12 @@ namespace VehiclePermitSystemWeb.Services.Workplace
 
             foreach (var user in db.UserAccounts.AsNoTracking())
             {
-                var key = BuildEmployeeSourceKey(user.EmployeeNumber, string.Empty, user.Username);
+                var key = BuildEmployeeSourceKey(
+                    user.EmployeeNumber,
+                    string.Empty,
+                    user.PhoneNumber,
+                    user.Username
+                );
                 UpsertProfile(
                     db,
                     existing,
@@ -947,7 +952,12 @@ namespace VehiclePermitSystemWeb.Services.Workplace
             {
                 var type = permit.IsPermanentPermit ? PersonTypes.Employee : PersonTypes.Contractor;
                 var key = permit.IsPermanentPermit
-                    ? BuildEmployeeSourceKey(permit.EmployeeNumber, permit.NationalId, permit.PermitNumber)
+                    ? BuildEmployeeSourceKey(
+                        permit.EmployeeNumber,
+                        permit.NationalId,
+                        permit.EmployeePhone,
+                        permit.PermitNumber
+                    )
                     : BuildExternalSourceKey(type, permit.NationalId, permit.EmployeePhone, permit.PermitNumber);
                 latestPermitActivity.TryGetValue(permit.PermitNumber, out var lastSeenAt);
                 UpsertProfile(
@@ -1214,7 +1224,9 @@ namespace VehiclePermitSystemWeb.Services.Workplace
                 PersonType = profile.PersonType,
                 PersonTypeDisplay = PersonTypes.DisplayName(profile.PersonType),
                 Reference = profile.LastReference,
-                NationalIdMasked = MaskIdentifier(profile.NationalId),
+                NationalIdMasked = PersonalDataSanitizer.IsInternalReference(profile.NationalId)
+                    ? string.Empty
+                    : MaskIdentifier(profile.NationalId),
                 PhoneNumberMasked = MaskPhone(profile.PhoneNumber),
                 Department = profile.Department,
                 JobTitle = profile.JobTitle,
@@ -1269,10 +1281,14 @@ namespace VehiclePermitSystemWeb.Services.Workplace
         private static string BuildEmployeeSourceKey(
             string? employeeNumber,
             string? nationalId,
+            string? phoneNumber,
             string fallback
         ) =>
             !string.IsNullOrWhiteSpace(employeeNumber) ? $"employee:number:{NormalizeKey(employeeNumber)}"
-            : !string.IsNullOrWhiteSpace(nationalId) ? $"employee:national:{NormalizeKey(nationalId)}"
+            : !string.IsNullOrWhiteSpace(phoneNumber) ? $"employee:phone:{NormalizeKey(phoneNumber)}"
+            : !string.IsNullOrWhiteSpace(nationalId)
+                && !PersonalDataSanitizer.IsInternalReference(nationalId)
+                    ? $"employee:national:{NormalizeKey(nationalId)}"
             : $"employee:source:{NormalizeKey(fallback)}";
 
         private static string BuildExternalSourceKey(
@@ -1281,7 +1297,9 @@ namespace VehiclePermitSystemWeb.Services.Workplace
             string? phoneNumber,
             string fallback
         ) =>
-            !string.IsNullOrWhiteSpace(nationalId) ? $"{personType}:national:{NormalizeKey(nationalId)}"
+            !string.IsNullOrWhiteSpace(nationalId)
+                && !PersonalDataSanitizer.IsInternalReference(nationalId)
+                ? $"{personType}:national:{NormalizeKey(nationalId)}"
             : !string.IsNullOrWhiteSpace(phoneNumber) ? $"{personType}:phone:{NormalizeKey(phoneNumber)}"
             : $"{personType}:source:{NormalizeKey(fallback)}";
 

@@ -86,7 +86,9 @@
                     </div>
                     <div class="col-md-6">
                         <label asp-for="OwnerUsername" class="form-label"></label>
-                        <input asp-for="OwnerUsername" class="form-control" inputmode="numeric" maxlength="10" autocomplete="username" />
+                        <input asp-for="OwnerUsername" class="form-control ltr-field" minlength="4" maxlength="64"
+                               pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,63}" autocomplete="username"
+                               placeholder="owner.main" />
                         <span asp-validation-for="OwnerUsername" class="field-validation-error"></span>
                     </div>
                     <div class="col-md-6">

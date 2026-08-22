@@ -30,6 +30,7 @@ using VehiclePermitSystemWeb.Services.Permits;
 using VehiclePermitSystemWeb.Services.Reports;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -42,18 +43,21 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IVisitService _visitService;
         private readonly IUserAdminService _userAdminService;
         private readonly IDisplayDeviceService _displayDeviceService;
+        private readonly IConfiguration _configuration;
 
         public ScanController(
             IPermitService permitService,
             IVisitService visitService,
             IUserAdminService userAdminService,
-            IDisplayDeviceService displayDeviceService
+            IDisplayDeviceService displayDeviceService,
+            IConfiguration? configuration = null
         )
         {
             _permitService = permitService;
             _visitService = visitService;
             _userAdminService = userAdminService;
             _displayDeviceService = displayDeviceService;
+            _configuration = configuration ?? new ConfigurationBuilder().Build();
         }
 
         [HttpPost("permit")]
@@ -92,6 +96,10 @@ namespace VehiclePermitSystemWeb.Controllers
                 );
             }
             var permitBeforeScan = _permitService.GetPermitByNumber(identifier);
+            if (permitBeforeScan != null && !CanScanWorkplaceSite(permitBeforeScan.WorkplaceSiteId, scannerUserId))
+            {
+                return Ok(new { allowed = false, reason = "site_access_denied", identifier });
+            }
             var (allowed, reason) = _permitService.RecordPermitScan(
                 identifier,
                 scannerUserId,
@@ -119,7 +127,7 @@ namespace VehiclePermitSystemWeb.Controllers
                             departmentName = permit.DepartmentName,
                             locationDisplay = permit.LocationDisplay,
                             subject = permit.Subject,
-                            nationalId = permit.NationalId,
+                            nationalId = MaskIdentity(permit.NationalId),
                             vehicleType = permit.VehicleType,
                             plateNumberDisplay = permit.PlateNumberDisplay,
                             employeePhone = permit.EmployeePhone,
@@ -212,6 +220,19 @@ namespace VehiclePermitSystemWeb.Controllers
             if (string.Equals(scanMode, "visit", StringComparison.OrdinalIgnoreCase))
             {
                 var visitBeforeScan = _visitService.GetVisitById(identifier);
+                if (visitBeforeScan != null && !CanScanWorkplaceSite(visitBeforeScan.WorkplaceSiteId, scannerUserId))
+                {
+                    return Ok(
+                        new
+                        {
+                            allowed = false,
+                            reason = "site_access_denied",
+                            overrideEntry = false,
+                            identifier,
+                            scanMode,
+                        }
+                    );
+                }
                 var (allowed, reason) = _visitService.RecordVisitScan(identifier, scannerUserId);
                 var visit = _visitService.GetVisitById(identifier) ?? visitBeforeScan;
                 return Ok(
@@ -237,13 +258,26 @@ namespace VehiclePermitSystemWeb.Controllers
                                 hostName = visit.SubjectDisplay,
                                 visitedPersonName = visit.SubjectDisplay,
                                 visitedPersonType = visit.VisitedPersonTypeDisplay,
-                                nationalId = MaskSensitiveValue(visit.NationalId, 4),
+                                nationalId = MaskIdentity(visit.NationalId),
                                 phoneNumber = MaskSensitiveValue(visit.PhoneNumber, 4),
                             },
                     }
                 );
             }
 
+            if (permitBeforeScan != null && !CanScanWorkplaceSite(permitBeforeScan.WorkplaceSiteId, scannerUserId))
+            {
+                return Ok(
+                    new
+                    {
+                        allowed = false,
+                        reason = "site_access_denied",
+                        overrideEntry = false,
+                        identifier,
+                        scanMode,
+                    }
+                );
+            }
             var (permitAllowed, permitReason) = _permitService.RecordPermitScan(
                 identifier,
                 scannerUserId,
@@ -272,7 +306,7 @@ namespace VehiclePermitSystemWeb.Controllers
                             departmentName = permit.DepartmentName,
                             locationDisplay = permit.LocationDisplay,
                             subject = permit.Subject,
-                            nationalId = MaskSensitiveValue(permit.NationalId, 4),
+                            nationalId = MaskIdentity(permit.NationalId),
                             vehicleType = permit.VehicleType,
                             plateNumberDisplay = permit.PlateNumberDisplay,
                             employeePhone = MaskSensitiveValue(permit.EmployeePhone, 4),
@@ -303,6 +337,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 return Ok(new { allowed = false, reason = "invalid_request" });
 
             var scannerUserId = ResolveEffectiveScannerUserId(requestBody);
+            var visitBeforeScan = _visitService.GetVisitById(identifier);
+            if (visitBeforeScan != null && !CanScanWorkplaceSite(visitBeforeScan.WorkplaceSiteId, scannerUserId))
+            {
+                return Ok(new { allowed = false, reason = "site_access_denied", identifier });
+            }
             var (allowed, reason) = _visitService.RecordVisitScan(identifier, scannerUserId);
             var visit = _visitService.GetVisitById(identifier);
             return Ok(
@@ -401,6 +440,29 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             return string.Empty;
+        }
+
+        private bool CanScanWorkplaceSite(int? recordSiteId, string? scannerUserId)
+        {
+            var scanner = string.IsNullOrWhiteSpace(scannerUserId)
+                ? null
+                : _userAdminService.GetUserAccount(scannerUserId);
+            if (
+                scanner != null
+                && !scanner.IsSuperAdmin
+                && !string.Equals(
+                    scanner.Role,
+                    AppRoles.GeneralManager,
+                    StringComparison.OrdinalIgnoreCase
+                )
+                && scanner.WorkplaceSiteId != recordSiteId
+            )
+            {
+                return false;
+            }
+
+            var device = _displayDeviceService.GetApprovedDevice(HttpContext);
+            return device == null || device.WorkplaceSiteId == recordSiteId;
         }
 
         private (string Identifier, string ScanMode) ResolveAutoIdentifier(string rawIdentifier)
@@ -544,6 +606,13 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var approvedDevice = _displayDeviceService.GetApprovedDevice(HttpContext);
             return approvedDevice == null ? string.Empty : $"display-device:{approvedDevice.Id}";
+        }
+
+        private string MaskIdentity(string? value)
+        {
+            return OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
+                ? string.Empty
+                : MaskSensitiveValue(value, 4);
         }
 
         private static string MaskSensitiveValue(string? value, int visibleSuffixLength)

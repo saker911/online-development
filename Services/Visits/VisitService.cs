@@ -14,6 +14,7 @@ using VehiclePermitSystemWeb.Models.ViewModels.Users;
 using VehiclePermitSystemWeb.Models.ViewModels.Visits;
 using VehiclePermitSystemWeb.Security;
 using VehiclePermitSystemWeb.Services.Notifications;
+using VehiclePermitSystemWeb.Utilities.Administration;
 using VehiclePermitSystemWeb.Utilities.Online;
 
 namespace VehiclePermitSystemWeb.Services.Visits
@@ -27,7 +28,11 @@ namespace VehiclePermitSystemWeb.Services.Visits
         private readonly IConfiguration _configuration;
         private readonly IOperationalEmailNotificationQueue? _emailNotificationQueue;
 
-        private sealed record WorkHoursSettings(TimeOnly StartTime, TimeOnly EndTime);
+        private sealed record WorkHoursSettings(
+            TimeOnly StartTime,
+            TimeOnly EndTime,
+            string OfficialWorkDaysCsv
+        );
 
         public VisitService(
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
@@ -114,6 +119,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                 )
                 .AsEnumerable()
                 .OrderBy(visit => QueueStatusOrder(visit.QueueStatus))
+                .ThenBy(visit => visit.VisitDate)
                 .ThenBy(visit => visit.QueuedAtUtc ?? visit.RequestedAtUtc ?? visit.VisitDate)
                 .ToList();
         }
@@ -197,11 +203,16 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     existing.NationalId = visit.NationalId;
                     existing.PhoneNumber = visit.PhoneNumber;
                     existing.VisitorEmail = visit.VisitorEmail;
+                    existing.WorkplaceSiteId = visit.WorkplaceSiteId;
+                    existing.WorkplaceSiteEntranceId = visit.WorkplaceSiteEntranceId;
+                    existing.DepartmentId = visit.DepartmentId;
                     existing.Purpose = visit.Purpose;
                     existing.HostName = visit.HostName;
                     existing.VisitedPersonName = visit.VisitedPersonName;
                     existing.VisitedPersonType = visit.VisitedPersonType;
                     existing.VisitDate = visit.VisitDate;
+                    existing.RequestedVisitDate = visit.RequestedVisitDate ?? visit.VisitDate;
+                    existing.ServiceDurationMinutes = 30;
                     existing.EntryTime = visit.EntryTime;
                     existing.ExitTime = visit.ExitTime;
                     if (visit.ExpiresAt.HasValue)
@@ -483,6 +494,11 @@ namespace VehiclePermitSystemWeb.Services.Visits
                             "Approved",
                             StringComparison.OrdinalIgnoreCase
                         );
+                        var wasApproved = string.Equals(
+                            visit.ApprovalStatus,
+                            "Approved",
+                            StringComparison.OrdinalIgnoreCase
+                        );
                         var delegatedSuffix = approvalContext.IsDelegated
                             ? $" بتفويض من {approvalContext.Delegator?.DisplayName ?? approvalContext.Delegator?.Username}"
                             : string.Empty;
@@ -504,6 +520,10 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         }
 
                         visit.ApprovalStatus = approvalStatus;
+                        if (isApproved && !wasApproved)
+                        {
+                            AssignApprovedVisitSchedule(db, visit);
+                        }
                         if (
                             string.Equals(
                                 approvalStatus,
@@ -607,7 +627,21 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         return 0;
                     }
 
+                    var isApprovedWithoutActor = string.Equals(
+                        approvalStatus,
+                        "Approved",
+                        StringComparison.OrdinalIgnoreCase
+                    );
+                    var wasApprovedWithoutActor = string.Equals(
+                        visit.ApprovalStatus,
+                        "Approved",
+                        StringComparison.OrdinalIgnoreCase
+                    );
                     visit.ApprovalStatus = approvalStatus;
+                    if (isApprovedWithoutActor && !wasApprovedWithoutActor)
+                    {
+                        AssignApprovedVisitSchedule(db, visit);
+                    }
                     if (
                         string.Equals(
                             approvalStatus,
@@ -657,6 +691,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
                             StringComparison.OrdinalIgnoreCase
                         )
                         || string.Equals(visit.Status, "Suspended", StringComparison.OrdinalIgnoreCase)
+                        || !string.Equals(visit.Status, "Inside", StringComparison.OrdinalIgnoreCase)
                     )
                     {
                         return false;
@@ -670,7 +705,12 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     }
                     if (string.Equals(currentStatus, targetStatus, StringComparison.Ordinal))
                     {
-                        return true;
+                        return targetStatus != Visit.QueueStatusServing
+                            || string.Equals(
+                                visit.ServiceOperatorUsername,
+                                performedBy,
+                                StringComparison.OrdinalIgnoreCase
+                            );
                     }
                     if (!CanTransitionQueue(currentStatus, targetStatus))
                     {
@@ -678,28 +718,68 @@ namespace VehiclePermitSystemWeb.Services.Visits
                     }
 
                     var now = _systemClock.UtcNow;
-                    visit.QueueStatus = targetStatus;
-                    switch (targetStatus)
+                    if (targetStatus == Visit.QueueStatusServing)
                     {
-                        case Visit.QueueStatusWaiting:
-                            visit.QueuedAtUtc = now;
-                            visit.CalledAtUtc = null;
-                            visit.ServiceStartedAtUtc = null;
-                            visit.QueueCompletedAtUtc = null;
-                            break;
-                        case Visit.QueueStatusCalled:
-                            visit.QueuedAtUtc ??= now;
-                            visit.CalledAtUtc = now;
-                            break;
-                        case Visit.QueueStatusServing:
-                            visit.QueuedAtUtc ??= now;
-                            visit.CalledAtUtc ??= now;
-                            visit.ServiceStartedAtUtc = now;
-                            break;
-                        case Visit.QueueStatusCompleted:
-                        case Visit.QueueStatusSkipped:
-                            visit.QueueCompletedAtUtc = now;
-                            break;
+                        var operatorDisplayName = db
+                            .UserAccounts.AsNoTracking()
+                            .Where(user => user.Username == performedBy)
+                            .Select(user => user.DisplayName)
+                            .FirstOrDefault();
+                        var claimed = db
+                            .Visits.Where(item =>
+                                item.VisitId == visitId
+                                && item.Status == "Inside"
+                                && item.ApprovalStatus == "Approved"
+                                && (item.QueueStatus == Visit.QueueStatusWaiting
+                                    || item.QueueStatus == Visit.QueueStatusCalled)
+                                && item.ServiceOperatorUsername == string.Empty
+                            )
+                            .ExecuteUpdate(setters =>
+                                setters
+                                    .SetProperty(
+                                        item => item.QueueStatus,
+                                        Visit.QueueStatusServing
+                                    )
+                                    .SetProperty(item => item.ServiceStartedAtUtc, now)
+                                    .SetProperty(
+                                        item => item.CalledAtUtc,
+                                        item => item.CalledAtUtc ?? now
+                                    )
+                                    .SetProperty(item => item.QueuedAtUtc, item => item.QueuedAtUtc ?? now)
+                                    .SetProperty(item => item.ServiceOperatorUsername, performedBy)
+                                    .SetProperty(
+                                        item => item.ServiceOperatorDisplayName,
+                                        operatorDisplayName ?? performedBy
+                                    )
+                            );
+                        if (claimed != 1)
+                        {
+                            return false;
+                        }
+
+                        db.Entry(visit).State = EntityState.Detached;
+                        visit = db.Visits.First(item => item.VisitId == visitId);
+                    }
+                    else
+                    {
+                        visit.QueueStatus = targetStatus;
+                        switch (targetStatus)
+                        {
+                            case Visit.QueueStatusWaiting:
+                                visit.QueuedAtUtc = now;
+                                visit.CalledAtUtc = null;
+                                visit.ServiceStartedAtUtc = null;
+                                visit.QueueCompletedAtUtc = null;
+                                break;
+                            case Visit.QueueStatusCalled:
+                                visit.QueuedAtUtc ??= now;
+                                visit.CalledAtUtc = now;
+                                break;
+                            case Visit.QueueStatusCompleted:
+                            case Visit.QueueStatusSkipped:
+                                visit.QueueCompletedAtUtc = now;
+                                break;
+                        }
                     }
 
                     RecordUserActivity(
@@ -758,20 +838,32 @@ namespace VehiclePermitSystemWeb.Services.Visits
                         return (false, "visit_not_approved");
                     }
 
+                    if (IsVisitNoShowExpired(visit, now))
+                    {
+                        visit.Status = "Completed";
+                        visit.ExitTime ??= visit.VisitDate.AddMinutes(20);
+                        db.SaveChanges();
+                        return (false, "visit_no_show");
+                    }
+
+                    if (visit.Status == "Active" && now < visit.VisitDate.AddMinutes(-30))
+                    {
+                        return (false, "visit_not_started");
+                    }
+
                     if (visit.Status == "Active")
                     {
                         var entryTime = now;
                         visit.EntryTime = entryTime;
                         visit.ExpiresAt = CalculateVisitExpiration(entryTime, workHours);
                         visit.Status = "Inside";
-                        if (
-                            visit.QueueStatus == Visit.QueueStatusWaiting
-                            || visit.QueueStatus == Visit.QueueStatusCalled
-                        )
+                        if (ShouldQueueOnArrival(db, visit))
                         {
-                            visit.QueueStatus = Visit.QueueStatusServing;
-                            visit.CalledAtUtc ??= _systemClock.UtcNow;
-                            visit.ServiceStartedAtUtc ??= _systemClock.UtcNow;
+                            visit.QueueStatus = Visit.QueueStatusWaiting;
+                            visit.QueuedAtUtc = _systemClock.UtcNow;
+                            visit.CalledAtUtc = null;
+                            visit.ServiceStartedAtUtc = null;
+                            visit.QueueCompletedAtUtc = null;
                         }
                         ApplyVisitTimesToCompanions(visit, entryTime, null);
                         db.SaveChanges();
@@ -800,36 +892,156 @@ namespace VehiclePermitSystemWeb.Services.Visits
 
         private void ApplyQueueDecision(ApplicationDbContext db, Visit visit, bool isApproved)
         {
-            var isSelfService = string.Equals(
-                visit.RequestSource,
-                Visit.RequestSourcePublicSelfService,
-                StringComparison.OrdinalIgnoreCase
-            );
-            var queueEnabled = db.Tenants
-                .AsNoTracking()
-                .Any(tenant =>
-                    tenant.TenantId == db.CurrentTenantId
-                    && tenant.VisitsServiceEnabled
-                    && tenant.SelfServiceEnabled
-                    && tenant.QueueServiceEnabled
-                );
-            if (
-                isApproved
-                && isSelfService
-                && queueEnabled
-                && string.IsNullOrWhiteSpace(visit.QueueStatus)
-            )
-            {
-                visit.QueueStatus = Visit.QueueStatusWaiting;
-                visit.QueuedAtUtc = _systemClock.UtcNow;
-                return;
-            }
-
             if (!isApproved && !string.IsNullOrWhiteSpace(visit.QueueStatus))
             {
                 visit.QueueStatus = Visit.QueueStatusSkipped;
                 visit.QueueCompletedAtUtc = _systemClock.UtcNow;
             }
+        }
+
+        private void AssignApprovedVisitSchedule(ApplicationDbContext db, Visit visit)
+        {
+            const int slotMinutes = 30;
+            visit.RequestedVisitDate ??= visit.VisitDate;
+            visit.ServiceDurationMinutes = slotMinutes;
+
+            var settings = db.AdministrationSettings.AsNoTracking().FirstOrDefault();
+            var workStart = settings?.WorkStartTime ?? new TimeOnly(8, 0);
+            var workEnd = settings?.WorkEndTime ?? new TimeOnly(16, 0);
+            var officialWorkDays = settings?.OfficialWorkDaysCsv
+                ?? AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv;
+            var requested = visit.RequestedVisitDate.Value;
+            var candidate = requested > _systemClock.LocalNow
+                ? requested
+                : _systemClock.LocalNow;
+            candidate = FindNextWorkSlot(
+                candidate,
+                workStart,
+                workEnd,
+                officialWorkDays,
+                slotMinutes
+            );
+
+            var departmentName = visit.DepartmentId.HasValue
+                ? db.Departments.AsNoTracking()
+                    .Where(department => department.Id == visit.DepartmentId.Value)
+                    .Select(department => department.Name)
+                    .FirstOrDefault()
+                : null;
+            var staffCapacity = string.IsNullOrWhiteSpace(departmentName)
+                ? 1
+                : db.UserAccounts.AsNoTracking().Count(user =>
+                    user.IsActive
+                    && user.Department == departmentName
+                    && (user.CanCreateVisit || user.Role == AppRoles.Receptionist)
+                );
+            staffCapacity = Math.Max(1, staffCapacity);
+
+            while (true)
+            {
+                var reservations = db.Visits.Count(existing =>
+                    existing.VisitId != visit.VisitId
+                    && existing.DepartmentId == visit.DepartmentId
+                    && existing.VisitDate == candidate
+                    && existing.ApprovalStatus == "Approved"
+                    && (existing.Status == "Active" || existing.Status == "Inside")
+                );
+                if (reservations < staffCapacity)
+                {
+                    visit.VisitDate = candidate;
+                    return;
+                }
+
+                candidate = FindNextWorkSlot(
+                    candidate.AddMinutes(slotMinutes),
+                    workStart,
+                    workEnd,
+                    officialWorkDays,
+                    slotMinutes
+                );
+            }
+        }
+
+        private static DateTime FindNextWorkSlot(
+            DateTime candidate,
+            TimeOnly workStart,
+            TimeOnly workEnd,
+            string officialWorkDaysCsv,
+            int slotMinutes
+        )
+        {
+            var officialDays = AdministrationWorkSchedule.ParseOfficialWorkDays(
+                officialWorkDaysCsv
+            );
+            if (officialDays.Count == 0)
+            {
+                officialDays = AdministrationWorkSchedule.ParseOfficialWorkDays(
+                    AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv
+                );
+            }
+
+            for (var dayOffset = 0; dayOffset < 370; dayOffset++)
+            {
+                var date = candidate.Date.AddDays(dayOffset);
+                if (!officialDays.Contains(date.DayOfWeek))
+                {
+                    continue;
+                }
+
+                var dayStart = date.Add(workStart.ToTimeSpan());
+                var dayEnd = date.Add(workEnd.ToTimeSpan());
+                if (workEnd <= workStart)
+                {
+                    dayEnd = dayEnd.AddDays(1);
+                }
+
+                var slot = dayOffset == 0 && candidate > dayStart ? candidate : dayStart;
+                var elapsedMinutes = Math.Max(0, (slot - dayStart).TotalMinutes);
+                var roundedMinutes = Math.Ceiling(elapsedMinutes / slotMinutes) * slotMinutes;
+                slot = dayStart.AddMinutes(roundedMinutes);
+                if (slot.AddMinutes(slotMinutes) <= dayEnd)
+                {
+                    return slot;
+                }
+            }
+
+            throw new InvalidOperationException("تعذر العثور على موعد زيارة ضمن أيام الدوام.");
+        }
+
+        private static bool ShouldQueueOnArrival(ApplicationDbContext db, Visit visit)
+        {
+            if (!visit.DepartmentId.HasValue)
+            {
+                return false;
+            }
+
+            var tenantQueueEnabled = db.Tenants.AsNoTracking().Any(tenant =>
+                tenant.TenantId == db.CurrentTenantId
+                && tenant.VisitsServiceEnabled
+                && tenant.QueueServiceEnabled
+            );
+            if (!tenantQueueEnabled)
+            {
+                return false;
+            }
+
+            var destinationAvailable = db.Departments.AsNoTracking().Any(department =>
+                department.Id == visit.DepartmentId.Value
+                && department.IsActive
+                && department.AcceptsVisitors
+            );
+            if (!destinationAvailable)
+            {
+                return false;
+            }
+
+            return !visit.WorkplaceSiteId.HasValue
+                || db.WorkplaceSites.AsNoTracking().Any(site =>
+                    site.Id == visit.WorkplaceSiteId.Value
+                    && site.IsActive
+                    && site.VisitsEnabled
+                    && site.QueueEnabled
+                );
         }
 
         private void CloseQueueVisit(Visit visit, string status)
@@ -895,6 +1107,8 @@ namespace VehiclePermitSystemWeb.Services.Visits
             {
                 visit.VisitDate = _systemClock.LocalNow;
             }
+            visit.RequestedVisitDate ??= visit.VisitDate;
+            visit.ServiceDurationMinutes = 30;
 
             visit.VisitorName = (visit.VisitorName ?? string.Empty).Trim();
             visit.VisitLocation = (visit.VisitLocation ?? string.Empty).Trim();
@@ -1200,7 +1414,7 @@ namespace VehiclePermitSystemWeb.Services.Visits
 
         private static IQueryable<Visit> CreateVisitQuery(ApplicationDbContext db)
         {
-            return db.Visits.Include(v => v.Companions);
+            return db.Visits.Include(v => v.Companions).Include(v => v.Department);
         }
 
         private static bool IsVisitNoShowExpired(Visit visit, DateTime now)
@@ -1258,7 +1472,9 @@ namespace VehiclePermitSystemWeb.Services.Visits
             var settings = db.AdministrationSettings.AsNoTracking().FirstOrDefault();
             return new WorkHoursSettings(
                 settings?.WorkStartTime ?? new TimeOnly(8, 0),
-                settings?.WorkEndTime ?? new TimeOnly(16, 0)
+                settings?.WorkEndTime ?? new TimeOnly(16, 0),
+                settings?.OfficialWorkDaysCsv
+                    ?? AdministrationWorkSchedule.DefaultOfficialWorkDaysCsv
             );
         }
 

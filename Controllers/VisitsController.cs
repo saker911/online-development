@@ -130,6 +130,7 @@ namespace VehiclePermitSystemWeb.Controllers
             NormalizePublicRequestInput(model);
             ModelState.Clear();
             model.Locations = GetPublicVisitLocations();
+            model.Destinations = GetVisitDestinations();
             if (model.Locations.Count > 0)
             {
                 var locationError = string.Empty;
@@ -151,6 +152,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         : $"{siteName} - {entranceName}";
                 }
             }
+            ValidateAndApplyDestination(model);
             TryValidateModel(model);
             ValidatePublicRequestWorkflow(model);
             ValidatePublicRequestSchedule(model, workflow, now);
@@ -167,12 +169,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             var nationalId = string.IsNullOrWhiteSpace(model.NationalId)
                 || !model.ShowNationalId
-                    ? OnlineEditionSettings.BuildSyntheticNationalId(
-                        model.VisitorName,
-                        model.PhoneNumber,
-                        model.VisitLocation,
-                        model.VisitDate.ToString("O")
-                    )
+                    ? OnlineEditionSettings.BuildInternalReference()
                     : model.NationalId;
             var visit = new Visit
             {
@@ -188,12 +185,15 @@ namespace VehiclePermitSystemWeb.Controllers
                 HostName = string.IsNullOrWhiteSpace(model.VisitedPersonName)
                     ? "الاستقبال"
                     : model.VisitedPersonName,
-                VisitedPersonType = Visit.VisitedPersonTypeHost,
+                VisitedPersonType = model.DepartmentId.HasValue
+                    ? Visit.VisitedPersonTypeOther
+                    : Visit.VisitedPersonTypeHost,
                 VisitLocation = string.IsNullOrWhiteSpace(model.VisitLocation)
                     ? "الموقع الرئيسي"
                     : model.VisitLocation,
                 WorkplaceSiteId = model.WorkplaceSiteId,
                 WorkplaceSiteEntranceId = model.WorkplaceSiteEntranceId,
+                DepartmentId = model.DepartmentId,
                 Purpose = string.IsNullOrWhiteSpace(model.Purpose)
                     ? "زيارة عامة"
                     : model.Purpose,
@@ -328,6 +328,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             ViewData["InitializeCurrentTime"] = true;
             PopulateLocationOptions();
+            PopulateDestinationOptions();
             var visit = new Visit { VisitDate = _systemClock.LocalNow };
             if (personId.HasValue)
             {
@@ -354,6 +355,8 @@ namespace VehiclePermitSystemWeb.Controllers
             NormalizeVisitInput(visit);
             ModelState.Clear();
             ValidateAndApplyLocation(visit, "visits");
+            ValidateAndApplyDestination(visit);
+            ValidateOptionalIdentity(visit.NationalId);
             TryValidateModel(visit);
             ValidateVisitSchedule(visit);
             if (ModelState.IsValid)
@@ -370,6 +373,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 }
             }
             PopulateLocationOptions();
+            PopulateDestinationOptions();
             return View(visit);
         }
 
@@ -386,6 +390,8 @@ namespace VehiclePermitSystemWeb.Controllers
             {
                 return Forbid();
             }
+            PopulateLocationOptions();
+            PopulateDestinationOptions();
             return View(visit);
         }
 
@@ -407,6 +413,9 @@ namespace VehiclePermitSystemWeb.Controllers
 
             NormalizeVisitInput(visit);
             ModelState.Clear();
+            ValidateAndApplyLocation(visit, "visits");
+            ValidateAndApplyDestination(visit);
+            ValidateOptionalIdentity(visit.NationalId);
             TryValidateModel(visit);
             ValidateVisitSchedule(visit, existingVisit.VisitDate);
             if (ModelState.IsValid)
@@ -423,6 +432,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 this.ToastSuccess("تم حفظ التعديلات على الزيارة بنجاح.");
                 return RedirectToAction("Index");
             }
+            PopulateLocationOptions();
+            PopulateDestinationOptions();
             return View(visit);
         }
 
@@ -674,7 +685,10 @@ namespace VehiclePermitSystemWeb.Controllers
 
                                         AddVisitDetailRow(table, "رقم الزيارة", visit.VisitId);
                                         AddVisitDetailRow(table, "اسم الزائر", visit.VisitorName);
-                                        AddVisitDetailRow(table, "رقم الهوية", visit.NationalId);
+                                        if (!OnlineEditionSettings.HideSensitiveIdentityFields(_configuration))
+                                        {
+                                            AddVisitDetailRow(table, "رقم الهوية", visit.NationalId);
+                                        }
                                         AddVisitDetailRow(
                                             table,
                                             "مكان الزيارة",
@@ -954,8 +968,9 @@ namespace VehiclePermitSystemWeb.Controllers
             );
             model.ShowNationalId = workflow.ShowNationalId && !sensitiveIdentityHidden;
             model.RequireNationalId = model.ShowNationalId && workflow.RequireNationalId;
-            model.ShowHostName = workflow.ShowHostName;
-            model.RequireHostName = workflow.ShowHostName && workflow.RequireHostName;
+            model.Destinations = GetVisitDestinations();
+            model.ShowHostName = model.Destinations.Count == 0 && workflow.ShowHostName;
+            model.RequireHostName = model.ShowHostName && workflow.RequireHostName;
             model.ShowVisitLocation = workflow.ShowVisitLocation;
             model.RequireVisitLocation = workflow.ShowVisitLocation
                 && workflow.RequireVisitLocation;
@@ -975,6 +990,18 @@ namespace VehiclePermitSystemWeb.Controllers
             _workplaceDirectoryService?.GetLocationOptions()
                 .Where(item => item.VisitsEnabled && item.SelfServiceEnabled)
                 .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+
+        private IReadOnlyList<VisitDestinationOptionViewModel> GetVisitDestinations() =>
+            _userAdminService
+                .GetDepartments()
+                .Where(department => department.IsActive && department.AcceptsVisitors)
+                .OrderBy(department => department.Name)
+                .Select(department => new VisitDestinationOptionViewModel
+                {
+                    Id = department.Id,
+                    Name = department.Name,
+                })
+                .ToList();
 
         private static void NormalizePublicRequestInput(PublicVisitRequestViewModel model)
         {
@@ -1113,11 +1140,10 @@ namespace VehiclePermitSystemWeb.Controllers
             var visitorEmail = (visit.VisitorEmail ?? string.Empty).Trim().ToLowerInvariant();
             visit.VisitorEmail = string.IsNullOrWhiteSpace(visitorEmail) ? null : visitorEmail;
             visit.NationalId = OnlineEditionSettings.HideSensitiveIdentityFields(_configuration)
-                ? OnlineEditionSettings.BuildSyntheticNationalId(
-                    visit.VisitorName,
-                    visit.PhoneNumber,
-                    visit.VisitLocation,
-                    visit.VisitDate.ToString("O")
+                ? (
+                    PersonalDataSanitizer.IsInternalReference(visit.NationalId)
+                        ? visit.NationalId.Trim()
+                        : OnlineEditionSettings.BuildInternalReference()
                 )
                 : new string((visit.NationalId ?? string.Empty).Where(char.IsDigit).ToArray());
             visit.Purpose = (visit.Purpose ?? string.Empty).Trim();
@@ -1140,18 +1166,83 @@ namespace VehiclePermitSystemWeb.Controllers
             }
         }
 
+        private void ValidateOptionalIdentity(string? identity)
+        {
+            if (OnlineEditionSettings.HideSensitiveIdentityFields(_configuration))
+            {
+                return;
+            }
+
+            if (!SaudiNationalIdOrIqamaValidator.IsValid(identity))
+            {
+                ModelState.AddModelError(
+                    nameof(Visit.NationalId),
+                    SaudiNationalIdOrIqamaValidator.ErrorMessage
+                );
+            }
+        }
+
         private void PopulateLocationOptions()
         {
-            ViewData["WorkplaceLocations"] = _workplaceDirectoryService?.GetLocationOptions()
+            ViewData["WorkplaceLocations"] = GetScopedLocationOptions()
                 .Where(item => item.VisitsEnabled)
-                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+                .ToList();
+        }
+
+        private void PopulateDestinationOptions()
+        {
+            ViewData["VisitDestinations"] = GetVisitDestinations();
+        }
+
+        private void ValidateAndApplyDestination(PublicVisitRequestViewModel model)
+        {
+            model.Destinations = GetVisitDestinations();
+            if (model.Destinations.Count == 0)
+            {
+                return;
+            }
+
+            var destination = model.Destinations.FirstOrDefault(item => item.Id == model.DepartmentId);
+            if (destination == null)
+            {
+                ModelState.AddModelError(
+                    nameof(model.DepartmentId),
+                    "يرجى اختيار القسم أو الخدمة المطلوبة."
+                );
+                return;
+            }
+
+            model.VisitedPersonName = destination.Name;
+        }
+
+        private void ValidateAndApplyDestination(Visit visit)
+        {
+            var destinations = GetVisitDestinations();
+            if (destinations.Count == 0)
+            {
+                return;
+            }
+
+            var destination = destinations.FirstOrDefault(item => item.Id == visit.DepartmentId);
+            if (destination == null)
+            {
+                ModelState.AddModelError(
+                    nameof(visit.DepartmentId),
+                    "يرجى اختيار القسم أو الخدمة المطلوبة."
+                );
+                return;
+            }
+
+            visit.VisitedPersonName = destination.Name;
+            visit.HostName = destination.Name;
+            visit.VisitedPersonType = Visit.VisitedPersonTypeOther;
         }
 
         private void ValidateAndApplyLocation(Visit visit, string service)
         {
-            var options = _workplaceDirectoryService?.GetLocationOptions()
+            var options = GetScopedLocationOptions()
                 .Where(item => item.VisitsEnabled)
-                .ToList() ?? new List<WorkplaceLocationOptionViewModel>();
+                .ToList();
             if (options.Count == 0 && !visit.WorkplaceSiteId.HasValue)
             {
                 return;
@@ -1177,6 +1268,25 @@ namespace VehiclePermitSystemWeb.Controllers
             visit.VisitLocation = string.IsNullOrWhiteSpace(entranceName)
                 ? siteName
                 : $"{siteName} - {entranceName}";
+        }
+
+        private IReadOnlyList<WorkplaceLocationOptionViewModel> GetScopedLocationOptions()
+        {
+            var options = _workplaceDirectoryService?.GetLocationOptions()
+                ?? Array.Empty<WorkplaceLocationOptionViewModel>();
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (
+                currentUser == null
+                || currentUser.IsSuperAdmin
+                || string.Equals(currentUser.Role, AppRoles.GeneralManager, StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return currentUser == null ? Array.Empty<WorkplaceLocationOptionViewModel>() : options;
+            }
+
+            return currentUser.WorkplaceSiteId.HasValue
+                ? options.Where(item => item.SiteId == currentUser.WorkplaceSiteId.Value).ToList()
+                : Array.Empty<WorkplaceLocationOptionViewModel>();
         }
 
         private static bool ShouldResetApprovalStatus(Visit existingVisit, Visit updatedVisit)

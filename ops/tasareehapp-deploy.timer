@@ -1,9 +1,9 @@
 [Unit]
-Description=Check GitHub for TasareehApp updates
+Description=Retired TasareehApp branch polling timer (keep disabled)
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
+OnUnitActiveSec=24h
 AccuracySec=30s
 Persistent=true
 

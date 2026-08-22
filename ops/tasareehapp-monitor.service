@@ -1,0 +1,13 @@
+[Unit]
+Description=Monitor TasareehApp production health
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/opt/tasareehapp/monitoring.env
+ExecStart=/usr/bin/env bash /opt/tasareehapp/app/ops/monitor-production.sh
+
+[Install]
+WantedBy=multi-user.target

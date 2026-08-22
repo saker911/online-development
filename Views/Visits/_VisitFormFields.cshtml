@@ -10,6 +10,8 @@
         .ToList();
     var workplaceLocations = ViewData["WorkplaceLocations"] as IReadOnlyList<WorkplaceLocationOptionViewModel>
         ?? Array.Empty<WorkplaceLocationOptionViewModel>();
+    var visitDestinations = ViewData["VisitDestinations"] as IReadOnlyList<VisitDestinationOptionViewModel>
+        ?? Array.Empty<VisitDestinationOptionViewModel>();
 }
 
 <div class="row g-3">
@@ -86,23 +88,42 @@
     </div>
     <div class="col-md-4">
         <label asp-for="Purpose" class="form-label">الغرض من الزيارة</label>
-        <input asp-for="Purpose" class="form-control" required />
+        <input asp-for="Purpose" class="form-control" placeholder="مثال: مراجعة معاملة مالية" required />
         <span asp-validation-for="Purpose" class="field-validation-error small"></span>
     </div>
-    <div class="col-md-4">
-        <label asp-for="VisitedPersonType" class="form-label">صفة الشخص المُزار</label>
-        <select asp-for="VisitedPersonType" class="form-select" data-visited-person-type>
-            <option value="Host">مضيف</option>
-            <option value="Employee">موظف</option>
-            <option value="Other">جهة أخرى</option>
-        </select>
-        <span asp-validation-for="VisitedPersonType" class="field-validation-error small"></span>
-    </div>
-    <div class="col-md-6">
-        <label asp-for="VisitedPersonName" class="form-label" data-visited-person-label>اسم الشخص المُزار</label>
-        <input asp-for="VisitedPersonName" class="form-control" required />
-        <span asp-validation-for="VisitedPersonName" class="field-validation-error small"></span>
-    </div>
+    @if (visitDestinations.Count > 0)
+    {
+        <div class="col-md-4">
+            <label asp-for="DepartmentId" class="form-label">القسم أو الخدمة</label>
+            <select asp-for="DepartmentId" class="form-select" required>
+                <option value="">اختر الوجهة</option>
+                @foreach (var destination in visitDestinations)
+                {
+                    <option value="@destination.Id">@destination.Name</option>
+                }
+            </select>
+            <span asp-validation-for="DepartmentId" class="field-validation-error small"></span>
+        </div>
+        <input asp-for="VisitedPersonName" type="hidden" />
+        <input asp-for="VisitedPersonType" type="hidden" />
+    }
+    else
+    {
+        <div class="col-md-4">
+            <label asp-for="VisitedPersonType" class="form-label">صفة الشخص المُزار</label>
+            <select asp-for="VisitedPersonType" class="form-select" data-visited-person-type>
+                <option value="Host">مضيف</option>
+                <option value="Employee">موظف</option>
+                <option value="Other">جهة أخرى</option>
+            </select>
+            <span asp-validation-for="VisitedPersonType" class="field-validation-error small"></span>
+        </div>
+        <div class="col-md-6">
+            <label asp-for="VisitedPersonName" class="form-label" data-visited-person-label>اسم الشخص المُزار</label>
+            <input asp-for="VisitedPersonName" class="form-control" required />
+            <span asp-validation-for="VisitedPersonName" class="field-validation-error small"></span>
+        </div>
+    }
     <div class="col-md-4 date-field-shell" data-date-field data-date-display-mode="hijri">
         <div class="date-field-head">
             <label asp-for="VisitDate" class="form-label mb-0">موعد الزيارة</label>

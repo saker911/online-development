@@ -308,15 +308,21 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
                             @Html.AntiForgeryToken()
                             <input asp-for="Department.Id" type="hidden" />
                             <div class="row g-3 align-items-end">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <label asp-for="Department.Name" class="form-label">اسم القسم</label>
                                     <input asp-for="Department.Name" class="form-control" placeholder="مثال: شؤون الموظفين" />
                                     <span asp-validation-for="Department.Name" class="field-validation-error small"></span>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-check mt-4 pt-2">
                                         <input asp-for="Department.IsActive" class="form-check-input" />
                                         <label asp-for="Department.IsActive" class="form-check-label">نشط</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check mt-4 pt-2">
+                                        <input asp-for="Department.AcceptsVisitors" class="form-check-input" />
+                                        <label asp-for="Department.AcceptsVisitors" class="form-check-label">يستقبل زيارات وطابور</label>
                                     </div>
                                 </div>
                             </div>
@@ -541,7 +547,13 @@ Model.Handover.PreviousManagerTargetDepartmentId)?.Name
                                                             <span class="text-muted">لا يوجد موظفون</span>
                                                         }
                                                     </td>
-                                                    <td>@(department.IsActive ? "نشط" : "موقوف")</td>
+                                                    <td>
+                                                        <span>@(department.IsActive ? "نشط" : "موقوف")</span>
+                                                        @if (department.AcceptsVisitors)
+                                                        {
+                                                            <small class="d-block text-success">وجهة زيارة</small>
+                                                        }
+                                                    </td>
                                                     <td>
                                                         <div class="record-row-actions department-row-actions">
                                                                                 <a asp-action="Leadership" asp-route-id="@department.Id"

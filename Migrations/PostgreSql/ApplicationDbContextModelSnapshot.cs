@@ -399,6 +399,11 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AcceptsVisitors")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -1107,7 +1112,8 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     b.Property<string>("NationalId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("OfficerName")
                         .IsRequired()
@@ -1913,6 +1919,27 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("MfaEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("MfaEnrolledAtUtc")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long?>("MfaLastVerifiedStep")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MfaRecoveryCodeHashesJson")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("MfaSecretProtected")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
                     b.Property<bool>("MustChangeOperatorPin")
                         .HasColumnType("boolean");
 
@@ -1959,11 +1986,18 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .HasColumnType("character varying(64)")
                         .HasDefaultValue("default");
 
+                    b.Property<int?>("WorkplaceSiteId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Username");
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("WorkplaceSiteId");
+
                     b.HasIndex("TenantId", "Email");
+
+                    b.HasIndex("TenantId", "WorkplaceSiteId");
 
                     b.ToTable("UserAccounts");
                 });
@@ -2045,6 +2079,9 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.Property<DateTime?>("CalledAtUtc")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("EntryTime")
                         .HasColumnType("timestamp without time zone");
 
@@ -2094,6 +2131,24 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     b.Property<DateTime?>("RequestedAtUtc")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("RequestedVisitDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ServiceDurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
+                    b.Property<string>("ServiceOperatorDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ServiceOperatorUsername")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime?>("ServiceStartedAtUtc")
                         .HasColumnType("timestamp without time zone");
@@ -2149,6 +2204,8 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
 
                     b.HasKey("VisitId");
 
+                    b.HasIndex("DepartmentId");
+
                     b.HasIndex("TenantId");
 
                     b.HasIndex("WorkplaceSiteEntranceId");
@@ -2158,6 +2215,10 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.HasIndex("TenantId", "QueueStatus");
 
                     b.HasIndex("TenantId", "WorkplaceSiteId");
+
+                    b.HasIndex("TenantId", "DepartmentId", "QueueStatus");
+
+                    b.HasIndex("TenantId", "DepartmentId", "VisitDate");
 
                     b.ToTable("Visits");
                 });
@@ -2507,8 +2568,23 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.UserAccount", b =>
+                {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSite", "WorkplaceSite")
+                        .WithMany("UserAccounts")
+                        .HasForeignKey("WorkplaceSiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("WorkplaceSite");
+                });
+
             modelBuilder.Entity("VehiclePermitSystemWeb.Models.Entities.Visit", b =>
                 {
+                    b.HasOne("VehiclePermitSystemWeb.Models.Entities.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("VehiclePermitSystemWeb.Models.Entities.WorkplaceSiteEntrance", "WorkplaceSiteEntrance")
                         .WithMany()
                         .HasForeignKey("WorkplaceSiteEntranceId")
@@ -2518,6 +2594,8 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                         .WithMany("Visits")
                         .HasForeignKey("WorkplaceSiteId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Department");
 
                     b.Navigation("WorkplaceSite");
 
@@ -2573,6 +2651,8 @@ namespace VehiclePermitSystemWeb.Migrations.PostgreSql
                     b.Navigation("Entrances");
 
                     b.Navigation("Permits");
+
+                    b.Navigation("UserAccounts");
 
                     b.Navigation("Visits");
                 });

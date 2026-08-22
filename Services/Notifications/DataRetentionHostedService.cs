@@ -17,7 +17,6 @@ namespace VehiclePermitSystemWeb.Services.Notifications
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
             using var timer = new PeriodicTimer(Interval);
 
             do
@@ -26,11 +25,12 @@ namespace VehiclePermitSystemWeb.Services.Notifications
                 {
                     var result = await _retentionService.RunAsync(stoppingToken);
                     _logger.LogInformation(
-                        "Data retention completed for {TenantCount} tenants: {Notifications} notifications, {EmailRecords} email records, {AuditLogs} audit logs removed.",
+                        "Data retention completed for {TenantCount} tenants: {Notifications} notifications, {EmailRecords} email records, {AuditLogs} audit logs removed, {PersonalDataFields} personal-data fields sanitized.",
                         result.TenantCount,
                         result.NotificationsDeleted,
                         result.EmailRecordsDeleted,
-                        result.AuditLogsDeleted
+                        result.AuditLogsDeleted,
+                        result.PersonalDataFieldsSanitized
                     );
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

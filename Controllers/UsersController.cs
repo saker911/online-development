@@ -66,13 +66,13 @@ namespace VehiclePermitSystemWeb.Controllers
         public IActionResult WizardIdentityLookup(string username)
         {
             var normalizedUsername = (username ?? string.Empty).Trim();
-            if (!IsNationalIdUsername(normalizedUsername))
+            if (!AccountUsernameValidator.IsValid(normalizedUsername))
             {
                 return Json(
                     new
                     {
                         status = "invalid",
-                        message = SaudiNationalIdOrIqamaValidator.ErrorMessage,
+                        message = AccountUsernameValidator.ErrorMessage,
                     }
                 );
             }
@@ -231,6 +231,15 @@ namespace VehiclePermitSystemWeb.Controllers
                     group => group.Select(department => department.Id).FirstOrDefault(),
                     StringComparer.OrdinalIgnoreCase
                 );
+            var workplaceSiteNamesById = users
+                .Select(user => user.TenantId)
+                .Where(tenantId => !string.IsNullOrWhiteSpace(tenantId))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .SelectMany(tenantId =>
+                    _userAdminService.GetWorkplaceSites(tenantId, User.IsSuperAdmin())
+                )
+                .GroupBy(site => site.Id)
+                .ToDictionary(group => group.Key, group => group.First().Name);
             var model = new UserManagementDashboardViewModel
             {
                 Users = users,
@@ -255,6 +264,7 @@ namespace VehiclePermitSystemWeb.Controllers
                     .ToDictionary(g => g.Key, g => g.Count()),
                 ManagedDepartmentNamesByUsername = managedDepartmentNamesByUsername,
                 ManagedDepartmentIdsByUsername = managedDepartmentIdsByUsername,
+                WorkplaceSiteNamesById = workplaceSiteNamesById,
                 TenantNamesById = tenantNamesById,
             };
 
@@ -564,6 +574,7 @@ namespace VehiclePermitSystemWeb.Controllers
 
             LoadRoleDefaults(model);
             PopulateTenantOptions(model);
+            PopulateWorkplaceSiteOptions(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             return View("Create", model);
@@ -582,6 +593,8 @@ namespace VehiclePermitSystemWeb.Controllers
             TryValidateModel(model);
             PopulateTenantOptions(model);
             ValidateTenantSelection(model);
+            PopulateWorkplaceSiteOptions(model);
+            ValidateWorkplaceSiteSelection(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext(
                 _userAdminService.GetAdministrationSettings(model.TenantId, User.IsSuperAdmin())
@@ -877,6 +890,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 );
             }
             PopulateTenantOptions(model);
+            PopulateWorkplaceSiteOptions(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             return View(model);
@@ -899,6 +913,8 @@ namespace VehiclePermitSystemWeb.Controllers
             TryValidateModel(model);
             PopulateTenantOptions(model);
             ValidateTenantSelection(model);
+            PopulateWorkplaceSiteOptions(model);
+            ValidateWorkplaceSiteSelection(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             ApplyUsernameValidation(model);
@@ -1273,6 +1289,8 @@ namespace VehiclePermitSystemWeb.Controllers
             ValidateManagedUserSubmission(model);
             PopulateTenantOptions(model);
             ValidateTenantSelection(model);
+            PopulateWorkplaceSiteOptions(model);
+            ValidateWorkplaceSiteSelection(model);
 
             if (!ModelState.IsValid)
             {
@@ -1310,6 +1328,7 @@ namespace VehiclePermitSystemWeb.Controllers
             }
 
             PopulateTenantOptions(model);
+            PopulateWorkplaceSiteOptions(model);
             PopulateDepartmentOptions(model);
             PopulateGeneralManagerContext();
             if (isCreateFlow)
@@ -1466,6 +1485,7 @@ namespace VehiclePermitSystemWeb.Controllers
                     ? user.DisplayName
                     : user.FullName,
                 Email = NormalizeEmailForDisplay(user),
+                WorkplaceSiteId = user.WorkplaceSiteId,
                 Department =
                     user.IsSuperAdmin || IsGeneralManagerRole(user.Role)
                         ? string.Empty
@@ -1520,6 +1540,10 @@ namespace VehiclePermitSystemWeb.Controllers
                     : model.TenantId.Trim(),
                 DisplayName = fullName,
                 FullName = fullName,
+                WorkplaceSiteId =
+                    model.IsSuperAdmin || IsGeneralManagerRole(normalizedRole)
+                        ? null
+                        : model.WorkplaceSiteId,
                 Department =
                     model.IsSuperAdmin || IsGeneralManagerRole(normalizedRole)
                         ? string.Empty
@@ -1595,11 +1619,13 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (IsGeneralManagerRole(model.Role))
             {
+                model.WorkplaceSiteId = null;
                 model.Department = string.Empty;
             }
 
             if (model.IsSuperAdmin)
             {
+                model.WorkplaceSiteId = null;
                 model.Department = string.Empty;
                 model.Role = AppRoles.SystemAdmin;
                 model.IsActive = true;
@@ -1755,11 +1781,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (string.IsNullOrWhiteSpace(normalizedOriginalUsername))
             {
-                if (!IsNationalIdUsername(normalizedUsername))
+                if (!AccountUsernameValidator.IsValid(normalizedUsername))
                 {
                     ModelState.AddModelError(
                         nameof(model.Username),
-                        SaudiNationalIdOrIqamaValidator.ErrorMessage
+                        AccountUsernameValidator.ErrorMessage
                     );
                 }
 
@@ -1768,11 +1794,11 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (model.IsSuperAdmin)
             {
-                if (!IsNationalIdUsername(normalizedUsername))
+                if (!AccountUsernameValidator.IsValid(normalizedUsername))
                 {
                     ModelState.AddModelError(
                         nameof(model.Username),
-                        SaudiNationalIdOrIqamaValidator.ErrorMessage
+                        AccountUsernameValidator.ErrorMessage
                     );
                 }
 
@@ -1829,6 +1855,51 @@ namespace VehiclePermitSystemWeb.Controllers
                         : $"المدير الحالي: {(string.IsNullOrWhiteSpace(department.ManagerDisplayName) ? department.ManagerUsername : department.ManagerDisplayName)} ({department.ManagerUsername})",
                 StringComparer.OrdinalIgnoreCase
             );
+        }
+
+        private void PopulateWorkplaceSiteOptions(UserEditViewModel model)
+        {
+            model.WorkplaceSiteOptions = _userAdminService
+                .GetWorkplaceSites(model.TenantId, User.IsSuperAdmin())
+                .Where(site => site.IsActive)
+                .Select(site => new UserWorkplaceSiteOptionViewModel
+                {
+                    Id = site.Id,
+                    Name = site.Name,
+                    Code = site.Code,
+                })
+                .ToList();
+        }
+
+        private void ValidateWorkplaceSiteSelection(UserEditViewModel model)
+        {
+            if (!RequiresWorkplaceSite(model.Role) || model.IsSuperAdmin)
+            {
+                model.WorkplaceSiteId = null;
+                return;
+            }
+
+            if (model.WorkplaceSiteOptions.Count == 0)
+            {
+                return;
+            }
+
+            if (!model.WorkplaceSiteId.HasValue)
+            {
+                ModelState.AddModelError(
+                    nameof(model.WorkplaceSiteId),
+                    "اختر الموقع أو الفرع الذي سيعمل فيه المستخدم."
+                );
+                return;
+            }
+
+            if (model.WorkplaceSiteOptions.All(site => site.Id != model.WorkplaceSiteId.Value))
+            {
+                ModelState.AddModelError(
+                    nameof(model.WorkplaceSiteId),
+                    "الموقع المحدد غير تابع للجهة أو غير نشط."
+                );
+            }
         }
 
         private IActionResult SetUserActiveState(string id, bool isActive)
@@ -1926,6 +1997,19 @@ namespace VehiclePermitSystemWeb.Controllers
                     "منح صلاحيات إدارة المستخدمين أو الأقسام أو الإدارة أو التفويضات متاح فقط لمالك النظام."
                 );
             }
+
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            if (
+                currentUser?.WorkplaceSiteId.HasValue == true
+                && !User.IsInRole(AppRoles.GeneralManager)
+                && model.WorkplaceSiteId != currentUser.WorkplaceSiteId
+            )
+            {
+                ModelState.AddModelError(
+                    nameof(model.WorkplaceSiteId),
+                    "يمكنك إدارة مستخدمي موقعك فقط."
+                );
+            }
         }
 
         private static bool RequestsPrivilegedAdministrativeRole(UserEditViewModel model)
@@ -1941,15 +2025,24 @@ namespace VehiclePermitSystemWeb.Controllers
                 || model.CanManageDelegations;
         }
 
-        private static bool IsNationalIdUsername(string username)
-        {
-            return SaudiNationalIdOrIqamaValidator.IsValid(username);
-        }
-
         private IEnumerable<UserAccount> GetVisibleUsers()
         {
             var users = _userAdminService.GetAllUsers(User.IsSuperAdmin());
-            return User.IsSuperAdmin() ? users : users.Where(user => !user.IsSuperAdmin);
+            if (User.IsSuperAdmin())
+            {
+                return users;
+            }
+
+            users = users.Where(user => !user.IsSuperAdmin);
+            if (User.IsInRole(AppRoles.GeneralManager))
+            {
+                return users;
+            }
+
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            return currentUser == null
+                ? Enumerable.Empty<UserAccount>()
+                : users.Where(user => user.WorkplaceSiteId == currentUser.WorkplaceSiteId);
         }
 
         private UserAccount? GetManagedUserAccount(string username)
@@ -1975,6 +2068,16 @@ namespace VehiclePermitSystemWeb.Controllers
             if (!User.IsSuperAdmin())
             {
                 model.TenantId = GetCurrentTenantId();
+                var currentUser = _userAdminService.GetUserAccount(
+                    User.Identity?.Name ?? string.Empty
+                );
+                if (
+                    currentUser?.WorkplaceSiteId.HasValue == true
+                    && !User.IsInRole(AppRoles.GeneralManager)
+                )
+                {
+                    model.WorkplaceSiteId = currentUser.WorkplaceSiteId;
+                }
             }
         }
 
@@ -2050,11 +2153,35 @@ namespace VehiclePermitSystemWeb.Controllers
 
         private bool CanManageUser(UserAccount? user)
         {
-            return user != null
-                && (
-                    User.IsSuperAdmin()
-                    || (!user.IsSuperAdmin && !IsPrivilegedAdministrativeRole(user.Role))
-                );
+            if (user == null)
+            {
+                return false;
+            }
+            if (User.IsSuperAdmin())
+            {
+                return true;
+            }
+            if (user.IsSuperAdmin || IsPrivilegedAdministrativeRole(user.Role))
+            {
+                return false;
+            }
+            if (User.IsInRole(AppRoles.GeneralManager))
+            {
+                return true;
+            }
+
+            var currentUser = _userAdminService.GetUserAccount(User.Identity?.Name ?? string.Empty);
+            return currentUser != null && user.WorkplaceSiteId == currentUser.WorkplaceSiteId;
+        }
+
+        private static bool RequiresWorkplaceSite(string? role)
+        {
+            return string.Equals(role, AppRoles.SecurityManager, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, AppRoles.PermitReviewer, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, AppRoles.GateSecurity, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, AppRoles.Receptionist, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, AppRoles.Manager, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(role, AppRoles.Employee, StringComparison.OrdinalIgnoreCase);
         }
 
         private IActionResult RedirectProtectedSuperAdminAccess()

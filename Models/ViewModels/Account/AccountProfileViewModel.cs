@@ -15,6 +15,9 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Account
         public string ManagerDisplayName { get; set; } = string.Empty;
         public bool MustChangePassword { get; set; }
         public bool MustChangeOperatorPin { get; set; }
+        public bool MfaRequired { get; set; }
+        public bool MfaEnabled { get; set; }
+        public DateTime? MfaEnrolledAtUtc { get; set; }
         public List<string> PermissionDisplayNames { get; set; } = new();
         public HashSet<string> GrantedPermissionKeys { get; set; } =
             new(StringComparer.OrdinalIgnoreCase);

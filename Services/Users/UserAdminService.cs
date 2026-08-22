@@ -586,6 +586,7 @@ namespace VehiclePermitSystemWeb.Services.Users
             existing.TenantId = normalizedTenantId;
             existing.DisplayName = user.DisplayName;
             existing.FullName = user.FullName;
+            existing.WorkplaceSiteId = user.WorkplaceSiteId;
             existing.Department = user.Department;
             existing.JobTitle = user.JobTitle;
             existing.ManagerUsername = user.ManagerUsername;
@@ -1102,6 +1103,34 @@ namespace VehiclePermitSystemWeb.Services.Users
             return DepartmentManagementMapper.GetUsersByDepartment(db, departmentName);
         }
 
+        public IEnumerable<WorkplaceSite> GetWorkplaceSites(
+            string tenantId,
+            bool ignoreTenantFilters = false
+        )
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var normalizedTenantId = string.IsNullOrWhiteSpace(tenantId)
+                ? db.CurrentTenantId
+                : tenantId.Trim();
+            if (
+                !ignoreTenantFilters
+                && !string.Equals(
+                    normalizedTenantId,
+                    db.CurrentTenantId,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                normalizedTenantId = db.CurrentTenantId;
+            }
+
+            return db.WorkplaceSites.IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(site => site.TenantId == normalizedTenantId)
+                .OrderBy(site => site.Name)
+                .ToList();
+        }
+
         public Department? GetDepartment(int id)
         {
             using var db = _dbContextFactory.CreateDbContext();
@@ -1147,6 +1176,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                         Name = department.Name,
                         ManagerUsername = department.ManagerUsername,
                         ManagerDisplayName = managerDisplayName,
+                        AcceptsVisitors = department.AcceptsVisitors,
                         IsActive = department.IsActive,
                     }
                 );
@@ -1160,6 +1190,7 @@ namespace VehiclePermitSystemWeb.Services.Users
                 existing.ManagerDisplayName = string.IsNullOrWhiteSpace(department.ManagerUsername)
                     ? existing.ManagerDisplayName
                     : managerDisplayName;
+                existing.AcceptsVisitors = department.AcceptsVisitors;
                 existing.IsActive = department.IsActive;
             }
 

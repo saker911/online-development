@@ -1,0 +1,15 @@
+[Unit]
+Description=Verify restoration of the latest TasareehApp off-site backup
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash /opt/tasareehapp/app/ops/verify-offsite-restore.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

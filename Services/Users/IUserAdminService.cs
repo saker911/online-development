@@ -87,6 +87,10 @@ namespace VehiclePermitSystemWeb.Services.Users
             string tenantId,
             bool ignoreTenantFilters = false
         );
+        IEnumerable<WorkplaceSite> GetWorkplaceSites(
+            string tenantId,
+            bool ignoreTenantFilters = false
+        );
         IEnumerable<UserAccount> GetUsersByDepartment(string departmentName);
         Department? GetDepartment(int id);
         bool UpsertDepartment(Department department);

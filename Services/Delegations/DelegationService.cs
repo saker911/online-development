@@ -829,7 +829,7 @@ namespace VehiclePermitSystemWeb.Services.Delegations
                     ActionLabel = actionLabel,
                     EntityType = "Delegation",
                     EntityId = delegation.DelegationNumber,
-                    Message = message,
+                    Message = PersonalDataSanitizer.SanitizeAuditText(message),
                     Source = nameof(DelegationService),
                     RecordedBy = NormalizeAuditUsername(recordedBy, delegation.DelegatorUsername),
                     OccurredAt = _systemClock.UtcNow,
@@ -837,8 +837,8 @@ namespace VehiclePermitSystemWeb.Services.Delegations
                     Success = true,
                     DelegatedFromUsername = delegation.DelegatorUsername,
                     DelegationId = delegation.Id,
-                    BeforeJson = beforeJson ?? string.Empty,
-                    AfterJson = afterJson ?? string.Empty,
+                    BeforeJson = PersonalDataSanitizer.SanitizeAuditJson(beforeJson),
+                    AfterJson = PersonalDataSanitizer.SanitizeAuditJson(afterJson),
                 }
             );
         }

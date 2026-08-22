@@ -34,6 +34,7 @@ using VehiclePermitSystemWeb.Services.Tenants;
 using VehiclePermitSystemWeb.Services.Uploads;
 using VehiclePermitSystemWeb.Services.Users;
 using VehiclePermitSystemWeb.Services.Visits;
+using VehiclePermitSystemWeb.Utilities.Barcodes;
 
 namespace VehiclePermitSystemWeb.Controllers
 {
@@ -44,6 +45,8 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IExternalLoginService? _externalLoginService;
         private readonly ITenantManagementService? _tenantManagementService;
         private readonly IAccountPasswordResetService? _passwordResetService;
+        private readonly IInitialSetupAccessPolicy? _initialSetupAccessPolicy;
+        private readonly IMultiFactorAuthenticationService? _multiFactorAuthenticationService;
 
         private IToastNotificationService ToastNotifications =>
             HttpContext.RequestServices.GetRequiredService<IToastNotificationService>();
@@ -58,7 +61,9 @@ namespace VehiclePermitSystemWeb.Controllers
             LoginAttemptGuard? loginAttemptGuard = null,
             IExternalLoginService? externalLoginService = null,
             ITenantManagementService? tenantManagementService = null,
-            IAccountPasswordResetService? passwordResetService = null
+            IAccountPasswordResetService? passwordResetService = null,
+            IInitialSetupAccessPolicy? initialSetupAccessPolicy = null,
+            IMultiFactorAuthenticationService? multiFactorAuthenticationService = null
         )
         {
             _userAdminService = userAdminService;
@@ -66,18 +71,24 @@ namespace VehiclePermitSystemWeb.Controllers
             _externalLoginService = externalLoginService;
             _tenantManagementService = tenantManagementService;
             _passwordResetService = passwordResetService;
+            _initialSetupAccessPolicy = initialSetupAccessPolicy;
+            _multiFactorAuthenticationService = multiFactorAuthenticationService;
         }
 
         private IAccountPasswordResetService PasswordResetService =>
             _passwordResetService
             ?? HttpContext.RequestServices.GetRequiredService<IAccountPasswordResetService>();
 
+        private IMultiFactorAuthenticationService? MultiFactorAuthenticationService =>
+            _multiFactorAuthenticationService
+            ?? HttpContext.RequestServices.GetService<IMultiFactorAuthenticationService>();
+
         [HttpGet]
         public IActionResult Login(string? returnUrl = null, string? tenant = null)
         {
             if (_userAdminService.IsInitialSetupRequired())
             {
-                return RedirectToAction(nameof(InitialSetup));
+                return InitialSetupRequiredResult();
             }
 
             if (
@@ -104,7 +115,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             if (_userAdminService.IsInitialSetupRequired())
             {
-                return RedirectToAction(nameof(InitialSetup));
+                return InitialSetupRequiredResult();
             }
 
             var resolvedTenant = ResolveTenantReference(tenant);
@@ -148,14 +159,14 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (_userAdminService.IsInitialSetupRequired())
             {
-                return RedirectToAction(nameof(InitialSetup));
+                return InitialSetupRequiredResult();
             }
 
-            if (!IsNationalIdUsername(username))
+            if (string.IsNullOrWhiteSpace(username) || username.Length > 256)
             {
                 _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
                 ViewData["SubmittedUsername"] = username;
-                ToastNotifications.Error("اسم المستخدم يجب أن يكون 10 أرقام.");
+                ToastNotifications.Error("أدخل معرف الحساب أو البريد الإلكتروني.");
                 return View();
             }
 
@@ -179,15 +190,28 @@ namespace VehiclePermitSystemWeb.Controllers
                     return View();
                 }
 
-                await SignInUserAsync(user, username, displayName, role);
+                var accountUsername = user?.Username ?? username;
+                if (
+                    user != null
+                    && MultiFactorAuthenticationService?.IsRequired(user) == true
+                )
+                {
+                    var challengeId = MultiFactorAuthenticationService.BeginChallenge(
+                        user,
+                        returnUrl
+                    );
+                    return RedirectToAction(nameof(TwoFactor), new { challenge = challengeId });
+                }
+
+                await SignInUserAsync(user, accountUsername, displayName, role);
                 _userAdminService.RecordUserActivity(
-                    username,
+                    accountUsername,
                     displayName,
                     "Login",
                     "تسجيل دخول",
                     $"تم تسجيل دخول {displayName} بنجاح.",
                     nameof(AccountController),
-                    username
+                    accountUsername
                 );
                 if (user?.MustChangePassword == true)
                 {
@@ -206,6 +230,103 @@ namespace VehiclePermitSystemWeb.Controllers
             _loginAttemptGuard.RecordFailure(username, tenant, remoteIp);
             ToastNotifications.Error("اسم المستخدم أو كلمة المرور غير صحيحة");
             return View();
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [EnableRateLimiting("mfa")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult TwoFactor(string challenge)
+        {
+            var model = BuildTwoFactorViewModel(challenge);
+            if (model == null)
+            {
+                ToastNotifications.Warning("انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+                return RedirectToAction(nameof(Login));
+            }
+
+            ConfigureTwoFactorView();
+            return View(model);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("mfa")]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> TwoFactor(TwoFactorAuthenticationViewModel model)
+        {
+            ConfigureTwoFactorView();
+            if (!ModelState.IsValid)
+            {
+                return RebuildTwoFactorView(model);
+            }
+
+            var result = MultiFactorAuthenticationService?.Verify(
+                model.ChallengeId,
+                model.Code
+            );
+            if (result?.Succeeded != true || result.User == null)
+            {
+                ModelState.AddModelError(
+                    nameof(model.Code),
+                    result?.Message ?? "تعذر إكمال التحقق. سجل الدخول مرة أخرى."
+                );
+                return RebuildTwoFactorView(model);
+            }
+
+            var user = result.User;
+            await SignInUserAsync(
+                user,
+                user.Username,
+                user.DisplayName,
+                user.Role,
+                mfaVerified: true
+            );
+            _userAdminService.RecordUserActivity(
+                user.Username,
+                user.DisplayName,
+                result.WasEnrollment ? "MfaEnrolled" : "MfaVerified",
+                result.WasEnrollment ? "تفعيل المصادقة الثنائية" : "تحقق المصادقة الثنائية",
+                result.WasEnrollment
+                    ? "تم ربط تطبيق المصادقة بالحساب الإداري."
+                    : "تم التحقق من العامل الثاني وتسجيل الدخول.",
+                nameof(AccountController),
+                user.Username
+            );
+
+            var continueUrl = !string.IsNullOrWhiteSpace(result.ReturnUrl)
+                && Url.IsLocalUrl(result.ReturnUrl)
+                    ? result.ReturnUrl
+                    : Url.Action("Index", "Home") ?? "/";
+            if (result.RecoveryCodes is { Count: > 0 })
+            {
+                return View(
+                    "MfaRecoveryCodes",
+                    new MfaRecoveryCodesViewModel
+                    {
+                        RecoveryCodes = result.RecoveryCodes,
+                        ContinueUrl = user.MustChangePassword
+                            ? Url.Action(nameof(ChangePassword), new { forced = true })
+                                ?? "/Account/ChangePassword?forced=true"
+                            : continueUrl,
+                    }
+                );
+            }
+
+            if (user.MustChangePassword)
+            {
+                ToastNotifications.Warning(
+                    "يجب تغيير كلمة المرور الافتراضية قبل متابعة استخدام النظام."
+                );
+                return RedirectToAction(nameof(ChangePassword), new { forced = true });
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.ReturnUrl) && Url.IsLocalUrl(result.ReturnUrl))
+            {
+                return Redirect(result.ReturnUrl);
+            }
+
+            return RedirectToDefaultAuthorizedPage(user);
         }
 
         [HttpGet]
@@ -497,6 +618,12 @@ namespace VehiclePermitSystemWeb.Controllers
                 return RedirectToAction(nameof(Login), new { tenant, returnUrl });
             }
 
+            if (MultiFactorAuthenticationService?.IsRequired(user) == true)
+            {
+                var challengeId = MultiFactorAuthenticationService.BeginChallenge(user, returnUrl);
+                return RedirectToAction(nameof(TwoFactor), new { challenge = challengeId });
+            }
+
             await SignInUserAsync(user, user.Username, user.DisplayName, user.Role);
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
             {
@@ -509,6 +636,11 @@ namespace VehiclePermitSystemWeb.Controllers
         [HttpGet]
         public IActionResult InitialSetup()
         {
+            if (!IsWebInitialSetupAllowed())
+            {
+                return NotFound();
+            }
+
             if (!_userAdminService.IsInitialSetupRequired())
             {
                 return RedirectToAction(nameof(Login));
@@ -524,6 +656,11 @@ namespace VehiclePermitSystemWeb.Controllers
             IFormFile? logoFile
         )
         {
+            if (!IsWebInitialSetupAllowed())
+            {
+                return NotFound();
+            }
+
             if (!_userAdminService.IsInitialSetupRequired())
             {
                 return RedirectToAction(nameof(Login));
@@ -548,11 +685,11 @@ namespace VehiclePermitSystemWeb.Controllers
                 return View(model);
             }
 
-            if (!IsNationalIdUsername(model.Username))
+            if (!AccountUsernameValidator.IsValid(model.Username))
             {
                 ModelState.AddModelError(
                     nameof(model.Username),
-                    SaudiNationalIdOrIqamaValidator.ErrorMessage
+                    AccountUsernameValidator.ErrorMessage
                 );
             }
 
@@ -636,7 +773,7 @@ namespace VehiclePermitSystemWeb.Controllers
         {
             if (_userAdminService.IsInitialSetupRequired())
             {
-                return RedirectToAction(nameof(InitialSetup));
+                return InitialSetupRequiredResult();
             }
 
             ViewData["Title"] = "اكتملت التهيئة";
@@ -716,6 +853,9 @@ namespace VehiclePermitSystemWeb.Controllers
                 ManagerDisplayName = managerAccount?.DisplayName ?? user.ManagerUsername,
                 MustChangePassword = user.MustChangePassword,
                 MustChangeOperatorPin = user.MustChangeOperatorPin,
+                MfaRequired = MultiFactorAuthenticationRequirement.IsRequired(user),
+                MfaEnabled = user.MfaEnabled,
+                MfaEnrolledAtUtc = user.MfaEnrolledAtUtc,
                 PermissionDisplayNames = grantedPermissionKeys
                     .Select(AppPermissions.GetDisplayName)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1028,7 +1168,8 @@ namespace VehiclePermitSystemWeb.Controllers
             UserAccount? user,
             string username,
             string displayName,
-            string role
+            string role,
+            bool mfaVerified = false
         )
         {
             if (!string.IsNullOrWhiteSpace(user?.TenantId))
@@ -1050,6 +1191,16 @@ namespace VehiclePermitSystemWeb.Controllers
             if (user?.IsSuperAdmin == true)
             {
                 claims.Add(new Claim(AppClaimTypes.SuperAdmin, "true"));
+            }
+
+            if (mfaVerified)
+            {
+                claims.Add(
+                    new Claim(
+                        MultiFactorAuthenticationRequirement.AuthenticationMethodClaimType,
+                        MultiFactorAuthenticationRequirement.AuthenticationMethodClaimValue
+                    )
+                );
             }
 
             if (user != null)
@@ -1080,6 +1231,46 @@ namespace VehiclePermitSystemWeb.Controllers
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 principal
             );
+        }
+
+        private TwoFactorAuthenticationViewModel? BuildTwoFactorViewModel(string challengeId)
+        {
+            var challenge = MultiFactorAuthenticationService?.GetChallenge(challengeId);
+            if (challenge == null)
+            {
+                return null;
+            }
+
+            return new TwoFactorAuthenticationViewModel
+            {
+                ChallengeId = challenge.ChallengeId,
+                DisplayName = challenge.DisplayName,
+                RequiresEnrollment = challenge.RequiresEnrollment,
+                ManualKey = challenge.ManualKey,
+                QrSvg = challenge.RequiresEnrollment
+                    ? BarcodeSvgRenderer.RenderQr(challenge.ProvisioningUri, 280, 2)
+                    : string.Empty,
+            };
+        }
+
+        private IActionResult RebuildTwoFactorView(TwoFactorAuthenticationViewModel submitted)
+        {
+            var rebuilt = BuildTwoFactorViewModel(submitted.ChallengeId);
+            if (rebuilt == null)
+            {
+                ToastNotifications.Warning("انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+                return RedirectToAction(nameof(Login));
+            }
+
+            rebuilt.Code = string.Empty;
+            return View(nameof(TwoFactor), rebuilt);
+        }
+
+        private void ConfigureTwoFactorView()
+        {
+            ViewData["Title"] = "التحقق بخطوتين";
+            ViewData["HideShell"] = true;
+            ViewData["BodyClass"] = "login-page-body";
         }
 
         private Tenant? ResolveTenantReference(string? tenantReference)
@@ -1165,6 +1356,28 @@ namespace VehiclePermitSystemWeb.Controllers
             }
         }
 
+        private bool IsWebInitialSetupAllowed() =>
+            _initialSetupAccessPolicy?.IsWebSetupAllowed ?? true;
+
+        private IActionResult InitialSetupRequiredResult()
+        {
+            if (IsWebInitialSetupAllowed())
+            {
+                return RedirectToAction(nameof(InitialSetup));
+            }
+
+            Response.Headers.RetryAfter = "300";
+            return StatusCode(
+                StatusCodes.Status503ServiceUnavailable,
+                new
+                {
+                    title = "الخدمة غير مهيأة",
+                    status = StatusCodes.Status503ServiceUnavailable,
+                    detail = "راجع مسؤول الخادم لإكمال التهيئة الآمنة.",
+                }
+            );
+        }
+
         private void ConfigureInitialSetupView()
         {
             ViewData["Title"] = "تهيئة أول تشغيل";
@@ -1200,9 +1413,5 @@ namespace VehiclePermitSystemWeb.Controllers
             return Math.Clamp(model.CurrentStep, 1, 3);
         }
 
-        private static bool IsNationalIdUsername(string username)
-        {
-            return SaudiNationalIdOrIqamaValidator.IsValid(username);
-        }
     }
 }

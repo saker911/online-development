@@ -27,11 +27,31 @@ namespace VehiclePermitSystemWeb.Infrastructure
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context, IUserAdminService userAdminService)
+        public async Task InvokeAsync(
+            HttpContext context,
+            IUserAdminService userAdminService,
+            IInitialSetupAccessPolicy accessPolicy
+        )
         {
             if (!userAdminService.IsInitialSetupRequired() || IsExcludedPath(context.Request.Path))
             {
                 await _next(context);
+                return;
+            }
+
+            if (!accessPolicy.IsWebSetupAllowed)
+            {
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                context.Response.ContentType = "application/problem+json";
+                context.Response.Headers.RetryAfter = "300";
+                await context.Response.WriteAsJsonAsync(
+                    new
+                    {
+                        title = "الخدمة غير مهيأة",
+                        status = StatusCodes.Status503ServiceUnavailable,
+                        detail = "راجع مسؤول الخادم لإكمال التهيئة الآمنة.",
+                    }
+                );
                 return;
             }
 
