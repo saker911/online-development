@@ -486,9 +486,15 @@
             <button type="button" class="tenant-dialog-close" data-close-delete-dialog aria-label="إغلاق">×</button>
         </div>
         <h2>حذف <span id="deleteTenantName"></span>؟</h2>
-        <p>سيتم حذف الحسابات والتصاريح والزيارات والإعدادات نهائياً.</p>
-        <label for="deleteTenantConfirmation">اكتب اسم الجهة للتأكيد</label>
-        <input type="text" class="form-control" name="confirmationName" id="deleteTenantConfirmation" autocomplete="off" />
+        <p>سيتم حذف الحسابات والتصاريح والزيارات والإعدادات نهائياً، ولا يمكن التراجع عن العملية.</p>
+        <label for="deleteTenantReason">سبب الحذف</label>
+        <textarea class="form-control" name="deletionReason" id="deleteTenantReason" rows="3"
+                  minlength="5" maxlength="300" required
+                  placeholder="اكتب سبب الحذف بوضوح"></textarea>
+        <label class="tenant-delete-acknowledgement" for="permanentDeletionConfirmed">
+            <input type="checkbox" name="permanentDeletionConfirmed" id="permanentDeletionConfirmed" value="true" />
+            <span>أفهم أن حذف الجهة وبياناتها نهائي ولا يمكن استعادته.</span>
+        </label>
         <div class="tenant-delete-actions">
             <button type="button" class="btn btn-outline-secondary" data-close-delete-dialog>إلغاء</button>
             <button type="submit" class="btn btn-danger" id="confirmTenantDelete" disabled>حذف نهائي</button>
@@ -688,24 +694,28 @@
             const dialog = document.getElementById('tenantDeleteDialog');
             const deleteId = document.getElementById('deleteTenantId');
             const deleteName = document.getElementById('deleteTenantName');
-            const confirmation = document.getElementById('deleteTenantConfirmation');
+            const deletionReason = document.getElementById('deleteTenantReason');
+            const deletionAcknowledgement = document.getElementById('permanentDeletionConfirmed');
             const confirmButton = document.getElementById('confirmTenantDelete');
-            let expectedName = '';
+
+            const syncDeleteButton = () => {
+                const hasReason = (deletionReason?.value.trim().length || 0) >= 5;
+                if (confirmButton) confirmButton.disabled = !hasReason || !deletionAcknowledgement?.checked;
+            };
 
             document.querySelectorAll('[data-delete-tenant]').forEach((button) => {
                 button.addEventListener('click', () => {
-                    expectedName = button.dataset.tenantName || '';
                     if (deleteId) deleteId.value = button.dataset.tenantId || '';
-                    if (deleteName) deleteName.textContent = expectedName;
-                    if (confirmation) confirmation.value = '';
+                    if (deleteName) deleteName.textContent = button.dataset.tenantName || '';
+                    if (deletionReason) deletionReason.value = '';
+                    if (deletionAcknowledgement) deletionAcknowledgement.checked = false;
                     if (confirmButton) confirmButton.disabled = true;
                     dialog?.showModal();
-                    confirmation?.focus();
+                    deletionReason?.focus();
                 });
             });
-            confirmation?.addEventListener('input', () => {
-                if (confirmButton) confirmButton.disabled = confirmation.value.trim() !== expectedName;
-            });
+            deletionReason?.addEventListener('input', syncDeleteButton);
+            deletionAcknowledgement?.addEventListener('change', syncDeleteButton);
             document.querySelectorAll('[data-close-delete-dialog]').forEach((button) => {
                 button.addEventListener('click', () => dialog?.close());
             });

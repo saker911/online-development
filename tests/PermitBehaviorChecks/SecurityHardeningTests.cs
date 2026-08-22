@@ -435,7 +435,7 @@ public sealed class SecurityHardeningTests
             db.SaveChanges();
         }
 
-        Assert.False(service.DeleteTenant("deletable-tenant", "جهة قابلة للحذف").Succeeded);
+        Assert.False(service.DeleteTenant("deletable-tenant", "تنظيف بيانات الاختبار", true).Succeeded);
         Assert.True(service.SetTenantActive("deletable-tenant", false).Succeeded);
         using (var stoppedDb = factory.CreateDbContext())
         {
@@ -444,8 +444,9 @@ public sealed class SecurityHardeningTests
                 item => item.TenantId == "deletable-tenant"
             );
         }
-        Assert.False(service.DeleteTenant("deletable-tenant", "اسم غير مطابق").Succeeded);
-        Assert.True(service.DeleteTenant("deletable-tenant", "جهة قابلة للحذف").Succeeded);
+        Assert.False(service.DeleteTenant("deletable-tenant", "", true).Succeeded);
+        Assert.False(service.DeleteTenant("deletable-tenant", "تنظيف بيانات الاختبار", false).Succeeded);
+        Assert.True(service.DeleteTenant("deletable-tenant", "تنظيف بيانات الاختبار", true).Succeeded);
 
         using var verifiedDb = factory.CreateDbContext();
         Assert.DoesNotContain(

@@ -17,15 +17,18 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
         private readonly ITimeLimitedDataProtector _checkoutProtector;
         private readonly ISubscriptionPlanService? _subscriptionPlanService;
+        private readonly ILogger<TenantManagementService>? _logger;
 
         public TenantManagementService(
             IDbContextFactory<ApplicationDbContext> dbContextFactory,
             IDataProtectionProvider dataProtectionProvider,
-            ISubscriptionPlanService? subscriptionPlanService = null
+            ISubscriptionPlanService? subscriptionPlanService = null,
+            ILogger<TenantManagementService>? logger = null
         )
         {
             _dbContextFactory = dbContextFactory;
             _subscriptionPlanService = subscriptionPlanService;
+            _logger = logger;
             _checkoutProtector = dataProtectionProvider
                 .CreateProtector("VehiclePermitSystemWeb.Subscription.Checkout.v1")
                 .ToTimeLimitedDataProtector();
@@ -829,7 +832,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             );
         }
 
-        public TenantOperationResult DeleteTenant(string tenantId, string confirmationName)
+        public TenantOperationResult DeleteTenant(
+            string tenantId,
+            string deletionReason,
+            bool permanentDeletionConfirmed
+        )
         {
             using var db = _dbContextFactory.CreateDbContext();
             var normalizedTenantId = NormalizeKey(tenantId);
@@ -855,9 +862,15 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantOperationResult(false, "يجب إيقاف الجهة قبل حذفها.");
             }
 
-            if (!string.Equals(tenant.Name, (confirmationName ?? string.Empty).Trim(), StringComparison.Ordinal))
+            var normalizedReason = (deletionReason ?? string.Empty).Trim();
+            if (normalizedReason.Length < 5 || normalizedReason.Length > 300)
             {
-                return new TenantOperationResult(false, "اسم الجهة المدخل للتأكيد غير مطابق.");
+                return new TenantOperationResult(false, "اكتب سبب الحذف بوضوح من 5 إلى 300 حرف.");
+            }
+
+            if (!permanentDeletionConfirmed)
+            {
+                return new TenantOperationResult(false, "يجب تأكيد فهمك أن الحذف نهائي.");
             }
 
             using var transaction = db.Database.IsRelational()
@@ -939,6 +952,13 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             db.Tenants.Remove(tenant);
             db.SaveChanges();
             transaction?.Commit();
+
+            _logger?.LogWarning(
+                "Platform owner permanently deleted tenant {TenantId} ({TenantName}). Reason: {DeletionReason}",
+                tenant.TenantId,
+                tenant.Name,
+                normalizedReason
+            );
 
             return new TenantOperationResult(true, "تم حذف الجهة وجميع بياناتها نهائيًا.");
         }

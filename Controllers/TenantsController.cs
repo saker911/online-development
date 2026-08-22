@@ -148,14 +148,22 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Delete(string id, string confirmationName)
+        public IActionResult Delete(
+            string id,
+            string deletionReason,
+            bool permanentDeletionConfirmed
+        )
         {
             if (!User.IsSuperAdmin())
             {
                 return RedirectToAction("AccessDenied", "Home");
             }
 
-            var result = _tenantManagementService.DeleteTenant(id, confirmationName);
+            var result = _tenantManagementService.DeleteTenant(
+                id,
+                deletionReason,
+                permanentDeletionConfirmed
+            );
             TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
         }

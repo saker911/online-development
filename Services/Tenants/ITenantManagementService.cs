@@ -15,7 +15,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         TenantCheckoutViewModel? GetCheckout(string tenantId, string checkoutToken);
         TenantOperationResult UpdateTenant(string tenantId, TenantEditorViewModel model);
         TenantOperationResult SetTenantActive(string tenantId, bool isActive);
-        TenantOperationResult DeleteTenant(string tenantId, string confirmationName);
+        TenantOperationResult DeleteTenant(
+            string tenantId,
+            string deletionReason,
+            bool permanentDeletionConfirmed
+        );
         TenantOperationResult ActivatePaidSubscription(string tenantId);
     }
 

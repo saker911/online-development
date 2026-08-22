@@ -640,6 +640,33 @@
     font-weight: 800;
 }
 
+.tenant-delete-dialog textarea {
+    min-height: 92px;
+    resize: vertical;
+}
+
+.tenant-delete-dialog .tenant-delete-acknowledgement {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 16px 0 0;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, #c83a4d 30%, var(--app-border, #dbe4ec));
+    border-radius: 6px;
+    color: var(--app-text, #122438);
+    background: color-mix(in srgb, #c83a4d 5%, var(--app-surface, #fff));
+    line-height: 1.7;
+    cursor: pointer;
+}
+
+.tenant-delete-acknowledgement input {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    accent-color: #b42336;
+    flex: 0 0 auto;
+}
+
 [data-theme="dark"] .tenant-table th {
     background: rgba(8, 18, 30, 0.48);
 }

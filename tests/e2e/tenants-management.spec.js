@@ -44,11 +44,12 @@ test("owner can stop and safely delete a tenant", async ({ page }) => {
   await row.getByRole("button", { name: "حذف" }).click();
   const dialog = page.locator("#tenantDeleteDialog");
   await expect(dialog).toBeVisible();
-  const confirmation = dialog.getByLabel("اكتب اسم الجهة للتأكيد");
+  const reason = dialog.getByLabel("سبب الحذف");
+  const acknowledgement = dialog.getByLabel(/أفهم أن حذف الجهة/);
   const deleteButton = dialog.getByRole("button", { name: "حذف نهائي" });
-  await confirmation.fill("اسم غير مطابق");
+  await reason.fill("حذف جهة اختبارية");
   await expect(deleteButton).toBeDisabled();
-  await confirmation.fill(tenantName);
+  await acknowledgement.check();
   await expect(deleteButton).toBeEnabled();
   await deleteButton.click();
 
@@ -207,7 +208,8 @@ test("owner controls tenant services and disabled public routes stay closed", as
   row = page.getByRole("row", { name: new RegExp(tenantName) });
   await row.getByRole("button", { name: "حذف" }).click();
   const dialog = page.locator("#tenantDeleteDialog");
-  await dialog.getByLabel("اكتب اسم الجهة للتأكيد").fill(tenantName);
+  await dialog.getByLabel("سبب الحذف").fill("تنظيف بيانات الاختبار");
+  await dialog.getByLabel(/أفهم أن حذف الجهة/).check();
   await dialog.getByRole("button", { name: "حذف نهائي" }).click();
   await expect(page.getByRole("row", { name: new RegExp(tenantName) })).toHaveCount(0);
 });

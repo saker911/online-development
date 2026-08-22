@@ -147,7 +147,11 @@ public sealed class PlatformSettingsTests
         public TenantCheckoutViewModel? GetCheckout(string tenantId, string checkoutToken) => null;
         public TenantOperationResult UpdateTenant(string tenantId, TenantEditorViewModel model) => throw new NotSupportedException();
         public TenantOperationResult SetTenantActive(string tenantId, bool isActive) => throw new NotSupportedException();
-        public TenantOperationResult DeleteTenant(string tenantId, string confirmationName) => throw new NotSupportedException();
+        public TenantOperationResult DeleteTenant(
+            string tenantId,
+            string deletionReason,
+            bool permanentDeletionConfirmed
+        ) => throw new NotSupportedException();
         public TenantOperationResult ActivatePaidSubscription(string tenantId) => throw new NotSupportedException();
     }
 }
