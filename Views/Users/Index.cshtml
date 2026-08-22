@@ -282,12 +282,25 @@ User.IsInRole(AppRoles.SystemAdmin);
                                             : string.Empty;
                                     var rowSearch = string.Join(' ', new[] { user.Username, userPrimaryName, userSecondaryName,
                     user.Department, user.JobTitle, roleDisplay, tenantDisplayName, workplaceSiteName }.Where(x => !string.IsNullOrWhiteSpace(x)));
+                                    var isCurrentUser = string.Equals(
+                                        user.Username,
+                                        currentUsername,
+                                        StringComparison.OrdinalIgnoreCase
+                                    );
+                                    var isPrivilegedAdministrativeUser = user.IsSuperAdmin
+                                        || string.Equals(user.Role, AppRoles.GeneralManager, StringComparison.OrdinalIgnoreCase)
+                                        || string.Equals(user.Role, AppRoles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
+                                    var canResetUserPassword = !isCurrentUser
+                                        && !user.IsSuperAdmin
+                                        && (User.IsSuperAdmin() || !isPrivilegedAdministrativeUser);
 
                                     <tr data-user-row="true" data-role="@roleDisplay" data-tenant-id="@tenantGroup.Key"
                                         data-status="@(user.IsActive ? "active" : "inactive")"
                                         data-search="@rowSearch.ToLowerInvariant()">
                                         <td data-label="الحساب">
                                             <div class="users-table-identity users-table-identity-compact">
+                                                <strong>@userPrimaryName</strong>
+                                                <small>اسم المستخدم</small>
                                                 <span class="users-username-pill ltr-field">@user.Username</span>
                                             </div>
                                         </td>
@@ -391,6 +404,27 @@ User.IsInRole(AppRoles.SystemAdmin);
                                                                       stroke-linejoin="round" />
                                                             </svg>
                                                         </a>
+                                                    }
+                                                    @if (canResetUserPassword)
+                                                    {
+                                                        <form asp-action="ResetTemporaryPassword"
+                                                              asp-route-id="@user.Username" method="post" class="users-inline-form"
+                                                              data-confirm-message="سيتم إنشاء كلمة مرور مؤقتة جديدة وإغلاق جلسات المستخدم @userPrimaryName. هل تريد المتابعة؟">
+                                                            @Html.AntiForgeryToken()
+                                                            <button type="submit"
+                                                                    class="users-icon-action users-icon-action-tooltip"
+                                                                    data-bs-toggle="tooltip"
+                                                                    data-bs-title="إعادة تعيين كلمة المرور"
+                                                                    title="إعادة تعيين كلمة المرور"
+                                                                    aria-label="إعادة تعيين كلمة مرور المستخدم @userPrimaryName">
+                                                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                                    <circle cx="8" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="1.8" />
+                                                                    <path d="M11 12l8-8M16 4h3v3M5 19l-2 2M8 19l-2 2" fill="none"
+                                                                          stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                                                          stroke-linejoin="round" />
+                                                                </svg>
+                                                            </button>
+                                                        </form>
                                                     }
                                                     @if (!string.Equals(user.Username, currentUsername, StringComparison.OrdinalIgnoreCase)
                                                                                                                                                                                                                                                                                                     && !user.IsSuperAdmin)

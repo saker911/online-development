@@ -14,16 +14,18 @@
         </a>
     </header>
 
-    <section class="login-page-card login-page-card-light mfa-auth-card">
-        <span class="login-page-kicker">تم تفعيل المصادقة</span>
+    <section class="login-page-card login-page-card-light mfa-auth-card mfa-recovery-card">
+        <div class="mfa-success-mark" aria-hidden="true">✓</div>
+        <span class="login-page-kicker">اكتمل الربط</span>
         <h1 class="login-page-title">احفظ رموز الاسترداد</h1>
-        <p class="login-page-subtitle">يُستخدم كل رمز مرة واحدة عند فقدان الوصول إلى تطبيق المصادقة. لن تظهر هذه الرموز مجددًا.</p>
+        <p class="login-page-subtitle">احتفظ بها في مكان آمن. يُستخدم كل رمز مرة واحدة إذا فقدت الوصول إلى تطبيق المصادقة.</p>
         <div class="mfa-recovery-grid" dir="ltr">
             @foreach (var recoveryCode in Model.RecoveryCodes)
             {
                 <code>@recoveryCode</code>
             }
         </div>
-        <a href="@Model.ContinueUrl" class="btn btn-primary login-submit-button">حفظتها، متابعة</a>
+        <p class="mfa-security-note">لن تظهر هذه الرموز مرة أخرى، ولا تشاركها مع أي شخص.</p>
+        <a href="@Model.ContinueUrl" class="btn btn-primary login-submit-button">حفظت الرموز، متابعة</a>
     </section>
 </div>

@@ -49,28 +49,59 @@
         </div>
     </section>
 
-    <section class="platform-section">
+    <section class="platform-section" aria-labelledby="platform-directory-title">
         <div class="platform-section-heading">
-            <div><span class="platform-eyebrow">آخر النشاط</span><h2>أحدث الجهات</h2></div>
+            <div>
+                <span class="platform-eyebrow">دليل الحسابات</span>
+                <h2 id="platform-directory-title">الجهات والمستخدمون</h2>
+            </div>
             <a asp-controller="Tenants" asp-action="Index">عرض جميع الجهات</a>
         </div>
-        <div class="platform-tenant-list">
+        <div class="platform-directory-list">
             @if (Model.Tenants.Count == 0)
             {
                 <div class="platform-empty">لم تُنشأ جهات بعد.</div>
             }
             else
             {
-                @foreach (var tenant in Model.Tenants.OrderByDescending(item => item.CreatedAtUtc).Take(6))
+                @foreach (var tenant in Model.Tenants.OrderBy(item => item.Name))
                 {
-                    <a class="platform-tenant-row" asp-controller="Tenants" asp-action="Index" asp-route-edit="@tenant.TenantId">
-                        <span class="platform-tenant-name"><strong>@tenant.Name</strong><small>@tenant.Slug</small></span>
-                        <span>@tenant.PlanName</span>
-                        <span>@tenant.UserCount حساب</span>
-                        <span class="platform-status @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "is-active" : "is-blocked")">
-                            @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "نشطة" : "متوقفة")
-                        </span>
-                    </a>
+                    <article class="platform-directory-row">
+                        <header>
+                            <a class="platform-directory-tenant" asp-controller="Tenants" asp-action="Index" asp-route-edit="@tenant.TenantId">
+                                <strong>@tenant.Name</strong>
+                                <small>/o/@tenant.Slug/</small>
+                            </a>
+                            <span class="platform-directory-meta">@tenant.PlanName · @tenant.UserCount حساب</span>
+                            <span class="platform-status @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "is-active" : "is-blocked")">
+                                @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "نشطة" : "متوقفة")
+                            </span>
+                        </header>
+
+                        <div class="platform-directory-users" aria-label="مستخدمو @tenant.Name">
+                            @if (tenant.Users.Count == 0)
+                            {
+                                <span class="platform-directory-empty-user">لا توجد حسابات مرتبطة بهذه الجهة.</span>
+                            }
+                            else
+                            {
+                                @foreach (var account in tenant.Users)
+                                {
+                                    <span class="platform-directory-user @(account.IsTenantManager ? "is-manager" : string.Empty) @(!account.IsActive ? "is-inactive" : string.Empty)">
+                                        <span class="platform-directory-avatar" aria-hidden="true">@account.FullName.Trim().Substring(0, 1)</span>
+                                        <span>
+                                            <strong>@account.FullName</strong>
+                                            <small><bdi>@account.Username</bdi> · @account.RoleDisplayName</small>
+                                        </span>
+                                        @if (!account.IsActive)
+                                        {
+                                            <em>موقوف</em>
+                                        }
+                                    </span>
+                                }
+                            }
+                        </div>
+                    </article>
                 }
             }
         </div>

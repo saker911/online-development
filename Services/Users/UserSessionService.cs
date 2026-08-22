@@ -122,5 +122,26 @@ namespace VehiclePermitSystemWeb.Services.Users
             db.SaveChanges();
         }
 
+        public void RemoveSessionsForUser(string username)
+        {
+            var normalizedUsername = (username ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalizedUsername))
+            {
+                return;
+            }
+
+            using var db = _dbContextFactory.CreateDbContext();
+            var sessions = db.SessionRecords
+                .Where(session => session.Username == normalizedUsername)
+                .ToList();
+            if (sessions.Count == 0)
+            {
+                return;
+            }
+
+            db.SessionRecords.RemoveRange(sessions);
+            db.SaveChanges();
+        }
+
     }
 }

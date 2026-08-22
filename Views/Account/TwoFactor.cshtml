@@ -15,39 +15,70 @@
     </header>
 
     <section class="login-page-card login-page-card-light mfa-auth-card">
-        <span class="login-page-kicker">مصادقة آمنة</span>
+        <span class="login-page-kicker">التحقق بخطوتين</span>
         @if (Model.RequiresEnrollment)
         {
-            <h1 class="login-page-title">اربط تطبيق المصادقة</h1>
-            <p class="login-page-subtitle">امسح الرمز بتطبيق Authenticator، ثم أدخل الرمز المكوّن من 6 أرقام.</p>
-            <div class="mfa-enrollment-grid">
+            <h1 class="login-page-title">احمِ حسابك</h1>
+            <p class="login-page-subtitle">اربط تطبيق المصادقة مرة واحدة لإضافة طبقة حماية لحسابك الإداري.</p>
+
+            <div class="mfa-setup-step">
+                <div class="mfa-step-heading">
+                    <span class="mfa-step-number" aria-hidden="true">1</span>
+                    <div>
+                        <h2>امسح رمز QR</h2>
+                        <p>افتح Google Authenticator أو Microsoft Authenticator ثم أضف حسابًا جديدًا.</p>
+                    </div>
+                </div>
+
                 <div class="mfa-qr" aria-label="رمز إعداد تطبيق المصادقة">
                     @Html.Raw(Model.QrSvg)
                 </div>
-                <div class="mfa-manual-key">
-                    <span>المفتاح اليدوي</span>
+
+                <details class="mfa-manual-key">
+                    <summary>تعذر مسح الرمز؟</summary>
+                    <p>أضف الحساب يدويًا باستخدام مفتاح الإعداد التالي:</p>
                     <code dir="ltr">@Model.ManualKey</code>
-                </div>
+                </details>
             </div>
         }
         else
         {
             <h1 class="login-page-title">تحقق من هويتك</h1>
-            <p class="login-page-subtitle">أدخل الرمز الحالي من تطبيق Authenticator أو استخدم أحد رموز الاسترداد.</p>
+            <p class="login-page-subtitle">أدخل الرمز الحالي من تطبيق المصادقة للمتابعة بأمان.</p>
         }
 
-        <form asp-controller="Account" asp-action="TwoFactor" method="post" class="login-form-grid">
+        <form asp-controller="Account" asp-action="TwoFactor" method="post"
+              class="login-form-grid @(Model.RequiresEnrollment ? "mfa-verification-step" : null)">
             <input asp-for="ChallengeId" type="hidden" />
             <div asp-validation-summary="ModelOnly" class="login-validation-summary"></div>
+            @if (Model.RequiresEnrollment)
+            {
+                <div class="mfa-step-heading">
+                    <span class="mfa-step-number" aria-hidden="true">2</span>
+                    <div>
+                        <h2>أكد الربط</h2>
+                        <p>أدخل الرمز المكوّن من 6 أرقام الظاهر في التطبيق.</p>
+                    </div>
+                </div>
+            }
             <div class="login-field">
                 <label asp-for="Code" class="form-label"></label>
-                <input asp-for="Code" class="form-control mfa-code-input" autocomplete="one-time-code"
-                       inputmode="text" dir="ltr" maxlength="32" autofocus placeholder="000000" />
+                @if (Model.RequiresEnrollment)
+                {
+                    <input asp-for="Code" class="form-control mfa-code-input" autocomplete="one-time-code"
+                           inputmode="numeric" dir="ltr" maxlength="6" autofocus placeholder="000000" />
+                }
+                else
+                {
+                    <input asp-for="Code" class="form-control mfa-code-input" autocomplete="one-time-code"
+                           inputmode="text" dir="ltr" maxlength="32" autofocus placeholder="رمز التطبيق أو الاسترداد" />
+                }
                 <span asp-validation-for="Code" class="field-validation-error"></span>
             </div>
             <button class="btn btn-primary login-submit-button" type="submit">
-                @(Model.RequiresEnrollment ? "تفعيل ومتابعة" : "تحقق ومتابعة")
+                @(Model.RequiresEnrollment ? "تأكيد وتفعيل" : "تحقق ومتابعة")
             </button>
+            <p class="mfa-security-note">لن نطلب منك رمز التحقق أو مفتاح الإعداد عبر الهاتف أو البريد.</p>
             <div class="login-secondary-action">
                 <a asp-controller="Account" asp-action="Login">العودة إلى تسجيل الدخول</a>
             </div>

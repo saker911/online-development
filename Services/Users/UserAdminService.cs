@@ -1545,6 +1545,11 @@ namespace VehiclePermitSystemWeb.Services.Users
             _userSessionService.RemoveSession(sessionId);
         }
 
+        public void RemoveSessionsForUser(string username)
+        {
+            _userSessionService.RemoveSessionsForUser(username);
+        }
+
         public void RecordUserActivity(
             string username,
             string displayName,

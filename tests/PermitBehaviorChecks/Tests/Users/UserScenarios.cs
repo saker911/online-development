@@ -1456,6 +1456,12 @@ internal static partial class ScenarioCatalog
             "user activate should publish the reactivation message"
         );
 
+        var sessionBeforePasswordReset = userAdminService.CreateSession(targetUsername);
+        Require(
+            userAdminService.ValidateSession(sessionBeforePasswordReset, out _),
+            "user session should be active before the password reset"
+        );
+
         var resetPasswordController = CreateUsersController(userAdminService, managerPrincipal);
         var resetPasswordResult = resetPasswordController.ResetTemporaryPassword(targetUsername);
         Require(
@@ -1486,8 +1492,20 @@ internal static partial class ScenarioCatalog
             "temporary password reset should keep the user display name intact"
         );
         Require(
-            HasQueuedToast(resetPasswordController.TempData, resetTemporaryPassword!, "success"),
-            "temporary password reset should publish the temporary password message"
+            HasQueuedToast(
+                resetPasswordController.TempData,
+                "تمت إعادة تعيين كلمة المرور وإغلاق جلسات المستخدم القديمة",
+                "success"
+            ),
+            "temporary password reset should publish a safe success message"
+        );
+        Require(
+            !HasQueuedToast(resetPasswordController.TempData, resetTemporaryPassword!, "success"),
+            "temporary password reset should not leak the temporary password in a toast"
+        );
+        Require(
+            !userAdminService.ValidateSession(sessionBeforePasswordReset, out _),
+            "temporary password reset should invalidate the user's active sessions"
         );
 
         if (OperatingSystem.IsWindows())
@@ -2527,6 +2545,15 @@ internal static partial class ScenarioCatalog
 
     private static string? ExtractTemporaryPassword(ITempDataDictionary tempData)
     {
+        var credentialNoticePassword = ExtractCredentialNoticeValue(
+            tempData,
+            "__CredentialNoticeTemporaryPassword"
+        );
+        if (!string.IsNullOrWhiteSpace(credentialNoticePassword))
+        {
+            return credentialNoticePassword;
+        }
+
         var message =
             FindQueuedToastMessage(tempData, "كلمة مرور الدخول المؤقتة هي")
             ?? FindQueuedToastMessage(tempData, "كلمة المرور الحالية هي");

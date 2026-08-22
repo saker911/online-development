@@ -1131,6 +1131,8 @@ namespace VehiclePermitSystemWeb.Controllers
                 return RedirectToAction(nameof(Edit), new { id });
             }
 
+            _userAdminService.RemoveSessionsForUser(user.Username);
+
             _userAdminService.RecordUserActivity(
                 user.Username,
                 user.DisplayName,
@@ -1141,9 +1143,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 User.Identity?.Name
             );
 
-            QueueToastSuccess(
-                $"تمت إعادة تعيين كلمة المرور المؤقتة بنجاح. كلمة المرور الحالية هي {temporaryPassword} ويجب تغييرها عند أول دخول."
-            );
+            QueueToastSuccess("تمت إعادة تعيين كلمة المرور وإغلاق جلسات المستخدم القديمة.");
             SetCredentialNotice(
                 title: "بيانات الدخول المؤقتة بعد إعادة التعيين",
                 username: user.Username,

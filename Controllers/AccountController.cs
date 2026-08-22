@@ -1248,7 +1248,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 RequiresEnrollment = challenge.RequiresEnrollment,
                 ManualKey = challenge.ManualKey,
                 QrSvg = challenge.RequiresEnrollment
-                    ? BarcodeSvgRenderer.RenderQr(challenge.ProvisioningUri, 280, 2)
+                    ? BarcodeSvgRenderer.RenderQr(challenge.ProvisioningUri, 208, 2)
                     : string.Empty,
             };
         }

@@ -25,6 +25,7 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public int UserCount { get; set; }
         public int PermitCount { get; set; }
         public int VisitCount { get; set; }
+        public List<TenantUserSummaryViewModel> Users { get; set; } = new();
         public string OrganizationName { get; set; } = string.Empty;
         public string SubscriptionStatus { get; set; } = TenantDefaults.DefaultSubscriptionStatus;
         public string SubscriptionStatusDisplayName =>
@@ -49,6 +50,15 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
             QueueServiceEnabled,
             GateServiceEnabled,
         }.Count(enabled => enabled);
+    }
+
+    public sealed class TenantUserSummaryViewModel
+    {
+        public string Username { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string RoleDisplayName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool IsTenantManager { get; set; }
     }
 
     public sealed class TenantEditorViewModel

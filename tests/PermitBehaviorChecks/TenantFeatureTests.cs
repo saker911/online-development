@@ -16,6 +16,63 @@ namespace PermitBehaviorChecks;
 public sealed class TenantFeatureTests
 {
     [Fact]
+    public void PlatformDashboardGroupsUserNamesUnderTheirTenants()
+    {
+        using var provider = CreateProvider("platform-tenant-directory");
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        using (var db = factory.CreateDbContext())
+        {
+            db.Tenants.AddRange(
+                new Tenant { TenantId = "riyadh", Name = "فرع الرياض", Slug = "riyadh" },
+                new Tenant { TenantId = "jeddah", Name = "فرع جدة", Slug = "jeddah" }
+            );
+            db.UserAccounts.AddRange(
+                new UserAccount
+                {
+                    TenantId = "riyadh",
+                    Username = "1023456789",
+                    FullName = "مدير فرع الرياض",
+                    Role = AppRoles.GeneralManager,
+                    IsActive = true,
+                },
+                new UserAccount
+                {
+                    TenantId = "riyadh",
+                    Username = "1034567890",
+                    FullName = "موظف الاستقبال",
+                    Role = AppRoles.Receptionist,
+                    IsActive = false,
+                },
+                new UserAccount
+                {
+                    TenantId = "jeddah",
+                    Username = "1045678901",
+                    FullName = "مدير فرع جدة",
+                    Role = AppRoles.GeneralManager,
+                    IsActive = true,
+                }
+            );
+            db.SaveChanges();
+        }
+
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+        var dashboard = service.GetDashboard();
+
+        var riyadh = Assert.Single(dashboard.Tenants, tenant => tenant.TenantId == "riyadh");
+        Assert.Equal(2, riyadh.UserCount);
+        Assert.Equal("مدير فرع الرياض", riyadh.Users[0].FullName);
+        Assert.True(riyadh.Users[0].IsTenantManager);
+        Assert.Contains(
+            riyadh.Users,
+            account => account.Username == "1034567890" && !account.IsActive
+        );
+
+        var jeddah = Assert.Single(dashboard.Tenants, tenant => tenant.TenantId == "jeddah");
+        Assert.Single(jeddah.Users);
+        Assert.Equal("مدير فرع جدة", jeddah.Users[0].FullName);
+    }
+
+    [Fact]
     public void TenantCreationCanAtomicallyCreateItsGeneralManager()
     {
         using var provider = CreateProvider("tenant-owner-create");

@@ -124,6 +124,7 @@ namespace VehiclePermitSystemWeb.Services.Users
         bool ValidateSession(string sessionId, out string? username);
         bool RefreshSession(string sessionId);
         void RemoveSession(string sessionId);
+        void RemoveSessionsForUser(string username);
         void RecordUserActivity(
             string username,
             string displayName,

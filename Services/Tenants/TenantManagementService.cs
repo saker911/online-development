@@ -35,7 +35,41 @@ namespace VehiclePermitSystemWeb.Services.Tenants
         {
             using var db = _dbContextFactory.CreateDbContext();
             var tenants = db.Tenants.AsNoTracking().OrderBy(tenant => tenant.Name).ToList();
-            var userCounts = CountByTenant(db.UserAccounts.IgnoreQueryFilters());
+            var usersByTenant = db
+                .UserAccounts.IgnoreQueryFilters()
+                .AsNoTracking()
+                .Select(user => new
+                {
+                    user.TenantId,
+                    user.Username,
+                    user.FullName,
+                    user.DisplayName,
+                    user.Role,
+                    user.IsActive,
+                    user.IsSuperAdmin,
+                })
+                .ToList()
+                .GroupBy(user => user.TenantId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .OrderByDescending(user => user.Role == AppRoles.GeneralManager)
+                        .ThenByDescending(user => user.IsActive)
+                        .ThenBy(user => string.IsNullOrWhiteSpace(user.FullName) ? user.DisplayName : user.FullName)
+                        .ThenBy(user => user.Username)
+                        .Select(user => new TenantUserSummaryViewModel
+                        {
+                            Username = user.Username,
+                            FullName = string.IsNullOrWhiteSpace(user.FullName)
+                                ? string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName
+                                : user.FullName,
+                            RoleDisplayName = AppRoles.GetDisplayName(user.Role, user.IsSuperAdmin),
+                            IsActive = user.IsActive,
+                            IsTenantManager = user.Role == AppRoles.GeneralManager,
+                        })
+                        .ToList(),
+                    StringComparer.OrdinalIgnoreCase
+                );
             var permitCounts = CountByTenant(db.Permits.IgnoreQueryFilters());
             var visitCounts = CountByTenant(db.Visits.IgnoreQueryFilters());
             var organizationNames = db
@@ -81,7 +115,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                         QueueServiceEnabled = tenant.QueueServiceEnabled,
                         GateServiceEnabled = tenant.GateServiceEnabled,
                         IsBlockedBySubscription = IsBlockedBySubscription(tenant),
-                        UserCount = GetCount(userCounts, tenant.TenantId),
+                        Users = usersByTenant.TryGetValue(tenant.TenantId, out var tenantUsers)
+                            ? tenantUsers
+                            : new List<TenantUserSummaryViewModel>(),
+                        UserCount = usersByTenant.TryGetValue(tenant.TenantId, out var users)
+                            ? users.Count
+                            : 0,
                         PermitCount = GetCount(permitCounts, tenant.TenantId),
                         VisitCount = GetCount(visitCounts, tenant.TenantId),
                         OrganizationName = organizationNames.TryGetValue(
