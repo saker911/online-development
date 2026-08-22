@@ -44,13 +44,15 @@ namespace VehiclePermitSystemWeb.Controllers
         private readonly IUserAdminService _userAdminService;
         private readonly IDisplayDeviceService _displayDeviceService;
         private readonly IConfiguration _configuration;
+        private readonly IScanSecurityAuditService? _scanSecurityAuditService;
 
         public ScanController(
             IPermitService permitService,
             IVisitService visitService,
             IUserAdminService userAdminService,
             IDisplayDeviceService displayDeviceService,
-            IConfiguration? configuration = null
+            IConfiguration? configuration = null,
+            IScanSecurityAuditService? scanSecurityAuditService = null
         )
         {
             _permitService = permitService;
@@ -58,6 +60,7 @@ namespace VehiclePermitSystemWeb.Controllers
             _userAdminService = userAdminService;
             _displayDeviceService = displayDeviceService;
             _configuration = configuration ?? new ConfigurationBuilder().Build();
+            _scanSecurityAuditService = scanSecurityAuditService;
         }
 
         [HttpPost("permit")]
@@ -86,19 +89,44 @@ namespace VehiclePermitSystemWeb.Controllers
             );
             if (!string.IsNullOrWhiteSpace(overrideFailureReason))
             {
+                var securityWarning = RecordScanSecurity(
+                    "Permit",
+                    identifier,
+                    false,
+                    overrideFailureReason,
+                    auditContext,
+                    scannerUserId
+                );
                 return Ok(
                     new
                     {
                         allowed = false,
                         reason = overrideFailureReason,
                         overrideEntry = false,
+                        securityWarning,
                     }
                 );
             }
             var permitBeforeScan = _permitService.GetPermitByNumber(identifier);
             if (permitBeforeScan != null && !CanScanWorkplaceSite(permitBeforeScan.WorkplaceSiteId, scannerUserId))
             {
-                return Ok(new { allowed = false, reason = "site_access_denied", identifier });
+                var securityWarning = RecordScanSecurity(
+                    "Permit",
+                    identifier,
+                    false,
+                    "site_access_denied",
+                    auditContext,
+                    scannerUserId
+                );
+                return Ok(
+                    new
+                    {
+                        allowed = false,
+                        reason = "site_access_denied",
+                        identifier,
+                        securityWarning,
+                    }
+                );
             }
             var (allowed, reason) = _permitService.RecordPermitScan(
                 identifier,
@@ -106,12 +134,21 @@ namespace VehiclePermitSystemWeb.Controllers
                 overrideEntry,
                 auditContext
             );
+            var scanSecurityWarning = RecordScanSecurity(
+                "Permit",
+                identifier,
+                allowed,
+                reason,
+                auditContext,
+                scannerUserId
+            );
             var permit = _permitService.GetPermitByNumber(identifier) ?? permitBeforeScan;
             return Ok(
                 new
                 {
                     allowed,
                     reason,
+                    securityWarning = scanSecurityWarning,
                     overrideEntry,
                     identifier,
                     displayName = permit?.DriverName ?? string.Empty,
@@ -171,6 +208,14 @@ namespace VehiclePermitSystemWeb.Controllers
             var displayOperator = ResolveActiveDisplayOperatorForScan(auditContext.DeviceId);
             if (displayOperator?.MustChangePin == true)
             {
+                var securityWarning = RecordScanSecurity(
+                    scanMode == "visit" ? "Visit" : "Permit",
+                    identifier,
+                    false,
+                    "operator_pin_change_required",
+                    auditContext,
+                    requestedScannerUserId
+                );
                 return Ok(
                     new
                     {
@@ -179,12 +224,21 @@ namespace VehiclePermitSystemWeb.Controllers
                         overrideEntry = false,
                         identifier,
                         scanMode,
+                        securityWarning,
                     }
                 );
             }
 
             if (RequiresActiveDisplayOperatorForScan() && displayOperator == null)
             {
+                var securityWarning = RecordScanSecurity(
+                    scanMode == "visit" ? "Visit" : "Permit",
+                    identifier,
+                    false,
+                    "operator_not_signed_in",
+                    auditContext,
+                    requestedScannerUserId
+                );
                 return Ok(
                     new
                     {
@@ -193,6 +247,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         overrideEntry = false,
                         identifier,
                         scanMode,
+                        securityWarning,
                     }
                 );
             }
@@ -205,12 +260,21 @@ namespace VehiclePermitSystemWeb.Controllers
             );
             if (!string.IsNullOrWhiteSpace(overrideFailureReason))
             {
+                var securityWarning = RecordScanSecurity(
+                    scanMode == "visit" ? "Visit" : "Permit",
+                    identifier,
+                    false,
+                    overrideFailureReason,
+                    auditContext,
+                    scannerUserId
+                );
                 return Ok(
                     new
                     {
                         allowed = false,
                         reason = overrideFailureReason,
                         overrideEntry = false,
+                        securityWarning,
                     }
                 );
             }
@@ -222,6 +286,14 @@ namespace VehiclePermitSystemWeb.Controllers
                 var visitBeforeScan = _visitService.GetVisitById(identifier);
                 if (visitBeforeScan != null && !CanScanWorkplaceSite(visitBeforeScan.WorkplaceSiteId, scannerUserId))
                 {
+                    var siteSecurityWarning = RecordScanSecurity(
+                        "Visit",
+                        identifier,
+                        false,
+                        "site_access_denied",
+                        auditContext,
+                        scannerUserId
+                    );
                     return Ok(
                         new
                         {
@@ -230,16 +302,26 @@ namespace VehiclePermitSystemWeb.Controllers
                             overrideEntry = false,
                             identifier,
                             scanMode,
+                            securityWarning = siteSecurityWarning,
                         }
                     );
                 }
                 var (allowed, reason) = _visitService.RecordVisitScan(identifier, scannerUserId);
+                var securityWarning = RecordScanSecurity(
+                    "Visit",
+                    identifier,
+                    allowed,
+                    reason,
+                    auditContext,
+                    scannerUserId
+                );
                 var visit = _visitService.GetVisitById(identifier) ?? visitBeforeScan;
                 return Ok(
                     new
                     {
                         allowed,
                         reason,
+                        securityWarning,
                         overrideEntry,
                         identifier,
                         scanMode,
@@ -267,6 +349,14 @@ namespace VehiclePermitSystemWeb.Controllers
 
             if (permitBeforeScan != null && !CanScanWorkplaceSite(permitBeforeScan.WorkplaceSiteId, scannerUserId))
             {
+                var securityWarning = RecordScanSecurity(
+                    "Permit",
+                    identifier,
+                    false,
+                    "site_access_denied",
+                    auditContext,
+                    scannerUserId
+                );
                 return Ok(
                     new
                     {
@@ -275,6 +365,7 @@ namespace VehiclePermitSystemWeb.Controllers
                         overrideEntry = false,
                         identifier,
                         scanMode,
+                        securityWarning,
                     }
                 );
             }
@@ -284,12 +375,21 @@ namespace VehiclePermitSystemWeb.Controllers
                 overrideEntry,
                 auditContext
             );
+            var permitSecurityWarning = RecordScanSecurity(
+                "Permit",
+                identifier,
+                permitAllowed,
+                permitReason,
+                auditContext,
+                scannerUserId
+            );
             var permit = _permitService.GetPermitByNumber(identifier) ?? permitBeforeScan;
             return Ok(
                 new
                 {
                     allowed = permitAllowed,
                     reason = permitReason,
+                    securityWarning = permitSecurityWarning,
                     overrideEntry,
                     identifier,
                     scanMode,
@@ -337,18 +437,44 @@ namespace VehiclePermitSystemWeb.Controllers
                 return Ok(new { allowed = false, reason = "invalid_request" });
 
             var scannerUserId = ResolveEffectiveScannerUserId(requestBody);
+            var auditContext = BuildPermitAuditContext(requestBody, "نقطة مسح الزيارات", "scan");
             var visitBeforeScan = _visitService.GetVisitById(identifier);
             if (visitBeforeScan != null && !CanScanWorkplaceSite(visitBeforeScan.WorkplaceSiteId, scannerUserId))
             {
-                return Ok(new { allowed = false, reason = "site_access_denied", identifier });
+                var securityWarning = RecordScanSecurity(
+                    "Visit",
+                    identifier,
+                    false,
+                    "site_access_denied",
+                    auditContext,
+                    scannerUserId
+                );
+                return Ok(
+                    new
+                    {
+                        allowed = false,
+                        reason = "site_access_denied",
+                        identifier,
+                        securityWarning,
+                    }
+                );
             }
             var (allowed, reason) = _visitService.RecordVisitScan(identifier, scannerUserId);
+            var scanSecurityWarning = RecordScanSecurity(
+                "Visit",
+                identifier,
+                allowed,
+                reason,
+                auditContext,
+                scannerUserId
+            );
             var visit = _visitService.GetVisitById(identifier);
             return Ok(
                 new
                 {
                     allowed,
                     reason,
+                    securityWarning = scanSecurityWarning,
                     identifier,
                     displayName = visit?.VisitorName ?? string.Empty,
                     visitedPersonName = visit?.SubjectDisplay ?? string.Empty,
@@ -573,6 +699,26 @@ namespace VehiclePermitSystemWeb.Controllers
                 ExecutionMethod = executionMethod,
                 IsAutomated = false,
             };
+        }
+
+        private string RecordScanSecurity(
+            string entityType,
+            string entityId,
+            bool allowed,
+            string reason,
+            PermitScanAuditContext auditContext,
+            string? recordedBy
+        )
+        {
+            return _scanSecurityAuditService?.RecordScanResult(
+                    entityType,
+                    entityId,
+                    allowed,
+                    reason,
+                    auditContext,
+                    recordedBy
+                )
+                ?? string.Empty;
         }
 
         private static string NormalizeAuditValue(string? value, int maxLength)

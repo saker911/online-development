@@ -33,6 +33,7 @@ services:
       Data__Provider: PostgreSql
       ConnectionStrings__PostgreSqlConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Security__CookieSecurePolicy: Always
+      Security__QrConcurrentGateWindowSeconds: "120"
       Security__Mfa__RequiredForPrivilegedAccounts: "true"
       Bootstrap__AllowWebInitialSetup: "false"
       Security__DataProtectionCertificatePath: /run/secrets/tasareehapp/data-protection.pfx

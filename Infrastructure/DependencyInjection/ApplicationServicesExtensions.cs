@@ -40,6 +40,7 @@ namespace VehiclePermitSystemWeb.Infrastructure.DependencyInjection
             services.AddSingleton<IGatePolicyService, GatePolicyService>();
             services.AddSingleton<IPermitAuditService, PermitAuditService>();
             services.AddSingleton<IAuditLogService, AuditLogService>();
+            services.AddSingleton<IScanSecurityAuditService, ScanSecurityAuditService>();
             services.AddSingleton<IDelegationService, DelegationService>();
             services.AddSingleton<IDisplayDeviceService, DisplayDeviceService>();
             services.AddSingleton<IMonitoringDashboardService, MonitoringDashboardService>();

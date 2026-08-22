@@ -26,6 +26,7 @@ namespace VehiclePermitSystemWeb.Services.Notifications
             "UnauthorizedExitStopped",
             "UnauthorizedExitConfirmed",
             "ExitUnauthorized",
+            "QrConcurrentGateUse",
         };
 
         private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;

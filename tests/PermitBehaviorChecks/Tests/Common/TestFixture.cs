@@ -72,6 +72,7 @@ internal sealed class TestFixture : IAsyncDisposable
         services.AddSingleton<IPermitMovementService, PermitMovementService>();
         services.AddSingleton<IAccessControlService, AccessControlService>();
         services.AddSingleton<IAuditLogService, AuditLogService>();
+        services.AddSingleton<IScanSecurityAuditService, ScanSecurityAuditService>();
         services.AddSingleton<IPermitService, PermitService>();
         services.AddSingleton<UserSessionService>();
         services.AddSingleton<IUserAdminService, UserAdminService>();
@@ -100,6 +101,8 @@ internal sealed class TestFixture : IAsyncDisposable
         AccessControlService = _serviceProvider.GetRequiredService<IAccessControlService>();
         DelegationService = _serviceProvider.GetRequiredService<IDelegationService>();
         DisplayDeviceService = _serviceProvider.GetRequiredService<IDisplayDeviceService>();
+        ScanSecurityAuditService =
+            _serviceProvider.GetRequiredService<IScanSecurityAuditService>();
         DataRetentionService = _serviceProvider.GetRequiredService<IDataRetentionService>();
         NotificationCenterService = _serviceProvider.GetRequiredService<INotificationCenterService>();
         WorkplaceDirectoryService =
@@ -161,6 +164,8 @@ internal sealed class TestFixture : IAsyncDisposable
     public IDelegationService DelegationService { get; }
 
     public IDisplayDeviceService DisplayDeviceService { get; }
+
+    public IScanSecurityAuditService ScanSecurityAuditService { get; }
 
     public IDataRetentionService DataRetentionService { get; }
 
