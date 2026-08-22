@@ -629,7 +629,13 @@ app.Use(
                 }
 
                 if (
-                    MultiFactorAuthenticationRequirement.IsRequired(currentUser)
+                    MultiFactorAuthenticationRequirement.IsRequired(
+                        currentUser,
+                        app.Configuration.GetValue(
+                            "Security:Mfa:RequiredForPrivilegedAccounts",
+                            true
+                        )
+                    )
                     && !context.User.HasClaim(
                         MultiFactorAuthenticationRequirement.AuthenticationMethodClaimType,
                         MultiFactorAuthenticationRequirement.AuthenticationMethodClaimValue

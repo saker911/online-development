@@ -18,6 +18,9 @@ try
         case "read-entry-only-recovery":
             ReadEntryOnlyRecovery(args);
             break;
+        case "prepare-visit-for-scan":
+            PrepareVisitForScan(args);
+            break;
         default:
             Fail($"Unknown command '{command}'.");
             break;
@@ -26,6 +29,55 @@ try
 catch (Exception ex)
 {
     Fail(ex.Message);
+}
+
+static void PrepareVisitForScan(string[] args)
+{
+    if (args.Length < 4)
+    {
+        Fail("Usage: prepare-visit-for-scan <dbPath> <visitId> <visitDate>");
+    }
+
+    var dbPath = args[1];
+    var visitId = args[2];
+    var visitDate = ParseDateTime(args[3]);
+
+    using var connection = OpenConnection(dbPath);
+    using var transaction = connection.BeginTransaction();
+    var updated = ExecuteNonQuery(
+        connection,
+        transaction,
+        """
+        UPDATE Visits
+        SET
+            VisitDate = $visitDate,
+            RequestedVisitDate = $visitDate,
+            ApprovalStatus = 'Approved',
+            Status = 'Active',
+            EntryTime = NULL,
+            ExitTime = NULL,
+            ExpiresAt = NULL,
+            QueueStatus = '',
+            QueuedAtUtc = NULL,
+            CalledAtUtc = NULL,
+            ServiceStartedAtUtc = NULL,
+            QueueCompletedAtUtc = NULL
+        WHERE VisitId = $visitId;
+        """,
+        new Dictionary<string, object?>
+        {
+            ["$visitId"] = visitId,
+            ["$visitDate"] = visitDate,
+        }
+    );
+
+    if (updated != 1)
+    {
+        Fail($"Visit '{visitId}' was not found for E2E scan preparation.");
+    }
+
+    transaction.Commit();
+    WriteJson(new { visitId, visitDate });
 }
 
 static void PrepareEntryOnlyStalePending(string[] args)

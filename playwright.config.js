@@ -39,6 +39,7 @@ module.exports = defineConfig({
       Security__CookieSecurePolicy: "SameAsRequest",
       Security__LoginPermitLimit: "100",
       Security__LoginWindowSeconds: "1",
+      Security__Mfa__RequiredForPrivilegedAccounts: "false",
       Email__Smtp__Host: "127.0.0.1",
       Email__Smtp__Port: "1",
       Email__Smtp__Username: "e2e-user",

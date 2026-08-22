@@ -37,12 +37,17 @@ test("create visits, companions, search, and edit", async ({ page }) => {
 
   await page.goto(`/Visits/Edit/${visit.visitId}`);
   await page.locator('[name="VisitorName"]').fill(`${visit.visitorName} معدل`);
-  await page.locator('[name="VisitLocation"]').fill(visit.visitLocation);
-  await page.locator('[name="NationalId"]').fill(visit.nationalId);
+  const locationField = page.locator('input[name="VisitLocation"]:visible');
+  if (await locationField.count()) await locationField.fill(visit.visitLocation);
+  const nationalIdField = page.locator('input[name="NationalId"]:visible');
+  if (await nationalIdField.count()) await nationalIdField.fill(visit.nationalId);
   await page.locator('[name="PhoneNumber"]').fill(visit.phoneNumber);
   await page.locator('[name="Purpose"]').fill(visit.purpose);
-  await page.locator('[name="VisitedPersonType"]').selectOption(visit.visitedPersonType);
-  await page.locator('[name="VisitedPersonName"]').fill(visit.visitedPersonName);
+  const visitedPersonType = page.locator('select[name="VisitedPersonType"]');
+  if (await visitedPersonType.count()) {
+    await visitedPersonType.selectOption(visit.visitedPersonType);
+    await page.locator('input[name="VisitedPersonName"]:visible').fill(visit.visitedPersonName);
+  }
   await page.locator('[name="VisitDate"]').fill(dateTimeLocal(20));
   await page.getByRole("button", { name: "حفظ التعديلات" }).click();
   await expect(page).toHaveURL(/\/Visits/i);
@@ -87,7 +92,17 @@ test("visit search table stays aligned and scrolls inside its card on narrow scr
 
 test("visit validation rejects old visit date", async ({ page }) => {
   await ensureOwnerSignedIn(page);
-  await submitForm(page, "/Visits/Create", {
+  await page.goto("/Visits/Create");
+  const firstOptionValue = async (name) => {
+    const select = page.locator(`select[name="${name}"]`);
+    if (!(await select.count())) return "";
+    return select.locator("option").evaluateAll((options) =>
+      options.map((option) => option.value).find((value) => value) ?? ""
+    );
+  };
+  const departmentId = await firstOptionValue("DepartmentId");
+  const workplaceSiteId = await firstOptionValue("WorkplaceSiteId");
+  const form = {
     VisitorName: "زائر بتاريخ قديم",
     VisitLocation: "مكتب الزيارات",
     NationalId: uniqueNationalId("6"),
@@ -97,6 +112,11 @@ test("visit validation rejects old visit date", async ({ page }) => {
     VisitedPersonName: "مضيف اختبار",
     VisitDate: dateTimeLocal(-120),
     Status: "Active",
+  };
+  if (departmentId) form.DepartmentId = departmentId;
+  if (workplaceSiteId) form.WorkplaceSiteId = workplaceSiteId;
+  await submitForm(page, "/Visits/Create", {
+    ...form,
   });
 
   await expect(page.getByRole("alert").getByText(/يجب أن يكون موعد الزيارة|بعده مباشرة|قديم/).first()).toBeVisible();

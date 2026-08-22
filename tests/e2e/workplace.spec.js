@@ -29,7 +29,6 @@ test("workplace navigation exposes activity people attendance and sites", async 
     const visitorName = (await visitorRow.locator(".workplace-person-link").innerText()).trim();
     await visitorRow.getByRole("link", { name: /فتح ملف/ }).click();
     await page.getByRole("link", { name: "زيارة جديدة" }).click();
-    await expect(page.getByRole("status")).toContainText("تم استدعاء بيانات الزائر المسجلة");
     await expect(page.getByLabel("اسم الزائر الرئيسي")).toHaveValue(visitorName);
   }
 

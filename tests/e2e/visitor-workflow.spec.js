@@ -31,14 +31,23 @@ test("owner publishes the express visitor flow and the public form follows it", 
 
   await expect(page.locator('[name="NationalId"]')).toHaveCount(0);
   await expect(page.locator('[name="VisitLocation"]')).toHaveCount(0);
-  await expect(page.locator('[name="VisitedPersonName"]')).toBeVisible();
+  const hasDestination = (await page.locator('select[name="DepartmentId"]').count()) > 0;
+  if (hasDestination) {
+    await expect(page.locator('select[name="DepartmentId"]')).toBeVisible();
+  } else {
+    await expect(page.locator('[name="VisitedPersonName"]')).toBeVisible();
+  }
   await expect(page.locator('[name="Purpose"]')).toBeVisible();
 
   await page.locator('[name="VisitorName"]').fill(`زائر سريع ${uniqueSuffix()}`);
   await page.locator('[name="PhoneNumber"]').fill(uniquePhone());
   await page.locator('[name="VisitorEmail"]').fill(`workflow-${uniqueSuffix()}@example.com`);
   await page.locator('[name="VisitDate"]').fill(dateTimeLocal(10));
-  await page.locator('[name="VisitedPersonName"]').fill("موظف الاستقبال");
+  if (hasDestination) {
+    await page.locator('select[name="DepartmentId"]').selectOption({ index: 1 });
+  } else {
+    await page.locator('[name="VisitedPersonName"]').fill("موظف الاستقبال");
+  }
   await page.locator('[name="Purpose"]').fill("زيارة عمل سريعة");
   await page.getByRole("checkbox", { name: /أوافق على استخدام البيانات/ }).check();
   await page.getByRole("button", { name: "إرسال الطلب" }).click();

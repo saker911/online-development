@@ -17,10 +17,13 @@ public static class MultiFactorAuthenticationRequirement
     public const string AuthenticationMethodClaimType = "amr";
     public const string AuthenticationMethodClaimValue = "mfa";
 
-    public static bool IsRequired(UserAccount? user) =>
-        user?.IsSuperAdmin == true
-        || string.Equals(user?.Role, AppRoles.SystemAdmin, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(user?.Role, AppRoles.GeneralManager, StringComparison.OrdinalIgnoreCase);
+    public static bool IsRequired(UserAccount? user, bool enabled = true) =>
+        enabled
+        && (
+            user?.IsSuperAdmin == true
+            || string.Equals(user?.Role, AppRoles.SystemAdmin, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(user?.Role, AppRoles.GeneralManager, StringComparison.OrdinalIgnoreCase)
+        );
 }
 
 public interface IMultiFactorAuthenticationService
@@ -60,13 +63,15 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
     private readonly IDataProtector _secretProtector;
     private readonly ISystemClock _clock;
     private readonly ILogger<MultiFactorAuthenticationService> _logger;
+    private readonly bool _requiredForPrivilegedAccounts;
 
     public MultiFactorAuthenticationService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         IMemoryCache cache,
         IDataProtectionProvider dataProtectionProvider,
         ISystemClock clock,
-        ILogger<MultiFactorAuthenticationService> logger
+        ILogger<MultiFactorAuthenticationService> logger,
+        IConfiguration? configuration = null
     )
     {
         _dbContextFactory = dbContextFactory;
@@ -76,9 +81,14 @@ public sealed class MultiFactorAuthenticationService : IMultiFactorAuthenticatio
         );
         _clock = clock;
         _logger = logger;
+        _requiredForPrivilegedAccounts = configuration?.GetValue(
+            "Security:Mfa:RequiredForPrivilegedAccounts",
+            true
+        ) ?? true;
     }
 
-    public bool IsRequired(UserAccount? user) => MultiFactorAuthenticationRequirement.IsRequired(user);
+    public bool IsRequired(UserAccount? user) =>
+        MultiFactorAuthenticationRequirement.IsRequired(user, _requiredForPrivilegedAccounts);
 
     public string BeginChallenge(UserAccount user, string? returnUrl)
     {

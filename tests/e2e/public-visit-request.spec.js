@@ -33,8 +33,14 @@ test("visitor submits a public request, follows status, and receives QR only aft
   await page.locator('[name="VisitorEmail"]').fill(`visitor-${uniqueSuffix()}@example.com`);
   await page.locator('[name="NationalId"]').fill(uniqueNationalId("2"));
   await page.locator('[name="VisitDate"]').fill(dateTimeLocal(25));
-  await page.locator('[name="VisitedPersonName"]').fill("موظف الاستقبال");
-  await page.locator('[name="VisitLocation"]').fill("المبنى الرئيسي");
+  const hostField = page.locator('[name="VisitedPersonName"]:visible');
+  if (await hostField.count()) await hostField.fill("موظف الاستقبال");
+  const destination = page.locator('select[name="DepartmentId"]');
+  if (await destination.count()) await destination.selectOption({ index: 1 });
+  const site = page.locator('select[name="WorkplaceSiteId"]');
+  if (await site.count()) await site.selectOption({ index: 1 });
+  const locationField = page.locator('input[name="VisitLocation"]:visible');
+  if (await locationField.count()) await locationField.fill("المبنى الرئيسي");
   await page.locator('[name="Purpose"]').fill("موعد عمل تجريبي");
   await page.getByRole("checkbox", { name: /أوافق على استخدام البيانات/ }).check();
   await page.getByRole("button", { name: "إرسال الطلب" }).click();

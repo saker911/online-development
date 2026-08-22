@@ -139,6 +139,12 @@ test("mobile gate console records a visit entry and exit without horizontal over
     visitorName: "زائر اختبار بوابة الجوال",
   });
   await approveVisitForScan(page, visit.visitId);
+  runStateTool(
+    "prepare-visit-for-scan",
+    resolveE2eDatabasePath(),
+    visit.visitId,
+    toLocalIso(new Date())
+  );
 
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);

@@ -404,6 +404,16 @@ async function createEmployeePermit(page, overrides = {}) {
 
 async function createVisit(page, overrides = {}) {
   await ensureOwnerSignedIn(page);
+  await page.goto("/Visits/Create");
+  const firstOptionValue = async (name) => {
+    const select = page.locator(`select[name="${name}"]`);
+    if (!(await select.count())) return "";
+    return select.locator("option").evaluateAll((options) =>
+      options.map((option) => option.value).find((value) => value) ?? ""
+    );
+  };
+  const departmentId = await firstOptionValue("DepartmentId");
+  const workplaceSiteId = await firstOptionValue("WorkplaceSiteId");
   const suffix = uniqueSuffix();
   const data = {
     visitorName: overrides.visitorName ?? `زائر زيارة ${suffix}`,
@@ -428,6 +438,8 @@ async function createVisit(page, overrides = {}) {
     VisitDate: data.visitDate,
     Status: "Active",
   };
+  if (departmentId) form.DepartmentId = departmentId;
+  if (workplaceSiteId) form.WorkplaceSiteId = workplaceSiteId;
   data.companions.forEach((companion, index) => {
     form[`Companions[${index}].FullName`] = companion.fullName;
     form[`Companions[${index}].NationalId`] = companion.nationalId;

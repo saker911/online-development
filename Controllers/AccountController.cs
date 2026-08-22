@@ -853,7 +853,7 @@ namespace VehiclePermitSystemWeb.Controllers
                 ManagerDisplayName = managerAccount?.DisplayName ?? user.ManagerUsername,
                 MustChangePassword = user.MustChangePassword,
                 MustChangeOperatorPin = user.MustChangeOperatorPin,
-                MfaRequired = MultiFactorAuthenticationRequirement.IsRequired(user),
+                MfaRequired = MultiFactorAuthenticationService?.IsRequired(user) == true,
                 MfaEnabled = user.MfaEnabled,
                 MfaEnrolledAtUtc = user.MfaEnrolledAtUtc,
                 PermissionDisplayNames = grantedPermissionKeys
