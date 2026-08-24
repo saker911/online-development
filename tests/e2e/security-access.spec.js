@@ -3,7 +3,7 @@ const {
   changePassword,
   createEmployeePermit,
   createUser,
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
   expectAccessDeniedOrLogin,
   roles,
   signIn,
@@ -24,7 +24,7 @@ async function createReadyUser(page, role, options = {}) {
 }
 
 async function createManagedDepartment(page, departmentName, managerUsername) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await submitForm(
     page,
     "/Administration/Departments",
@@ -59,7 +59,7 @@ async function createManagedDepartment(page, departmentName, managerUsername) {
 }
 
 test("anonymous users are redirected to login for protected pages", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await signOut(page);
   await page.context().clearCookies();
   for (const path of [
@@ -80,27 +80,27 @@ test("anonymous users are redirected to login for protected pages", async ({ pag
 });
 
 test("Receptionist, GateSecurity, and Employee direct URL permissions are enforced", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const receptionist = await createReadyUser(page, roles.receptionist);
   await signIn(page, receptionist.username, receptionist.password);
   await expectAccessDeniedOrLogin(page, "/Users");
   await expectAccessDeniedOrLogin(page, "/Administration/Edit");
   await expectAccessDeniedOrLogin(page, "/Administration/Departments");
 
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const gate = await createReadyUser(page, roles.gateSecurity);
   await signIn(page, gate.username, gate.password);
   await expectAccessDeniedOrLogin(page, "/Users");
   await expectAccessDeniedOrLogin(page, "/Administration/Edit");
 
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const employee = await createReadyUser(page, roles.employee);
   await signIn(page, employee.username, employee.password);
   await expectAccessDeniedOrLogin(page, "/Permits/Create");
 });
 
 test("reviewer forwards employee permit and security manager approves it", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Administration/Edit");
   await page.locator('[name="SignatureText"]').fill("توقيع اعتماد المدير");
   await page.getByRole("button", { name: "حفظ البيانات" }).click();

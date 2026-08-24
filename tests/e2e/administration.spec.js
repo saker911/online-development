@@ -1,13 +1,14 @@
 const { expect, test } = require("@playwright/test");
 const {
   createTestPngBuffer,
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
+  getTenantManagerAccount,
   signIn,
   uniqueSuffix,
 } = require("./helpers/e2e-helpers");
 
-test("owner updates administration data and opens display settings", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+test("tenant manager updates administration data and opens display settings", async ({ page }) => {
+  await ensureTenantManagerSignedIn(page);
   const suffix = uniqueSuffix();
 
   await page.goto("/Administration/Edit");
@@ -15,6 +16,11 @@ test("owner updates administration data and opens display settings", async ({ pa
   await page.locator('[name="OrganizationName"]').fill(`جهة قبول ${suffix}`);
   await page.locator('[name="DepartmentName"]').fill(`إدارة قبول ${suffix}`);
   await page.locator('[name="SignatureText"]').fill("توقيع قبول E2E");
+  await page.locator('input[name="logoFile"]').setInputFiles({
+    name: "tenant-logo.png",
+    mimeType: "image/png",
+    buffer: createTestPngBuffer(14, 116, 144),
+  });
   await page.locator('[name="AttendanceGraceMinutes"]').fill("12");
   await page.locator('[name="WorkEndExitGraceMinutes"]').fill("35");
   await page.locator('input[type="checkbox"][name="LeaveRequestsEnabled"]').check();
@@ -38,11 +44,11 @@ for (const viewport of [
   { name: "mobile", width: 390, height: 844 },
 ]) {
   test(`waiting board is privacy-safe and responsive on ${viewport.name}`, async ({ page }) => {
-    await ensureOwnerSignedIn(page);
+    await ensureTenantManagerSignedIn(page);
     await page.setViewportSize(viewport);
     await page.goto("/Display/WaitingBoard");
 
-    const waitingBoardHeading = page.getByRole("heading", { name: "بانتظار الوصول" });
+    const waitingBoardHeading = page.getByRole("heading", { name: "بانتظار الاستدعاء" });
     const disabledHeading = page.getByRole("heading", { name: "تنظيم الطابور غير مفعلة" });
     await expect(waitingBoardHeading.or(disabledHeading)).toBeVisible();
     if (await waitingBoardHeading.isVisible()) {
@@ -59,7 +65,7 @@ for (const viewport of [
 }
 
 test("backup page creates and downloads backup, restore rejects invalid upload", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/Administration/Backup");
   await expect(page.getByRole("heading", { name: "النسخ الاحتياطي" })).toBeVisible();
@@ -85,7 +91,7 @@ test("backup page creates and downloads backup, restore rejects invalid upload",
 });
 
 test("administration rejects an image whose declared type does not match its content", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/Administration/Edit");
   await page.locator('input[name="logoFile"]').setInputFiles({
@@ -101,7 +107,7 @@ test("administration rejects an image whose declared type does not match its con
 });
 
 test("organization name remains contextual while the product mark stays consistent", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const organizationName = `شركة تشغيل ${uniqueSuffix()}`;
 
   await page.goto("/Administration/Edit");
@@ -127,7 +133,8 @@ test("organization name remains contextual while the product mark stays consiste
   );
 
   await page.context().clearCookies();
-  await page.goto("/Account/Login");
+  const manager = getTenantManagerAccount();
+  await page.goto(`/Account/Login?tenant=${manager.tenantId}`);
   await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
   await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",
@@ -135,14 +142,14 @@ test("organization name remains contextual while the product mark stays consiste
   );
   await expect(page.locator(".login-page-topbar-brand img")).toHaveCSS("filter", "none");
 
-  await signIn(page);
+  await signIn(page, manager.username, manager.password, manager.tenantId);
   await page.goto("/Administration/Edit");
   await page.locator('input[name="removeLogo"]').check();
   await page.getByRole("button", { name: "حفظ البيانات" }).click();
   await page.getByRole("button", { name: "متابعة" }).click();
 
   await page.context().clearCookies();
-  await page.goto("/Account/Login");
+  await page.goto(`/Account/Login?tenant=${manager.tenantId}`);
   await expect(page.locator(".login-page-topbar-brand small")).toHaveText(organizationName);
   await expect(page.locator(".login-page-topbar-brand img")).toHaveAttribute(
     "src",

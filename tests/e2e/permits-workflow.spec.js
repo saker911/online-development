@@ -3,7 +3,9 @@ const {
   createEmployeePermit,
   createVisitorPermit,
   downloadPdfAndAssert,
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
+  ensurePermitReviewerSignedIn,
+  ensureSecurityManagerSignedIn,
   submitForm,
   todayPlus,
   uniqueNationalId,
@@ -12,7 +14,7 @@ const {
 } = require("./helpers/e2e-helpers");
 
 async function ensureAdministrationSignature(page) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Administration/Edit");
   await expect(page.getByRole("heading", { name: /بيانات الإدارة/ })).toBeVisible();
   await page.locator('[name="OrganizationName"]').fill("جهة اختبار القبول");
@@ -24,10 +26,14 @@ async function ensureAdministrationSignature(page) {
 }
 
 async function approvePermit(page, permitNumber) {
+  await ensureSecurityManagerSignedIn(page);
+  await ensurePermitReviewerSignedIn(page);
   await ensureAdministrationSignature(page);
+  await ensurePermitReviewerSignedIn(page);
   await submitForm(page, `/Permits/ForwardToGeneralManager/${permitNumber}`, {}, {
     tokenPath: `/Permits/Details/${permitNumber}`,
   });
+  await ensureSecurityManagerSignedIn(page);
   await page.goto(`/Permits/Approve/${permitNumber}`);
   await expect(page.getByRole("heading", { name: "اعتماد التصريح" })).toBeVisible();
   await page.getByRole("button", { name: "اعتماد مباشر" }).click();
@@ -137,10 +143,6 @@ test("edit, approve, reject, stop, reactivate, print, and verify permit", async 
   const barcodeResponse = await page.goto(`/Permits/Barcode/${permit.permitNumber}`);
   expect(barcodeResponse?.ok()).toBeTruthy();
   expect(barcodeResponse?.headers()["content-type"] ?? "").toMatch(/image/i);
-
-  await page.goto(`/ScanConsole?id=${encodeURIComponent(permit.permitNumber)}`);
-  await expect(page.getByRole("heading", { name: "باركود التصريح المعتمد" })).toBeVisible();
-  await expect(page.getByText(permit.permitNumber, { exact: true }).first()).toBeVisible();
 
   await page.goto(`/Permits/VerifyByNumber/${permit.permitNumber}`);
   const publicVerification = page.getByRole("region", { name: /تصريح/ });

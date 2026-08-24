@@ -52,7 +52,7 @@ internal static partial class ScenarioCatalog
     {
         const string actorUsername = "tester";
         var departmentName = $"قسم إشعارات {Guid.NewGuid():N}";
-        var targetUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var targetUsername = $"notify.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {
@@ -167,7 +167,7 @@ internal static partial class ScenarioCatalog
     {
         const string actorUsername = "tester";
         var departmentName = $"قسم تكرار {Guid.NewGuid():N}";
-        var duplicateUsername = $"{Random.Shared.NextInt64(1000000000, 2999999999)}";
+        var duplicateUsername = $"duplicate.{Guid.NewGuid():N}";
 
         using (var db = dbFactory.CreateDbContext())
         {

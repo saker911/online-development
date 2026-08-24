@@ -1,7 +1,7 @@
 const { expect, test } = require("@playwright/test");
 const {
   dateTimeLocal,
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
   submitForm,
   updateAdministrationBranding,
   uniqueNationalId,
@@ -54,7 +54,7 @@ test("visitor submits a public request, follows status, and receives QR only aft
   const invalidResponse = await page.request.get(invalidTenantUrl);
   expect(invalidResponse.status()).toBe(404);
 
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto(`/Visits?searchTerm=${encodeURIComponent(visitorName)}`);
   await expect(page.locator("table.visit-management-table")).toContainText(visitorName);
   await expect(page.getByText("طلب ذاتي").first()).toBeVisible();
@@ -91,7 +91,7 @@ test("visitor submits a public request, follows status, and receives QR only aft
 });
 
 test("public visit request stays compact and aligned with application forms on desktop", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Visits");
   const publicUrl = await page.locator("#publicVisitRequestUrl").inputValue();
   await page.context().clearCookies();

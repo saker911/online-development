@@ -8,7 +8,9 @@ const {
   createEmployeePermit,
   createUser,
   createVisit,
-  ensureOwnerSignedIn,
+  ensurePermitReviewerSignedIn,
+  ensureSecurityManagerSignedIn,
+  ensureTenantManagerSignedIn,
   expectAccessDeniedOrLogin,
   roles,
   signIn,
@@ -18,7 +20,7 @@ const {
 } = require("./helpers/e2e-helpers");
 
 async function ensureScanApprovalSignature(page) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Administration/Edit");
   await page.locator('[name="SignatureText"]').fill("اعتماد E2E للمسح");
   await page.getByRole("button", { name: "حفظ البيانات" }).click();
@@ -26,11 +28,16 @@ async function ensureScanApprovalSignature(page) {
 }
 
 async function approvePermitForScan(page, permitNumber) {
+  await ensureSecurityManagerSignedIn(page);
+  await ensurePermitReviewerSignedIn(page);
   await ensureScanApprovalSignature(page);
+  await ensurePermitReviewerSignedIn(page);
   await submitForm(page, `/Permits/ForwardToGeneralManager/${permitNumber}`, {}, {
     tokenPath: `/Permits/Details/${permitNumber}`,
   });
+  await ensureSecurityManagerSignedIn(page);
   await page.goto(`/Permits/Approve/${permitNumber}`);
+  await expect(page.getByRole("heading", { name: "اعتماد التصريح" })).toBeVisible();
   await page.getByRole("button", { name: "اعتماد مباشر" }).click();
   await page.goto(`/Permits/Details/${permitNumber}`);
   await expect(page.getByText("معتمد")).toBeVisible();
@@ -46,7 +53,7 @@ async function approveVisitForScan(page, visitId) {
 }
 
 async function createReadyGateUser(page) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const gate = await createUser(page, { role: roles.gateSecurity });
   const password = `Aa${uniqueNationalId("8")}!`;
   await signOut(page);
@@ -120,7 +127,7 @@ test("GateSecurity can open scan console and invalid scan shows denial", async (
 });
 
 test("legacy gate routes converge on the unified gate workspace", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/ScanConsole");
   await expect(page).toHaveURL(/\/Display\/Gate$/i);
@@ -188,7 +195,7 @@ test("mobile gate console records a visit entry and exit without horizontal over
 });
 
 test("Receptionist without ScanOperations cannot open scan console", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const receptionist = await createUser(page, { role: roles.receptionist });
   const password = `Aa${uniqueNationalId("8")}!`;
   await signOut(page);
@@ -205,10 +212,14 @@ test("valid, stopped, and rejected permit scans return expected states", async (
   await approvePermitForScan(page, stopped.permitNumber);
   await submitForm(page, `/Permits/Stop/${stopped.permitNumber}`, {}, { tokenPath: `/Permits/Details/${stopped.permitNumber}` });
   const rejected = await createEmployeePermit(page);
+  await ensurePermitReviewerSignedIn(page);
   await submitForm(page, `/Permits/ForwardToGeneralManager/${rejected.permitNumber}`, {}, {
     tokenPath: `/Permits/Details/${rejected.permitNumber}`,
   });
+  await ensureSecurityManagerSignedIn(page);
   await submitForm(page, `/Permits/Reject/${rejected.permitNumber}`, {}, { tokenPath: `/Permits/Details/${rejected.permitNumber}` });
+  await page.goto(`/Permits/Details/${rejected.permitNumber}`);
+  await expect(page.locator(".status-badge").getByText("مرفوض", { exact: true })).toBeVisible();
 
   const gate = await createReadyGateUser(page);
   await signIn(page, gate.username, gate.password);
@@ -359,7 +370,7 @@ test("unified gate keeps results and recent operations responsive on desktop", a
   });
   await approvePermitForScan(page, permit.permitNumber);
 
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Display/Gate");
   await expect(page.locator("#unifiedGateRoot")).toBeVisible();
 
@@ -422,7 +433,7 @@ test("unified gate keeps results and recent operations responsive on desktop", a
 });
 
 test("display gate preserves QR verification URL punctuation when scanning", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   const scannedUrl = "http://127.0.0.1:5001/Permits/VerifyByNumber/PERMIT-00003?source=gate&mode=qr";
   let submittedBody = null;
@@ -471,7 +482,7 @@ test("display gate preserves QR verification URL punctuation when scanning", asy
 });
 
 test("display gate uses the signed-in account without a temporary operator PIN", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.route("**/Display/GateStatus**", (route) =>
     route.fulfill({

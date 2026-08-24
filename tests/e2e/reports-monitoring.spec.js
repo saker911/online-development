@@ -2,7 +2,7 @@ const { expect, test } = require("@playwright/test");
 const {
   createVisitorPermit,
   downloadPdfAndAssert,
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
 } = require("./helpers/e2e-helpers");
 
 test("reports index, permits report, PDF, and user activity report open", async ({ page }) => {
@@ -20,7 +20,7 @@ test("reports index, permits report, PDF, and user activity report open", async 
 });
 
 test("monitoring page ranges and snapshot endpoint work", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   for (const range of ["today", "7d", "30d"]) {
     await page.goto(`/Monitoring?range=${range}`);

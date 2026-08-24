@@ -1,12 +1,12 @@
 const { test, expect } = require("@playwright/test");
 const {
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
   createVisitorPermit,
   uniqueSuffix,
 } = require("./helpers/e2e-helpers");
 
 test("tenant notification center supports filtering, read state, dismissal, and settings", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   const driverName = `تنبيه تصريح ${uniqueSuffix()}`;
   await createVisitorPermit(page, { driverName });

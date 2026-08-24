@@ -1,12 +1,11 @@
 const { expect, test } = require("@playwright/test");
 const {
   createTestPngBuffer,
-  ensureOwnerSignedIn,
-  ensureOperationalAdminSignedIn,
+  ensureTenantManagerSignedIn,
 } = require("./helpers/e2e-helpers");
 
 test("workplace navigation exposes activity people attendance and sites", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/People");
   await expect(page.getByRole("heading", { name: "الأشخاص", exact: true })).toBeVisible();
@@ -42,7 +41,7 @@ test("workplace navigation exposes activity people attendance and sites", async 
 });
 
 test("site management creates and removes an operational site", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Sites");
 
   await page.getByLabel("اسم الموقع", { exact: true }).fill("فرع اختبار المتصفح");
@@ -100,7 +99,7 @@ test("site management creates and removes an operational site", async ({ page })
 });
 
 test("site services drive rotating access and emergency operations", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Sites");
 
   await page.getByLabel("اسم الموقع", { exact: true }).fill("فرع السلامة التجريبي");
@@ -137,7 +136,7 @@ test("site services drive rotating access and emergency operations", async ({ pa
 });
 
 test("authorized operator securely adds and removes a person photo", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/People");
   await page.locator(".workplace-person-row").first().getByRole("link", { name: /فتح ملف/ }).click();
 
@@ -161,7 +160,7 @@ test("authorized operator securely adds and removes a person photo", async ({ pa
 });
 
 test("workplace pages stay responsive and use neutral black in dark mode", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/People");
   await page.locator(".workplace-person-row").first().getByRole("link", { name: /فتح ملف/ }).click();
@@ -191,7 +190,7 @@ test("workplace pages stay responsive and use neutral black in dark mode", async
 });
 
 test("home exposes flat permission-aware application cards in light and dark modes", async ({ page }) => {
-  await ensureOperationalAdminSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   for (const theme of ["light", "dark"]) {
     await page.goto("/");
@@ -241,7 +240,7 @@ test("home exposes flat permission-aware application cards in light and dark mod
 });
 
 test("application launcher stacks cleanly on mobile", async ({ page }) => {
-  await ensureOperationalAdminSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
 
@@ -263,7 +262,7 @@ test("application launcher stacks cleanly on mobile", async ({ page }) => {
 });
 
 test("application shell keeps document scrolling available on desktop and mobile", async ({ page }) => {
-  await ensureOperationalAdminSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   for (const viewport of [
     { width: 1440, height: 900 },
@@ -301,7 +300,7 @@ test("application shell keeps document scrolling available on desktop and mobile
 });
 
 test("display and gate sidebar routes never appear active together", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/Display/Gate");
   await expect(page.locator('.app-sidebar-link.active', { hasText: "مركز البوابة" })).toHaveCount(1);
@@ -313,7 +312,7 @@ test("display and gate sidebar routes never appear active together", async ({ pa
 });
 
 test("desktop shell uses a compact horizontal portal navigation", async ({ page }) => {
-  await ensureOperationalAdminSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
 

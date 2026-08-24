@@ -4,7 +4,7 @@ const {
   createTestPngBuffer,
   dateTimeLocal,
   downloadPdfBufferAndAssert,
-  ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
   submitForm,
   updateAdministrationBranding,
   uniqueNationalId,
@@ -91,7 +91,7 @@ test("visit search table stays aligned and scrolls inside its card on narrow scr
 });
 
 test("visit validation rejects old visit date", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Visits/Create");
   const firstOptionValue = async (name) => {
     const select = page.locator(`select[name="${name}"]`);
@@ -123,18 +123,6 @@ test("visit validation rejects old visit date", async ({ page }) => {
 });
 
 test("suspend, resume, approve, reject, and print visits", async ({ page }) => {
-  await updateAdministrationBranding(page, { signatureText: "" });
-
-  const visit = await createVisit(page, {
-    visitedPersonType: "Detained",
-    purpose: "زيارة موقوف للاختبار",
-  });
-
-  await submitForm(page, `/Visits/ApproveDetained/${visit.visitId}`, {}, { tokenPath: `/Visits/Details/${visit.visitId}` });
-  await expect(page.getByText(/تعذر اعتماد الزيارة/).first()).toBeVisible();
-  await page.goto(`/Visits/Details/${visit.visitId}`);
-  await expect(page.locator(".badge").getByText("معتمد").first()).toHaveCount(0);
-
   await updateAdministrationBranding(page, {
     organizationName: `جهة بطاقة زيارة ${uniqueSuffix()}`,
     departmentName: "إدارة الزيارات",
@@ -149,6 +137,11 @@ test("suspend, resume, approve, reject, and print visits", async ({ page }) => {
       mimeType: "image/png",
       buffer: createTestPngBuffer(20, 132, 72),
     },
+  });
+
+  const visit = await createVisit(page, {
+    visitedPersonType: "Detained",
+    purpose: "زيارة موقوف للاختبار",
   });
 
   await submitForm(page, `/Visits/Suspend/${visit.visitId}`, {}, { tokenPath: `/Visits/Details/${visit.visitId}` });

@@ -1,5 +1,5 @@
 const { expect, test } = require("@playwright/test");
-const { ensureOwnerSignedIn } = require("./helpers/e2e-helpers");
+const { ensureTenantManagerSignedIn } = require("./helpers/e2e-helpers");
 
 const operationalTablePages = [
   "/Permits",
@@ -13,7 +13,7 @@ const operationalTablePages = [
 ];
 
 test("operational tables stay inside their page and use internal scrolling on narrow screens", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.setViewportSize({ width: 390, height: 844 });
 
   for (const route of operationalTablePages) {

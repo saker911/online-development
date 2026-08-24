@@ -1,5 +1,5 @@
 const { expect, test } = require("@playwright/test");
-const { ensureOwnerSignedIn } = require("./helpers/e2e-helpers");
+const { ensureTenantManagerSignedIn } = require("./helpers/e2e-helpers");
 
 const reportRoutes = [
   "/Reports",
@@ -11,7 +11,7 @@ const reportRoutes = [
 ];
 
 test("report pages use contained responsive tables without crowded rows", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.setViewportSize({ width: 390, height: 844 });
 
   for (const route of reportRoutes) {

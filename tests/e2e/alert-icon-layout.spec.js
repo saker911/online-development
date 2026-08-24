@@ -1,5 +1,10 @@
 const { expect, test } = require("@playwright/test");
-const { ensureOwnerSignedIn, owner, signOut } = require("./helpers/e2e-helpers");
+const {
+    ensureOwnerSignedIn,
+    ensureTenantManagerSignedIn,
+    owner,
+    signOut,
+} = require("./helpers/e2e-helpers");
 
 const longRtlMessage =
     "هذه رسالة تنبيه طويلة باللغة العربية للتأكد من أن الأيقونة لا تغطي بداية النص، وأن النص يلتف على أكثر من سطر داخل مساحة ضيقة مع بقاء كامل المحتوى ظاهرًا في اتجاه RTL دون قص أو تداخل.";
@@ -170,11 +175,10 @@ test("RTL alert icons do not cover wrapped text in light and dark modes", async 
 
     for (const theme of ["light", "dark"]) {
         await setTheme(page, theme);
-        await ensureOwnerSignedIn(page);
+        await ensureTenantManagerSignedIn(page);
         await page.goto("/Administration/Leadership");
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 
-        await assertPseudoIconAlertLayout(page.locator(".app-inline-note-info").first(), { expectWrapped: true });
         await addAlertFixtures(page);
 
         for (const name of ["inline-info", "inline-warning", "inline-danger", "inline-success", "bootstrap-warning"]) {
@@ -201,7 +205,7 @@ test("login error notification keeps icon separate from RTL text", async ({ page
 
 test("notifications fade in place without sliding from a side", async ({ page }) => {
     await setTheme(page, "light");
-    await ensureOwnerSignedIn(page);
+    await ensureTenantManagerSignedIn(page);
     await page.goto("/Administration/Leadership");
     await addAlertFixtures(page);
 

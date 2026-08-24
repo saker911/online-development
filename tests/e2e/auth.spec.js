@@ -1,7 +1,12 @@
 const { expect, test } = require("@playwright/test");
+const path = require("path");
+const {
+  ensureTenantManagerSignedIn,
+  getTenantManagerAccount,
+} = require("./helpers/e2e-helpers");
 
 const owner = {
-  username: "1234567890",
+  username: "owner.e2e",
   password: "OnlineTest2026!",
 };
 let permitSequence = 0;
@@ -32,6 +37,9 @@ async function completeInitialSetup(page) {
   await page.locator("#setupNextButton").click();
 
   await page.locator('[name="OrganizationName"]').fill("جهة اختبار المتصفح");
+  await page.locator('[name="logoFile"]').setInputFiles(
+    path.resolve(__dirname, "../../wwwroot/icons/brand-mark-512.png")
+  );
   await page.locator('[name="AdministrationPhone"]').fill("0111234567");
   await page.locator('[name="AdministrationEmail"]').fill("e2e@example.test");
   await page.locator('[name="AdministrationAddress"]').fill("عنوان اختبار المتصفح");
@@ -76,7 +84,7 @@ function buildVisitorPermitData() {
 
 async function createVisitorPermit(page) {
   const permit = buildVisitorPermitData();
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/Permits/Create");
   await expect(page.getByRole("heading", { name: "إنشاء تصريح جديد" })).toBeVisible();
@@ -97,7 +105,7 @@ async function createVisitorPermit(page) {
 }
 
 async function expectDelegationFilterPreservesScroll(page, path, headingName, formId) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto(path);
   await expect(page.getByRole("heading", { name: headingName })).toBeVisible();
@@ -164,8 +172,8 @@ test("tenant platform link and mobile PWA entry are ready", async ({ page }) => 
   expect(manifest.icons.some((icon) => icon.sizes === "512x512")).toBeTruthy();
 });
 
-test("owner can open administration backup page", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+test("tenant manager can open administration backup page", async ({ page }) => {
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/Administration/Backup");
   await expect(page).toHaveURL(/\/Administration\/Backup$/i);
@@ -175,11 +183,11 @@ test("owner can open administration backup page", async ({ page }) => {
   await expect(page.locator('form[action="/Administration/RestoreBackup"] input[name="backupFile"]')).toHaveAttribute("required", "");
 });
 
-test("owner can create a new visitor permit", async ({ page }) => {
+test("tenant manager can create a new visitor permit", async ({ page }) => {
   await createVisitorPermit(page);
 });
 
-test("owner can search for an existing permit", async ({ page }) => {
+test("tenant manager can search for an existing permit", async ({ page }) => {
   const permit = await createVisitorPermit(page);
 
   await page.goto("/Permits");
@@ -192,7 +200,7 @@ test("owner can search for an existing permit", async ({ page }) => {
   await expect(resultsTable.getByText(permit.nationalId, { exact: true })).toBeVisible();
 });
 
-test("owner can open reports center and permits print page", async ({ page }) => {
+test("tenant manager can open reports center and permits print page", async ({ page }) => {
   await createVisitorPermit(page);
 
   await page.goto("/Reports");
@@ -227,12 +235,12 @@ test("delegation filter submit keeps scroll position", async ({ page }) => {
 });
 
 test("delegation permission groups can collapse and expand", async ({ page }) => {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
 
   await page.goto("/Delegations");
   await expect(page.getByRole("heading", { name: "إدارة التفويضات المؤقتة" })).toBeVisible();
 
-  await page.locator('#Editor_DelegatorUsername').selectOption(owner.username);
+  await page.locator('#Editor_DelegatorUsername').selectOption(getTenantManagerAccount().username);
 
   const groupButton = page.getByRole("button", { name: /تصاريح الموظفين/ }).first();
   const groupBody = page.locator('[data-delegation-group-body="employee-permits"]');

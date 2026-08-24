@@ -1,5 +1,8 @@
 const { expect } = require("@playwright/test");
+const { execFileSync } = require("child_process");
 const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const zlib = require("zlib");
 
 const owner = {
@@ -45,6 +48,9 @@ const allPermissionFlags = [
 
 let sequence = 0;
 let operationalAdmin = null;
+let permitReviewer = null;
+let securityManager = null;
+let tenantManager = null;
 
 const crcTable = Array.from({ length: 256 }, (_, index) => {
   let value = index;
@@ -108,9 +114,16 @@ function todayPlus(days) {
 }
 
 function dateTimeLocal(minutesFromNow) {
-  const date = new Date(Date.now() + minutesFromNow * 60_000);
+  const now = new Date();
+  const date = new Date(now.getTime() + minutesFromNow * 60_000);
   const pad = (value) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function sameDayDateTimeLocal(minutesFromNow) {
+  const now = new Date();
+  const target = new Date(now.getTime() + minutesFromNow * 60_000);
+  return target.getDate() === now.getDate() ? dateTimeLocal(minutesFromNow) : dateTimeLocal(0);
 }
 
 async function expectHomePage(page) {
@@ -153,8 +166,12 @@ async function completeInitialSetup(page) {
   await expectHomePage(page);
 }
 
-async function signIn(page, username = owner.username, password = owner.password) {
-  await page.goto("/Account/Login");
+async function signIn(page, username = owner.username, password = owner.password, tenant = "") {
+  const resolvedTenant = tenant || (
+    tenantManager && username !== owner.username ? tenantManager.tenantId : ""
+  );
+  const tenantQuery = resolvedTenant ? `?tenant=${encodeURIComponent(resolvedTenant)}` : "";
+  await page.goto(`/Account/Login${tenantQuery}`);
   await page.locator('[name="username"]').fill(username);
   await page.locator('[name="password"]').fill(password);
   await page.getByRole("button", { name: "دخول" }).click();
@@ -181,8 +198,106 @@ async function ensureOwnerSignedIn(page) {
   await expectHomePage(page);
 }
 
+function resolveE2eDatabasePath() {
+  const candidates = fs.readdirSync(os.tmpdir(), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("VehiclePermitSystemWeb-e2e-"))
+    .map((entry) => path.join(os.tmpdir(), entry.name, "storage", ".localdata", "vehicle-permit-system.db"))
+    .filter((candidate) => fs.existsSync(candidate))
+    .map((candidate) => ({ path: candidate, modifiedAt: fs.statSync(candidate).mtimeMs }))
+    .sort((left, right) => right.modifiedAt - left.modifiedAt);
+
+  if (candidates.length === 0) {
+    throw new Error("Could not locate the Playwright SQLite database.");
+  }
+
+  return candidates[0].path;
+}
+
+function runStateTool(command, ...args) {
+  const project = path.join(__dirname, "..", "tools", "E2eStateTool", "E2eStateTool.csproj");
+  const output = execFileSync("dotnet", ["run", "--project", project, "--", command, ...args], {
+    cwd: path.resolve(__dirname, "../../.."),
+    encoding: "utf8",
+    timeout: 120_000,
+  });
+  const jsonLine = output.trim().split(/\r?\n/).filter(Boolean).pop();
+  return JSON.parse(jsonLine || "{}");
+}
+
+async function ensureTenantManagerSignedIn(page) {
+  if (!tenantManager) {
+    await ensureOwnerSignedIn(page);
+    const suffix = uniqueSuffix();
+    const tenantName = `جهة تشغيل الاختبارات ${suffix}`;
+    const username = `manager${suffix}`;
+    const password = "TenantManagerTest2026!";
+    const tenantId = `e2e-${suffix}`;
+
+    await submitForm(page, "/Tenants/Create", {
+      TenantId: tenantId,
+      Slug: `e2e-workspace-${suffix}`,
+      Name: tenantName,
+      DepartmentName: "الإدارة العامة",
+      SubscriptionStatus: "Active",
+      PlanName: "اختبار E2E",
+      OwnerFullName: "مدير جهة اختبار المتصفح",
+      OwnerUsername: username,
+      OwnerEmail: `manager-${suffix}@example.test`,
+      OwnerPhoneNumber: uniquePhone(),
+      PermitsServiceEnabled: "true",
+      VisitsServiceEnabled: "true",
+      SelfServiceEnabled: "true",
+      QueueServiceEnabled: "true",
+      GateServiceEnabled: "true",
+      NotificationCenterEnabled: "true",
+      PermitNotificationsEnabled: "true",
+      VisitNotificationsEnabled: "true",
+      SecurityAlertsEnabled: "true",
+      FailedOperationAlertsEnabled: "true",
+      UnauthorizedMovementAlertsEnabled: "true",
+      NotificationRetentionDays: "90",
+      EmailOutboxRetentionDays: "30",
+      AuditLogRetentionDays: "365",
+    }, { tokenPath: "/Tenants" });
+
+    runStateTool("set-user-password", resolveE2eDatabasePath(), tenantId, username, password);
+    tenantManager = { tenantId, username, password };
+  }
+
+  runStateTool(
+    "set-user-password",
+    resolveE2eDatabasePath(),
+    tenantManager.tenantId,
+    tenantManager.username,
+    tenantManager.password
+  );
+  await page.context().clearCookies();
+  await signIn(page, tenantManager.username, tenantManager.password, tenantManager.tenantId);
+  await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$|Administration\/Edit\?onboarding=true)/i);
+  if (/\/Administration\/Edit\?onboarding=true/i.test(page.url())) {
+    await page.locator('[name="SignatureText"]').fill("اعتماد جهة اختبار المتصفح");
+    await page.locator('input[name="logoFile"]').setInputFiles({
+      name: "tenant-onboarding-logo.png",
+      mimeType: "image/png",
+      buffer: createTestPngBuffer(14, 116, 144),
+    });
+    await page.getByRole("button", { name: "حفظ البيانات" }).click();
+    const continueButton = page.getByRole("button", { name: "متابعة" });
+    await continueButton.waitFor({ state: "visible", timeout: 3000 });
+    await continueButton.click();
+    await expect(page).not.toHaveURL(/onboarding=true/i);
+  }
+}
+
+function getTenantManagerAccount() {
+  if (!tenantManager) {
+    throw new Error("Tenant manager fixture has not been initialized.");
+  }
+  return tenantManager;
+}
+
 async function updateAdministrationBranding(page, options = {}) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Administration/Edit");
   await expect(page.getByRole("heading", { name: /تعديل بيانات الإدارة/ })).toBeVisible();
 
@@ -258,7 +373,10 @@ function withPermissionFlags(granted = []) {
 }
 
 async function readTemporaryPassword(page) {
-  const input = page.locator('section:has-text("بيانات") input[readonly]').first();
+  const input = page
+    .locator("section", { hasText: "بيانات مؤقتة لمرة واحدة" })
+    .locator(".col-md-6", { hasText: "كلمة المرور المؤقتة" })
+    .locator("input[readonly]");
   await expect(input).toBeVisible();
   const value = await input.inputValue();
   expect(value).toBeTruthy();
@@ -266,9 +384,9 @@ async function readTemporaryPassword(page) {
 }
 
 async function createUser(page, options = {}) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const suffix = uniqueSuffix();
-  const username = options.username ?? uniqueNationalId("3");
+  const username = options.username ?? `user${suffix}`;
   const role = options.role ?? roles.receptionist;
   const applyRoleDefaults = options.applyRoleDefaults ?? true;
   const fullName = options.fullName ?? `مستخدم اختبار ${suffix}`;
@@ -309,16 +427,91 @@ async function ensureOperationalAdminSignedIn(page) {
     });
     const password = "OperationalTest2026!";
     await page.context().clearCookies();
-    await signIn(page, account.username, account.temporaryPassword);
+    const manager = getTenantManagerAccount();
+    await signIn(page, account.username, account.temporaryPassword, manager.tenantId);
     if (/\/Account\/ChangePassword/i.test(page.url())) {
       await changePassword(page, account.temporaryPassword, password);
     }
-    operationalAdmin = { username: account.username, password };
+    operationalAdmin = { username: account.username, password, tenantId: manager.tenantId };
     return;
   }
 
+  runStateTool(
+    "set-user-password",
+    resolveE2eDatabasePath(),
+    operationalAdmin.tenantId,
+    operationalAdmin.username,
+    operationalAdmin.password
+  );
   await page.context().clearCookies();
-  await signIn(page, operationalAdmin.username, operationalAdmin.password);
+  await signIn(page, operationalAdmin.username, operationalAdmin.password, operationalAdmin.tenantId);
+  await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$)/i);
+}
+
+async function ensureSecurityManagerSignedIn(page) {
+  if (!securityManager) {
+    const account = await createUser(page, {
+      role: roles.securityManager,
+      fullName: "مدير أمن اختبار المتصفح",
+      jobTitle: "مدير الأمن",
+    });
+    const password = "SecurityManagerTest2026!";
+    const manager = getTenantManagerAccount();
+    runStateTool(
+      "set-user-password",
+      resolveE2eDatabasePath(),
+      manager.tenantId,
+      account.username,
+      password
+    );
+    await page.context().clearCookies();
+    await signIn(page, account.username, password, manager.tenantId);
+    await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$)/i);
+    securityManager = {
+      username: account.username,
+      password,
+      tenantId: manager.tenantId,
+    };
+    return;
+  }
+
+  runStateTool(
+    "set-user-password",
+    resolveE2eDatabasePath(),
+    securityManager.tenantId,
+    securityManager.username,
+    securityManager.password
+  );
+  await page.context().clearCookies();
+  await signIn(page, securityManager.username, securityManager.password, securityManager.tenantId);
+  await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$)/i);
+}
+
+async function ensurePermitReviewerSignedIn(page) {
+  if (!permitReviewer) {
+    const account = await createUser(page, {
+      role: roles.permitReviewer,
+      fullName: "مدقق تصاريح اختبار المتصفح",
+      jobTitle: "مدقق التصاريح",
+    });
+    const password = "PermitReviewerTest2026!";
+    const manager = getTenantManagerAccount();
+    permitReviewer = {
+      username: account.username,
+      password,
+      tenantId: manager.tenantId,
+    };
+  }
+
+  runStateTool(
+    "set-user-password",
+    resolveE2eDatabasePath(),
+    permitReviewer.tenantId,
+    permitReviewer.username,
+    permitReviewer.password
+  );
+  await page.context().clearCookies();
+  await signIn(page, permitReviewer.username, permitReviewer.password, permitReviewer.tenantId);
   await expect(page).toHaveURL(/\/(?:$|Home(?:\/Index)?$|Dashboard$)/i);
 }
 
@@ -332,7 +525,7 @@ async function changePassword(page, currentPassword, newPassword) {
 }
 
 async function setUserActive(page, username, active) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const action = active ? "Activate" : "Deactivate";
   await submitForm(page, `/Users/${action}/${username}`, {}, { tokenPath: "/Users" });
   if (active) {
@@ -370,7 +563,7 @@ function buildEmployeePermitData(overrides = {}) {
 }
 
 async function createPermit(page, data, type) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   const form = {
     PermitType: type,
     RequiresReturn: data.requiresReturn === false ? "false" : "true",
@@ -403,7 +596,7 @@ async function createEmployeePermit(page, overrides = {}) {
 }
 
 async function createVisit(page, overrides = {}) {
-  await ensureOwnerSignedIn(page);
+  await ensureTenantManagerSignedIn(page);
   await page.goto("/Visits/Create");
   const firstOptionValue = async (name) => {
     const select = page.locator(`select[name="${name}"]`);
@@ -423,7 +616,7 @@ async function createVisit(page, overrides = {}) {
     purpose: overrides.purpose ?? "اختبار زيارة",
     visitedPersonType: overrides.visitedPersonType ?? "Host",
     visitedPersonName: overrides.visitedPersonName ?? "مضيف اختبار",
-    visitDate: overrides.visitDate ?? dateTimeLocal(10),
+    visitDate: overrides.visitDate ?? sameDayDateTimeLocal(10),
     companions: overrides.companions ?? [],
   };
 
@@ -528,7 +721,11 @@ module.exports = {
   signIn,
   signOut,
   ensureOwnerSignedIn,
+  ensureTenantManagerSignedIn,
+  getTenantManagerAccount,
   ensureOperationalAdminSignedIn,
+  ensurePermitReviewerSignedIn,
+  ensureSecurityManagerSignedIn,
   updateAdministrationBranding,
   createUser,
   changePassword,

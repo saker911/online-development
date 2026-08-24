@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
@@ -21,6 +23,9 @@ try
         case "prepare-visit-for-scan":
             PrepareVisitForScan(args);
             break;
+        case "set-user-password":
+            SetUserPassword(args);
+            break;
         default:
             Fail($"Unknown command '{command}'.");
             break;
@@ -29,6 +34,49 @@ try
 catch (Exception ex)
 {
     Fail(ex.Message);
+}
+
+static void SetUserPassword(string[] args)
+{
+    if (args.Length < 5)
+    {
+        Fail("Usage: set-user-password <dbPath> <tenantId> <username> <password>");
+    }
+
+    var dbPath = args[1];
+    var tenantId = args[2];
+    var username = args[3];
+    var password = args[4];
+    var salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+    var hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{salt}:{password}")));
+
+    using var connection = OpenConnection(dbPath);
+    var updated = ExecuteNonQuery(
+        connection,
+        null,
+        """
+        UPDATE UserAccounts
+        SET PasswordSalt = $salt,
+            PasswordHash = $hash,
+            MustChangePassword = 0,
+            Email = ''
+        WHERE TenantId = $tenantId AND Username = $username;
+        """,
+        new Dictionary<string, object?>
+        {
+            ["$tenantId"] = tenantId,
+            ["$username"] = username,
+            ["$salt"] = salt,
+            ["$hash"] = hash,
+        }
+    );
+
+    if (updated != 1)
+    {
+        Fail($"User '{username}' in tenant '{tenantId}' was not found.");
+    }
+
+    WriteJson(new { tenantId, username });
 }
 
 static void PrepareVisitForScan(string[] args)
@@ -330,7 +378,7 @@ static SqliteConnection OpenConnection(string dbPath)
 
 static int ExecuteNonQuery(
     SqliteConnection connection,
-    SqliteTransaction transaction,
+    SqliteTransaction? transaction,
     string sql,
     IReadOnlyDictionary<string, object?>? parameters = null
 )
