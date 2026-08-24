@@ -5,7 +5,7 @@ function ownerFields(suffix, index = 0) {
   const digits = `${suffix}${String(index).padStart(2, "0")}`.replace(/\D/g, "");
   return {
     OwnerFullName: `مدير الجهة ${suffix} ${index}`,
-    OwnerUsername: `1${digits.slice(-9).padStart(9, "0")}`,
+    OwnerUsername: `tenant${digits.slice(-12).padStart(12, "0")}`,
     OwnerEmail: `tenant-${suffix}-${index}@example.test`,
     OwnerPhoneNumber: `05${digits.slice(-8).padStart(8, "0")}`,
   };
@@ -35,6 +35,11 @@ test("owner can stop and safely delete a tenant", async ({ page }) => {
 
   let row = page.getByRole("row", { name: new RegExp(tenantName) });
   await expect(row).toBeVisible();
+  await expect(row.getByText("1 مستخدم", { exact: true }).first()).toBeVisible();
+  await row.locator(".tenant-users-directory summary").click();
+  await expect(row.getByText(`مدير الجهة ${suffix} 0`, { exact: true })).toBeVisible();
+  await expect(row.getByText(ownerFields(suffix).OwnerUsername, { exact: true })).toBeVisible();
+  await expect(row.getByText("مدير عام", { exact: true })).toBeVisible();
   await expect(row.getByRole("button", { name: "حذف" })).toBeDisabled();
 
   await row.getByRole("button", { name: "إيقاف" }).click();
