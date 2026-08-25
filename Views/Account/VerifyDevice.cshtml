@@ -1,29 +1,53 @@
+@using VehiclePermitSystemWeb.Services.Administration
 @model VehiclePermitSystemWeb.Models.ViewModels.Account.DeviceVerificationViewModel
+
 @{
-    Layout = "_Layout";
+    ViewData["Title"] = "تأكيد الجهاز";
+    ViewData["HideShell"] = true;
+    ViewData["BodyClass"] = "login-page-body";
 }
 
-<main class="login-stage auth-security-stage" dir="rtl">
-    <section class="login-card auth-security-card">
-        <div class="login-card-heading">
-            <span class="login-eyebrow">حماية الحساب</span>
-            <h1>تأكيد الجهاز الجديد</h1>
-            <p>أرسلنا رمزاً من 6 أرقام إلى <strong class="ltr-field">@Model.MaskedEmail</strong></p>
+<div class="login-page-shell login-page-shell-light device-verification-shell">
+    <header class="login-page-topbar">
+        <a asp-controller="Home" asp-action="Index" class="login-page-topbar-brand">
+            <img src="~/@ProductIdentity.MarkPath" asp-append-version="true" alt="" data-product-mark />
+            <span><strong>@ProductIdentity.DisplayName</strong><small>حماية الحساب</small></span>
+        </a>
+        <div class="login-page-topbar-actions">
+            @await Html.PartialAsync("~/Views/Shared/_PublicThemeToggle.cshtml")
+            <a asp-controller="Account" asp-action="Login" class="login-back-link">تسجيل الدخول</a>
         </div>
+    </header>
 
-        <form asp-action="VerifyDevice" method="post" class="login-form" autocomplete="one-time-code">
+    <section class="login-page-card login-page-card-light device-verification-card" aria-labelledby="device-verification-title">
+        <span class="login-page-kicker">تأكيد آمن</span>
+        <h1 id="device-verification-title" class="login-page-title">تأكيد الجهاز الجديد</h1>
+        <p class="login-page-subtitle">
+            أدخل الرمز المكوّن من 6 أرقام المرسل إلى
+            <strong class="device-verification-email" dir="ltr">@Model.MaskedEmail</strong>
+        </p>
+
+        <form asp-controller="Account" asp-action="VerifyDevice" method="post"
+              class="login-form-grid device-verification-form" autocomplete="off" data-no-form-persist>
             @Html.AntiForgeryToken()
             <input asp-for="ChallengeId" type="hidden" />
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Code">رمز التحقق</label>
-                <input asp-for="Code" class="form-control ltr-field text-center" inputmode="numeric"
-                       maxlength="6" autocomplete="one-time-code" placeholder="000000" autofocus />
-                <span asp-validation-for="Code" class="text-danger"></span>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">تأكيد هذا الجهاز والمتابعة</button>
-        </form>
+            <div asp-validation-summary="ModelOnly" class="login-validation-summary"></div>
 
-        <p class="login-card-note">إذا لم تكن أنت من حاول الدخول، لا تشارك الرمز وغيّر كلمة المرور.</p>
+            <div class="login-field">
+                <label asp-for="Code" class="form-label">رمز التحقق</label>
+                <input asp-for="Code" class="form-control mfa-code-input device-verification-code"
+                       inputmode="numeric" pattern="[0-9]*" dir="ltr" maxlength="6"
+                       autocomplete="one-time-code" placeholder="000000" autofocus
+                       aria-describedby="device-verification-hint" />
+                <span asp-validation-for="Code" class="field-validation-error"></span>
+                <small id="device-verification-hint" class="device-verification-hint">أدخل الأرقام الستة كما ظهرت في الرسالة.</small>
+            </div>
+
+            <button class="btn btn-primary login-submit-button" type="submit">تأكيد ومتابعة</button>
+            <p class="mfa-security-note">إذا لم تطلب هذا الرمز، تجاهل الرسالة وغيّر كلمة المرور.</p>
+            <div class="login-secondary-action">
+                <a asp-controller="Account" asp-action="Login">العودة إلى تسجيل الدخول</a>
+            </div>
+        </form>
     </section>
-</main>
+</div>

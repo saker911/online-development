@@ -124,6 +124,58 @@
     text-align: center;
 }
 
+.device-verification-shell {
+    gap: 20px !important;
+}
+
+body.login-page-body .device-verification-card {
+    width: min(100%, 460px) !important;
+    padding: 34px !important;
+}
+
+body.login-page-body .device-verification-card .login-page-title {
+    font-size: clamp(1.65rem, 3vw, 2rem);
+}
+
+body.login-page-body .device-verification-card .login-page-kicker {
+    width: fit-content;
+    align-self: flex-start;
+}
+
+.device-verification-email {
+    display: inline-block;
+    color: #202329;
+    font-weight: 800;
+}
+
+.device-verification-form {
+    width: 100%;
+}
+
+.device-verification-code {
+    width: 100%;
+    text-align: center;
+    font-size: 1.16rem !important;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+.device-verification-hint {
+    display: block;
+    margin-top: 7px;
+    color: #777b83;
+    font-size: .78rem;
+    line-height: 1.6;
+}
+
+[data-theme="dark"] .device-verification-email {
+    color: #f3f5f4;
+}
+
+[data-theme="dark"] .device-verification-hint {
+    color: #a7b0ac;
+}
+
 .mfa-success-mark {
     display: grid;
     width: 44px;
@@ -172,6 +224,10 @@
         width: min(100%, 196px);
         height: auto;
         aspect-ratio: 1;
+    }
+
+    body.login-page-body .device-verification-card {
+        padding: 26px 20px !important;
     }
 }
 
