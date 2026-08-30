@@ -98,41 +98,48 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             return new TenantManagementViewModel
             {
                 Tenants = tenants
-                    .Select(tenant => new TenantSummaryViewModel
+                    .Select(tenant =>
                     {
-                        TenantId = tenant.TenantId,
-                        Name = tenant.Name,
-                        Slug = tenant.Slug,
-                        OrganizationReference = tenant.OrganizationReference,
-                        IsActive = tenant.IsActive,
-                        CreatedAtUtc = tenant.CreatedAtUtc,
-                        SubscriptionStatus = tenant.SubscriptionStatus,
-                        PlanName = tenant.PlanName,
-                        TrialEndsAtUtc = tenant.TrialEndsAtUtc,
-                        SubscriptionEndsAtUtc = tenant.SubscriptionEndsAtUtc,
-                        MaxUsers = tenant.MaxUsers,
-                        MaxPermitsPerMonth = tenant.MaxPermitsPerMonth,
-                        MaxVisitsPerMonth = tenant.MaxVisitsPerMonth,
-                        PermitsServiceEnabled = tenant.PermitsServiceEnabled,
-                        VisitsServiceEnabled = tenant.VisitsServiceEnabled,
-                        SelfServiceEnabled = tenant.SelfServiceEnabled,
-                        QueueServiceEnabled = tenant.QueueServiceEnabled,
-                        GateServiceEnabled = tenant.GateServiceEnabled,
-                        IsBlockedBySubscription = IsBlockedBySubscription(tenant),
-                        Users = usersByTenant.TryGetValue(tenant.TenantId, out var tenantUsers)
-                            ? tenantUsers
-                            : new List<TenantUserSummaryViewModel>(),
-                        UserCount = usersByTenant.TryGetValue(tenant.TenantId, out var users)
-                            ? users.Count
-                            : 0,
-                        PermitCount = GetCount(permitCounts, tenant.TenantId),
-                        VisitCount = GetCount(visitCounts, tenant.TenantId),
-                        OrganizationName = organizationNames.TryGetValue(
-                            tenant.TenantId,
-                            out var organizationName
-                        )
-                            ? organizationName
-                            : string.Empty,
+                        var accessState = GetAccessState(tenant);
+                        return new TenantSummaryViewModel
+                        {
+                            TenantId = tenant.TenantId,
+                            Name = tenant.Name,
+                            Slug = tenant.Slug,
+                            OrganizationReference = tenant.OrganizationReference,
+                            IsActive = tenant.IsActive,
+                            CreatedAtUtc = tenant.CreatedAtUtc,
+                            SubscriptionStatus = tenant.SubscriptionStatus,
+                            PlanName = tenant.PlanName,
+                            TrialEndsAtUtc = tenant.TrialEndsAtUtc,
+                            SubscriptionEndsAtUtc = tenant.SubscriptionEndsAtUtc,
+                            AccessEndsAtUtc = accessState.EndsAtUtc,
+                            IsAccessAvailable = accessState.IsAvailable,
+                            AccessStatusReason = accessState.Reason,
+                            MaxUsers = tenant.MaxUsers,
+                            MaxPermitsPerMonth = tenant.MaxPermitsPerMonth,
+                            MaxVisitsPerMonth = tenant.MaxVisitsPerMonth,
+                            PermitsServiceEnabled = tenant.PermitsServiceEnabled,
+                            VisitsServiceEnabled = tenant.VisitsServiceEnabled,
+                            SelfServiceEnabled = tenant.SelfServiceEnabled,
+                            QueueServiceEnabled = tenant.QueueServiceEnabled,
+                            GateServiceEnabled = tenant.GateServiceEnabled,
+                            IsBlockedBySubscription = !accessState.IsAvailable,
+                            Users = usersByTenant.TryGetValue(tenant.TenantId, out var tenantUsers)
+                                ? tenantUsers
+                                : new List<TenantUserSummaryViewModel>(),
+                            UserCount = usersByTenant.TryGetValue(tenant.TenantId, out var users)
+                                ? users.Count
+                                : 0,
+                            PermitCount = GetCount(permitCounts, tenant.TenantId),
+                            VisitCount = GetCount(visitCounts, tenant.TenantId),
+                            OrganizationName = organizationNames.TryGetValue(
+                                tenant.TenantId,
+                                out var organizationName
+                            )
+                                ? organizationName
+                                : string.Empty,
+                        };
                     })
                     .ToList(),
             };
@@ -712,6 +719,8 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             var subscriptionStatus = TenantSubscriptionStatuses.Normalize(model.SubscriptionStatus);
             var planName = NormalizeText(model.PlanName);
             NormalizeServiceDependencies(model);
+            var trialEndsAtUtc = NormalizeAccessEndDate(model.TrialEndsAtUtc);
+            var subscriptionEndsAtUtc = NormalizeAccessEndDate(model.SubscriptionEndsAtUtc);
 
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -732,6 +741,17 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantOperationResult(false, "الرابط المختصر مستخدم مسبقًا.");
             }
 
+            var stateValidation = ValidateManagedSubscriptionState(
+                tenant.TenantId,
+                subscriptionStatus,
+                trialEndsAtUtc,
+                subscriptionEndsAtUtc
+            );
+            if (!string.IsNullOrWhiteSpace(stateValidation))
+            {
+                return new TenantOperationResult(false, stateValidation);
+            }
+
             tenant.Name = name;
             tenant.Slug = slug;
             tenant.OrganizationReference = organizationReference;
@@ -739,8 +759,12 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             tenant.PlanName = string.IsNullOrWhiteSpace(planName)
                 ? TenantDefaults.DefaultPlanName
                 : planName;
-            tenant.TrialEndsAtUtc = NormalizeDate(model.TrialEndsAtUtc);
-            tenant.SubscriptionEndsAtUtc = NormalizeDate(model.SubscriptionEndsAtUtc);
+            ApplyManagedSubscriptionState(
+                tenant,
+                subscriptionStatus,
+                trialEndsAtUtc,
+                subscriptionEndsAtUtc
+            );
             tenant.MaxUsers = NormalizeLimit(model.MaxUsers);
             tenant.MaxPermitsPerMonth = NormalizeLimit(model.MaxPermitsPerMonth);
             tenant.MaxVisitsPerMonth = NormalizeLimit(model.MaxVisitsPerMonth);
@@ -758,6 +782,11 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             tenant.NotificationRetentionDays = Math.Clamp(model.NotificationRetentionDays, 7, 730);
             tenant.EmailOutboxRetentionDays = Math.Clamp(model.EmailOutboxRetentionDays, 7, 365);
             tenant.AuditLogRetentionDays = Math.Clamp(model.AuditLogRetentionDays, 90, 2555);
+
+            if (!tenant.IsActive)
+            {
+                CloseTenantSessions(db, tenant.TenantId);
+            }
 
             var settings = db
                 .AdministrationSettings.IgnoreQueryFilters()
@@ -814,14 +843,24 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 return new TenantOperationResult(false, "لا يمكن إيقاف الجهة الافتراضية.");
             }
 
-            tenant.IsActive = isActive;
-            if (!isActive)
+            if (isActive)
             {
-                db.SessionRecords.RemoveRange(
-                    db.SessionRecords
-                        .IgnoreQueryFilters()
-                        .Where(session => session.TenantId == tenant.TenantId)
-                );
+                var accessState = GetAccessState(tenant, ignoreAdministrativeStop: true);
+                if (!accessState.IsAvailable)
+                {
+                    return new TenantOperationResult(
+                        false,
+                        "حدد نوع التفعيل وتاريخ نهاية صالحًا من نافذة إعادة التنشيط."
+                    );
+                }
+
+                tenant.IsActive = true;
+            }
+            else
+            {
+                tenant.IsActive = false;
+                tenant.SubscriptionStatus = TenantSubscriptionStatuses.Suspended;
+                CloseTenantSessions(db, tenant.TenantId);
             }
             db.SaveChanges();
             return new TenantOperationResult(
@@ -829,6 +868,78 @@ namespace VehiclePermitSystemWeb.Services.Tenants
                 isActive
                     ? "تم تفعيل الجهة."
                     : "تم إيقاف الجهة وإغلاق جلسات حساباتها."
+            );
+        }
+
+        public TenantOperationResult ReactivateTenant(
+            string tenantId,
+            string subscriptionStatus,
+            DateTime? accessEndsAtUtc
+        )
+        {
+            using var db = _dbContextFactory.CreateDbContext();
+            var normalizedTenantId = NormalizeKey(tenantId);
+            var tenant = db.Tenants.FirstOrDefault(item => item.TenantId == normalizedTenantId);
+            if (tenant == null)
+            {
+                return new TenantOperationResult(false, "تعذر العثور على الجهة.");
+            }
+
+            var normalizedStatus = TenantSubscriptionStatuses.Normalize(subscriptionStatus);
+            if (
+                !string.Equals(normalizedStatus, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal)
+                && !string.Equals(normalizedStatus, TenantSubscriptionStatuses.Active, StringComparison.Ordinal)
+            )
+            {
+                return new TenantOperationResult(false, "اختر تجربة أو اشتراكًا نشطًا لإعادة التنشيط.");
+            }
+
+            var normalizedEndAtUtc = NormalizeAccessEndDate(accessEndsAtUtc);
+            if (!normalizedEndAtUtc.HasValue || normalizedEndAtUtc.Value <= DateTime.UtcNow)
+            {
+                return new TenantOperationResult(false, "حدد تاريخ نهاية لاحقًا لليوم لإعادة التنشيط.");
+            }
+
+            tenant.IsActive = true;
+            tenant.SubscriptionStatus = normalizedStatus;
+            if (string.Equals(normalizedStatus, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal))
+            {
+                tenant.TrialEndsAtUtc = normalizedEndAtUtc;
+                tenant.SubscriptionEndsAtUtc = null;
+            }
+            else
+            {
+                tenant.TrialEndsAtUtc = null;
+                tenant.SubscriptionEndsAtUtc = normalizedEndAtUtc;
+            }
+
+            var managers = db
+                .UserAccounts.IgnoreQueryFilters()
+                .Where(user =>
+                    user.TenantId == tenant.TenantId && user.Role == AppRoles.GeneralManager
+                )
+                .ToList();
+            var reactivatedManagers = 0;
+            foreach (var manager in managers.Where(manager => !manager.IsActive))
+            {
+                manager.IsActive = true;
+                AppPermissions.ApplyRoleDefaults(manager);
+                reactivatedManagers++;
+            }
+
+            db.SaveChanges();
+            _logger?.LogInformation(
+                "Platform owner reactivated tenant {TenantId} as {SubscriptionStatus} until {AccessEndsAtUtc}; reactivated {ManagerCount} manager accounts.",
+                tenant.TenantId,
+                normalizedStatus,
+                normalizedEndAtUtc,
+                reactivatedManagers
+            );
+            return new TenantOperationResult(
+                true,
+                reactivatedManagers > 0
+                    ? $"تمت إعادة تنشيط الجهة حتى {normalizedEndAtUtc.Value:yyyy-MM-dd} وتفعيل حساب مديرها."
+                    : $"تمت إعادة تنشيط الجهة حتى {normalizedEndAtUtc.Value:yyyy-MM-dd}."
             );
         }
 
@@ -1061,27 +1172,152 @@ namespace VehiclePermitSystemWeb.Services.Tenants
             db.SaveChanges();
         }
 
-        private static bool IsBlockedBySubscription(Tenant tenant)
+        private static bool IsBlockedBySubscription(Tenant tenant) => !GetAccessState(tenant).IsAvailable;
+
+        private static TenantAccessState GetAccessState(
+            Tenant tenant,
+            bool ignoreAdministrativeStop = false
+        )
         {
-            if (!tenant.IsActive)
+            if (!ignoreAdministrativeStop && !tenant.IsActive)
             {
-                return true;
+                return new TenantAccessState(false, "موقوفة إداريًا", GetEffectiveEndDate(tenant));
             }
 
             var status = TenantSubscriptionStatuses.Normalize(tenant.SubscriptionStatus);
-            if (
-                string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal)
-                || string.Equals(status, TenantSubscriptionStatuses.Expired, StringComparison.Ordinal)
-            )
+            if (string.Equals(status, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal))
             {
-                return true;
+                return new TenantAccessState(false, "بانتظار تأكيد الدفع", null);
+            }
+            if (string.Equals(status, TenantSubscriptionStatuses.Suspended, StringComparison.Ordinal))
+            {
+                return new TenantAccessState(false, "الاشتراك موقوف", GetEffectiveEndDate(tenant));
+            }
+            if (string.Equals(status, TenantSubscriptionStatuses.Expired, StringComparison.Ordinal))
+            {
+                return new TenantAccessState(false, "الاشتراك منتهي", GetEffectiveEndDate(tenant));
             }
 
-            var now = DateTime.UtcNow;
-            return string.Equals(status, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal)
-                ? tenant.TrialEndsAtUtc.HasValue && tenant.TrialEndsAtUtc.Value < now
-                : tenant.SubscriptionEndsAtUtc.HasValue && tenant.SubscriptionEndsAtUtc.Value < now;
+            var endsAtUtc = GetEffectiveEndDate(tenant);
+            if (string.Equals(status, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal))
+            {
+                if (!endsAtUtc.HasValue)
+                {
+                    return new TenantAccessState(false, "لم يُحدد تاريخ نهاية التجربة", null);
+                }
+
+                return endsAtUtc.Value <= DateTime.UtcNow
+                    ? new TenantAccessState(false, "انتهت مدة التجربة", endsAtUtc)
+                    : new TenantAccessState(true, "التجربة متاحة", endsAtUtc);
+            }
+
+            if (endsAtUtc.HasValue && endsAtUtc.Value <= DateTime.UtcNow)
+            {
+                return new TenantAccessState(false, "انتهى الاشتراك", endsAtUtc);
+            }
+
+            return new TenantAccessState(
+                true,
+                endsAtUtc.HasValue ? "الاشتراك متاح" : "متاحة دون تاريخ انتهاء",
+                endsAtUtc
+            );
         }
+
+        private static DateTime? GetEffectiveEndDate(Tenant tenant)
+        {
+            var status = TenantSubscriptionStatuses.Normalize(tenant.SubscriptionStatus);
+            return string.Equals(status, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal)
+                ? tenant.TrialEndsAtUtc
+                : tenant.SubscriptionEndsAtUtc;
+        }
+
+        private static string? ValidateManagedSubscriptionState(
+            string tenantId,
+            string subscriptionStatus,
+            DateTime? trialEndsAtUtc,
+            DateTime? subscriptionEndsAtUtc
+        )
+        {
+            if (string.Equals(subscriptionStatus, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal))
+            {
+                return !trialEndsAtUtc.HasValue || trialEndsAtUtc.Value <= DateTime.UtcNow
+                    ? "حدد تاريخ نهاية تجربة لاحقًا لليوم."
+                    : null;
+            }
+
+            if (string.Equals(subscriptionStatus, TenantSubscriptionStatuses.Active, StringComparison.Ordinal))
+            {
+                if (
+                    string.Equals(tenantId, TenantDefaults.DefaultTenantId, StringComparison.OrdinalIgnoreCase)
+                    && !subscriptionEndsAtUtc.HasValue
+                )
+                {
+                    return null;
+                }
+
+                return !subscriptionEndsAtUtc.HasValue || subscriptionEndsAtUtc.Value <= DateTime.UtcNow
+                    ? "حدد تاريخ نهاية اشتراك لاحقًا لليوم."
+                    : null;
+            }
+
+            return null;
+        }
+
+        private static void ApplyManagedSubscriptionState(
+            Tenant tenant,
+            string subscriptionStatus,
+            DateTime? trialEndsAtUtc,
+            DateTime? subscriptionEndsAtUtc
+        )
+        {
+            if (string.Equals(subscriptionStatus, TenantSubscriptionStatuses.Trial, StringComparison.Ordinal))
+            {
+                tenant.IsActive = true;
+                tenant.TrialEndsAtUtc = trialEndsAtUtc;
+                tenant.SubscriptionEndsAtUtc = null;
+                return;
+            }
+
+            if (string.Equals(subscriptionStatus, TenantSubscriptionStatuses.Active, StringComparison.Ordinal))
+            {
+                tenant.IsActive = true;
+                tenant.TrialEndsAtUtc = null;
+                tenant.SubscriptionEndsAtUtc = subscriptionEndsAtUtc;
+                return;
+            }
+
+            tenant.IsActive = false;
+            tenant.TrialEndsAtUtc = trialEndsAtUtc;
+            tenant.SubscriptionEndsAtUtc = subscriptionEndsAtUtc;
+        }
+
+        private static DateTime? NormalizeAccessEndDate(DateTime? value)
+        {
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            return DateTime.SpecifyKind(
+                value.Value.Date.AddDays(1).AddTicks(-1),
+                DateTimeKind.Utc
+            );
+        }
+
+        private static void CloseTenantSessions(ApplicationDbContext db, string tenantId)
+        {
+            db.SessionRecords.RemoveRange(
+                db.SessionRecords
+                    .IgnoreQueryFilters()
+                    .Where(session => session.TenantId == tenantId)
+            );
+        }
+
+        private sealed record TenantAccessState(
+            bool IsAvailable,
+            string Reason,
+            DateTime? EndsAtUtc
+        );
 
         private static int GetNextAdministrationSettingsId(ApplicationDbContext db)
         {

@@ -148,6 +148,34 @@ namespace VehiclePermitSystemWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public IActionResult Reactivate(string id, TenantReactivationViewModel activation)
+        {
+            if (!User.IsSuperAdmin())
+            {
+                return RedirectToAction("AccessDenied", "Home");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                TempData["ErrorMessage"] = ModelState.Values
+                    .SelectMany(value => value.Errors)
+                    .Select(error => error.ErrorMessage)
+                    .FirstOrDefault(message => !string.IsNullOrWhiteSpace(message))
+                    ?? "أكمل بيانات إعادة التنشيط.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var result = _tenantManagementService.ReactivateTenant(
+                id,
+                activation.SubscriptionStatus,
+                activation.AccessEndsAtUtc
+            );
+            TempData[result.Succeeded ? "SuccessMessage" : "ErrorMessage"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Delete(
             string id,
             string deletionReason,

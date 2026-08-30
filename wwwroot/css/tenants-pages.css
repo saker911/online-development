@@ -757,6 +757,32 @@
     color: var(--app-muted, #65778d);
 }
 
+.tenant-reactivation-dialog {
+    width: min(92vw, 560px);
+}
+
+.tenant-reactivation-head {
+    color: var(--platform-accent-strong, #0b6f52);
+}
+
+.tenant-dialog-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.tenant-dialog-grid label {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+}
+
+.tenant-dialog-grid .form-control,
+.tenant-dialog-grid .form-select {
+    min-height: 46px;
+}
+
 .tenant-delete-dialog label {
     display: block;
     margin-bottom: 7px;
@@ -962,6 +988,10 @@
 
     .tenant-actions {
         min-width: 0;
+    }
+
+    .tenant-dialog-grid {
+        grid-template-columns: 1fr;
     }
 }
 .tenant-services-editor {

@@ -13,7 +13,7 @@
         TenantSubscriptionStatuses.PendingPayment,
         StringComparison.Ordinal
     ));
-    var inactiveTenantCount = Model.Tenants.Count(tenant => !tenant.IsActive);
+    var inactiveTenantCount = Model.Tenants.Count(tenant => !tenant.IsAccessAvailable);
 
     string GetSubscriptionClass(string status) => status switch
     {
@@ -93,7 +93,7 @@
                 </div>
                 <div class="tenant-field">
                     <label asp-for="Editor.SubscriptionStatus"></label>
-                    <select asp-for="Editor.SubscriptionStatus" name="SubscriptionStatus" class="form-select">
+                    <select asp-for="Editor.SubscriptionStatus" name="SubscriptionStatus" class="form-select" data-tenant-subscription-status>
                         @foreach (var status in Model.Editor.SubscriptionStatusOptions)
                         {
                             <option value="@status">@TenantSubscriptionStatuses.GetDisplayName(status)</option>
@@ -105,7 +105,7 @@
                     <input asp-for="Editor.PlanName" name="PlanName" class="form-control" />
                     <span asp-validation-for="Editor.PlanName" class="field-validation-error"></span>
                 </div>
-                <div class="tenant-field date-field-shell" data-date-field data-date-display-mode="hijri">
+                <div class="tenant-field date-field-shell" data-date-field data-date-display-mode="hijri" data-access-date-for="@TenantSubscriptionStatuses.Trial">
                     <label asp-for="Editor.TrialEndsAtUtc"></label>
                     <div class="date-input-shell">
                         <input asp-for="Editor.TrialEndsAtUtc"
@@ -129,7 +129,7 @@
                         </label>
                     </div>
                 </div>
-                <div class="tenant-field date-field-shell" data-date-field data-date-display-mode="hijri">
+                <div class="tenant-field date-field-shell" data-date-field data-date-display-mode="hijri" data-access-date-for="@TenantSubscriptionStatuses.Active">
                     <label asp-for="Editor.SubscriptionEndsAtUtc"></label>
                     <div class="date-input-shell">
                         <input asp-for="Editor.SubscriptionEndsAtUtc"
@@ -369,7 +369,7 @@
                         var createdAtUnix = new DateTimeOffset(DateTime.SpecifyKind(tenant.CreatedAtUtc, DateTimeKind.Utc)).ToUnixTimeMilliseconds();
                         <tr data-tenant-row
                             data-search="@searchValue"
-                            data-state="@(tenant.IsActive ? "active" : "inactive")"
+                            data-state="@(tenant.IsAccessAvailable ? "active" : "inactive")"
                             data-subscription="@tenant.SubscriptionStatus"
                             data-recent="@(tenant.CreatedAtUtc >= recentCutoffUtc ? "true" : "false")"
                             data-created="@createdAtUnix"
@@ -420,9 +420,9 @@
                                     <span class="tenant-subscription @GetSubscriptionClass(tenant.SubscriptionStatus)">@tenant.SubscriptionStatusDisplayName</span>
                                     <strong class="tenant-plan">@tenant.PlanName</strong>
                                     <span class="tenant-services-count">@tenant.EnabledServiceCount من 5 خدمات مفعلة</span>
-                                    @if (tenant.SubscriptionEndsAtUtc.HasValue)
+                                    @if (tenant.AccessEndsAtUtc.HasValue)
                                     {
-                                        <span class="tenant-date">حتى @tenant.SubscriptionEndsAtUtc.Value.ToString("yyyy-MM-dd")</span>
+                                        <span class="tenant-date">حتى @tenant.AccessEndsAtUtc.Value.ToString("yyyy-MM-dd")</span>
                                     }
                                 </div>
                             </td>
@@ -446,10 +446,10 @@
                             </td>
                             <td data-label="الحالة">
                                 <div class="tenant-cell-stack">
-                                    <span class="tenant-state @(tenant.IsActive ? "is-active" : "is-inactive")">
-                                        @(tenant.IsActive ? "نشطة" : "موقوفة")
+                                    <span class="tenant-state @(tenant.IsAccessAvailable ? "is-active" : "is-inactive")">
+                                        @(tenant.IsAccessAvailable ? "متاحة" : "متوقفة")
                                     </span>
-                                    <small>@(tenant.IsActive ? "الحسابات متاحة" : "الحسابات محجوبة")</small>
+                                    <small>@tenant.AccessStatusReason</small>
                                 </div>
                             </td>
                             <td data-label="الإجراءات">
@@ -462,15 +462,29 @@
                                             <button type="submit" class="btn btn-success btn-sm">تأكيد الدفع</button>
                                         </form>
                                     }
-                                    @if (!isDefault)
+                                    @if (!isDefault && tenant.IsAccessAvailable)
                                     {
                                         <form asp-action="SetActive" asp-route-id="@tenant.TenantId" method="post">
                                             @Html.AntiForgeryToken()
-                                            <input type="hidden" name="isActive" value="@(!tenant.IsActive)" />
+                                            <input type="hidden" name="isActive" value="false" />
                                             <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                                @(tenant.IsActive ? "إيقاف" : "تفعيل")
+                                                إيقاف
                                             </button>
                                         </form>
+                                    }
+                                    @if (!isDefault && !tenant.IsAccessAvailable && !string.Equals(tenant.SubscriptionStatus, TenantSubscriptionStatuses.PendingPayment, StringComparison.Ordinal))
+                                    {
+                                        <button type="button"
+                                                class="btn btn-primary btn-sm"
+                                                data-reactivate-tenant
+                                                data-tenant-id="@tenant.TenantId"
+                                                data-tenant-name="@tenant.Name"
+                                                data-tenant-status="@(string.Equals(tenant.SubscriptionStatus, TenantSubscriptionStatuses.Active, StringComparison.Ordinal) ? TenantSubscriptionStatuses.Active : TenantSubscriptionStatuses.Trial)">
+                                            إعادة التنشيط
+                                        </button>
+                                    }
+                                    @if (!isDefault)
+                                    {
                                         <button type="button"
                                                 class="btn btn-outline-danger btn-sm"
                                                 data-delete-tenant
@@ -532,6 +546,36 @@
     </form>
 </dialog>
 
+<dialog class="tenant-delete-dialog tenant-reactivation-dialog" id="tenantReactivationDialog">
+    <form asp-action="Reactivate" method="post" id="tenantReactivationForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" id="reactivateTenantId" />
+        <div class="tenant-delete-head tenant-reactivation-head">
+            <span>إعادة تنشيط الجهة</span>
+            <button type="button" class="tenant-dialog-close" data-close-reactivation-dialog aria-label="إغلاق">×</button>
+        </div>
+        <h2 id="reactivateTenantName"></h2>
+        <p>اختر نوع الوصول وحدد تاريخًا جديدًا. ستعود حسابات مديري الجهة الموقوفة للعمل تلقائيًا.</p>
+        <div class="tenant-dialog-grid">
+            <label>
+                <span>نوع التفعيل</span>
+                <select class="form-select" name="SubscriptionStatus" id="reactivationStatus" required>
+                    <option value="@TenantSubscriptionStatuses.Trial">تجربة</option>
+                    <option value="@TenantSubscriptionStatuses.Active">اشتراك نشط</option>
+                </select>
+            </label>
+            <label>
+                <span>نهاية الوصول</span>
+                <input class="form-control ltr-field" type="date" name="AccessEndsAtUtc" id="reactivationEndDate" required />
+            </label>
+        </div>
+        <div class="tenant-delete-actions">
+            <button type="button" class="btn btn-outline-secondary" data-close-reactivation-dialog>إلغاء</button>
+            <button type="submit" class="btn btn-primary">تنشيط الجهة</button>
+        </div>
+    </form>
+</dialog>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script nonce="@(Context.Items["CspScriptNonce"])">
@@ -544,6 +588,21 @@
                 editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 window.setTimeout(() => editor.querySelector('input:not([readonly])')?.focus(), 350);
             });
+
+            const subscriptionStatus = document.querySelector('[data-tenant-subscription-status]');
+            const accessDateFields = Array.from(document.querySelectorAll('[data-access-date-for]'));
+            const syncAccessDateFields = () => {
+                const selectedStatus = subscriptionStatus?.value || '';
+                accessDateFields.forEach((field) => {
+                    const isRelevant = field.dataset.accessDateFor === selectedStatus;
+                    field.hidden = !isRelevant;
+                    field.querySelectorAll('input').forEach((input) => {
+                        if (input.type !== 'checkbox') input.disabled = !isRelevant;
+                    });
+                });
+            };
+            subscriptionStatus?.addEventListener('change', syncAccessDateFields);
+            syncAccessDateFields();
 
             const visitsService = document.querySelector('[data-tenant-service="visits"]');
             const selfService = document.querySelector('[data-tenant-service="self-service"]');
@@ -751,6 +810,33 @@
             });
             dialog?.addEventListener('click', (event) => {
                 if (event.target === dialog) dialog.close();
+            });
+
+            const reactivationDialog = document.getElementById('tenantReactivationDialog');
+            const reactivationId = document.getElementById('reactivateTenantId');
+            const reactivationName = document.getElementById('reactivateTenantName');
+            const reactivationStatus = document.getElementById('reactivationStatus');
+            const reactivationEndDate = document.getElementById('reactivationEndDate');
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const minimumDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+            if (reactivationEndDate) reactivationEndDate.min = minimumDate;
+
+            document.querySelectorAll('[data-reactivate-tenant]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    if (reactivationId) reactivationId.value = button.dataset.tenantId || '';
+                    if (reactivationName) reactivationName.textContent = button.dataset.tenantName || '';
+                    if (reactivationStatus) reactivationStatus.value = button.dataset.tenantStatus || '@TenantSubscriptionStatuses.Trial';
+                    if (reactivationEndDate) reactivationEndDate.value = '';
+                    reactivationDialog?.showModal();
+                    reactivationEndDate?.focus();
+                });
+            });
+            document.querySelectorAll('[data-close-reactivation-dialog]').forEach((button) => {
+                button.addEventListener('click', () => reactivationDialog?.close());
+            });
+            reactivationDialog?.addEventListener('click', (event) => {
+                if (event.target === reactivationDialog) reactivationDialog.close();
             });
         })();
     </script>

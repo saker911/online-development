@@ -154,6 +154,130 @@ public sealed class TenantFeatureTests
     }
 
     [Fact]
+    public void DashboardUsesTheDateThatMatchesTheSubscriptionStatus()
+    {
+        using var provider = CreateProvider("tenant-expired-trial");
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        using (var db = factory.CreateDbContext())
+        {
+            db.Tenants.Add(new Tenant
+            {
+                TenantId = "expired-trial",
+                Name = "جهة بتجربة منتهية",
+                Slug = "expired-trial",
+                IsActive = true,
+                SubscriptionStatus = TenantSubscriptionStatuses.Trial,
+                TrialEndsAtUtc = DateTime.UtcNow.AddDays(-1),
+                SubscriptionEndsAtUtc = DateTime.UtcNow.AddYears(1),
+            });
+            db.SaveChanges();
+        }
+
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+        var tenant = Assert.Single(service.GetDashboard().Tenants);
+
+        Assert.False(tenant.IsAccessAvailable);
+        Assert.True(tenant.IsBlockedBySubscription);
+        Assert.Equal("انتهت مدة التجربة", tenant.AccessStatusReason);
+        Assert.Equal(tenant.TrialEndsAtUtc, tenant.AccessEndsAtUtc);
+    }
+
+    [Fact]
+    public void UpdatingTrialAlignsAccessDateAndReactivatesTenant()
+    {
+        using var provider = CreateProvider("tenant-trial-update");
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        using (var db = factory.CreateDbContext())
+        {
+            db.Tenants.Add(new Tenant
+            {
+                TenantId = "trial-update",
+                Name = "جهة تجريبية",
+                Slug = "trial-update",
+                IsActive = false,
+                SubscriptionStatus = TenantSubscriptionStatuses.Trial,
+                TrialEndsAtUtc = DateTime.UtcNow.AddDays(-1),
+                SubscriptionEndsAtUtc = DateTime.UtcNow.AddYears(1),
+            });
+            db.SaveChanges();
+        }
+
+        var requestedEndDate = DateTime.UtcNow.Date.AddDays(14);
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+        var result = service.UpdateTenant("trial-update", new TenantEditorViewModel
+        {
+            TenantId = "trial-update",
+            Name = "جهة تجريبية",
+            Slug = "trial-update",
+            SubscriptionStatus = TenantSubscriptionStatuses.Trial,
+            TrialEndsAtUtc = requestedEndDate,
+            PlanName = "تجربة",
+        });
+
+        Assert.True(result.Succeeded, result.Message);
+        using var verificationDb = factory.CreateDbContext();
+        var tenant = verificationDb.Tenants.IgnoreQueryFilters().Single();
+        Assert.True(tenant.IsActive);
+        Assert.Equal(TenantSubscriptionStatuses.Trial, tenant.SubscriptionStatus);
+        Assert.Null(tenant.SubscriptionEndsAtUtc);
+        Assert.Equal(requestedEndDate.AddDays(1).AddTicks(-1), tenant.TrialEndsAtUtc);
+        Assert.True(Assert.Single(service.GetDashboard().Tenants).IsAccessAvailable);
+    }
+
+    [Fact]
+    public void ReactivatingTenantRequiresFutureDateAndRestoresItsManager()
+    {
+        using var provider = CreateProvider("tenant-reactivation");
+        var factory = provider.GetRequiredService<IDbContextFactory<ApplicationDbContext>>();
+        using (var db = factory.CreateDbContext())
+        {
+            db.Tenants.Add(new Tenant
+            {
+                TenantId = "suspended-tenant",
+                Name = "جهة موقوفة",
+                Slug = "suspended-tenant",
+                IsActive = false,
+                SubscriptionStatus = TenantSubscriptionStatuses.Suspended,
+            });
+            db.UserAccounts.Add(new UserAccount
+            {
+                TenantId = "suspended-tenant",
+                Username = "suspended.manager",
+                FullName = "مدير الجهة",
+                Role = AppRoles.GeneralManager,
+                IsActive = false,
+            });
+            db.SaveChanges();
+        }
+
+        var service = new TenantManagementService(factory, new EphemeralDataProtectionProvider());
+        var rejected = service.ReactivateTenant(
+            "suspended-tenant",
+            TenantSubscriptionStatuses.Active,
+            DateTime.UtcNow.AddDays(-1)
+        );
+        Assert.False(rejected.Succeeded);
+
+        var requestedEndDate = DateTime.UtcNow.Date.AddMonths(1);
+        var result = service.ReactivateTenant(
+            "suspended-tenant",
+            TenantSubscriptionStatuses.Active,
+            requestedEndDate
+        );
+
+        Assert.True(result.Succeeded, result.Message);
+        using var verificationDb = factory.CreateDbContext();
+        var tenant = verificationDb.Tenants.IgnoreQueryFilters().Single();
+        var manager = verificationDb.UserAccounts.IgnoreQueryFilters().Single();
+        Assert.True(tenant.IsActive);
+        Assert.Equal(TenantSubscriptionStatuses.Active, tenant.SubscriptionStatus);
+        Assert.Null(tenant.TrialEndsAtUtc);
+        Assert.Equal(requestedEndDate.AddDays(1).AddTicks(-1), tenant.SubscriptionEndsAtUtc);
+        Assert.True(manager.IsActive);
+        Assert.True(manager.CanManageAdministration);
+    }
+
+    [Fact]
     public void FeatureAvailabilityIsTenantScopedAndAppliesDependencies()
     {
         using var provider = CreateProvider("tenant-feature-scope");

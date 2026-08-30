@@ -8,9 +8,8 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public List<TenantSummaryViewModel> Tenants { get; set; } = new();
         public TenantEditorViewModel Editor { get; set; } = new();
         public int TotalTenants => Tenants.Count;
-        public int ActiveTenants => Tenants.Count(tenant => tenant.IsActive);
-        public int BlockedTenants =>
-            Tenants.Count(tenant => tenant.IsBlockedBySubscription || !tenant.IsActive);
+        public int ActiveTenants => Tenants.Count(tenant => tenant.IsAccessAvailable);
+        public int BlockedTenants => Tenants.Count(tenant => !tenant.IsAccessAvailable);
         public int TotalUsers => Tenants.Sum(tenant => tenant.UserCount);
     }
 
@@ -39,6 +38,9 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
         public int? MaxPermitsPerMonth { get; set; }
         public int? MaxVisitsPerMonth { get; set; }
         public bool IsBlockedBySubscription { get; set; }
+        public bool IsAccessAvailable { get; set; }
+        public string AccessStatusReason { get; set; } = string.Empty;
+        public DateTime? AccessEndsAtUtc { get; set; }
         public bool PermitsServiceEnabled { get; set; }
         public bool VisitsServiceEnabled { get; set; }
         public bool SelfServiceEnabled { get; set; }
@@ -52,6 +54,17 @@ namespace VehiclePermitSystemWeb.Models.ViewModels.Tenants
             QueueServiceEnabled,
             GateServiceEnabled,
         }.Count(enabled => enabled);
+    }
+
+    public sealed class TenantReactivationViewModel
+    {
+        [Required(ErrorMessage = "اختر نوع التفعيل.")]
+        [Display(Name = "نوع التفعيل")]
+        public string SubscriptionStatus { get; set; } = TenantSubscriptionStatuses.Trial;
+
+        [Required(ErrorMessage = "حدد تاريخ نهاية الوصول.")]
+        [Display(Name = "نهاية الوصول")]
+        public DateTime? AccessEndsAtUtc { get; set; }
     }
 
     public sealed class TenantUserSummaryViewModel

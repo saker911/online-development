@@ -4,9 +4,10 @@
     Layout = "_PlatformLayout";
     ViewData["Title"] = "لوحة المنصة";
     var expiringSoon = Model.Tenants.Count(tenant =>
-        tenant.SubscriptionEndsAtUtc.HasValue
-        && tenant.SubscriptionEndsAtUtc.Value >= DateTime.UtcNow
-        && tenant.SubscriptionEndsAtUtc.Value <= DateTime.UtcNow.AddDays(30));
+        tenant.IsAccessAvailable
+        && tenant.AccessEndsAtUtc.HasValue
+        && tenant.AccessEndsAtUtc.Value >= DateTime.UtcNow
+        && tenant.AccessEndsAtUtc.Value <= DateTime.UtcNow.AddDays(30));
 }
 
 <main class="platform-dashboard">
@@ -73,8 +74,8 @@
                                 <small>/o/@tenant.Slug/</small>
                             </a>
                             <span class="platform-directory-meta">@tenant.PlanName · @tenant.UserCount حساب</span>
-                            <span class="platform-status @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "is-active" : "is-blocked")">
-                                @(tenant.IsActive && !tenant.IsBlockedBySubscription ? "نشطة" : "متوقفة")
+                            <span class="platform-status @(tenant.IsAccessAvailable ? "is-active" : "is-blocked")" title="@tenant.AccessStatusReason">
+                                @(tenant.IsAccessAvailable ? "متاحة" : "متوقفة")
                             </span>
                         </header>
 
