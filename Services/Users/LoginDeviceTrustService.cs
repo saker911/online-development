@@ -14,6 +14,7 @@ public interface ILoginDeviceTrustService
     string GetCookieName(UserAccount user);
     bool IsTrusted(UserAccount user, string? token);
     DeviceChallengeStartResult BeginChallenge(UserAccount user, string? returnUrl, string? userAgent);
+    DeviceChallengeStartResult ResendChallenge(string challengeId);
     DeviceChallengeView? GetChallenge(string challengeId);
     DeviceChallengeVerificationResult Verify(string challengeId, string code);
 }
@@ -31,6 +32,8 @@ public sealed record DeviceChallengeVerificationResult(
 public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
 {
     private const int MaximumAttempts = 5;
+    private const int MaximumResends = 3;
+    private static readonly TimeSpan ResendInterval = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan ChallengeLifetime = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan TrustedDeviceLifetime = TimeSpan.FromDays(90);
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
@@ -121,6 +124,7 @@ public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
             CodeHash = HashCode(challengeId, code),
             DeviceDescription = DescribeDevice(userAgent),
             ExpiresAtUtc = now.Add(ChallengeLifetime),
+            LastSentAtUtc = now,
         };
 
         try
@@ -129,8 +133,7 @@ public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
             var safeName = WebUtility.HtmlEncode(
                 string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName
             );
-            db.EmailNotificationOutbox.Add(
-                new EmailNotificationOutbox
+            var notification = new EmailNotificationOutbox
                 {
                     TenantId = user.TenantId,
                     NotificationType = "NewDeviceVerification",
@@ -145,17 +148,89 @@ public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
                     Status = EmailNotificationOutbox.StatusPending,
                     CreatedAtUtc = now,
                     NextAttemptAtUtc = now,
-                }
-            );
+                };
+            db.EmailNotificationOutbox.Add(notification);
             db.SaveChanges();
+            challenge.NotificationId = notification.Id;
             _cache.Set(challengeId, challenge, challenge.ExpiresAtUtc);
             _cache.Set(accountChallengeKey, challengeId, challenge.ExpiresAtUtc);
-            return new(true, "تم إرسال رمز التحقق إلى البريد المسجل.", challengeId);
+            return new(true, "تم طلب إرسال رمز التحقق إلى البريد المسجل.", challengeId);
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Failed to queue new-device verification email.");
             return new(false, "تعذر إرسال رمز التحقق حالياً. حاول مرة أخرى.");
+        }
+    }
+
+    public DeviceChallengeStartResult ResendChallenge(string challengeId)
+    {
+        if (!TryGetChallenge(challengeId, out var challenge))
+            return new(false, "انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+
+        lock (challenge.SyncRoot)
+        {
+            if (!TryGetChallenge(challengeId, out _) || challenge.Attempts >= MaximumAttempts)
+                return new(false, "انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+            var now = _clock.UtcNow;
+            if (now - challenge.LastSentAtUtc < ResendInterval)
+                return new(false, "انتظر دقيقة بين طلبات إرسال الرمز.", challengeId);
+            if (challenge.ResendCount >= MaximumResends)
+                return new(false, "بلغت الحد المتاح لإعادة الإرسال. حاول تسجيل الدخول بعد انتهاء الجلسة.", challengeId);
+
+            try
+            {
+                using var db = _dbContextFactory.CreateDbContext();
+                var user = FindUser(db, challenge.TenantId, challenge.Username);
+                if (user == null || !user.IsActive || !user.IsEmailConfirmed || string.IsNullOrWhiteSpace(user.Email))
+                    return new(false, "تعذر إرسال رمز التحقق لهذا الحساب.", challengeId);
+
+                // Resending rotates the code without resetting the attempt limit or session expiry.
+                string code;
+                byte[] codeHash;
+                do
+                {
+                    code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+                    codeHash = HashCode(challengeId, code);
+                } while (CryptographicOperations.FixedTimeEquals(codeHash, challenge.CodeHash));
+                var previous = db.EmailNotificationOutbox.IgnoreQueryFilters()
+                    .SingleOrDefault(message => message.Id == challenge.NotificationId);
+                if (previous?.Status == EmailNotificationOutbox.StatusPending)
+                {
+                    previous.Status = EmailNotificationOutbox.StatusFailed;
+                    previous.LastError = "تم استبدال رمز التحقق بطلب جديد.";
+                }
+
+                var minutes = Math.Max(1, (int)Math.Ceiling((challenge.ExpiresAtUtc - now).TotalMinutes));
+                var notification = new EmailNotificationOutbox
+                {
+                    TenantId = user.TenantId,
+                    NotificationType = "NewDeviceVerification",
+                    ReferenceType = "UserAccount",
+                    ReferenceId = user.Username,
+                    DeduplicationKey = $"new-device:{challengeId}:resend:{challenge.ResendCount + 1}",
+                    RecipientEmail = user.Email,
+                    RecipientName = user.DisplayName,
+                    Subject = "رمز تأكيد تسجيل الدخول | تصاريح",
+                    HtmlBody = BuildHtmlBody(WebUtility.HtmlEncode(user.DisplayName), code, challenge.DeviceDescription, minutes),
+                    TextBody = BuildTextBody(user.DisplayName, code, challenge.DeviceDescription, minutes),
+                    CreatedAtUtc = now,
+                    NextAttemptAtUtc = now,
+                    Status = EmailNotificationOutbox.StatusPending,
+                };
+                db.EmailNotificationOutbox.Add(notification);
+                db.SaveChanges();
+                challenge.CodeHash = codeHash;
+                challenge.NotificationId = notification.Id;
+                challenge.LastSentAtUtc = now;
+                challenge.ResendCount++;
+                return new(true, "تم طلب إرسال رمز جديد. استخدم أحدث رسالة، وتحقق من البريد غير المرغوب فيه.", challengeId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to requeue new-device verification email.");
+                return new(false, "تعذر إرسال رمز التحقق حالياً. حاول مرة أخرى.", challengeId);
+            }
         }
     }
 
@@ -180,6 +255,8 @@ public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
 
         lock (challenge.SyncRoot)
         {
+            if (!TryGetChallenge(challengeId, out _))
+                return new(false, "انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
             challenge.Attempts++;
             if (challenge.Attempts > MaximumAttempts)
             {
@@ -292,7 +369,7 @@ public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
         return $"{browser} على {device}";
     }
 
-    private static string BuildHtmlBody(string name, string code, string device) =>
+    private static string BuildHtmlBody(string name, string code, string device, int minutes = 10) =>
         $"""
         <!doctype html><html lang="ar" dir="rtl"><body style="margin:0;padding:0;background:#f4f6f8;font-family:Tahoma,Arial,sans-serif;color:#172033">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:32px 16px">
@@ -301,19 +378,22 @@ public sealed class LoginDeviceTrustService : ILoginDeviceTrustService
         <tr><td style="padding:32px 28px;text-align:right"><h1 style="margin:0 0 12px;font-size:23px">تأكيد تسجيل الدخول</h1>
         <p style="line-height:1.9;color:#4b5563">مرحباً {name}، رصدنا محاولة دخول من {WebUtility.HtmlEncode(device)}. استخدم الرمز التالي إذا كنت أنت من بدأ العملية:</p>
         <div dir="ltr" style="margin:22px 0;padding:16px;text-align:center;background:#f3f7f6;border:1px solid #d6e7e2;border-radius:8px;font-size:30px;font-weight:700;letter-spacing:6px">{code}</div>
-        <p style="font-size:13px;line-height:1.8;color:#7b8493">الرمز صالح لمدة 10 دقائق. إذا لم تكن أنت، تجاهل الرسالة وغيّر كلمة المرور.</p></td></tr></table>
+        <p style="font-size:13px;line-height:1.8;color:#7b8493">استخدم أحدث رمز خلال {minutes} دقائق. إذا لم تكن أنت، تجاهل الرسالة وغيّر كلمة المرور.</p></td></tr></table>
         </td></tr></table></body></html>
         """;
 
-    private static string BuildTextBody(string name, string code, string device) =>
-        $"مرحباً {name}\n\nرصدنا محاولة دخول من {device}. رمز التأكيد: {code}\n\nالرمز صالح لمدة 10 دقائق. إذا لم تكن أنت، تجاهل الرسالة وغيّر كلمة المرور.";
+    private static string BuildTextBody(string name, string code, string device, int minutes = 10) =>
+        $"مرحباً {name}\n\nرصدنا محاولة دخول من {device}. رمز التأكيد: {code}\n\nاستخدم أحدث رمز خلال {minutes} دقائق. إذا لم تكن أنت، تجاهل الرسالة وغيّر كلمة المرور.";
 
     private sealed class PendingDeviceChallenge
     {
         public string TenantId { get; init; } = string.Empty;
         public string Username { get; init; } = string.Empty;
         public string ReturnUrl { get; init; } = string.Empty;
-        public byte[] CodeHash { get; init; } = Array.Empty<byte>();
+        public byte[] CodeHash { get; set; } = Array.Empty<byte>();
+        public long NotificationId { get; set; }
+        public DateTime LastSentAtUtc { get; set; }
+        public int ResendCount { get; set; }
         public string DeviceDescription { get; init; } = string.Empty;
         public DateTime ExpiresAtUtc { get; init; }
         public int Attempts { get; set; }

@@ -23,9 +23,13 @@
         <span class="login-page-kicker">تأكيد آمن</span>
         <h1 id="device-verification-title" class="login-page-title">تأكيد الجهاز الجديد</h1>
         <p class="login-page-subtitle">
-            أدخل الرمز المكوّن من 6 أرقام المرسل إلى
+            سيصلك رمز من 6 أرقام على
             <strong class="device-verification-email" dir="ltr">@Model.MaskedEmail</strong>
         </p>
+        @if (TempData["DeviceCodeResendMessage"] is string resendMessage)
+        {
+            <p class="device-verification-hint" role="status">@resendMessage</p>
+        }
 
         <form asp-controller="Account" asp-action="VerifyDevice" method="post"
               class="login-form-grid device-verification-form" autocomplete="off" data-no-form-persist>
@@ -48,6 +52,13 @@
             <div class="login-secondary-action">
                 <a asp-controller="Account" asp-action="Login">العودة إلى تسجيل الدخول</a>
             </div>
+        </form>
+        <form asp-controller="Account" asp-action="ResendDeviceCode" method="post"
+              class="login-form-grid" data-no-form-persist>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="challengeId" value="@Model.ChallengeId" />
+            <p class="device-verification-hint">لم يصلك الرمز؟ تحقق من البريد غير المرغوب فيه أو اطلب رمزًا جديدًا.</p>
+            <button class="btn btn-outline-secondary" type="submit">إعادة إرسال الرمز</button>
         </form>
     </section>
 </div>

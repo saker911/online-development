@@ -345,6 +345,24 @@ namespace VehiclePermitSystemWeb.Controllers
             return RedirectToDefaultAuthorizedPage(result.User);
         }
 
+        [HttpPost]
+        [AllowAnonymous]
+        [EnableRateLimiting("mfa")]
+        [ValidateAntiForgeryToken]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public IActionResult ResendDeviceCode(string challengeId)
+        {
+            var result = LoginDeviceTrustService?.ResendChallenge(challengeId);
+            if (result == null || string.IsNullOrWhiteSpace(result.ChallengeId))
+            {
+                ToastNotifications.Warning("انتهت جلسة التحقق. سجل الدخول مرة أخرى.");
+                return RedirectToAction(nameof(Login));
+            }
+
+            TempData["DeviceCodeResendMessage"] = result.Message;
+            return RedirectToAction(nameof(VerifyDevice), new { challenge = result.ChallengeId });
+        }
+
         [HttpGet]
         [AllowAnonymous]
         [EnableRateLimiting("mfa")]
